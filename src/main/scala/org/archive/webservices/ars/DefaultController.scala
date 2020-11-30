@@ -76,26 +76,26 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-//  get("/login") {
-//    Ok(ssp("login", "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
-//  }
-//
-//  post("/login") {
-//    try {
-//      val username = params("username")
-//      val password = params("password")
-//      Ait.login(username, password) match {
-//        case Some(error) =>
-//          Ok(ssp("login", "error" -> Some(error), "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
-//        case None =>
-//          Found(ArsCloud.BasePath)
-//      }
-//    } catch {
-//      case e: Exception =>
-//        e.printStackTrace()
-//        NotFound()
-//    }
-//  }
+  get("/login") {
+    Ok(ssp("login", "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
+  }
+
+  post("/login") {
+    try {
+      val username = params("username")
+      val password = params("password")
+      Ait.login(username, password) match {
+        case Some(error) =>
+          Ok(ssp("login", "error" -> Some(error), "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
+        case None =>
+          Found(ArsCloud.BasePath)
+      }
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+        NotFound()
+    }
+  }
 
   get("/logout") {
     Ait.logout()
