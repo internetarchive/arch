@@ -1,0 +1,92 @@
+<%@ val user: org.archive.webservices.ars.ait.AitUser %>
+<%@ val collections: Seq[(String, String, String)] %>
+
+#set (title)
+    Research Services Cloud
+#end
+
+#set (subtitle)
+    <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Documentation</a>
+#end
+
+<subnav data="state.menus.research_services" class="ng-isolate-scope">
+    <div class="row subnav">
+        <div class="small-12 columns">
+
+            <div class="row">
+
+                <div class="subnav-box columns">
+
+                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services active" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
+                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collection Analysis</a></span>
+                    </div>
+
+                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
+                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services/download">Downloading Datasets</a></span>
+                    </div>
+
+                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
+                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services/learning_resources">Learning Resources</a></span>
+                    </div>
+
+                    <hr>
+
+                </div>
+
+            </div>
+        </div>
+        <div ng-transclude=""></div>
+    </div>
+</subnav>
+
+<div class="row">
+    <div class="large-12 columns">
+        <table class="large-12 columns margin-top one">
+            <thead>
+                <tr>
+                    <th>Collection Name</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody class="ng-scope">
+                <!--
+                <tr>
+                    <td class="ng-binding">Test Collection</td>
+                    <td class="ng-scope">
+                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
+                        Request WAT File
+                    </div>
+                    </td>
+                    <td class="ng-scope">
+                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
+                        Request LGA File
+                    </div>
+                    </td>
+                    <td class="ng-scope">
+                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
+                        Request WANE File
+                    </div>
+                    </td>
+                    <td>
+                        <a class="button tiny margin-top margin-bottom padding-top padding-bottom half" href="https://support.archive-it.org/hc/en-us/articles/209643793-Partner-Guide-to-Downloading-Archive-It-Data" target="_blank">
+                        Download (W)ARC File
+                        </a>
+                    </td>
+                </tr>
+                -->
+                <% for ((collectionId, collectionName, sizeStr) <- collections) { %>
+                    <tr>
+                        <td class="ng-binding">
+                            <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>">
+                                <%=collectionName%>
+                            </a>
+                        </td>
+                        <td class="ng-scope">
+                            <%=sizeStr%>
+                        </td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>

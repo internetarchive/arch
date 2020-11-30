@@ -1,0 +1,47 @@
+<%@ val user: org.archive.webservices.ars.ait.AitUser %>
+<%@ val collectionId: String %>
+<%@ val resultFiles: String %>
+<%@ val resultSize: String %>
+<%@ val job: org.archive.webservices.ars.processing.DerivationJob %>
+
+#set (title)
+    Analyze <%=collectionId%>
+#end
+
+#set (subtitle)
+    <%=job.name%>
+#end
+
+<br><br>
+
+<div class="row">
+<div class="large-12 columns">
+    This is an individual, job-specific page, using a template to render specifically the results of a <i>FileCountAndSize</i> job, which could contain job-specific visualizations for the following data:<br>
+    <br><br>
+    <table class="large-12 columns margin-top one">
+        <thead>
+            <tr>
+                <th colspan="2">Results</th>
+            </tr>
+        </thead>
+        <tbody class="ng-scope">
+            <tr>
+                <td class="ng-binding">
+                    Files
+                </td>
+                <td class="ng-scope">
+                    <%=resultFiles%>
+                </td>
+            </tr>
+            <tr>
+                <td class="ng-binding">
+                    Size
+                </td>
+                <td class="ng-scope">
+                    <%=resultSize%> bytes
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</div>

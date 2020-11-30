@@ -1,0 +1,138 @@
+<%@ val title: String = "ARS Cloud" %>
+<%@ val subtitle: String = "" %>
+<%@ val body: String %>
+<%@ val user: org.archive.webservices.ars.ait.AitUser = org.archive.webservices.ars.ait.AitUser.None %>
+<%@ val breadcrumbs: Seq[(String, String)] = Seq.empty %>
+
+<!DOCTYPE html>
+
+<html ng-app="ArchiveIt" class="js flexbox canvas canvastext webgl no-touch geolocation postmessage no-websqldatabase indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients no-cssreflections csstransforms csstransforms3d csstransitions fontface generatedcontent video audio localstorage sessionstorage webworkers applicationcache svg inlinesvg smil svgclippaths ng-scope" style="" lang="en"><head><style type="text/css">@charset "UTF-8";[ng\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>
+<base href="/">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Archive-It: <%=unescape(title)%></title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/normalize.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/main.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/foundation-datepicker/css/foundation-datepicker.min.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css?c=datetimenow">
+<link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
+<link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="72x72" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="76x76" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="114x114" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="120x120" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="144x144" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-180x180.png">
+<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-194x194.png" sizes="194x194">
+<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/android-chrome-192x192.png" sizes="192x192">
+<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-16x16.png" sizes="16x16">
+<link rel="manifest" href="https://partner.archive-it.org/static/favicon/manifest.json">
+<link rel="mask-icon" href="https://partner.archive-it.org/static/favicon/safari-pinned-tab.svg%22%20color%3D%22%235bbad5">
+<link rel="shortcut icon" href="https://partner.archive-it.org/static/favicon/favicon.ico">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="msapplication-TileImage" content="https://partner.archive-it.org/static/favicon/mstile-144x144.png">
+<meta name="msapplication-config" content="https://partner.archive-it.org/static/favicon/browserconfig.xml">
+
+<meta class="foundation-mq-topbar"><meta class="foundation-mq-small"><meta class="foundation-mq-medium"><meta class="foundation-mq-large">
+
+<script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
+<script src="/ait/js/pagetransitions.js"></script>
+<script src="/ait/js/jobs.js"></script>
+
+</head>
+<body style="padding-top: 70px;">
+<noscript style="display:block;font-size:2rem;text-align:center;z-index:999;margin:8rem;padding:1rem;background-color:#700;color:#ccc">javascript required :-\</noscript>
+<div class="fixed">
+<div id="top-shim"></div>
+<nav class="sticky top-bar top-bar ng-isolate-scope" ng-transclude="" scrolltop="false">
+    <ul class="title-area ng-scope">
+        <li class="name"><h1><a href="https://archive-it.org/"><img src="https://partner.archive-it.org/static/app/img/ait-logo.png"></a></h1></li>
+        </ul>
+        <% if (user.isLoggedIn) { %>
+        <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
+            <ul class="left ng-scope">
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>">Home</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/collections">Collections</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/crawls">Crawls</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/archives">Archives</a></li>
+                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Research</a></li>
+            </ul>
+        </section>
+        <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
+            <ul id="secondary-menu" class="right show-for-large-up ng-scope">
+                <li><a target="_blank" href="https://support.archive-it.org/">Help Center</a></li>
+                <li class="has-dropdown ng-isolate-scope not-click" ng-transclude="" has-dropdown="" ng-show="user.username">
+                    <a name="_welcome" class="ng-scope">Welcome, <span ng-bind="user.full_name||user.username" class="ng-binding"><%=user.fullName%></span></a>
+                    <ul class="dropdown ng-scope ng-isolate-scope" ng-transclude="" top-bar-dropdown=""><li class="title back js-generated ng-scope"><h5><a href="" ng-click="back($event);" class="ng-binding">Back</a></h5></li>
+                        <li class="ng-scope"><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/settings">Administration</a></li>
+                        <li class="ng-scope"><a href="https://webdata.archive-it.org/ait/logout" target="_self">Log Out</a></li>
+                    </ul>
+                </li>
+                <li ng-hide="user.username" class="ng-hide"><a href="https://partner.archive-it.org/login?next=https://webdata.archive-it.org/ait">Log In</a></li>
+            </ul>
+        </section>
+        <% } %>
+    </nav>
+</div>
+
+<announcementdisplay>
+</announcementdisplay>
+
+<!--[if lt IE 7]>
+<p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+<![endif]-->
+<div ui-view="" autoscroll="true" class="ng-scope"><div class="research_services ng-scope">
+<header>
+<div class="row">
+    <div class="small-12 columns">
+        <ul class="breadcrumbs ng-isolate-scope" ncy-breadcrumb="">
+            <li ng-repeat="step in steps" class="ng-scope">
+                <a href="<%=(if (user.isLoggedIn) "ait/" + user.idStr + "/research_services" else "/ait")%>" class="ng-binding">ARS Cloud</a>
+            </li>
+            <% for ((href, text) <- breadcrumbs) { %>
+                <li ng-repeat="step in steps" class="ng-scope">
+                    <a href="<%=unescape(href)%>" class="ng-binding"><%=text%></a>
+                </li>
+            <% } %>
+        </ul>
+    </div>
+</div>
+<div class="row">
+    <div class="large-12 columns">
+        <div class="bottom medium-8">
+            <h1><%=unescape(title)%></h1>
+        </div>
+    </div>
+</div></header>
+<sticky scroll-offset="60" classes="'sub header'" use-placeholder="1" placeholder-classes="'sub header placeholder'" class="ng-isolate-scope"><div class="sub header" ng-class="{ stuck: sticking }" ng-transclude="">
+    <div class="panel darker sub header margin-bottom zero ng-scope">
+        <div class="row">
+            <div class="small-6 columns left">
+                <%=unescape(subtitle)%>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="sub header placeholder ng-hide" ng-show="show_placeholder" style="height: 41px;"></div>
+</sticky>
+
+<%=unescape(body)%>
+
+</div>
+</div>
+<div class="footer">
+<div class="footer-link">© Internet Archive&nbsp;&nbsp;&nbsp;&nbsp;Archive-It</div>
+<div class="footer-link"><a target="_blank" href="https://support.archive-it.org/">Help Center</a></div>
+
+<br><br><a href="https://partner.archive-it.org/angband"><span class="fa fa-question-circle smaller footer-link where-am-i"></span></a>
+</div>
+
+<iframe data-product="web_widget" title="No content" tabindex="-1" aria-hidden="true" style="width: 0px; height: 0px; border: 0px none; position: absolute; top: -9999px;" src="about:blank"></iframe><div><iframe title="Opens a widget where you can find more information" id="launcher" tabindex="0" style="width: 106px; height: 50px; padding: 0px; margin: 10px 20px; position: fixed; bottom: 0px; overflow: visible; opacity: 1; border: 0px none; z-index: 999998; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; right: 0px;"></iframe><iframe title="Find more information here" id="webWidget" tabindex="-1" style="width: 374px; max-height: calc(-32px + 100vh); height: 572px; position: fixed; opacity: 0; border: 0px none; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; top: -9999px; visibility: hidden; z-index: 999999;"></iframe></div></body></html>
