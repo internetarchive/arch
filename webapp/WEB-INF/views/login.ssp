@@ -1,4 +1,5 @@
 <%@ val error: Option[String] = None %>
+<%@ val next: String %>
 
 #set (title)
     Research Services Cloud
@@ -10,14 +11,14 @@
 
 <div class="small-4 columns small-centered margin-top two">
 <form action="/ait/login" method="post">
-<% if (error.isDefined) { %>
-<div class="alert-box"><span class="fa fa-exclamation-triangle"></span> <%=error.get%></div>
-<% } %>
-<label for="user">Username</label>
-<input type="text" id="user" name="username" value="" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
-<label for="pass">Password</label>
-<input type="password" id="pass" name="password" ng-model="password" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
-<input type="hidden" name="next" value="">
+    <% if (error.isDefined) { %>
+    <div class="alert-box"><span class="fa fa-exclamation-triangle"></span> <%=error.get%></div>
+    <% } %>
+    <label for="user">Username</label>
+    <input type="text" id="user" name="username" value="" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
+    <label for="pass">Password</label>
+    <input type="password" id="pass" name="password" ng-model="password" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
+    <input type="hidden" name="next" value="<%=unescape(next)%>">
     <button class="padding-top padding-bottom half small">Log In</button>
     <a href="https://partner.archive-it.org/forgot_password" class="smaller right margin-top one">Forgot Password?</a>
 </form>

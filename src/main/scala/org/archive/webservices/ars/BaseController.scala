@@ -2,12 +2,13 @@ package org.archive.webservices.ars
 
 import javax.servlet.http.HttpServletRequest
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.model.ArsCloudConf
 import org.scalatra._
 
 import scala.util.Try
 
 class BaseController extends ScalatraServlet {
-  def login(url: String): ActionResult = TemporaryRedirect("https://partner.archive-it.org/login?next=" + url)
+  def login(url: String): ActionResult = TemporaryRedirect(ArsCloudConf.loginUrl + url)
 
   def chooseAccount(): ActionResult = TemporaryRedirect("https://partner.archive-it.org/choose_account")
 

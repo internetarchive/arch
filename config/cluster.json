@@ -1,0 +1,8 @@
+{
+  "aitCollectionPath": "/search/ait",
+  "aitCollectionWarcDir": "arcs",
+  "jobOutPath": "/user/helge/ars-cloud",
+  "sparkMaster": "yarn",
+  "baseUrl": "https://webdata.archive-it.org",
+  "loginUrl": "https://partner.archive-it.org/login?next="
+}

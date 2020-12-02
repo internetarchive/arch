@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.ArsCloudConf
+
 case class DerivationJobConf (
   collectionId: String,
   inputPath: String,
@@ -14,8 +16,8 @@ object DerivationJobConf {
 
   def aitCollection(collectionId: String): DerivationJobConf = {
     val aitId = collectionId.stripPrefix("ARCHIVEIT-")
-    val inputPath = s"/search/ait/$aitId/arcs/*.warc.gz"
-    val outputPath = s"/user/helge/ars-cloud/$collectionId/out"
+    val inputPath = ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz"
+    val outputPath = ArsCloudConf.jobOutPath + s"/$collectionId/out"
     DerivationJobConf(collectionId, inputPath, outputPath)
   }
 }

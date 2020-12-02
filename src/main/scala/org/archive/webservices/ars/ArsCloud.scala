@@ -1,13 +1,15 @@
 package org.archive.webservices.ars
 
+import org.archive.webservices.ars.model.ArsCloudConf
 import org.archive.webservices.ars.processing.SparkManager
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
 object ArsCloud {
+  val Port = 12341
   val BasePath = "/ait"
-  val BaseUrl: String = "https://webdata.archive-it.org" + BasePath
+  val BaseUrl: String = ArsCloudConf.baseUrl + BasePath
   val BaseDir = "/research_services"
 
   def start(contextPath: String, port: Int): Unit = {
@@ -30,6 +32,6 @@ object ArsCloud {
   }
 
   def main(args: Array[String]): Unit = {
-    start(BasePath, 12341)
+    start(BasePath, Port)
   }
 }

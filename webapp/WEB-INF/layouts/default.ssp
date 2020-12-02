@@ -73,10 +73,10 @@
                     <a name="_welcome" class="ng-scope">Welcome, <span ng-bind="user.full_name||user.username" class="ng-binding"><%=user.fullName%></span></a>
                     <ul class="dropdown ng-scope ng-isolate-scope" ng-transclude="" top-bar-dropdown=""><li class="title back js-generated ng-scope"><h5><a href="" ng-click="back($event);" class="ng-binding">Back</a></h5></li>
                         <li class="ng-scope"><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/settings">Administration</a></li>
-                        <li class="ng-scope"><a href="https://webdata.archive-it.org/ait/logout" target="_self">Log Out</a></li>
+                        <li class="ng-scope"><a href="<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/logout" target="_self">Log Out</a></li>
                     </ul>
                 </li>
-                <li ng-hide="user.username" class="ng-hide"><a href="https://partner.archive-it.org/login?next=https://webdata.archive-it.org/ait">Log In</a></li>
+                <li ng-hide="user.username" class="ng-hide"><a href="<%=unescape(org.archive.webservices.ars.model.ArsCloudConf.loginUrl)%><%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>">Log In</a></li>
             </ul>
         </section>
         <% } %>

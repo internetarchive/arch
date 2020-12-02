@@ -8,6 +8,8 @@ import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
+import scala.util.Try
+
 class DefaultController extends BaseController with ScalateSupport {
   get("/?") {
     ensureLogin { implicit user =>
@@ -77,10 +79,12 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/login") {
-    Ok(ssp("login", "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
+    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArsCloud.BaseUrl)
+    Ok(ssp("login", "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login")), "next" -> next), Map("Content-Type" -> "text/html"))
   }
 
   post("/login") {
+    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArsCloud.BaseUrl)
     try {
       val username = params("username")
       val password = params("password")
@@ -88,7 +92,7 @@ class DefaultController extends BaseController with ScalateSupport {
         case Some(error) =>
           Ok(ssp("login", "error" -> Some(error), "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))), Map("Content-Type" -> "text/html"))
         case None =>
-          Found(ArsCloud.BasePath)
+          Found(next)
       }
     } catch {
       case e: Exception =>

@@ -3,6 +3,7 @@ package org.archive.webservices.ars.processing
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 import org.archive.helge.sparkling.util.SparkUtil
+import org.archive.webservices.ars.model.ArsCloudConf
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,7 +15,9 @@ object SparkManager {
   private var running = 0
 
   val context: Future[SparkContext] = {
-    val context = SparkUtil.config(SparkSession.builder, appName = "ARS-cloud", executors = 5, executorCores = 4, executorMemory = "2g") //, additionalConfigs = Map("spark.master" -> "local[*]"))
+    val context = SparkUtil.config(SparkSession.builder, appName = "ARS-cloud", executors = 5, executorCores = 4, executorMemory = "2g", additionalConfigs = Map(
+      "spark.master" -> ArsCloudConf.sparkMaster
+    ))
     Future(context)
   }
 
