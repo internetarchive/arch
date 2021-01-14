@@ -1,3 +1,5 @@
+import sbt.ExclusionRule
+
 lazy val commonSettings = Seq(
   name := "ars-cloud",
   version := "0.1.0",
@@ -15,7 +17,7 @@ lazy val webapp = (project in file(".")).
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
       "org.scalatra" %% "scalatra" % "2.5.4",
-      "org.scalatra" %% "scalatra-cache-guava" % "2.5.4",
+      "org.scalatra" %% "scalatra-cache-guava" % "2.5.4" exclude(org = "com.google.guava", name = "guava"),
       "org.scalatra" %% "scalatra-scalate" % "2.5.4",
       "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
       "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
