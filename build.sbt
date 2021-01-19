@@ -27,6 +27,7 @@ lazy val webapp = (project in file(".")).
       "org.apache.spark" %% "spark-sql" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
       "org.apache.spark" %% "spark-yarn" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
       // "org.archive.helge" %% "sparkling" % "0.2.0-SNAPSHOT" // TODO: put JAR into `lib`
+      // "io.archivesunleashed" % "aut" % "0.80.1-SNAPSHOT", // TODO: put JAR into `lib`
     ) ++ Seq(
       "io.circe" %% "circe-core",
       "io.circe" %% "circe-generic",

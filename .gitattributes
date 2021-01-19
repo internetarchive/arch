@@ -1,0 +1,1 @@
+lib/aut-0.80.1-SNAPSHOT-fatjar.jar filter=lfs diff=lfs merge=lfs -text
