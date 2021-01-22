@@ -219,4 +219,3 @@ spark-warehouse/
 # End of https://www.toptal.com/developers/gitignore/api/intellij,scala,spark,sbt
 
 config/config.json
-data
