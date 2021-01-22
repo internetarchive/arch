@@ -1,5 +1,3 @@
-import sbt.ExclusionRule
-
 lazy val commonSettings = Seq(
   name := "ars-cloud",
   version := "0.1.0",
@@ -22,11 +20,16 @@ lazy val webapp = (project in file(".")).
       "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
       "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
       "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "container;compile",
+      "org.apache.hadoop" % "hadoop-common" % "2.6.0", // % "provided", // TODO: "provided" for cluster mode
       "org.apache.hadoop" % "hadoop-client" % "2.6.0", // % "provided", // TODO: "provided" for cluster mode
       "org.apache.spark" %% "spark-core" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
       "org.apache.spark" %% "spark-sql" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
       "org.apache.spark" %% "spark-yarn" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
-      // "org.archive.helge" %% "sparkling" % "0.2.0-SNAPSHOT" // TODO: put JAR into `lib`
+      // "org.archive.helge" %% "sparkling" % "0.2.0-SNAPSHOT" // TODO: put JAR into `lib`,
+      "io.archivesunleashed" % "aut" % "0.80.1-SNAPSHOT" intransitive(),
+      "org.apache.tika" % "tika-core" % "1.22" exclude(org = "com.google.guava", name = "guava"),
+      "org.apache.tika" % "tika-langdetect" % "1.22" exclude(org = "com.google.guava", name = "guava"),
+      "org.jsoup" % "jsoup" % "1.7.3"
     ) ++ Seq(
       "io.circe" %% "circe-core",
       "io.circe" %% "circe-generic",

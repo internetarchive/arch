@@ -17,7 +17,7 @@ object SparkManager {
   val context: Future[SparkContext] = {
     val context = SparkUtil.config(SparkSession.builder, appName = "ARS-cloud", executors = 5, executorCores = 4, executorMemory = "2g", additionalConfigs = Map(
       "spark.master" -> ArsCloudConf.sparkMaster
-    ))
+    ), verbose = true)
     Future(context)
   }
 
