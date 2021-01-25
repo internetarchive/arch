@@ -3,6 +3,6 @@
   "aitCollectionWarcDir": "arcs",
   "jobOutPath": "/data/out",
   "sparkMaster": "local[*]",
-  "baseUrl": "http://127.0.0.1:12341",
-  "loginUrl": "http://127.0.0.1:12341/ait/login?next="
+  "baseUrl": "http://localhost:12341",
+  "loginUrl": "http://localhost:12341/ait/login?next="
 }

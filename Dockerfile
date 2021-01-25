@@ -39,10 +39,9 @@ RUN git fetch origin pull/510/head:ars-cloud
 RUN git checkout ars-cloud
 RUN mvn clean install -DskipTests
 
-# updating sbt with AUT installed
-RUN sbt update
-
+ADD ./ /app/
 WORKDIR /app
+RUN sbt clean update compile
 
 ENTRYPOINT ["sbt"]
 CMD ["run"]
