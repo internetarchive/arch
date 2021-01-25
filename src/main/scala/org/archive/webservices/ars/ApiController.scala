@@ -12,11 +12,11 @@ class ApiController extends BaseController {
         case Some(job) =>
           DerivationJobConf.collection(collectionId) match {
             case Some(conf) =>
-              job.enqueue(conf)
+              val instance = job.enqueue(conf).getOrElse(job.history(conf))
               Ok(Map(
-                "state" -> ProcessingState.Strings.head.asJson,
-                "started" -> true.asJson,
-                "finished" -> false.asJson
+                "state" -> instance.stateStr.asJson,
+                "started" -> (instance.state != ProcessingState.NotStarted).asJson,
+                "finished" -> (instance.state == ProcessingState.Finished).asJson
               ).asJson.spaces4, Map("Content-Type" -> "application/json"))
             case None =>
               NotImplemented()

@@ -14,7 +14,7 @@ object FileCountAndSize extends SparkJob {
   val relativeOutPath = s"/$id.gz"
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
-    SparkManager.context.map { _ =>
+    SparkJobManager.context.map { _ =>
       val singlePartition = RddUtil.loadFilesLocality(conf.inputPath).map { file =>
         (true, (1L, HdfsIO.length(file)))
       }.reduceByKey({case ((c1, s1), (c2, s2)) =>

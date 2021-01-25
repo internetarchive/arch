@@ -8,7 +8,7 @@ import org.archive.webservices.ars.model.ArsCloudConf
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object SparkManager {
+object SparkJobManager {
   val MaxRunning = 5
 
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
@@ -25,12 +25,12 @@ object SparkManager {
 
   def init(): Unit = for (c <- context) println("Spark context initialized: " + c.startTime)
 
-  def enqueue(instance: DerivationJobInstance): Boolean = queue.synchronized {
+  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] = queue.synchronized {
     if (JobManager.register(instance)) {
       queue.enqueue(instance)
       processQueue()
-      true
-    } else false
+      Some(instance)
+    } else None
   }
 
   private def processQueue(): Unit = queue.synchronized {
@@ -42,7 +42,7 @@ object SparkManager {
         val success = opt.toOption.getOrElse(false)
         instance.state = if (success) ProcessingState.Finished else ProcessingState.Failed
         JobManager.unregister(instance)
-        running += 1
+        running -= 1
         processQueue()
       }
     }

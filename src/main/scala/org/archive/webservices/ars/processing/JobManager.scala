@@ -8,7 +8,7 @@ import scala.collection.mutable
 object JobManager {
   private val instances = mutable.Map.empty[String, mutable.Map[String, DerivationJobInstance]]
 
-  val registeredJobs: Seq[SparkJob] = Seq(FileCountAndSize, WebPagesExtraction)
+  val registeredJobs: Seq[DerivationJob] = Seq(FileCountAndSize, WebPagesExtraction)
 
   val jobs: ListMap[String, DerivationJob] = ListMap(registeredJobs.sortBy(_.id).map { job =>
     job.id -> job
@@ -37,7 +37,7 @@ object JobManager {
     }
   }
 
-  def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] = instances.get(collectionId).flatMap(_.get(jobId)).orElse {
+  def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] = getRegistered(collectionId, jobId).orElse {
     jobs.get(jobId).flatMap { job =>
       DerivationJobConf.collection(collectionId).map { conf =>
         job.history(conf)
@@ -45,5 +45,7 @@ object JobManager {
     }
   }
 
-  def getInstances(collectionId: String): Seq[DerivationJobInstance] = instances.get(collectionId).toSeq.flatMap(_.values)
+  def getRegistered(collectionId: String, jobId: String): Option[DerivationJobInstance] = instances.get(collectionId).flatMap(_.get(jobId))
+
+  def registered(collectionId: String): Seq[DerivationJobInstance] = instances.get(collectionId).toSeq.flatMap(_.values)
 }

@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing
 
-trait SparkJob extends DerivationJob {
+trait GenericJob extends DerivationJob {
   override def enqueue(conf: DerivationJobConf, get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
-    super.enqueue(conf, get).flatMap(SparkJobManager.enqueue)
+    super.enqueue(conf, get).flatMap(GenericJobManager.enqueue)
   }
 }
