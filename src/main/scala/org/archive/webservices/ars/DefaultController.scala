@@ -65,13 +65,18 @@ class DefaultController extends BaseController with ScalateSupport {
       val jobId = params("job_id")
       JobManager.getInstance(collectionId, jobId) match {
         case Some(instance) =>
-          val attributes = Seq(
-            "breadcrumbs" -> Seq((relativePath("/analysis/" + collectionId), collectionId), (relativePath("/analysis/" + collectionId + "/" + jobId), instance.job.name)),
-            "user" -> user,
-            "collectionId" -> collectionId,
-            "job" -> instance.job
-          ) ++ instance.templateVariables
-          Ok(ssp(instance.job.templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+          instance.job.templateName match {
+            case Some(templateName) =>
+              val attributes = Seq(
+                "breadcrumbs" -> Seq((relativePath("/analysis/" + collectionId), collectionId), (relativePath("/analysis/" + collectionId + "/" + jobId), instance.job.name)),
+                "user" -> user,
+                "collectionId" -> collectionId,
+                "job" -> instance.job
+              ) ++ instance.templateVariables
+              Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+            case None =>
+              NotImplemented()
+          }
         case None =>
           NotFound()
       }

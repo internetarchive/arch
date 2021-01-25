@@ -1,6 +1,6 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
 <%@ val collectionId: String %>
-<%@ val numFiles: Int %>
+<%@ val resultSize: Long %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJob %>
 
 #set (title)
@@ -15,7 +15,7 @@
 
 <div class="row">
 <div class="large-12 columns">
-    This is a generic template to display the number of output files:
+    This is a generic template to display the size of the output files:
     <br><br>
     <table class="large-12 columns margin-top one">
         <thead>
@@ -26,10 +26,10 @@
         <tbody class="ng-scope">
             <tr>
                 <td class="ng-binding">
-                    Number of output files
+                    File size
                 </td>
                 <td class="ng-scope">
-                    <%=numFiles%>
+                    <%=resultSize%> bytes
                 </td>
             </tr>
         </tbody>

@@ -1,7 +1,7 @@
 package org.archive.webservices.ars
 
 import org.archive.webservices.ars.model.ArsCloudConf
-import org.archive.webservices.ars.processing.SparkManager
+import org.archive.webservices.ars.processing.SparkJobManager
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
@@ -13,7 +13,7 @@ object ArsCloud {
   val BaseDir = "/research_services"
 
   def start(contextPath: String, port: Int): Unit = {
-    SparkManager.init()
+    SparkJobManager.init()
 
     val server = new Server(port)
 
