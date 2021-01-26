@@ -16,7 +16,9 @@ object WebPagesExtraction extends ChainedJob {
   val name = "Extract webpages"
   val relativeOutPath = s"/$id"
 
-  addJob(new PartialDerivationJob(_) with SparkJob {
+  lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
+
+  object Spark extends PartialDerivationJob(this) with SparkJob {
     def succeeded(conf: DerivationJobConf): Boolean = HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
 
     def run(conf: DerivationJobConf): Future[Boolean] = {
@@ -39,9 +41,9 @@ object WebPagesExtraction extends ChainedJob {
       }
       instance
     }
-  })
+  }
 
-  addJob(new PartialDerivationJob(_) with GenericJob {
+  object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     def run(conf: DerivationJobConf): Future[Boolean] = Future {
       import sys.process._
       val outPath = conf.outputPath + relativeOutPath
@@ -65,5 +67,5 @@ object WebPagesExtraction extends ChainedJob {
         "resultSize" -> size
       )
     }
-  })
+  }
 }

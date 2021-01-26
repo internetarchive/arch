@@ -1,3 +1,5 @@
+import sbt.Keys.fork
+
 lazy val commonSettings = Seq(
   name := "ars-cloud",
   version := "0.1.0",
@@ -9,6 +11,7 @@ val circeVersion = "0.10.0"
 lazy val webapp = (project in file(".")).
   settings(commonSettings: _*).
   settings(
+    mainClass in (Compile, run) := Some("org.archive.webservices.ars.ArsCloud"),
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided",

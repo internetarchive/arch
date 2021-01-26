@@ -3,20 +3,17 @@ package org.archive.webservices.ars.processing
 import scala.concurrent.Future
 
 abstract class ChainedJob extends DerivationJob {
-  private var _children: Seq[PartialDerivationJob] = Seq.empty
-  def children: Seq[PartialDerivationJob] = _children
-
-  def addJob(child: ChainedJob => PartialDerivationJob): Unit = _children :+= child(this)
+  def children: Seq[PartialDerivationJob]
 
   def run(conf: DerivationJobConf): Future[Boolean] = throw new UnsupportedOperationException("Cannot run a chained job: " + id)
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    for (finalJob <- _children.lastOption.map(_.history(conf))) {
+    for (finalJob <- children.lastOption.map(_.history(conf))) {
       if (finalJob.state > ProcessingState.Queued) {
         instance.state = finalJob.state
       } else {
-        val firstJob = _children.head.history(conf)
+        val firstJob = children.head.history(conf)
         instance.state = if (firstJob.state > ProcessingState.Running) ProcessingState.Running else firstJob.state
       }
     }
@@ -27,8 +24,8 @@ abstract class ChainedJob extends DerivationJob {
 
   private def onChildComplete(instance: DerivationJobInstance, idx: Int, success: Boolean): Unit = {
     if (success) {
-      if (idx + 1 < _children.size) {
-        val nextChild = _children(idx + 1)
+      if (idx + 1 < children.size) {
+        val nextChild = children(idx + 1)
         val enqueued = nextChild.enqueue(instance.conf, child => child.onStateChanged {
           if (child.state > ProcessingState.Running) onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
         })
@@ -43,10 +40,10 @@ abstract class ChainedJob extends DerivationJob {
   }
 
   override def enqueue(conf: DerivationJobConf, get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
-    if (_children.nonEmpty) {
+    if (children.nonEmpty) {
       super.enqueue(conf, get).filter { instance =>
         JobManager.register(instance) && {
-          val enqueued = _children.head.enqueue(conf, child => child.onStateChanged {
+          val enqueued = children.head.enqueue(conf, child => child.onStateChanged {
             if (child.state > ProcessingState.Running) onChildComplete(instance, 0, child.state == ProcessingState.Finished)
             else instance.state = child.state
           })
