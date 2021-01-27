@@ -26,18 +26,6 @@ RUN apt-get update && apt-get install -y sbt=1.3.8
 
 # initially load dependencies before installing AUT (the other way arround causes weird conflicts and missing classes)
 ADD build.sbt .
-# comment out AUT dependency as it's not available at this point
-RUN sed -i -e 's/"io.archivesunleashed/\/\//g' build.sbt
-ADD project/build.properties project/*.sbt project/
-RUN sbt update
-
-RUN git clone https://github.com/archivesunleashed/aut.git
-
-WORKDIR aut
-
-RUN git fetch origin pull/510/head:ars-cloud
-RUN git checkout ars-cloud
-RUN mvn clean install -DskipTests
 
 ADD ./ /app/
 WORKDIR /app
