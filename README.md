@@ -19,5 +19,6 @@ Demo running under https://webdata.archive-it.org/ait
 2. `cd ars-cloud`
 3. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
 4. `docker build --no-cache -t ars-cloud .`
-5. `docker run -ti --rm -p 12341:12341 -v /home/nruest/Projects/au/sample-data/ars-cloud:/data -v /home/nruest/Projects/au/ars-cloud:/app ars-cloud`
-6. Open `http://localhost:12341/ait`
+5. `docker run -ti --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/ars-cloud:/data -v /home/nruest/Projects/au/ars-cloud:/app ars-cloud`
+6. Open [http://localhost:12341/ait](http://localhost:12341/ait)
+7. Open [http://localhost:54040](http://localhost:54040)
