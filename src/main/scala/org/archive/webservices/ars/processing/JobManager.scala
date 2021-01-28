@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.processing.jobs.{FileCountAndSize, AudioInformationExtraction, WebPagesExtraction}
+import org.archive.webservices.ars.processing.jobs.{FileCountAndSize, AudioInformationExtraction, DomainFrequencyExtraction, WebPagesExtraction}
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -8,7 +8,7 @@ import scala.collection.mutable
 object JobManager {
   private val instances = mutable.Map.empty[String, mutable.Map[String, DerivationJobInstance]]
 
-  val registeredJobs: Seq[DerivationJob] = Seq(FileCountAndSize, AudioInformationExtraction, WebPagesExtraction)
+  val registeredJobs: Seq[DerivationJob] = Seq(FileCountAndSize, AudioInformationExtraction, DomainFrequencyExtraction, WebPagesExtraction)
 
   val jobs: ListMap[String, DerivationJob] = ListMap(registeredJobs.sortBy(_.id).map { job =>
     job.id -> job
