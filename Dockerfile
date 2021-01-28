@@ -7,6 +7,7 @@ LABEL description="Docker image for ars-cloud development"
 LABEL website="https://archive-it.org"
 
 EXPOSE 12341
+EXPOSE 54040
 
 VOLUME /app
 VOLUME /data
