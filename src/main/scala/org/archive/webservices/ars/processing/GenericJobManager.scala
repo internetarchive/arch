@@ -22,9 +22,9 @@ object GenericJobManager {
       instance.state = ProcessingState.Running
       running += 1
       instance.job.run(instance.conf).onComplete { opt =>
+        JobManager.unregister(instance)
         val success = opt.toOption.getOrElse(false)
         instance.state = if (success) ProcessingState.Finished else ProcessingState.Failed
-        JobManager.unregister(instance)
         running -= 1
         processQueue()
       }

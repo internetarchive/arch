@@ -56,8 +56,8 @@ object DomainFrequencyExtraction extends ChainedJob {
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
       val outPath = conf.outputPath + relativeOutPath
-      if (HdfsIO.exists(outPath + "/domain-frequency.tar.gz")) {
-        instance.state = if (HdfsIO.files(outPath + "/*.csv.gz").isEmpty) ProcessingState.Finished else ProcessingState.Failed
+      if (HdfsIO.exists(outPath + "/domain-frequency.csv.gz")) {
+        instance.state = if (HdfsIO.files(outPath + "/*part*").isEmpty) ProcessingState.Finished else ProcessingState.Failed
       }
       instance
     }
