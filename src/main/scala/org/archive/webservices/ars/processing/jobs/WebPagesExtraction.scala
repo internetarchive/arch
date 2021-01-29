@@ -23,7 +23,6 @@ object WebPagesExtraction extends ChainedJob {
 
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
-        // cf. https://github.com/archivesunleashed/aut/blob/5d2bf57c8bb9e19b60df6c85fff28501b276d690/src/main/scala/io/archivesunleashed/app/CommandLineApp.scala#L286
         val df = RddUtil.loadBinary(conf.inputPath, decompress = false, close = false) { (filename, in) =>
           IteratorUtil.cleanup(WarcLoader.load(in).map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)), in.close)
         }.webpages()

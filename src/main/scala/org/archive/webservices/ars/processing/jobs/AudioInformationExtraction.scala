@@ -16,7 +16,9 @@ object AudioInformationExtraction extends ChainedJob {
   val name = "Extract audio information"
   val relativeOutPath = s"/$id"
 
-  addJob(new PartialDerivationJob(_) with SparkJob {
+  lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
+
+  object Spark extends PartialDerivationJob(this) with SparkJob {
     def succeeded(conf: DerivationJobConf): Boolean = HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
 
     def run(conf: DerivationJobConf): Future[Boolean] = {
@@ -38,15 +40,15 @@ object AudioInformationExtraction extends ChainedJob {
       }
       instance
     }
-  })
+  }
 
-  addJob(new PartialDerivationJob(_) with GenericJob {
+  object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     def run(conf: DerivationJobConf): Future[Boolean] = Future {
       import sys.process._
       val outPath = conf.outputPath + relativeOutPath
       Try {
-        Seq("/bin/sh", "-c", "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/audio-information.csv \\;").! == 0
-        Seq("/bin/sh", "-c", "gzip " + outPath + "/audio-information.csv").! == 0
+        Seq("/bin/sh", "-c", "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/audio-information.csv \\;").! == 0 &&
+        Seq("/bin/sh", "-c", "gzip " + outPath + "/audio-information.csv").! == 0 &&
         Seq("/bin/sh", "-c", "find " + outPath + " -iname '*part*' -type f -delete").! == 0
       }.getOrElse(false)
     }
@@ -66,5 +68,5 @@ object AudioInformationExtraction extends ChainedJob {
         "resultSize" -> size
       )
     }
-  })
+  }
 }
