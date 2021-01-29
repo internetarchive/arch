@@ -10,7 +10,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 object SparkJobManager {
-  val SharedSparkContext = false
+  val SharedSparkContext = true
   val MaxRunning = 5
 
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
