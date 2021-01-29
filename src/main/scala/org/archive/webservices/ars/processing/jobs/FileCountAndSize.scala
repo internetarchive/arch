@@ -9,7 +9,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object FileCountAndSize extends SparkJob {
-  val id = "FileCountAndSize"
   val name = "Count files and size"
   val relativeOutPath = s"/$id.gz"
 
