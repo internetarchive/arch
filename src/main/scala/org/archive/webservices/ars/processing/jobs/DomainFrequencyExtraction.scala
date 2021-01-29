@@ -12,7 +12,6 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object DomainFrequencyExtraction extends ChainedJob {
-  val id = "DomainFrequencyExtraction"
   val name = "Domain Frequency"
   val relativeOutPath = s"/$id"
 

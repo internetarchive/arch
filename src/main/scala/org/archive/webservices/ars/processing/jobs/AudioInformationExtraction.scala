@@ -12,7 +12,6 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object AudioInformationExtraction extends ChainedJob {
-  val id = "AudioInformationExtraction"
   val name = "Extract audio information"
   val relativeOutPath = s"/$id"
 

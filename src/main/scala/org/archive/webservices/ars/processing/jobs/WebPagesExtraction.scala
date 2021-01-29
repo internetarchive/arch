@@ -12,7 +12,6 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object WebPagesExtraction extends ChainedJob {
-  val id = "WebPagesExtraction"
   val name = "Extract webpages"
   val relativeOutPath = s"/$id"
 

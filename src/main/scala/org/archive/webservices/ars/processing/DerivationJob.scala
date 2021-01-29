@@ -3,7 +3,8 @@ package org.archive.webservices.ars.processing
 import scala.concurrent.Future
 
 trait DerivationJob {
-  def id: String
+  private val _id: String = getClass.getSimpleName.stripSuffix("$")
+  def id: String = _id
 
   def name: String
 
