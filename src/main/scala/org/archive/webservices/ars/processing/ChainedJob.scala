@@ -29,9 +29,13 @@ abstract class ChainedJob extends DerivationJob {
         val enqueued = nextChild.enqueue(instance.conf, child => child.onStateChanged {
           if (child.state > ProcessingState.Running) onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
         })
-        if (enqueued.isEmpty) JobManager.unregister(instance)
+        if (enqueued.isEmpty) {
+          instance.state = ProcessingState.Failed
+          JobManager.unregister(instance)
+        }
       } else {
         instance.state = ProcessingState.Finished
+        JobManager.unregister(instance)
       }
     } else {
       instance.state = ProcessingState.Failed

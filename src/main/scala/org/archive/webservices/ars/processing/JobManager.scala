@@ -16,25 +16,25 @@ object JobManager {
 
   def get(id: String): Option[DerivationJob] = jobs.get(id)
 
-  def register(instance: DerivationJobInstance): Boolean = {
-    instances.synchronized {
-      val collectionJobs = instances.getOrElseUpdate(instance.conf.collectionId, mutable.Map.empty)
-      if (!collectionJobs.contains(instance.job.id)) {
-        collectionJobs.update(instance.job.id, instance)
-        true
-      } else false
-    }
+  def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
+    val collectionJobs = instances.getOrElseUpdate(instance.conf.collectionId, mutable.Map.empty)
+    if (!collectionJobs.contains(instance.job.id)) {
+      collectionJobs.update(instance.job.id, instance)
+      println("Registered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
+      true
+    } else false
   }
 
-  def unregister(instance: DerivationJobInstance): Boolean = {
-    instances.synchronized {
-      val collectionJobs = instances.get(instance.conf.collectionId)
-      if (collectionJobs.isDefined) {
-        val removed = collectionJobs.get.remove(instance.job.id)
+  def unregister(instance: DerivationJobInstance): Boolean = instances.synchronized {
+    val collectionJobs = instances.get(instance.conf.collectionId)
+    if (collectionJobs.isDefined) {
+      val removed = collectionJobs.get.remove(instance.job.id)
+      if (removed.nonEmpty) {
         if (collectionJobs.get.isEmpty) instances.remove(instance.conf.collectionId)
-        removed.isDefined
+        println("Unregistered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
+        true
       } else false
-    }
+    } else false
   }
 
   def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] = getRegistered(collectionId, jobId).orElse {

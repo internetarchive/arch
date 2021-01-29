@@ -47,9 +47,9 @@ object SparkJobManager {
       instance.state = ProcessingState.Running
       running += 1
       run(instance.job, instance.conf).onComplete { opt =>
+        JobManager.unregister(instance)
         val success = opt.toOption.getOrElse(false)
         instance.state = if (success) ProcessingState.Finished else ProcessingState.Failed
-        JobManager.unregister(instance)
         running -= 1
         processQueue()
       }
