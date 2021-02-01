@@ -12,16 +12,19 @@ trait DerivationJob {
 
   def run(conf: DerivationJobConf): Future[Boolean]
 
-  def enqueue(conf: DerivationJobConf, get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
+  def enqueue(
+      conf: DerivationJobConf,
+      get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
     val instance = DerivationJobInstance(this, conf)
     instance.state = ProcessingState.Queued
     get(instance)
     Some(instance)
   }
 
-  def history(conf: DerivationJobConf): DerivationJobInstance = JobManager.getRegistered(conf.collectionId, id).getOrElse {
-    DerivationJobInstance(this, conf)
-  }
+  def history(conf: DerivationJobConf): DerivationJobInstance =
+    JobManager.getRegistered(conf.collectionId, id).getOrElse {
+      DerivationJobInstance(this, conf)
+    }
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 }

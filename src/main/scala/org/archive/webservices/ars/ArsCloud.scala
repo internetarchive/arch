@@ -22,7 +22,9 @@ object ArsCloud {
     context.setResourceBase("webapp")
     context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false")
     context.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false")
-    context.setInitParameter(ScalatraListener.LifeCycleKey, classOf[ScalatraBootstrap].getCanonicalName)
+    context.setInitParameter(
+      ScalatraListener.LifeCycleKey,
+      classOf[ScalatraBootstrap].getCanonicalName)
 //    context.setInitParameter(org.scalatra.EnvironmentKey, "production")
     context.setEventListeners(Array(new ScalatraListener))
 

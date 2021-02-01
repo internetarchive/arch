@@ -10,11 +10,13 @@ import scala.util.Try
 class BaseController extends ScalatraServlet {
   def login(url: String): ActionResult = TemporaryRedirect(ArsCloudConf.loginUrl + url)
 
-  def chooseAccount(): ActionResult = TemporaryRedirect("https://partner.archive-it.org/choose_account")
+  def chooseAccount(): ActionResult =
+    TemporaryRedirect("https://partner.archive-it.org/choose_account")
 
   def ensureLogin(action: AitUser => ActionResult): ActionResult = ensureLogin()(action)
 
-  def ensureLogin(requiresLogin: Boolean = true, redirect: Boolean = true)(action: AitUser => ActionResult): ActionResult = {
+  def ensureLogin(requiresLogin: Boolean = true, redirect: Boolean = true)(
+      action: AitUser => ActionResult): ActionResult = {
     if (requiresLogin) {
       val user = Ait.user
       if (user.isDefined) {
@@ -25,7 +27,8 @@ class BaseController extends ScalatraServlet {
     } else action(AitUser.None)
   }
 
-  def ensureUserBasePath(userIdKey: String)(action: AitUser => ActionResult)(implicit request: HttpServletRequest): ActionResult = {
+  def ensureUserBasePath(userIdKey: String)(action: AitUser => ActionResult)(
+      implicit request: HttpServletRequest): ActionResult = {
     val userId = params(userIdKey)
     val path = requestPath.stripPrefix("/" + userId)
     Try(userId.toInt).toOption match {
@@ -45,7 +48,8 @@ class BaseController extends ScalatraServlet {
     }
   }
 
-  def relativePath(relative: String, dir: String = ArsCloud.BaseDir)(implicit user: AitUser): String = {
+  def relativePath(relative: String, dir: String = ArsCloud.BaseDir)(
+      implicit user: AitUser): String = {
     ArsCloud.BaseUrl + "/" + user.idStr + dir + relative
   }
 }

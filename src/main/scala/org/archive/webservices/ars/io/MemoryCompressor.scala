@@ -2,7 +2,10 @@ package org.archive.webservices.ars.io
 
 import java.io.{ByteArrayOutputStream, EOFException, InputStream}
 
-import org.apache.commons.compress.compressors.bzip2.{BZip2CompressorInputStream, BZip2CompressorOutputStream}
+import org.apache.commons.compress.compressors.bzip2.{
+  BZip2CompressorInputStream,
+  BZip2CompressorOutputStream
+}
 import org.archive.helge.sparkling.io.ByteArray
 
 object MemoryCompressor {
@@ -31,5 +34,6 @@ object MemoryCompressor {
     array
   }
 
-  def decompress(array: ByteArray): InputStream = new BZip2CompressorInputStream(array.toInputStream)
+  def decompress(array: ByteArray): InputStream =
+    new BZip2CompressorInputStream(array.toInputStream)
 }

@@ -5,11 +5,7 @@ import _root_.io.circe.syntax._
 import _root_.io.circe.parser._
 import io.circe.{Decoder, Json}
 
-case class DerivationJobConf (
-  collectionId: String,
-  inputPath: String,
-  outputPath: String
-) {
+case class DerivationJobConf(collectionId: String, inputPath: String, outputPath: String) {
   def serialize: String = DerivationJobConf.unapply(this).get.asJson.noSpaces
 }
 
@@ -27,7 +23,8 @@ object DerivationJobConf {
   }
 
   def deserialize(conf: String): DerivationJobConf = {
-    def getOrElse[A](json: Json, orElse: A)(implicit decoder: Decoder[A]): A = json.as[A].getOrElse(orElse)
+    def getOrElse[A](json: Json, orElse: A)(implicit decoder: Decoder[A]): A =
+      json.as[A].getOrElse(orElse)
     (DerivationJobConf.apply _).tupled(getOrElse(parse(conf).toOption.get, ("", "", "")))
   }
 }

@@ -12,10 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object SparkRunner {
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = Future {
     val mainClass = getClass.getName.stripSuffix("$")
-    val args = Seq(
-      job.getClass.getName,
-      conf.serialize
-    )
+    val args = Seq(job.getClass.getName, conf.serialize)
 
     val command = System.getProperty("sun.java.command")
     val jar = command.split(' ').head
