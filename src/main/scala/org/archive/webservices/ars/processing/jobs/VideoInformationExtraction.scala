@@ -18,14 +18,22 @@ object VideoInformationExtraction extends ChainedJob {
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
-    def succeeded(conf: DerivationJobConf): Boolean = HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
+    def succeeded(conf: DerivationJobConf): Boolean =
+      HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
 
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
-        val df = RddUtil.loadBinary(conf.inputPath, decompress = false, close = false) { (filename, in) =>
-          IteratorUtil.cleanup(WarcLoader.load(in).map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)), in.close)
-        }.videos()
-        VideoInformationExtractor(df).write.option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ").format("csv").csv(conf.outputPath + relativeOutPath)
+        val df = RddUtil
+          .loadBinary(conf.inputPath, decompress = false, close = false) { (filename, in) =>
+            IteratorUtil.cleanup(
+              WarcLoader.load(in).map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
+              in.close)
+          }
+          .videos()
+        VideoInformationExtractor(df).write
+          .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
+          .format("csv")
+          .csv(conf.outputPath + relativeOutPath)
         succeeded(conf)
       }
     }
@@ -46,7 +54,10 @@ object VideoInformationExtraction extends ChainedJob {
       import sys.process._
       val outPath = conf.outputPath + relativeOutPath
       Try {
-        Seq("/bin/sh", "-c", "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/video-information.csv \\;").! == 0 &&
+        Seq(
+          "/bin/sh",
+          "-c",
+          "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/video-information.csv \\;").! == 0 &&
         Seq("/bin/sh", "-c", "gzip " + outPath + "/video-information.csv").! == 0 &&
         Seq("/bin/sh", "-c", "find " + outPath + " -iname '*part*' -type f -delete").! == 0
       }.getOrElse(false)
@@ -56,16 +67,17 @@ object VideoInformationExtraction extends ChainedJob {
       val instance = super.history(conf)
       val outPath = conf.outputPath + relativeOutPath
       if (HdfsIO.exists(outPath + "/video-information.csv.gz")) {
-        instance.state = if (HdfsIO.files(outPath + "/*part*").isEmpty) ProcessingState.Finished else ProcessingState.Failed
+        instance.state =
+          if (HdfsIO.files(outPath + "/*part*").isEmpty) ProcessingState.Finished
+          else ProcessingState.Failed
       }
       instance
     }
 
     override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-      val size = HdfsIO.files(conf.outputPath + relativeOutPath + "/*.csv.gz").map(HdfsIO.length).sum
-      Seq(
-        "resultSize" -> size
-      )
+      val size =
+        HdfsIO.files(conf.outputPath + relativeOutPath + "/*.csv.gz").map(HdfsIO.length).sum
+      Seq("resultSize" -> size)
     }
   }
 }

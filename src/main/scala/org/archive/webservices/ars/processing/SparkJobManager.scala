@@ -17,9 +17,14 @@ object SparkJobManager {
   private var running = 0
 
   lazy val context: Future[SparkContext] = {
-    val context = SparkUtil.config(SparkSession.builder, appName = "ARS-cloud", executors = 5, executorCores = 4, executorMemory = "2g", additionalConfigs = Map(
-      "spark.master" -> ArsCloudConf.sparkMaster
-    ), verbose = true)
+    val context = SparkUtil.config(
+      SparkSession.builder,
+      appName = "ARS-cloud",
+      executors = 5,
+      executorCores = 4,
+      executorMemory = "2g",
+      additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
+      verbose = true)
     context.setLogLevel("INFO")
     println("Spark context initialized: " + context.applicationId)
     Future(context)
@@ -29,13 +34,14 @@ object SparkJobManager {
 
   def init(): Unit = if (SharedSparkContext) Await.ready(context, Duration.Inf)
 
-  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] = queue.synchronized {
-    if (JobManager.register(instance)) {
-      queue.enqueue(instance)
-      processQueue()
-      Some(instance)
-    } else None
-  }
+  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] =
+    queue.synchronized {
+      if (JobManager.register(instance)) {
+        queue.enqueue(instance)
+        processQueue()
+        Some(instance)
+      } else None
+    }
 
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {
     if (SharedSparkContext) job.run(conf) else SparkRunner.run(job, conf)

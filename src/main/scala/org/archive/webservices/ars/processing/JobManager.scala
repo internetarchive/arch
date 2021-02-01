@@ -1,6 +1,17 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.processing.jobs.{FileCountAndSize, AudioInformationExtraction, DomainFrequencyExtraction, WebPagesExtraction, PdfInformationExtraction, PresentationProgramInformationExtraction, SpreadsheetInformationExtraction, VideoInformationExtraction, WordProcessorInformationExtraction, ImageInformationExtraction}
+import org.archive.webservices.ars.processing.jobs.{
+  AudioInformationExtraction,
+  DomainFrequencyExtraction,
+  FileCountAndSize,
+  ImageInformationExtraction,
+  PdfInformationExtraction,
+  PresentationProgramInformationExtraction,
+  SpreadsheetInformationExtraction,
+  VideoInformationExtraction,
+  WebPagesExtraction,
+  WordProcessorInformationExtraction
+}
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -8,7 +19,17 @@ import scala.collection.mutable
 object JobManager {
   private val instances = mutable.Map.empty[String, mutable.Map[String, DerivationJobInstance]]
 
-  val registeredJobs: Seq[DerivationJob] = Seq(FileCountAndSize, AudioInformationExtraction, DomainFrequencyExtraction, WebPagesExtraction, PdfInformationExtraction, PresentationProgramInformationExtraction, SpreadsheetInformationExtraction, VideoInformationExtraction, WordProcessorInformationExtraction, ImageInformationExtraction)
+  val registeredJobs: Seq[DerivationJob] = Seq(
+    AudioInformationExtraction,
+    DomainFrequencyExtraction,
+    FileCountAndSize,
+    ImageInformationExtraction,
+    PdfInformationExtraction,
+    PresentationProgramInformationExtraction,
+    SpreadsheetInformationExtraction,
+    VideoInformationExtraction,
+    WebPagesExtraction,
+    WordProcessorInformationExtraction)
 
   val jobs: ListMap[String, DerivationJob] = ListMap(registeredJobs.sortBy(_.id).map { job =>
     job.id -> job
@@ -37,15 +58,18 @@ object JobManager {
     } else false
   }
 
-  def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] = getRegistered(collectionId, jobId).orElse {
-    jobs.get(jobId).flatMap { job =>
-      DerivationJobConf.collection(collectionId).map { conf =>
-        job.history(conf)
+  def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] =
+    getRegistered(collectionId, jobId).orElse {
+      jobs.get(jobId).flatMap { job =>
+        DerivationJobConf.collection(collectionId).map { conf =>
+          job.history(conf)
+        }
       }
     }
-  }
 
-  def getRegistered(collectionId: String, jobId: String): Option[DerivationJobInstance] = instances.get(collectionId).flatMap(_.get(jobId))
+  def getRegistered(collectionId: String, jobId: String): Option[DerivationJobInstance] =
+    instances.get(collectionId).flatMap(_.get(jobId))
 
-  def registered(collectionId: String): Seq[DerivationJobInstance] = instances.get(collectionId).toSeq.flatMap(_.values)
+  def registered(collectionId: String): Seq[DerivationJobInstance] =
+    instances.get(collectionId).toSeq.flatMap(_.values)
 }

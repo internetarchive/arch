@@ -8,13 +8,14 @@ object GenericJobManager {
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
   private var running = 0
 
-  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] = queue.synchronized {
-    if (JobManager.register(instance)) {
-      queue.enqueue(instance)
-      processQueue()
-      Some(instance)
-    } else None
-  }
+  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] =
+    queue.synchronized {
+      if (JobManager.register(instance)) {
+        queue.enqueue(instance)
+        processQueue()
+        Some(instance)
+      } else None
+    }
 
   private def processQueue(): Unit = queue.synchronized {
     if (running < MaxRunning && queue.nonEmpty) {

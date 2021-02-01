@@ -13,11 +13,12 @@ class ApiController extends BaseController {
           DerivationJobConf.collection(collectionId) match {
             case Some(conf) =>
               val instance = job.enqueue(conf).getOrElse(job.history(conf))
-              Ok(Map(
-                "state" -> instance.stateStr.asJson,
-                "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-                "finished" -> (instance.state == ProcessingState.Finished).asJson
-              ).asJson.spaces4, Map("Content-Type" -> "application/json"))
+              Ok(
+                Map(
+                  "state" -> instance.stateStr.asJson,
+                  "started" -> (instance.state != ProcessingState.NotStarted).asJson,
+                  "finished" -> (instance.state == ProcessingState.Finished).asJson).asJson.spaces4,
+                Map("Content-Type" -> "application/json"))
             case None =>
               NotImplemented()
           }
@@ -33,11 +34,12 @@ class ApiController extends BaseController {
       val collectionId = params("collectionid")
       JobManager.getInstance(collectionId, jobId) match {
         case Some(instance) =>
-          Ok(Map(
-            "state" -> instance.stateStr.asJson,
-            "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-            "finished" -> (instance.state == ProcessingState.Finished).asJson
-          ).asJson.spaces4, Map("Content-Type" -> "application/json"))
+          Ok(
+            Map(
+              "state" -> instance.stateStr.asJson,
+              "started" -> (instance.state != ProcessingState.NotStarted).asJson,
+              "finished" -> (instance.state == ProcessingState.Finished).asJson).asJson.spaces4,
+            Map("Content-Type" -> "application/json"))
         case None =>
           NotFound()
       }
