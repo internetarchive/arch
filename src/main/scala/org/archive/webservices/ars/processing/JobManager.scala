@@ -3,12 +3,15 @@ package org.archive.webservices.ars.processing
 import org.archive.webservices.ars.processing.jobs.{
   AudioInformationExtraction,
   DomainFrequencyExtraction,
+  DomainGraphExtraction,
   FileCountAndSize,
+  ImageGraphExtraction,
   ImageInformationExtraction,
   PdfInformationExtraction,
   PresentationProgramInformationExtraction,
   SpreadsheetInformationExtraction,
   VideoInformationExtraction,
+  WebGraphExtraction,
   WebPagesExtraction,
   WordProcessorInformationExtraction
 }
@@ -22,12 +25,15 @@ object JobManager {
   val registeredJobs: Seq[DerivationJob] = Seq(
     AudioInformationExtraction,
     DomainFrequencyExtraction,
+    DomainGraphExtraction,
     FileCountAndSize,
+    ImageGraphExtraction,
     ImageInformationExtraction,
     PdfInformationExtraction,
     PresentationProgramInformationExtraction,
     SpreadsheetInformationExtraction,
     VideoInformationExtraction,
+    WebGraphExtraction,
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
