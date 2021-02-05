@@ -13,6 +13,8 @@ import scala.util.Try
 
 object PdfInformationExtraction extends ChainedJob {
   val name = "Extract PDF information"
+  override val category = "Binary Information"
+  override val description = "This will output a single file with the following columns: crawl date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

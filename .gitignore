@@ -218,4 +218,12 @@ spark-warehouse/
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij,scala,spark,sbt
 
+# metals
+.metals/
+.bloop/
+project/.bloop/
+project/metals.sbt
+project/project/
+# End of metals
+
 config/config.json

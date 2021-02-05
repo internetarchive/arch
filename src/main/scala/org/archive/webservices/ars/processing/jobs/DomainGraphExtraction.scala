@@ -13,6 +13,8 @@ import scala.util.Try
 
 object DomainGraphExtraction extends ChainedJob {
   val name = "Extract domain graph"
+  override val category = "Network"
+  override val description = "This will output a single file with the following columns crawl date, source domain, destination domain, and count."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
