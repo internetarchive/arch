@@ -13,6 +13,8 @@ import scala.util.Try
 
 object ImageInformationExtraction extends ChainedJob {
   val name = "Extract image information"
+  override val category = "Image Data"
+  override val description = "This will output a single file with the following columns: crawl date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

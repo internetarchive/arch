@@ -13,6 +13,8 @@ import scala.util.Try
 
 object PresentationProgramInformationExtraction extends ChainedJob {
   val name = "Extract presentation program information"
+  override val category = "Binary Information"
+  override val description = "This will output a single file with the following columns: crawl date, URL of the presentation program file, filename, presentation program extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, presentation program MD5 hash and presentation program SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

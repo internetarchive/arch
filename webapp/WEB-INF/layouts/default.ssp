@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css?c=datetimenow">
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css?c=datetimenow">
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css?c=datetimenow">
+<link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
 <link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
 <link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
 <link rel="apple-touch-icon" sizes="72x72" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-72x72.png">

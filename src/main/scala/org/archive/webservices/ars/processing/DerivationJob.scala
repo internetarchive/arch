@@ -8,6 +8,10 @@ trait DerivationJob {
 
   def name: String
 
+  def category: String = ""
+
+  def description: String = ""
+
   def templateName: Option[String] = Some("jobs/" + id)
 
   def run(conf: DerivationJobConf): Future[Boolean]

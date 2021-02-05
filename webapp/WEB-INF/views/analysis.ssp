@@ -7,46 +7,36 @@
 #end
 
 #set (subtitle)
-    Job Overview
+    Web Archive Derivative Datasets
 #end
 
 <br><br>
 
 <div class="row">
-<div class="large-12 columns">
-    <table class="large-12 columns margin-top one">
-        <thead>
-            <tr>
-                <th>Job Name</th>
-                <th colspan="2">State</th>
-            </tr>
-        </thead>
-        <tbody class="ng-scope">
-            <% for (instance <- jobs) { %>
-                <tr id="row<%=unescape(instance.job.id)%>">
-                    <td class="ng-binding">
-                    <%=instance.job.name%>
-                    </td>
-                    <td class="ng-scope jobstate">
-                    <%=instance.stateStr%>
-                    </td>
-                    <td class="ng-scope" style="text-align: right;">
-                        <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">
-                            Run
-                        </div>
-                        <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display: none;">
-                            View Results
-                        </div>
-                        <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">
-                            View Results
-                        </a>
-                    </td>
-                </tr>
-                <script type="text/javascript">
-                    initJob("row<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-                </script>
-            <% } %>
-        </tbody>
-    </table>
-</div>
+  <div class="large-12 columns">
+    <h2>Category Name</h2>
+    <p>Category description.</p>
+    <div class="card-columns">
+      <% for (instance <- jobs) { %>
+        <div class="card" id="card-<%=unescape(instance.job.id)%>">
+          <div class="card-body">
+            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
+            <p class="card-text"><%=instance.job.description%></p>
+            <p class="card-text"><%=instance.job.category%></p>
+            <div class="ng-scope">
+              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
+              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+            </div>
+            <script type="text/javascript">
+                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
+            </script>
+            <div class="ng-scope">
+              <p class="card-text right">Job status: <%=instance.stateStr%></p>
+            </div>
+          </div>
+        </div>
+        <% } %>
+    </div>
+  </div>
 </div>

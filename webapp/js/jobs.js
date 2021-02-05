@@ -1,30 +1,30 @@
-function initJob(rowId, collectionId, jobId) {
-    var $row = $("#" + rowId);
+function initJob(cardId, collectionId, jobId) {
+    var $card = $("#" + cardId);
 
-    $row.find(".job-runbutton").click(function () {
+    $card.find(".job-runbutton").click(function () {
         $.getJSON("/ait/api/runjob/" + jobId + "/" + collectionId, function (json) {
-            $row.find(".jobstate").text(json.state);
-            $row.find(".job-button").css("display", "none");
+            $card.find(".jobstate").text(json.state);
+            $card.find(".job-button").css("display", "none");
             if (!json.started) {
-                $row.find(".job-runbutton").css("display", "block");
+                $card.find(".job-runbutton").css("display", "block");
             } else if (json.finished) {
-                $row.find(".job-resultsbutton").css("display", "block");
+                $card.find(".job-resultsbutton").css("display", "block");
             } else {
-                $row.find(".job-resultsbutton-disabled").css("display", "block");
+                $card.find(".job-resultsbutton-disabled").css("display", "block");
             }
         });
     });
 
     function update() {
         $.getJSON("/ait/api/jobstate/" + jobId + "/" + collectionId, function (json) {
-            $row.find(".jobstate").text(json.state);
-            $row.find(".job-button").css("display", "none");
+            $card.find(".jobstate").text(json.state);
+            $card.find(".job-button").css("display", "none");
             if (!json.started) {
-                $row.find(".job-runbutton").css("display", "block");
+                $card.find(".job-runbutton").css("display", "block");
             } else if (json.finished) {
-                $row.find(".job-resultsbutton").css("display", "block");
+                $card.find(".job-resultsbutton").css("display", "block");
             } else {
-                $row.find(".job-resultsbutton-disabled").css("display", "block");
+                $card.find(".job-resultsbutton-disabled").css("display", "block");
             }
         });
     }

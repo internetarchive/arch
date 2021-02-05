@@ -13,6 +13,8 @@ import scala.util.Try
 
 object WordProcessorInformationExtraction extends ChainedJob {
   val name = "Extract word processor information"
+  override val category = "Binary Information"
+  override val description = "This will output a single file with the following columns: crawl date, URL of the word processor program file, filename, word processor program extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, word processor program MD5 hash and word processor program SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

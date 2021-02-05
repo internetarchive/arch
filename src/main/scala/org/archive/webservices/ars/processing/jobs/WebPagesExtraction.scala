@@ -13,6 +13,8 @@ import scala.util.Try
 
 object WebPagesExtraction extends ChainedJob {
   val name = "Extract webpages"
+  override val category = "Text"
+  override val description = "This will output a single file with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
