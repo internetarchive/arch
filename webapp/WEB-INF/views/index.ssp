@@ -2,7 +2,7 @@
 <%@ val collections: Seq[(String, String, String)] %>
 
 #set (title)
-    Research Services Cloud
+    Datasets
 #end
 
 #set (subtitle)
@@ -45,41 +45,25 @@
             <thead>
                 <tr>
                     <th>Collection Name</th>
+                    <th>Public Collection</th>
+                    <th>Datasets Created</th>
+                    <th>Last Created</th>
                     <th>Size</th>
                 </tr>
             </thead>
             <tbody class="ng-scope">
-                <!--
-                <tr>
-                    <td class="ng-binding">Test Collection</td>
-                    <td class="ng-scope">
-                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
-                        Request WAT File
-                    </div>
-                    </td>
-                    <td class="ng-scope">
-                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
-                        Request LGA File
-                    </div>
-                    </td>
-                    <td class="ng-scope">
-                    <div class="button tiny margin-top margin-bottom padding-top padding-bottom half ng-binding secondary" ng-class="buttonClass(fileType, collection.id)" ng-click="performAction(collection.id, fileType)">
-                        Request WANE File
-                    </div>
-                    </td>
-                    <td>
-                        <a class="button tiny margin-top margin-bottom padding-top padding-bottom half" href="https://support.archive-it.org/hc/en-us/articles/209643793-Partner-Guide-to-Downloading-Archive-It-Data" target="_blank">
-                        Download (W)ARC File
-                        </a>
-                    </td>
-                </tr>
-                -->
                 <% for ((collectionId, collectionName, sizeStr) <- collections) { %>
                     <tr>
                         <td class="ng-binding">
                             <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>">
                                 <%=collectionName%>
                             </a>
+                        </td>
+                        <td class="ng-scope">
+                        </td>
+                        <td class="ng-scope">
+                        </td>
+                        <td class="ng-scope">
                         </td>
                         <td class="ng-scope">
                             <%=sizeStr%>

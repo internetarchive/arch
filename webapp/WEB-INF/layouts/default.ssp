@@ -64,7 +64,7 @@
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/collections">Collections</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/crawls">Crawls</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/archives">Archives</a></li>
-                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Research</a></li>
+                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Datasets</a></li>
             </ul>
         </section>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
