@@ -36,17 +36,20 @@ class DefaultController extends BaseController with ScalateSupport {
                     .right
                     .toOption
                     .map(id =>
-                      ("ARCHIVEIT-" + id, c.get[String]("name").right.getOrElse(id.toString))))
+                      (
+                        "ARCHIVEIT-" + id,
+                        c.get[String]("name").right.getOrElse(id.toString),
+                        c.get[Boolean]("publicly_visible").right.getOrElse(id.toString))))
               .toSeq)
         }
         .getOrElse(Seq.empty)
       val collections = aitCollections.flatMap {
-        case (id, name) =>
+        case (id, name, publicly_visible) =>
           DerivationJobConf.collection(id).map { conf =>
             val sizeStr = StringUtil.formatNumber(
               HdfsIO.files(conf.inputPath).map(HdfsIO.length).sum.toDouble / 1.gb,
               2) + " GB"
-            (id, name, sizeStr)
+            (id, name, publicly_visible, sizeStr)
           }
       }
       Ok(
