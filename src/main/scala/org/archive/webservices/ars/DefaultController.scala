@@ -36,11 +36,14 @@ class DefaultController extends BaseController with ScalateSupport {
                   c.get[Int]("id")
                     .right
                     .toOption
-                    .map(id =>
-                      (
-                        "ARCHIVEIT-" + id,
-                        c.get[String]("name").right.getOrElse(id.toString),
-                        c.get[Boolean]("publicly_visible").right.getOrElse(id.toString))))
+                    .map(
+                      id =>
+                        (
+                          "ARCHIVEIT-" + id,
+                          c.get[String]("name").right.getOrElse(id.toString),
+                          c.get[Boolean]("publicly_visible")
+                            .right
+                            .getOrElse(id.toString))))
               .toSeq)
         }
         .getOrElse(Seq.empty)

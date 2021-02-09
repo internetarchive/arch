@@ -52,7 +52,7 @@
                 </tr>
             </thead>
             <tbody class="ng-scope">
-                <% for ((collectionId, collectionName, publiclyVisible, sizeStr) <- collections) { %>
+                <% for ((collectionId, collectionName, publiclyVisible, sizeStr) <- collections) {%>
                     <tr>
                         <td class="ng-binding">
                             <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>">
@@ -60,7 +60,7 @@
                             </a>
                         </td>
                         <td class="ng-scope">
-                          <%=unescape(publiclyVisible)%>
+                          <%=if (publiclyVisible == true) {"Yes"} else {"No"}%>
                         </td>
                         <td class="ng-scope">
                         </td>
