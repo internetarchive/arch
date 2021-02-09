@@ -34,7 +34,7 @@
                 <p class="card-text"><%=instance.job.description%></p>
                 <div class="ng-scope">
                   <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">In Progress</div>
                   <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
                 </div>
                 <script type="text/javascript">
