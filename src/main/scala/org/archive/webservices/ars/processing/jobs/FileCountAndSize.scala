@@ -3,6 +3,7 @@ package org.archive.webservices.ars.processing.jobs
 import org.archive.helge.sparkling.Sparkling
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.RddUtil
+import org.archive.webservices.ars.model.ArsCloudJobCategories
 import org.archive.webservices.ars.processing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,6 +11,9 @@ import scala.concurrent.Future
 
 object FileCountAndSize extends SparkJob {
   val name = "Count files and size"
+  val category = ArsCloudJobCategories.None
+  def description = "Demo job."
+
   val relativeOutPath = s"/$id.gz"
 
   def run(conf: DerivationJobConf): Future[Boolean] = {

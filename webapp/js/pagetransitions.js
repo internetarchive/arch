@@ -1,7 +1,10 @@
+var onPageTransition = [];
+
 $(function () {
     var currentTransition = {};
 
     function transition(url, popstate) {
+        for (let event of onPageTransition) event();
         var transitionId = {};
         currentTransition = transitionId;
         $.get(url, function (data) {
@@ -11,6 +14,8 @@ $(function () {
                 initPageTransitions($newBody);
                 $("body").empty().append($newBody);
                 $("title").html(title);
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
                 if (!popstate) history.pushState({}, title, url);
             }
         });
