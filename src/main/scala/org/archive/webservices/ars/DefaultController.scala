@@ -4,6 +4,7 @@ import org.archive.helge.sparkling._
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.Ait
+import org.archive.webservices.ars.model.ArsCloudJobCategories
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
@@ -71,7 +72,13 @@ class DefaultController extends BaseController with ScalateSupport {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
       val jobs =
-        JobManager.jobs.values.toSeq.flatMap(job => JobManager.getInstance(collectionId, job.id))
+        JobManager.jobs.values.toSeq
+          .flatMap { job =>
+            JobManager.getInstance(collectionId, job.id)
+          }
+          .filter(_.job.category != ArsCloudJobCategories.None)
+          .groupBy(_.job.category)
+          .mapValues(_.sortBy(_.job.name))
       Ok(
         ssp(
           "analysis",

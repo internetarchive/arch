@@ -1,6 +1,6 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
 <%@ val collectionId: String %>
-<%@ val jobs: Seq[org.archive.webservices.ars.processing.DerivationJobInstance] %>
+<%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[org.archive.webservices.ars.processing.DerivationJobInstance]] %>
 
 #set (title)
     Analyze <%=collectionId%>
@@ -14,128 +14,41 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <h2>Collection</h2>
-    <p>Provides a basic overview of the collection.</p>
-    <div class="card-deck">
-      <% for (instance <- jobs if instance.job.category == "Collection") { %>
-        <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
-          <div class="card-body">
-            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-            <p class="card-text"><%=instance.job.description%></p>
-            <div class="ng-scope">
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
-            </div>
-            <script type="text/javascript">
-                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-            </script>
-            <div class="ng-scope">
-              <p class="card-text right">Job status: <%=instance.stateStr%></p>
-            </div>
-          </div>
-        </div>
-      <% } %>
-    </div>
-    <br /><br />
 
-    <h2>Network</h2>
-    <p>These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.</p>
-    <div class="card-deck">
-      <% for (instance <- jobs if instance.job.category == "Network") { %>
-        <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
-          <div class="card-body">
-            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-            <p class="card-text"><%=instance.job.description%></p>
-            <div class="ng-scope">
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+    <%
+    import org.archive.webservices.ars.model._
+    for ((category, categoryDescription) <- Seq(
+        (ArsCloudJobCategories.Collection, "Provides a basic overview of the collection."),
+        (ArsCloudJobCategories.Network, "These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
+        (ArsCloudJobCategories.Text, "The full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
+        (ArsCloudJobCategories.ImageData, "The following datasets contain information on images: their types, locations, and basic statistical information about them."),
+        (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
+    )) { %>
+        <h2><%=category%></h2>
+        <p><%=categoryDescription%></p>
+        <div class="card-deck">
+          <% for (instance <- jobs(category)) { %>
+            <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
+              <div class="card-body">
+                <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
+                <p class="card-text"><%=instance.job.description%></p>
+                <div class="ng-scope">
+                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
+                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+                  <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+                </div>
+                <script type="text/javascript">
+                    initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
+                </script>
+                <div class="ng-scope">
+                  <p class="card-text right">Job status: <%=instance.stateStr%></p>
+                </div>
+              </div>
             </div>
-            <script type="text/javascript">
-                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-            </script>
-            <div class="ng-scope">
-              <p class="card-text right">Job status: <%=instance.stateStr%></p>
-            </div>
-          </div>
+          <% } %>
         </div>
-      <% } %>
-    </div>
-    <br /><br />
+        <br /><br />
+    <% } %>
 
-    <h2>Text</h2>
-    <p>The full text of a web collection can be invaluable for analysis. The following datasets provide access to the "plain text" of a collection, extracted from web page HTML.</p>
-    <div class="card-deck">
-      <% for (instance <- jobs if instance.job.category == "Text") { %>
-        <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
-          <div class="card-body">
-            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-            <p class="card-text"><%=instance.job.description%></p>
-            <div class="ng-scope">
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
-            </div>
-            <script type="text/javascript">
-                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-            </script>
-            <div class="ng-scope">
-              <p class="card-text right">Job status: <%=instance.stateStr%></p>
-            </div>
-          </div>
-        </div>
-      <% } %>
-    </div>
-    <br /><br />
-
-    <h2>Image Data</h2>
-    <p>The following datasets contain information on images: their types, locations, and basic statistical information about them.</p>
-    <div class="card-deck">
-      <% for (instance <- jobs if instance.job.category == "Image Data") { %>
-        <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
-          <div class="card-body">
-            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-            <p class="card-text"><%=instance.job.description%></p>
-            <div class="ng-scope">
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
-            </div>
-            <script type="text/javascript">
-                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-            </script>
-            <div class="ng-scope">
-              <p class="card-text right">Job status: <%=instance.stateStr%></p>
-            </div>
-          </div>
-        </div>
-      <% } %>
-    </div>
-    <br /><br />
-
-    <h2>Binary Information</h2>
-    <p>The following datasets contain information on certain types of binary files found within a web archive.</p>
-    <div class="card-deck">
-      <% for (instance <- jobs if instance.job.category == "Binary Information") { %>
-        <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
-          <div class="card-body">
-            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-            <p class="card-text"><%=instance.job.description%></p>
-            <div class="ng-scope">
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-              <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-              <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
-            </div>
-            <script type="text/javascript">
-                initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
-            </script>
-            <div class="ng-scope">
-              <p class="card-text right">Job status: <%=instance.stateStr%></p>
-            </div>
-          </div>
-        </div>
-      <% } %>
-    </div>
   </div>
 </div>

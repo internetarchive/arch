@@ -1,8 +1,11 @@
 package org.archive.webservices.ars.processing
+import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 
 abstract class PartialDerivationJob(parent: ChainedJob) extends DerivationJob {
-  override def id: String = parent.id + "_" + super.id
+  override lazy val id: String = parent.id + "_" + super.id
   def name: String = id
+  def category: ArsCloudJobCategory = ArsCloudJobCategories.None
+  def description: String = id
   override def templateName: Option[String] = None
   override def enqueue(
       conf: DerivationJobConf,
