@@ -1,85 +1,18 @@
 package org.archive.webservices.ars.processing.jobs
 
+import io.archivesunleashed.ArchiveRecord
 import io.archivesunleashed.app.VideoInformationExtractor
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
-import org.archive.helge.sparkling.warc.WarcLoader
-import org.archive.webservices.ars.io.AutRecordLoader
-import org.archive.webservices.ars.processing._
+import org.apache.spark.rdd.RDD
+import org.archive.webservices.ars.model.ArsCloudJobCategories
+import org.archive.webservices.ars.processing.jobs.shared.AutJob
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scala.util.Try
-
-object VideoInformationExtraction extends ChainedJob {
+object VideoInformationExtraction extends AutJob {
   val name = "Extract video information"
-  override val category = "Binary Information"
-  override val description = "This will output a single file with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
-  val relativeOutPath = s"/$id"
+  val category = ArsCloudJobCategories.BinaryInformation
+  val description =
+    "This will output a single file with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
 
-  lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
+  val targetFile: String = "video-information.csv.gz"
 
-  object Spark extends PartialDerivationJob(this) with SparkJob {
-    def succeeded(conf: DerivationJobConf): Boolean =
-      HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
-
-    def run(conf: DerivationJobConf): Future[Boolean] = {
-      SparkJobManager.context.map { _ =>
-        val df = RddUtil
-          .loadBinary(conf.inputPath, decompress = false, close = false) { (filename, in) =>
-            IteratorUtil.cleanup(
-              WarcLoader.load(in).map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
-              in.close)
-          }
-          .videos()
-        VideoInformationExtractor(df).write
-          .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
-          .format("csv")
-          .csv(conf.outputPath + relativeOutPath)
-        succeeded(conf)
-      }
-    }
-
-    override def history(conf: DerivationJobConf): DerivationJobInstance = {
-      val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
-      if (started) {
-        val completed = succeeded(conf)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
-      }
-      instance
-    }
-  }
-
-  object PostProcessor extends PartialDerivationJob(this) with GenericJob {
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
-      import sys.process._
-      val outPath = conf.outputPath + relativeOutPath
-      Try {
-        Seq(
-          "/bin/sh",
-          "-c",
-          "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/video-information.csv \\;").! == 0 &&
-        Seq("/bin/sh", "-c", "gzip " + outPath + "/video-information.csv").! == 0 &&
-        Seq("/bin/sh", "-c", "find " + outPath + " -iname '*part*' -type f -delete").! == 0
-      }.getOrElse(false)
-    }
-
-    override def history(conf: DerivationJobConf): DerivationJobInstance = {
-      val instance = super.history(conf)
-      val outPath = conf.outputPath + relativeOutPath
-      if (HdfsIO.exists(outPath + "/video-information.csv.gz")) {
-        instance.state =
-          if (HdfsIO.files(outPath + "/*part*").isEmpty) ProcessingState.Finished
-          else ProcessingState.Failed
-      }
-      instance
-    }
-
-    override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-      val size =
-        HdfsIO.files(conf.outputPath + relativeOutPath + "/*.csv.gz").map(HdfsIO.length).sum
-      Seq("resultSize" -> size)
-    }
-  }
+  def df(rdd: RDD[ArchiveRecord]) = VideoInformationExtractor(rdd.videos())
 }

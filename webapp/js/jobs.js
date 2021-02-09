@@ -1,3 +1,20 @@
+var jobUpdateHandlers = [];
+
+onPageTransition.push(function () {
+    jobUpdateHandlers = [];
+});
+
+$(function () {
+    function timeoutHandler() {
+        var handlers = jobUpdateHandlers;
+        jobUpdateHandlers = [];
+        for (let handler of handlers) handler();
+        setTimeout(timeoutHandler, 5000);
+    }
+
+    setTimeout(timeoutHandler, 5000);
+});
+
 function initJob(cardId, collectionId, jobId) {
     var $card = $("#" + cardId);
 
@@ -26,12 +43,10 @@ function initJob(cardId, collectionId, jobId) {
             } else {
                 $card.find(".job-resultsbutton-disabled").css("display", "block");
             }
+            jobUpdateHandlers.push(update);
         });
     }
 
-    setInterval(function () {
-        update();
-    }, 5000);
-
     update();
 }
+

@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.ArsCloudJobCategory
+
 import scala.concurrent.Future
 
 trait DerivationJob {
@@ -8,9 +10,9 @@ trait DerivationJob {
 
   def name: String
 
-  def category: String = ""
+  def category: ArsCloudJobCategory
 
-  def description: String = ""
+  def description: String
 
   def templateName: Option[String] = Some("jobs/" + id)
 
