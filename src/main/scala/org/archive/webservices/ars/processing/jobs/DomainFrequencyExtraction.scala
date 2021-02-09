@@ -14,7 +14,8 @@ import scala.util.Try
 object DomainFrequencyExtraction extends ChainedJob {
   val name = "Domain Frequency"
   override val category = "Collection"
-  override val description = "This will output a single file with the following two columns: domain and count."
+  override val description =
+    "This will output a single file with the following two columns: domain and count."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

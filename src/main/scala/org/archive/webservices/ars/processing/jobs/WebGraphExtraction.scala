@@ -14,7 +14,8 @@ import scala.util.Try
 object WebGraphExtraction extends ChainedJob {
   val name = "Extract web graph"
   override val category = "Network"
-  override val description = "This will output a single file with the following columns: crawl date, source, destination, and anchor text. Note that this contains all links and is not aggregated into domains."
+  override val description =
+    "This will output a single file with the following columns: crawl date, source, destination, and anchor text. Note that this contains all links and is not aggregated into domains."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

@@ -14,7 +14,8 @@ import scala.util.Try
 object AudioInformationExtraction extends ChainedJob {
   val name = "Extract audio information"
   override val category = "Binary Information"
-  override val description = "This will output a single file with the following columns: crawl date, URL of the audio file, filename, audio extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, audio MD5 hash and audio SHA1 hash."
+  override val description =
+    "This will output a single file with the following columns: crawl date, URL of the audio file, filename, audio extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, audio MD5 hash and audio SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

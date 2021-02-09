@@ -14,7 +14,8 @@ import scala.util.Try
 object ImageGraphExtraction extends ChainedJob {
   val name = "Extract image graph"
   override val category = "Image Data"
-  override val description = "This will output a single file with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
+  override val description =
+    "This will output a single file with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

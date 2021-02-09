@@ -14,7 +14,8 @@ import scala.util.Try
 object SpreadsheetInformationExtraction extends ChainedJob {
   val name = "Extract spreadsheet information"
   override val category = "Binary Information"
-  override val description = "This will output a single file with the following columns: crawl date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."
+  override val description =
+    "This will output a single file with the following columns: crawl date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)

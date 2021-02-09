@@ -14,7 +14,8 @@ import scala.util.Try
 object VideoInformationExtraction extends ChainedJob {
   val name = "Extract video information"
   override val category = "Binary Information"
-  override val description = "This will output a single file with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
+  override val description =
+    "This will output a single file with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
