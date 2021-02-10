@@ -41,12 +41,12 @@
 
 <div class="row">
     <div class="large-12 columns">
-        <table class="large-12 columns margin-top one">
+        <table class="large-12 columns margin-top one sortable">
             <thead>
                 <tr>
                     <th>Collection Name</th>
                     <th>Public Collection</th>
-                    <th>Datasets Created</th>
+                    <th>Recently Created</th>
                     <th>Last Created</th>
                     <th>Size</th>
                 </tr>
