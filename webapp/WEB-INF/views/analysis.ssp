@@ -1,9 +1,9 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collectionId: String %>
+<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
 <%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[org.archive.webservices.ars.processing.DerivationJobInstance]] %>
 
 #set (title)
-    Analyze <%=collectionId%>
+    Analyze <%=collection.name%>
 #end
 
 #set (subtitle)
@@ -34,11 +34,11 @@
                 <p class="card-text"><%=instance.job.description%></p>
                 <div class="ng-scope">
                   <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">In Progress</div>
-                  <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+                  <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
                 </div>
                 <script type="text/javascript">
-                    initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collectionId)%>", "<%=unescape(instance.job.id)%>");
+                    initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
                 </script>
                 <div class="ng-scope">
                   <p class="card-text right">Job status: <%=instance.stateStr%></p>
