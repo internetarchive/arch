@@ -47,6 +47,7 @@
 <script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
 <script src="/ait/js/pagetransitions.js"></script>
 <script src="/ait/js/jobs.js"></script>
+<script src="/ait/js/sorttable.js"></script>
 
 </head>
 <body style="padding-top: 70px;">
