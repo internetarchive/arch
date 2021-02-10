@@ -6,7 +6,7 @@ import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.scalatra.guavaCache.GuavaCache
 
-case class ArsCloudCollection(id: String, name: String) {
+case class ArsCloudCollection(id: String, name: String, public: Boolean) {
   def jobConfig: Option[DerivationJobConf] = DerivationJobConf.collection(id)
 }
 
@@ -27,9 +27,14 @@ object ArsCloudCollection {
     cursor.values.map(_.map(_.hcursor).flatMap { c =>
       c.get[Int]("id").right.toOption.map { aitId =>
         val collectionId = AitPrefix + aitId
-        GuavaCache.put(cacheKey(collectionId), {
-          ArsCloudCollection(collectionId, c.get[String]("name").right.getOrElse(collectionId))
-        }, None)
+        GuavaCache.put(
+          cacheKey(collectionId), {
+            ArsCloudCollection(
+              collectionId,
+              c.get[String]("name").right.getOrElse(collectionId),
+              c.get[Boolean]("publicly_visible").right.getOrElse(false))
+          },
+          None)
       }
     }.toSeq)
   }
