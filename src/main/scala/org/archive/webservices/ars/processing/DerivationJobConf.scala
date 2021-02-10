@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
 import _root_.io.circe.syntax._
 import _root_.io.circe.parser._
 import io.circe.{Decoder, Json}
@@ -11,12 +11,12 @@ case class DerivationJobConf(collectionId: String, inputPath: String, outputPath
 
 object DerivationJobConf {
   def collection(collectionId: String): Option[DerivationJobConf] = {
-    if (collectionId.startsWith("ARCHIVEIT-")) Some(aitCollection(collectionId))
+    if (collectionId.startsWith(ArsCloudCollection.AitPrefix)) Some(aitCollection(collectionId))
     else None
   }
 
   def aitCollection(collectionId: String): DerivationJobConf = {
-    val aitId = collectionId.stripPrefix("ARCHIVEIT-")
+    val aitId = collectionId.stripPrefix(ArsCloudCollection.AitPrefix)
     val inputPath = ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz"
     val outputPath = ArsCloudConf.jobOutPath + s"/$collectionId/out"
     DerivationJobConf(collectionId, inputPath, outputPath)
