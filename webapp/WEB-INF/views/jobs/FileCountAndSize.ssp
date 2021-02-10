@@ -1,11 +1,11 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collectionId: String %>
+<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
 <%@ val resultFiles: String %>
 <%@ val resultSize: String %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJob %>
 
 #set (title)
-    Analyze <%=collectionId%>
+    Analyze <%=collection.name%>
 #end
 
 #set (subtitle)

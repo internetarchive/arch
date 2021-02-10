@@ -1,5 +1,5 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collections: Seq[(String, String, String)] %>
+<%@ val collections: Seq[(org.archive.webservices.ars.model.ArsCloudCollection, String)] %>
 
 #set (title)
     Research Services Cloud
@@ -74,11 +74,11 @@
                     </td>
                 </tr>
                 -->
-                <% for ((collectionId, collectionName, sizeStr) <- collections) { %>
+                <% for ((collection, sizeStr) <- collections) { %>
                     <tr>
                         <td class="ng-binding">
-                            <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collectionId)%>">
-                                <%=collectionName%>
+                            <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>">
+                                <%=collection.name%>
                             </a>
                         </td>
                         <td class="ng-scope">
