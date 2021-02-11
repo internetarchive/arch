@@ -29,11 +29,11 @@ class DefaultController extends BaseController with ScalateSupport {
     ensureUserBasePath("userid") { user =>
       val aitCollections = ArsCloudCollection.userCollections(user)
       val collections = aitCollections.flatMap { collection =>
-        collection.jobConfig.map { conf =>
+        DerivationJobConf.collection(collection.id).map { conf =>
           val sizeStr = StringUtil.formatNumber(
             HdfsIO.files(conf.inputPath).map(HdfsIO.length).sum.toDouble / 1.gb,
             2) + " GB"
-          (collection, sizeStr)
+          (collection, collection.info, sizeStr)
         }
       }
       Ok(
