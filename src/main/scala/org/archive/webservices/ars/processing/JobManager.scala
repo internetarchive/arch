@@ -20,7 +20,8 @@ import scala.collection.immutable.ListMap
 import scala.collection.mutable
 
 object JobManager {
-  private val instances = mutable.Map.empty[String, mutable.Map[String, DerivationJobInstance]]
+  private val instances =
+    mutable.Map.empty[DerivationJobConf, mutable.Map[String, DerivationJobInstance]]
 
   val registeredJobs: Seq[DerivationJob] = Seq(
     AudioInformationExtraction,
@@ -44,7 +45,7 @@ object JobManager {
   def get(id: String): Option[DerivationJob] = jobs.get(id)
 
   def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
-    val collectionJobs = instances.getOrElseUpdate(instance.conf.collectionId, mutable.Map.empty)
+    val collectionJobs = instances.getOrElseUpdate(instance.conf, mutable.Map.empty)
     if (!collectionJobs.contains(instance.job.id)) {
       collectionJobs.update(instance.job.id, instance)
       println("Registered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
@@ -53,29 +54,27 @@ object JobManager {
   }
 
   def unregister(instance: DerivationJobInstance): Boolean = instances.synchronized {
-    val collectionJobs = instances.get(instance.conf.collectionId)
+    val collectionJobs = instances.get(instance.conf)
     if (collectionJobs.isDefined) {
       val removed = collectionJobs.get.remove(instance.job.id)
       if (removed.nonEmpty) {
-        if (collectionJobs.get.isEmpty) instances.remove(instance.conf.collectionId)
+        if (collectionJobs.get.isEmpty) instances.remove(instance.conf)
         println("Unregistered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
         true
       } else false
     } else false
   }
 
-  def getInstance(collectionId: String, jobId: String): Option[DerivationJobInstance] =
-    getRegistered(collectionId, jobId).orElse {
-      jobs.get(jobId).flatMap { job =>
-        DerivationJobConf.collection(collectionId).map { conf =>
-          job.history(conf)
-        }
+  def getInstance(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
+    getRegistered(jobId, conf).orElse {
+      jobs.get(jobId).map { job =>
+        job.history(conf)
       }
     }
 
-  def getRegistered(collectionId: String, jobId: String): Option[DerivationJobInstance] =
-    instances.get(collectionId).flatMap(_.get(jobId))
+  def getRegistered(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
+    instances.get(conf).flatMap(_.get(jobId))
 
-  def registered(collectionId: String): Seq[DerivationJobInstance] =
-    instances.get(collectionId).toSeq.flatMap(_.values)
+  def registered(conf: DerivationJobConf): Seq[DerivationJobInstance] =
+    instances.get(conf).toSeq.flatMap(_.values)
 }

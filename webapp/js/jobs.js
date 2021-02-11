@@ -15,33 +15,33 @@ $(function () {
     setTimeout(timeoutHandler, 5000);
 });
 
-function initJob(cardId, collectionId, jobId) {
-    var $card = $("#" + cardId);
+function initJob(containerSelector, collectionId, jobId, sample) {
+    var $container = $(containerSelector);
 
-    $card.find(".job-runbutton").click(function () {
-        $.getJSON("/ait/api/runjob/" + jobId + "/" + collectionId, function (json) {
-            $card.find(".jobstate").text(json.state);
-            $card.find(".job-button").css("display", "none");
+    $container.find(".job-runbutton").click(function () {
+        $.getJSON("/ait/api/runjob/" + jobId + "/" + collectionId + (sample ? "?sample=true" : ""), function (json) {
+            $container.find(".jobstate").text(json.state);
+            $container.find(".job-button").css("display", "none");
             if (!json.started) {
-                $card.find(".job-runbutton").css("display", "block");
+                $container.find(".job-runbutton").css("display", "block");
             } else if (json.finished) {
-                $card.find(".job-resultsbutton").css("display", "block");
+                $container.find(".job-resultsbutton").css("display", "block");
             } else {
-                $card.find(".job-resultsbutton-disabled").css("display", "block");
+                $container.find(".job-resultsbutton-disabled").css("display", "block");
             }
         });
     });
 
     function update() {
-        $.getJSON("/ait/api/jobstate/" + jobId + "/" + collectionId, function (json) {
-            $card.find(".jobstate").text(json.state);
-            $card.find(".job-button").css("display", "none");
+        $.getJSON("/ait/api/jobstate/" + jobId + "/" + collectionId + (sample ? "?sample=true" : ""), function (json) {
+            $container.find(".jobstate").text(json.state);
+            $container.find(".job-button").css("display", "none");
             if (!json.started) {
-                $card.find(".job-runbutton").css("display", "block");
+                $container.find(".job-runbutton").css("display", "block");
             } else if (json.finished) {
-                $card.find(".job-resultsbutton").css("display", "block");
+                $container.find(".job-resultsbutton").css("display", "block");
             } else {
-                $card.find(".job-resultsbutton-disabled").css("display", "block");
+                $container.find(".job-resultsbutton-disabled").css("display", "block");
             }
             jobUpdateHandlers.push(update);
         });

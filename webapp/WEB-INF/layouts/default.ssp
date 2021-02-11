@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css?c=datetimenow">
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css?c=datetimenow">
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css?c=datetimenow">
+<link rel="stylesheet" href="/ait/css/ars-cloud-style.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
 <link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
 <link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
@@ -47,6 +48,7 @@
 <script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
 <script src="/ait/js/pagetransitions.js"></script>
 <script src="/ait/js/jobs.js"></script>
+<script src="/ait/js/sorttable.js"></script>
 
 </head>
 <body style="padding-top: 70px;">
@@ -64,7 +66,7 @@
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/collections">Collections</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/crawls">Crawls</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/archives">Archives</a></li>
-                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Research</a></li>
+                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Datasets</a></li>
             </ul>
         </section>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">

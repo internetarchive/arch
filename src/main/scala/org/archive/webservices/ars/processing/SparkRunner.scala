@@ -45,13 +45,18 @@ object SparkRunner {
   def main(args: Array[String]): Unit = {
     SparkJobManager.init()
     val Array(className, confStr) = args
-    val conf = DerivationJobConf.deserialize(confStr)
-    val job = Class.forName(className).getField("MODULE$").get(null).asInstanceOf[DerivationJob]
-    val success = Await.result(job.run(conf), Duration.Inf)
-    Await.ready(SparkJobManager.context.map { sc =>
-      sc.stop()
-      while (!sc.isStopped) Thread.sleep(1)
-    }, Duration.Inf)
-    System.exit(if (success) 0 else 1)
+    DerivationJobConf.deserialize(confStr) match {
+      case Some(conf) =>
+        val job =
+          Class.forName(className).getField("MODULE$").get(null).asInstanceOf[DerivationJob]
+        val success = Await.result(job.run(conf), Duration.Inf)
+        Await.ready(SparkJobManager.context.map { sc =>
+          sc.stop()
+          while (!sc.isStopped) Thread.sleep(1)
+        }, Duration.Inf)
+        System.exit(if (success) 0 else 1)
+      case None =>
+        System.exit(2)
+    }
   }
 }
