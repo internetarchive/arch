@@ -10,7 +10,7 @@ class ApiController extends BaseController {
       val collectionId = params("collectionid")
       JobManager.get(params("jobid")) match {
         case Some(job) =>
-          DerivationJobConf.collection(collectionId) match {
+          DerivationJobConf.collection(collectionId, params.get("sample").contains("true")) match {
             case Some(conf) =>
               val instance = job.enqueue(conf).getOrElse(job.history(conf))
               Ok(
@@ -32,7 +32,9 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false) { user =>
       val jobId = params("jobid")
       val collectionId = params("collectionid")
-      JobManager.getInstance(collectionId, jobId) match {
+      DerivationJobConf
+        .collection(collectionId, params.get("sample").contains("true"))
+        .flatMap(JobManager.getInstance(jobId, _)) match {
         case Some(instance) =>
           Ok(
             Map(

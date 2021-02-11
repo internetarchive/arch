@@ -1,0 +1,20 @@
+div.job-card-flex {
+    display: flex;
+}
+
+div.job-card-sample {
+    padding-right: 10px;
+    border-right: 1px solid #5c5c5c;
+    font-size: 90%;
+    display: flex;
+    flex-direction: column;
+    width: 100%
+}
+
+div.job-card-full {
+    padding-left: 10px;
+    font-size: 90%;
+    display: flex;
+    flex-direction: column;
+    width: 100%
+}
