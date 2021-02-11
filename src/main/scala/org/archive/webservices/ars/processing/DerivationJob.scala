@@ -22,7 +22,7 @@ trait DerivationJob {
       conf: DerivationJobConf,
       get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
     val instance = DerivationJobInstance(this, conf)
-    instance.state = ProcessingState.Queued
+    instance.updateState(ProcessingState.Queued)
     get(instance)
     Some(instance)
   }

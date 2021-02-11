@@ -39,17 +39,17 @@ abstract class ChainedJob extends DerivationJob {
             child.onStateChanged {
               if (child.state > ProcessingState.Running)
                 onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
-            })
+          })
         if (enqueued.isEmpty) {
-          instance.state = ProcessingState.Failed
+          instance.updateState(ProcessingState.Failed)
           JobManager.unregister(instance)
         }
       } else {
-        instance.state = ProcessingState.Finished
+        instance.updateState(ProcessingState.Finished)
         JobManager.unregister(instance)
       }
     } else {
-      instance.state = ProcessingState.Failed
+      instance.updateState(ProcessingState.Failed)
       JobManager.unregister(instance)
     }
   }
@@ -66,8 +66,8 @@ abstract class ChainedJob extends DerivationJob {
               child.onStateChanged {
                 if (child.state > ProcessingState.Running)
                   onChildComplete(instance, 0, child.state == ProcessingState.Finished)
-                else instance.state = child.state
-              })
+                else instance.updateState(child.state)
+            })
           if (enqueued.isDefined) true
           else {
             JobManager.unregister(instance)

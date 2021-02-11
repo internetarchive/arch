@@ -50,12 +50,12 @@ object SparkJobManager {
   private def processQueue(): Unit = queue.synchronized {
     if (running < MaxRunning && queue.nonEmpty) {
       val instance = queue.dequeue
-      instance.state = ProcessingState.Running
+      instance.updateState(ProcessingState.Running)
       running += 1
       run(instance.job, instance.conf).onComplete { opt =>
         JobManager.unregister(instance)
         val success = opt.toOption.getOrElse(false)
-        instance.state = if (success) ProcessingState.Finished else ProcessingState.Failed
+        instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
         running -= 1
         processQueue()
       }
