@@ -23,8 +23,7 @@ case class ArsCloudCollectionInfo private (
     val file = ArsCloudCollectionInfo.infoFile(collectionId)
     val out = new PrintStream(file, ArsCloudCollectionInfo.Charset)
     try {
-      out.println()
-      ArsCloudCollectionInfo.unapply(this).get.asJson.spaces4
+      out.println(ArsCloudCollectionInfo.unapply(this).get.asJson.spaces4)
     } finally {
       out.close()
     }
