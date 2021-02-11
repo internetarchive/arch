@@ -5,10 +5,10 @@ import java.time.Instant
 import org.archive.webservices.ars.model.ArsCloudCollectionInfo
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
-  private var _state: Int = ProcessingState.NotStarted
-  def state: Int = _state
-  def state_=(value: Int): Unit = {
-    _state = value
+  var state: Int = ProcessingState.NotStarted
+
+  def updateState(value: Int): Unit = {
+    state = value
     for (func <- _onStateChanged) func()
     if (value == ProcessingState.Finished) {
       val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
@@ -19,7 +19,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
     }
   }
 
-  def stateStr: String = ProcessingState.Strings(_state)
+  def stateStr: String = ProcessingState.Strings(state)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
