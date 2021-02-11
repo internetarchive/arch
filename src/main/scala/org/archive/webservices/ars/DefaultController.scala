@@ -5,7 +5,7 @@ import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudJobCategories}
-import org.archive.webservices.ars.processing.JobManager
+import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
@@ -29,11 +29,11 @@ class DefaultController extends BaseController with ScalateSupport {
     ensureUserBasePath("userid") { user =>
       val aitCollections = ArsCloudCollection.userCollections(user)
       val collections = aitCollections.flatMap { collection =>
-        collection.jobConfig.map { conf =>
+        DerivationJobConf.collection(collection.id).map { conf =>
           val sizeStr = StringUtil.formatNumber(
             HdfsIO.files(conf.inputPath).map(HdfsIO.length).sum.toDouble / 1.gb,
             2) + " GB"
-          (collection, sizeStr)
+          (collection, collection.info, sizeStr)
         }
       }
       Ok(
@@ -57,26 +57,33 @@ class DefaultController extends BaseController with ScalateSupport {
   get("/:userid/research_services/analysis/:collection_id") {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
-      ArsCloudCollection.get(collectionId) match {
-        case Some(collection) =>
-          val jobs =
-            JobManager.jobs.values.toSeq
-              .flatMap { job =>
-                JobManager.getInstance(collectionId, job.id)
-              }
-              .filter(_.job.category != ArsCloudJobCategories.None)
-              .groupBy(_.job.category)
-              .mapValues(_.sortBy(_.job.name))
-          Ok(
-            ssp(
-              "analysis",
-              "breadcrumbs" -> Seq((relativePath("/analysis/" + collectionId), collectionId)),
-              "jobs" -> jobs,
-              "user" -> user,
-              "collection" -> collection),
-            Map("Content-Type" -> "text/html"))
-        case None => NotFound()
-      }
+      (for {
+        collection <- ArsCloudCollection.get(collectionId)
+        conf <- DerivationJobConf.collection(collectionId)
+        sampleConf <- DerivationJobConf.collection(collectionId, sample = true)
+      } yield {
+        val jobs =
+          JobManager.jobs.values.toSeq
+            .filter(_.category != ArsCloudJobCategories.None)
+            .groupBy(_.category)
+            .map {
+              case (category, jobs) =>
+                category -> jobs.sortBy(_.name).flatMap { job =>
+                  for {
+                    instance <- JobManager.getInstance(job.id, conf)
+                    sampleInstance <- JobManager.getInstance(job.id, sampleConf)
+                  } yield (instance, sampleInstance)
+                }
+            }
+        Ok(
+          ssp(
+            "analysis",
+            "breadcrumbs" -> Seq((relativePath("/analysis/" + collectionId), collectionId)),
+            "jobs" -> jobs,
+            "user" -> user,
+            "collection" -> collection),
+          Map("Content-Type" -> "text/html"))
+      }).getOrElse(NotFound())
     }
   }
 
@@ -86,7 +93,10 @@ class DefaultController extends BaseController with ScalateSupport {
       val jobId = params("job_id")
       (for {
         collection <- ArsCloudCollection.get(collectionId)
-        instance <- JobManager.getInstance(collectionId, jobId)
+        conf <- DerivationJobConf.collection(
+          collectionId,
+          sample = params.get("sample").contains("true"))
+        instance <- JobManager.getInstance(jobId, conf)
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>

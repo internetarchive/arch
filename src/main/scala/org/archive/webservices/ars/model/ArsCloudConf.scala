@@ -20,12 +20,17 @@ object ArsCloudConf {
 
   lazy val aitCollectionPath: String =
     cursor.get[String]("aitCollectionPath").toOption.getOrElse("data/in")
+
   lazy val aitCollectionWarcDir: String =
     cursor.get[String]("aitCollectionWarcDir").toOption.getOrElse("arcs")
+
   lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
+
   lazy val sparkMaster: String = cursor.get[String]("sparkMaster").toOption.getOrElse("local[*]")
+
   lazy val baseUrl: String =
     cursor.get[String]("baseUrl").toOption.getOrElse("http://127.0.0.1:" + ArsCloud.Port)
+
   lazy val loginUrl: String = cursor
     .get[String]("loginUrl")
     .toOption

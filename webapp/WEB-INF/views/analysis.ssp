@@ -1,6 +1,6 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
-<%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[org.archive.webservices.ars.processing.DerivationJobInstance]] %>
+<%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
 
 #set (title)
     Analyze <%=collection.name%>
@@ -27,22 +27,39 @@
         <h2><%=category%></h2>
         <p><%=categoryDescription%></p>
         <div class="card-deck">
-          <% for (instance <- jobs(category)) { %>
+          <% for ((instance, sampleInstance) <- jobs(category)) { %>
             <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
               <div class="card-body">
                 <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
                 <p class="card-text"><%=instance.job.description%></p>
-                <div class="ng-scope">
-                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-                  <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-                  <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+                <div class="job-card-flex">
+                    <div class="job-card-sample">
+                        <b>Sample:</b>
+                        <div class="ng-scope">
+                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
+                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+                            <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true" style="display: none;">View Results</a>
+                        </div>
+                        <div class="ng-scope">
+                                <p class="card-text right">Status: <span class="jobstate"><%=sampleInstance.stateStr%></span></p>
+                        </div>
+                    </div>
+                    <div class="job-card-full">
+                        <b>Full:</b>
+                        <div class="ng-scope">
+                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
+                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
+                            <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
+                        </div>
+                        <div class="ng-scope">
+                                <p class="card-text right">Status: <span class="jobstate"><%=instance.stateStr%></span></p>
+                        </div>
+                    </div>
                 </div>
                 <script type="text/javascript">
-                    initJob("card-<%=unescape(instance.job.id)%>", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+                    initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+                    initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
                 </script>
-                <div class="ng-scope">
-                  <p class="card-text right">Job status: <%=instance.stateStr%></p>
-                </div>
               </div>
             </div>
           <% } %>

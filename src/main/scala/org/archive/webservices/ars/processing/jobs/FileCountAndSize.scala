@@ -27,8 +27,14 @@ object FileCountAndSize extends SparkJob {
           case ((c1, s1), (c2, s2)) =>
             (c1 + c2, s1 + s2)
         }, numPartitions = 1)
-
-      val processed = RddUtil.saveAsTextFile(singlePartition.values.map {
+      val rdd =
+        if (conf.sample < 0) singlePartition
+        else
+          singlePartition.mapPartitionsWithIndex {
+            case (idx, records) =>
+              if (idx == 0) records.take(conf.sample) else Iterator.empty
+          }
+      val processed = RddUtil.saveAsTextFile(rdd.values.map {
         case (c, s) => c + "\t" + s
       }, conf.outputPath + relativeOutPath, skipIfExists = true, skipEmpty = false)
 

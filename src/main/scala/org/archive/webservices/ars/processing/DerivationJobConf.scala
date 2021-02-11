@@ -1,30 +1,33 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
-import _root_.io.circe.syntax._
 import _root_.io.circe.parser._
-import io.circe.{Decoder, Json}
+import _root_.io.circe.syntax._
+import io.circe.Decoder
+import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
 
-case class DerivationJobConf(collectionId: String, inputPath: String, outputPath: String) {
+case class DerivationJobConf(
+    collectionId: String,
+    inputPath: String,
+    outputPath: String,
+    sample: Int = -1) {
   def serialize: String = DerivationJobConf.unapply(this).get.asJson.noSpaces
 }
 
 object DerivationJobConf {
-  def collection(collectionId: String): Option[DerivationJobConf] = {
-    if (collectionId.startsWith(ArsCloudCollection.AitPrefix)) Some(aitCollection(collectionId))
-    else None
+  val SampleSize = 100
+
+  def collection(collectionId: String, sample: Boolean = false): Option[DerivationJobConf] = {
+    ArsCloudCollection.inputPath(collectionId).map { inputPath =>
+      val outDir = if (sample) "samples" else "out"
+      val outputPath = ArsCloudConf.jobOutPath + s"/$collectionId/" + outDir
+      DerivationJobConf(collectionId, inputPath, outputPath, if (sample) SampleSize else -1)
+    }
   }
 
-  def aitCollection(collectionId: String): DerivationJobConf = {
-    val aitId = collectionId.stripPrefix(ArsCloudCollection.AitPrefix)
-    val inputPath = ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz"
-    val outputPath = ArsCloudConf.jobOutPath + s"/$collectionId/out"
-    DerivationJobConf(collectionId, inputPath, outputPath)
-  }
-
-  def deserialize(conf: String): DerivationJobConf = {
-    def getOrElse[A](json: Json, orElse: A)(implicit decoder: Decoder[A]): A =
-      json.as[A].getOrElse(orElse)
-    (DerivationJobConf.apply _).tupled(getOrElse(parse(conf).toOption.get, ("", "", "")))
+  def deserialize(conf: String): Option[DerivationJobConf] = {
+    def opt[A](apply: A => DerivationJobConf)(
+        implicit decoder: Decoder[A]): Option[DerivationJobConf] =
+      parse(conf).right.toOption.flatMap(_.as[A].toOption).map(apply)
+    opt((DerivationJobConf.apply _).tupled)
   }
 }
