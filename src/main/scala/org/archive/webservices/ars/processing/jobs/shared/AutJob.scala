@@ -22,11 +22,12 @@ abstract class AutJob extends ChainedJob {
 
   def df(rdd: RDD[ArchiveRecord]): Dataset[Row]
 
-  def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
-    df(rdd).write
+  def runSpark(rdd: RDD[ArchiveRecord], conf: DerivationJobConf): Unit = {
+    val dataFrame = if (conf.sample < 0) df(rdd) else df(rdd).limit(conf.sample)
+    dataFrame.write
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
-      .csv(outPath)
+      .csv(conf.outputPath + relativeOutPath)
   }
 
   def postProcess(outPath: String): Boolean = {
@@ -55,7 +56,7 @@ abstract class AutJob extends ChainedJob {
                   .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
                 in.close)
             },
-          conf.outputPath + relativeOutPath)
+          conf)
         succeeded(conf)
       }
     }

@@ -28,7 +28,7 @@ trait DerivationJob {
   }
 
   def history(conf: DerivationJobConf): DerivationJobInstance =
-    JobManager.getRegistered(conf.collectionId, id).getOrElse {
+    JobManager.getRegistered(id, conf).getOrElse {
       DerivationJobInstance(this, conf)
     }
 
