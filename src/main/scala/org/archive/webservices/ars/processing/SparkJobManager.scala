@@ -23,6 +23,7 @@ object SparkJobManager {
       executors = 5,
       executorCores = 4,
       executorMemory = "2g",
+      queue = ArsCloudConf.hadoopQueue,
       additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
       verbose = true)
     context.setLogLevel("INFO")
@@ -57,6 +58,7 @@ object SparkJobManager {
         val success = opt.toOption.getOrElse(false)
         instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
         running -= 1
+        if (!success && opt.isFailure) opt.failed.get.printStackTrace()
         processQueue()
       }
     }

@@ -1,43 +1,74 @@
+import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
+
 lazy val commonSettings = Seq(name := "ars-cloud", version := "0.1.0", scalaVersion := "2.12.8")
 
-val circeVersion = "0.10.0"
+val guava = "com.google.guava" % "guava" % "29.0-jre"
 
-lazy val webapp = (project in file("."))
-  .settings(commonSettings: _*)
+val guavaDependent = Seq(
+  "org.scalatra" %% "scalatra-cache-guava" % "2.5.4",
+  "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
+  "com.optimaize.languagedetector" % "language-detector" % "0.6",
+  "org.apache.tika" % "tika-core" % "1.22",
+  "org.apache.tika" % "tika-langdetect" % "1.22" exclude (org = "com.optimaize.languagedetector",
+  name = "language-detector"),
+  "org.apache.tika" % "tika-parsers" % "1.22" excludeAll ExclusionRule(
+    organization = "com.fasterxml.jackson.core"))
+
+val prodProvided = Seq(
+  "org.apache.hadoop" % "hadoop-common" % "2.6.0",
+  "org.apache.hadoop" % "hadoop-client" % "2.6.0",
+  "org.apache.spark" %% "spark-core" % "2.4.5",
+  "org.apache.spark" %% "spark-sql" % "2.4.5",
+  "org.apache.spark" %% "spark-yarn" % "2.4.5")
+
+val dependencies = prodProvided.map(_ % "provided") ++ Seq(
+  "org.scalatra" %% "scalatra" % "2.5.4",
+  "org.scalatra" %% "scalatra-scalate" % "2.5.4",
+  "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
+  "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
+  "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",
+  "com.thoughtworks.paranamer" % "paranamer" % "2.8",
+  "com.syncthemall" % "boilerpipe" % "1.2.2",
+  "xerces" % "xercesImpl" % "2.12.0",
+  "org.jsoup" % "jsoup" % "1.13.1") ++ guavaDependent.map(
+  _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
+  "io.circe" %% "circe-core",
+  "io.circe" %% "circe-generic",
+  "io.circe" %% "circe-parser").map(_ % "0.10.0")
+
+val buildSettings = commonSettings ++ Seq(
+  mainClass in (Compile, run) := Some("org.archive.webservices.ars.ArsCloud"),
+  resolvers += Resolver.mavenLocal,
+  publishMavenStyle := false,
+  libraryDependencies ++= dependencies)
+
+lazy val root = (project in file("."))
   .settings(
-    mainClass in (Compile, run) := Some("org.archive.webservices.ars.ArsCloud"),
-    resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
-      "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
-      "org.scalatra" %% "scalatra" % "2.5.4",
-      "org.scalatra" %% "scalatra-cache-guava" % "2.5.4" exclude (org = "com.google.guava", name =
-        "guava"),
-      "org.scalatra" %% "scalatra-scalate" % "2.5.4",
-      "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
-      "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
-      "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "container;compile",
-      "org.apache.hadoop" % "hadoop-common" % "2.6.0", // % "provided", // TODO: "provided" for cluster mode
-      "org.apache.hadoop" % "hadoop-client" % "2.6.0", // % "provided", // TODO: "provided" for cluster mode
-      "org.apache.spark" %% "spark-core" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
-      "org.apache.spark" %% "spark-sql" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
-      "org.apache.spark" %% "spark-yarn" % "2.4.5", // % "provided", // TODO: "provided" for cluster mode
-      // "org.archive.helge" %% "sparkling" % "0.2.0-SNAPSHOT" // TODO: put JAR into `lib`,
-      "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
-      "org.apache.tika" % "tika-core" % "1.22" exclude (org = "com.google.guava", name = "guava"),
-      "org.apache.tika" % "tika-langdetect" % "1.22" exclude (org = "com.google.guava", name =
-        "guava"),
-      "org.jsoup" % "jsoup" % "1.7.3") ++ Seq(
-      "io.circe" %% "circe-core",
-      "io.circe" %% "circe-generic",
-      "io.circe" %% "circe-parser").map(_ % circeVersion))
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided") ++ dependencies)
 
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
+lazy val dev = (project in file("build/dev"))
+  .dependsOn(root)
+  .settings(libraryDependencies ++= prodProvided)
+  .settings(buildSettings: _*)
 
-assemblyMergeStrategy in assembly := {
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case _ => MergeStrategy.first
-}
+lazy val prod = (project in file("build/prod"))
+  .dependsOn(root)
+  .settings(libraryDependencies += guava)
+  .settings(buildSettings: _*)
+  .settings(
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule
+        .rename("com.google.common.**" -> (name.value + ".shade.@0"))
+        .inLibrary(guava)
+        .inLibrary(guavaDependent: _*)
+        .inProject),
+    assemblyOption in assembly := (assemblyOption in assembly).value
+      .copy(includeScala = false, includeDependency = false),
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case _ => MergeStrategy.first
+    })
 
 enablePlugins(ScalatraPlugin)

@@ -2,12 +2,12 @@ package org.archive.webservices.ars.processing.jobs.shared
 
 import io.archivesunleashed.ArchiveRecord
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql._
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
 import org.archive.helge.sparkling.warc.WarcLoader
-import org.archive.webservices.ars.io.AutRecordLoader
+import org.archive.webservices.ars.io.{AutRecordLoader, IOHelper}
 import org.archive.webservices.ars.processing._
-import org.apache.spark.sql._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -23,22 +23,23 @@ abstract class AutJob extends ChainedJob {
   def df(rdd: RDD[ArchiveRecord]): Dataset[Row]
 
   def runSpark(rdd: RDD[ArchiveRecord], conf: DerivationJobConf): Unit = {
-    val dataFrame = if (conf.sample < 0) df(rdd) else df(rdd).limit(conf.sample)
-    dataFrame.write
+    df(rdd).write
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
       .csv(conf.outputPath + relativeOutPath)
   }
 
   def postProcess(outPath: String): Boolean = {
-    import sys.process._
-    val outFile = targetFile.stripSuffix(".gz")
-    Seq(
-      "/bin/sh",
-      "-c",
-      "find " + outPath + " -iname 'part*' -type f -exec cat {} > " + outPath + "/" + outFile + " \\;").! == 0 &&
-    Seq("/bin/sh", "-c", "gzip " + outPath + "/" + outFile).! == 0 &&
-    Seq("/bin/sh", "-c", "find " + outPath + " -iname '*part*' -type f -delete").! == 0
+    IOHelper.concatLocal(
+      outPath,
+      targetFile,
+      _.startsWith("part-"),
+      compress = true,
+      deleteSrcFiles = true) { tmpFile =>
+      val outFile = outPath + "/" + targetFile
+      HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
+      HdfsIO.exists(outFile)
+    }
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
@@ -47,16 +48,19 @@ abstract class AutJob extends ChainedJob {
 
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
-        runSpark(
-          RddUtil
-            .loadBinary(conf.inputPath, decompress = false, close = false) { (filename, in) =>
-              IteratorUtil.cleanup(
-                WarcLoader
-                  .load(in)
-                  .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
-                in.close)
-            },
-          conf)
+        val rdd = IOHelper
+          .load(
+            conf.inputPath,
+            RddUtil
+              .loadBinary(_, decompress = false, close = false) { (filename, in) =>
+                IteratorUtil.cleanup(
+                  WarcLoader
+                    .load(in)
+                    .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
+                  in.close)
+              },
+            conf.sample)
+        runSpark(rdd, conf)
         succeeded(conf)
       }
     }
@@ -82,7 +86,7 @@ abstract class AutJob extends ChainedJob {
       val outPath = conf.outputPath + relativeOutPath
       if (HdfsIO.exists(outPath + "/" + targetFile)) {
         instance.state =
-          if (HdfsIO.files(outPath + "/*part*").isEmpty) ProcessingState.Finished
+          if (HdfsIO.files(outPath + "/part-*").isEmpty) ProcessingState.Finished
           else ProcessingState.Failed
       }
       instance

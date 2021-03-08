@@ -26,6 +26,9 @@ object ArsCloudConf {
 
   lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
 
+  lazy val localTempPath: String =
+    cursor.get[String]("localTempPath").toOption.getOrElse("data/tmp")
+
   lazy val sparkMaster: String = cursor.get[String]("sparkMaster").toOption.getOrElse("local[*]")
 
   lazy val baseUrl: String =
@@ -35,4 +38,7 @@ object ArsCloudConf {
     .get[String]("loginUrl")
     .toOption
     .getOrElse("http://127.0.0.1:" + ArsCloud.Port + "/ait/login?next=")
+
+  lazy val hadoopQueue: String =
+    cursor.get[String]("hadoopQueue").toOption.getOrElse("default")
 }

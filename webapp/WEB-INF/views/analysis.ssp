@@ -41,7 +41,7 @@
                             <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true" style="display: none;">View Results</a>
                         </div>
                         <div class="ng-scope">
-                                <p class="card-text right">Status: <span class="jobstate"><%=sampleInstance.stateStr%></span></p>
+                                <p class="card-text right small">Status: <span class="jobstate"><%=sampleInstance.stateStr%></span></p>
                         </div>
                     </div>
                     <div class="job-card-full">
@@ -52,7 +52,7 @@
                             <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
                         </div>
                         <div class="ng-scope">
-                                <p class="card-text right">Status: <span class="jobstate"><%=instance.stateStr%></span></p>
+                            <p class="card-text right small">Status: <span class="jobstate"><%=instance.stateStr%></span></p>
                         </div>
                     </div>
                 </div>

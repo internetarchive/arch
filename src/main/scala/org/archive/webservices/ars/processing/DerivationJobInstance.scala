@@ -10,7 +10,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def updateState(value: Int): Unit = {
     state = value
     for (func <- _onStateChanged) func()
-    if (value == ProcessingState.Finished) {
+    if (job.partialOf.isEmpty && value == ProcessingState.Finished) {
       val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
       ArsCloudCollectionInfo
         .get(conf.collectionId)

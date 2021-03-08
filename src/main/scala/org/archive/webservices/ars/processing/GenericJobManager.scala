@@ -27,6 +27,7 @@ object GenericJobManager {
         val success = opt.toOption.getOrElse(false)
         instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
         running -= 1
+        if (!success && opt.isFailure) opt.failed.get.printStackTrace()
         processQueue()
       }
     }

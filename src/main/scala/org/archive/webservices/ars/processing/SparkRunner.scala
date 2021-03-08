@@ -43,7 +43,6 @@ object SparkRunner {
   }
 
   def main(args: Array[String]): Unit = {
-    SparkJobManager.init()
     val Array(className, confStr) = args
     DerivationJobConf.deserialize(confStr) match {
       case Some(conf) =>
@@ -52,7 +51,7 @@ object SparkRunner {
         val success = Await.result(job.run(conf), Duration.Inf)
         Await.ready(SparkJobManager.context.map { sc =>
           sc.stop()
-          while (!sc.isStopped) Thread.sleep(1)
+          while (!sc.isStopped) Thread.`yield`()
         }, Duration.Inf)
         System.exit(if (success) 0 else 1)
       case None =>

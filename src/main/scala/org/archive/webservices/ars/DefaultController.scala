@@ -1,9 +1,7 @@
 package org.archive.webservices.ars
 
-import org.archive.helge.sparkling._
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.Ait
+import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.scalatra._
@@ -30,10 +28,7 @@ class DefaultController extends BaseController with ScalateSupport {
       val aitCollections = ArsCloudCollection.userCollections(user)
       val collections = aitCollections.flatMap { collection =>
         DerivationJobConf.collection(collection.id).map { conf =>
-          val sizeStr = StringUtil.formatNumber(
-            HdfsIO.files(conf.inputPath).map(HdfsIO.length).sum.toDouble / 1.gb,
-            2) + " GB"
-          (collection, collection.info, sizeStr)
+          (collection, collection.info, IOHelper.sizeStr(conf.inputPath))
         }
       }
       Ok(

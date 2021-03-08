@@ -118,6 +118,7 @@ project/plugins/project/
 .history
 .cache
 .lib/
+build/*
 
 ### Scala ###
 *.class
@@ -211,9 +212,6 @@ spark-warehouse/
 *.Rproj.*
 
 .Rproj.user
-
-# For SBT
-.jvmopts
 
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij,scala,spark,sbt
