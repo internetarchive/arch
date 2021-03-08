@@ -5,6 +5,8 @@ import org.archive.webservices.ars.model.ArsCloudJobCategory
 import scala.concurrent.Future
 
 trait DerivationJob {
+  val partialOf: Option[DerivationJob] = None
+
   private val _id: String = getClass.getSimpleName.stripSuffix("$")
   def id: String = _id
 

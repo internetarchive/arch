@@ -2,6 +2,7 @@
   "aitCollectionPath": "/data/in",
   "aitCollectionWarcDir": "arcs",
   "jobOutPath": "/data/out",
+  "localTempPath": "/data/tmp",
   "sparkMaster": "local[*]",
   "baseUrl": "http://localhost:12341",
   "loginUrl": "http://localhost:12341/ait/login?next="

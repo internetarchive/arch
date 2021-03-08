@@ -27,7 +27,7 @@ RUN apt-get -qq update && apt-get -qq install -y sbt=1.3.8
 
 ADD ./ /app/
 WORKDIR /app
-RUN sbt clean update compile
+RUN ["sbt", "dev/clean", "dev/update", "dev/compile"]
 
 ENTRYPOINT ["sbt"]
-CMD ["run"]
+CMD ["dev/run"]

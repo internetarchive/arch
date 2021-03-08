@@ -2,7 +2,9 @@
   "aitCollectionPath": "/search/ait",
   "aitCollectionWarcDir": "arcs",
   "jobOutPath": "/user/helge/ars-cloud",
+  "localTempPath": "/tmp",
   "sparkMaster": "yarn",
   "baseUrl": "https://webdata.archive-it.org",
-  "loginUrl": "https://partner.archive-it.org/login?next="
+  "loginUrl": "https://partner.archive-it.org/login?next=",
+  "hadoopQueue": "webdata"
 }

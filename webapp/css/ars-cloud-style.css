@@ -18,3 +18,7 @@ div.job-card-full {
     flex-direction: column;
     width: 100%
 }
+
+.small {
+    font-size: 90%;
+}

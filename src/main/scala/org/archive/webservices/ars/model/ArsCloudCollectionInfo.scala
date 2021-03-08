@@ -1,13 +1,11 @@
 package org.archive.webservices.ars.model
 
-import java.io.{File, PrintStream}
 import java.time.Instant
 
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Decoder
-
-import scala.io.Source
+import org.archive.helge.sparkling.io.HdfsIO
 
 case class ArsCloudCollectionInfo private (
     collectionId: String,
@@ -21,32 +19,23 @@ case class ArsCloudCollectionInfo private (
 
   def save(): Unit = {
     val file = ArsCloudCollectionInfo.infoFile(collectionId)
-    val out = new PrintStream(file, ArsCloudCollectionInfo.Charset)
-    try {
-      out.println(ArsCloudCollectionInfo.unapply(this).get.asJson.spaces4)
-    } finally {
-      out.close()
-    }
+    HdfsIO.writeLines(
+      file,
+      Seq(ArsCloudCollectionInfo.unapply(this).get.asJson.spaces4),
+      overwrite = true)
   }
 }
 
 object ArsCloudCollectionInfo {
   val Charset = "utf-8"
 
-  def infoFile(collectionId: String): File =
-    new File(ArsCloudConf.jobOutPath + s"/$collectionId/info.json")
+  def infoFile(collectionId: String): String =
+    ArsCloudConf.jobOutPath + s"/$collectionId/info.json"
 
   def get(collectionId: String): ArsCloudCollectionInfo = {
     val file = infoFile(collectionId)
-    val str = if (file.exists) {
-      val source = Source.fromFile(file, Charset)
-      try {
-        source.mkString
-      } catch {
-        case _: Exception => ""
-      } finally {
-        source.close()
-      }
+    val str = if (HdfsIO.exists(file)) {
+      HdfsIO.lines(file).mkString
     } else ""
     def opt[A](apply: A => ArsCloudCollectionInfo)(
         implicit decoder: Decoder[A]): Option[ArsCloudCollectionInfo] =
