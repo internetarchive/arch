@@ -10,7 +10,7 @@ object DomainGraphExtraction extends AutJob {
   val name = "Extract domain graph"
   val category = ArsCloudJobCategories.Network
   val description =
-    "This will output a single file with the following columns crawl date, source domain, destination domain, and count."
+    "Create a CSV with the following columns: crawl date, source domain, destination domain, and count."
   val targetFile: String = "domain-graph.csv.gz"
 
   def df(rdd: RDD[ArchiveRecord]) = DomainGraphExtractor(rdd.webgraph())

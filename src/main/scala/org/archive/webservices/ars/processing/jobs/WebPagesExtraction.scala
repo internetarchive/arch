@@ -10,7 +10,7 @@ object WebPagesExtraction extends AutJob {
   val name = "Extract webpages"
   val category = ArsCloudJobCategories.Text
   val description =
-    "This will output a single file with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
+    "Create a CSV with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
 
   val targetFile: String = "web-pages.csv.gz"
 
