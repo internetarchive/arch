@@ -10,7 +10,7 @@ object ImageInformationExtraction extends AutJob {
   val name = "Extract image information"
   val category = ArsCloudJobCategories.ImageData
   val description =
-    "This will output a single file with the following columns: crawl date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
+    "Create a CSV with the following columns: crawl date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
 
   val targetFile: String = "image-information.csv.gz"
 

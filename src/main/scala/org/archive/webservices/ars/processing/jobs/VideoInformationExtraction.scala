@@ -10,7 +10,7 @@ object VideoInformationExtraction extends AutJob {
   val name = "Extract video information"
   val category = ArsCloudJobCategories.BinaryInformation
   val description =
-    "This will output a single file with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
+    "Create a CSV with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
 
   val targetFile: String = "video-information.csv.gz"
 

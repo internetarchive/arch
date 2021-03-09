@@ -28,31 +28,24 @@
         <p><%=categoryDescription%></p>
         <div class="card-deck">
           <% for ((instance, sampleInstance) <- jobs(category)) { %>
-            <div class="card" id="card-<%=unescape(instance.job.id)%>" style="min-width: 18rem;">
+            <div class="card" id="card-<%=unescape(instance.job.id)%>">
               <div class="card-body">
                 <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
                 <p class="card-text"><%=instance.job.description%></p>
+                <hr />
                 <div class="job-card-flex">
                     <div class="job-card-sample">
-                        <b>Sample:</b>
                         <div class="ng-scope">
-                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-                            <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true" style="display: none;">View Results</a>
-                        </div>
-                        <div class="ng-scope">
-                                <p class="card-text right small">Status: <span class="jobstate"><%=sampleInstance.stateStr%></span></p>
+                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button">Run Sample Job</div>
+                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
+                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Results</a>
                         </div>
                     </div>
                     <div class="job-card-full">
-                        <b>Full:</b>
                         <div class="ng-scope">
-                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" style="display: none;">Run</div>
-                            <div class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button" style="display:none;">View Results</div>
-                            <a class="button tiny margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>" style="display: none;">View Results</a>
-                        </div>
-                        <div class="ng-scope">
-                            <p class="card-text right small">Status: <span class="jobstate"><%=instance.stateStr%></span></p>
+                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button">Run Job</div>
+                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
+                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">View Results</a>
                         </div>
                     </div>
                 </div>

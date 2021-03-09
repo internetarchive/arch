@@ -19,6 +19,19 @@ div.job-card-full {
     width: 100%
 }
 
+div.button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button {
+    display: none;
+    font-weight: bold;
+}
+
+div.button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate {
+    display:none;
+}
+
 .small {
     font-size: 90%;
+}
+
+span.jobstate {
+    font-weight: bold;
 }

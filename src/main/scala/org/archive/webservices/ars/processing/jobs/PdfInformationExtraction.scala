@@ -10,7 +10,7 @@ object PdfInformationExtraction extends AutJob {
   val name = "Extract PDF information"
   val category = ArsCloudJobCategories.BinaryInformation
   val description =
-    "This will output a single file with the following columns: crawl date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
+    "Create a CSV with the following columns: crawl date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
 
   val targetFile: String = "pdf-information.csv.gz"
 
