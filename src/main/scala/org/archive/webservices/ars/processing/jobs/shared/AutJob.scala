@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.shared
 
+import java.io.{OutputStream, PrintStream}
+
 import io.archivesunleashed.ArchiveRecord
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -29,13 +31,19 @@ abstract class AutJob extends ChainedJob {
       .csv(conf.outputPath + relativeOutPath)
   }
 
+  def prepareOutputStream(out: OutputStream): Unit =
+    printToOutputStream(new PrintStream(out, true, "utf-8"))
+
+  def printToOutputStream(out: PrintStream): Unit = {}
+
   def postProcess(outPath: String): Boolean = {
     IOHelper.concatLocal(
       outPath,
       targetFile,
       _.startsWith("part-"),
       compress = true,
-      deleteSrcFiles = true) { tmpFile =>
+      deleteSrcFiles = true,
+      prepare = prepareOutputStream) { tmpFile =>
       val outFile = outPath + "/" + targetFile
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
       HdfsIO.exists(outFile)
