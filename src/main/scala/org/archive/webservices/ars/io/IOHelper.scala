@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.io
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
 import java.nio.file.Files
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
@@ -30,12 +30,14 @@ object IOHelper {
       dstFile: String,
       filter: String => Boolean = _ => true,
       compress: Boolean = false,
-      deleteSrcFiles: Boolean = false)(action: String => R): R = {
+      deleteSrcFiles: Boolean = false,
+      prepare: OutputStream => Unit = _ => {})(action: String => R): R = {
     val srcFiles = HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq
     IOHelper.tempDir { dir =>
       val tmpOutFile = dir + "/" + dstFile
       val out = new BufferedOutputStream(new FileOutputStream(tmpOutFile))
       val compressed = if (compress) new GzipCompressorOutputStream(out) else out
+      prepare(compressed)
       try {
         for (file <- srcFiles) HdfsIO.access(file)(IOUtils.copy(_, compressed))
       } finally {
