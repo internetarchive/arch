@@ -10,6 +10,7 @@ case class DerivationJobConf(
     inputPath: String,
     outputPath: String,
     sample: Int = -1) {
+  def isSample: Boolean = sample >= 0
   def serialize: String = DerivationJobConf.unapply(this).get.asJson.noSpaces
 }
 

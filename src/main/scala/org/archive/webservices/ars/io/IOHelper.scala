@@ -32,7 +32,8 @@ object IOHelper {
       compress: Boolean = false,
       deleteSrcFiles: Boolean = false,
       prepare: OutputStream => Unit = _ => {})(action: String => R): R = {
-    val srcFiles = HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq
+    val srcFiles =
+      HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
     IOHelper.tempDir { dir =>
       val tmpOutFile = dir + "/" + dstFile
       val out = new BufferedOutputStream(new FileOutputStream(tmpOutFile))

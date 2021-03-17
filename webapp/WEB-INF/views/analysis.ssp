@@ -36,7 +36,7 @@
                 <div class="job-card-flex">
                     <div class="job-card-sample">
                         <div class="ng-scope">
-                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button">Run Sample Job</div>
+                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</div>
                             <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
                             <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Results</a>
                         </div>

@@ -1,9 +1,11 @@
 package org.archive.webservices.ars
 
+import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudJobCategories}
+import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf, ArsCloudJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
+import org.archive.webservices.ars.util.CacheUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
@@ -83,6 +85,37 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/analysis/:collection_id/:job_id") {
+    CacheUtil.cacheRequest(request, enabled = ArsCloudConf.production) {
+      ensureUserBasePath("userid") { implicit user =>
+        val collectionId = params("collection_id")
+        val jobId = params("job_id")
+        (for {
+          collection <- ArsCloudCollection.get(collectionId)
+          conf <- DerivationJobConf.collection(
+            collectionId,
+            sample = params.get("sample").contains("true"))
+          instance <- JobManager.getInstance(jobId, conf)
+        } yield {
+          instance.job.templateName match {
+            case Some(templateName) =>
+              val attributes = Seq(
+                "breadcrumbs" -> Seq(
+                  (relativePath("/analysis/" + collectionId), collectionId),
+                  (relativePath("/analysis/" + collectionId + "/" + jobId), instance.job.name)),
+                "user" -> user,
+                "collection" -> collection,
+                "job" -> instance,
+                "files" -> instance.outFiles) ++ instance.templateVariables
+              Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+            case None =>
+              NotImplemented()
+          }
+        }).getOrElse(NotFound())
+      }
+    }
+  }
+
+  get("/:userid/research_services/download/:collection_id/:job_id/:file_name") {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
       val jobId = params("job_id")
@@ -93,16 +126,13 @@ class DefaultController extends BaseController with ScalateSupport {
           sample = params.get("sample").contains("true"))
         instance <- JobManager.getInstance(jobId, conf)
       } yield {
-        instance.job.templateName match {
-          case Some(templateName) =>
-            val attributes = Seq(
-              "breadcrumbs" -> Seq(
-                (relativePath("/analysis/" + collectionId), collectionId),
-                (relativePath("/analysis/" + collectionId + "/" + jobId), instance.job.name)),
-              "user" -> user,
-              "collection" -> collection,
-              "job" -> instance.job) ++ instance.templateVariables
-            Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+        instance.outFiles.find(_.filename == params("file_name")) match {
+          case Some(file) =>
+            Ok(
+              HdfsIO.open(file.path, decompress = false),
+              Map(
+                "Content-Type" -> file.mimeType,
+                "Content-Disposition" -> ("attachment; filename=" + file.filename)))
           case None =>
             NotImplemented()
         }

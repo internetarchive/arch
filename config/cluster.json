@@ -6,5 +6,6 @@
   "sparkMaster": "yarn",
   "baseUrl": "https://webdata.archive-it.org",
   "loginUrl": "https://partner.archive-it.org/login?next=",
-  "hadoopQueue": "webdata"
+  "hadoopQueue": "webdata",
+  "production": true
 }

@@ -1,38 +1,33 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
+<%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
+<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
 <%@ val resultSize: Long %>
-<%@ val job: org.archive.webservices.ars.processing.DerivationJob %>
 
-#set (title)
-    Analyze <%=collection.name%>
-#end
-
-#set (subtitle)
-    <%=job.name%>
-#end
-
-<br><br>
+<% layout("/layouts/job.ssp") { %>
 
 <div class="row">
-<div class="large-12 columns">
-    This is a generic template to display the size of the output files:
-    <br><br>
-    <table class="large-12 columns margin-top one">
-        <thead>
-            <tr>
-                <th colspan="2">Results</th>
-            </tr>
-        </thead>
-        <tbody class="ng-scope">
-            <tr>
-                <td class="ng-binding">
-                    File size
-                </td>
-                <td class="ng-scope">
-                    <%=resultSize%> bytes
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="large-12 columns">
+        This is a generic template to display the size of the output files:
+        <br><br>
+        <table class="large-12 columns margin-top one">
+            <thead>
+                <tr>
+                    <th colspan="2">Results</th>
+                </tr>
+            </thead>
+            <tbody class="ng-scope">
+                <tr>
+                    <td class="ng-binding">
+                        File size
+                    </td>
+                    <td class="ng-scope">
+                        <%=resultSize%> bytes
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
-</div>
+
+<% } %>

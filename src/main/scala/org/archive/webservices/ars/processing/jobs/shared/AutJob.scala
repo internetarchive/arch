@@ -9,6 +9,7 @@ import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
 import org.archive.helge.sparkling.warc.WarcLoader
 import org.archive.webservices.ars.io.{AutRecordLoader, IOHelper}
+import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,6 +65,7 @@ abstract class AutJob extends ChainedJob {
                 IteratorUtil.cleanup(
                   WarcLoader
                     .load(in)
+                    .filter(r => r.isResponse || r.isRevisit)
                     .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
                   in.close)
               },
@@ -107,6 +109,9 @@ abstract class AutJob extends ChainedJob {
         .sum
       Seq("resultSize" -> size)
     }
+
+    override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] = Seq(
+      DerivativeOutput(targetFile, conf.outputPath + relativeOutPath, "application/gzip"))
   }
 
   override def templateName: Option[String] = Some("jobs/DefaultAutJob")

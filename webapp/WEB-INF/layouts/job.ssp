@@ -1,0 +1,51 @@
+<%@ val body: String %>
+<%@ val user: org.archive.webservices.ars.ait.AitUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
+<%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
+<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
+
+#set (title)
+    <%=collection.name%>: <%=job.job.name%>
+#end
+
+#set (subtitle)
+  Web Archive Derivative Datasets
+#end
+
+<br><br>
+
+<%=unescape(body)%>
+
+<% for (file <- files) { %>
+  <div class="row">
+    <div class="large-12 columns">
+      <h1>Dataset Download Options</h1>
+        <div class="card" id="card-download-browser">
+          <div class="card-body">
+            <h4 class="card-title ng-binding">Browser</h4>
+            <div class="button download-button">
+              <a class="download" href="/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" target="_blank">
+                Download <%=file.filename%> (<%=file.sizeStr%>)
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="card-download-curl">
+          <div class="card-body">
+            <h4 class="card-title ng-binding">curl</h4>
+            <p class="card-text">
+              <pre>$ curl <%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%> --output <%=unescape(file.filename)%></pre>
+            </p>
+          </div>
+        </div>
+        <div class="card" id="card-download-wget">
+          <div class="card-body">
+            <h4 class="card-title ng-binding">wget</h4>
+            <p class="card-text">
+              <pre>$ wget <%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%></pre>
+            </p>
+          </div>
+        </div>
+    </div>
+  </div>
+<% } %>
