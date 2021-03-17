@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.DerivativeOutput
+
 import scala.concurrent.Future
 
 abstract class ChainedJob extends DerivationJob {
@@ -31,6 +33,9 @@ abstract class ChainedJob extends DerivationJob {
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
     children.flatMap(_.templateVariables(conf))
 
+  override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
+    children.flatMap(_.outFiles(conf))
+
   private def onChildComplete(
       instance: DerivationJobInstance,
       idx: Int,
@@ -44,7 +49,7 @@ abstract class ChainedJob extends DerivationJob {
             child.onStateChanged {
               if (child.state > ProcessingState.Running)
                 onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
-            })
+          })
         if (enqueued.isEmpty) {
           instance.updateState(ProcessingState.Failed)
           JobManager.unregister(instance)
@@ -72,7 +77,7 @@ abstract class ChainedJob extends DerivationJob {
                 if (child.state > ProcessingState.Running)
                   onChildComplete(instance, 0, child.state == ProcessingState.Finished)
                 else instance.updateState(child.state)
-              })
+            })
           if (enqueued.isDefined) true
           else {
             JobManager.unregister(instance)

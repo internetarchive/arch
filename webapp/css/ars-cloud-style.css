@@ -28,10 +28,103 @@ div.button margin-top margin-bottom padding-top padding-bottom half job-resultsb
     display:none;
 }
 
+div.button,download-button {
+  display: block;
+  margin: 10px;
+  padding: 10px;
+}
+
+a.download:link {
+  color: white;
+  font-weight: bold;
+}
+
+a.download:visited {
+  color: white;
+}
+
+a.download:hover {
+  color: white;
+}
+
+a.download:active {
+  color: white;
+}
+
 .small {
     font-size: 90%;
 }
 
 span.jobstate {
     font-weight: bold;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+  opacity: 0;
+  transition: all 0.15s ease;
+  padding: 10px;
+  color: white;
+  border-radius: 10px;
+}
+
+[data-tooltip]:hover:before {
+  opacity: 1;
+  z-index: 1;
+  background: rgb(52, 143, 198);
+  width: 350px;
+  top: 110%;
+  left: 50%;
+  margin-left: -175px;
+}
+
+#tooltip {
+  background: rgb(52, 143, 198);
+  color: white;
+  /*font-weight: bold;*/
+  padding: 10px;
+  font-size: 20px;
+  border-radius: 4px;
+  display: none;
+  text-align: center;
+  z-index: 1;
+}
+
+#tooltip[data-show] {
+  display: block;
+}
+
+#arrow,
+#arrow::before {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+}
+
+#arrow {
+  visibility: hidden;
+}
+
+#arrow::before {
+  visibility: visible;
+  content: '';
+  transform: rotate(45deg);
+}
+
+#tooltip[data-popper-placement^='top'] > #arrow {
+  bottom: -4px;
+}
+
+#tooltip[data-popper-placement^='bottom'] > #arrow {
+  top: -4px;
+}
+
+#tooltip[data-popper-placement^='left'] > #arrow {
+  right: -4px;
+}
+
+#tooltip[data-popper-placement^='right'] > #arrow {
+  left: -4px;
 }

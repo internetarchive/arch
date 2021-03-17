@@ -4,7 +4,7 @@ import org.archive.helge.sparkling.Sparkling
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.RddUtil
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.ArsCloudJobCategories
+import org.archive.webservices.ars.model.{ArsCloudJobCategories, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,4 +55,10 @@ object FileCountAndSize extends SparkJob {
     val split = line.split("\t")
     Seq("resultFiles" -> split.head, "resultSize" -> split(1))
   }
+
+  override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
+    HdfsIO.files(conf.outputPath + relativeOutPath + "/*.gz").toSeq.map { file =>
+      val (path, name) = file.splitAt(file.lastIndexOf('/'))
+      DerivativeOutput(name, path, "application/gzip")
+    }
 }

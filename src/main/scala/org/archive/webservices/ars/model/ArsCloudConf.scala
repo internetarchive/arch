@@ -41,4 +41,7 @@ object ArsCloudConf {
 
   lazy val hadoopQueue: String =
     cursor.get[String]("hadoopQueue").toOption.getOrElse("default")
+
+  lazy val production: Boolean =
+    cursor.get[Boolean]("production").toOption.getOrElse(false)
 }

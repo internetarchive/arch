@@ -2,7 +2,7 @@ package org.archive.webservices.ars.processing
 
 import java.time.Instant
 
-import org.archive.webservices.ars.model.ArsCloudCollectionInfo
+import org.archive.webservices.ars.model.{ArsCloudCollectionInfo, DerivativeOutput}
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var state: Int = ProcessingState.NotStarted
@@ -21,6 +21,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def stateStr: String = ProcessingState.Strings(state)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
+  def outFiles: Seq[DerivativeOutput] = job.outFiles(conf)
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
   def onStateChanged(action: => Unit): Unit = _onStateChanged :+= (() => action)

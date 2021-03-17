@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.ArsCloudJobCategory
+import org.archive.webservices.ars.model.{ArsCloudJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -35,4 +35,6 @@ trait DerivationJob {
     }
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
+
+  def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] = Seq.empty
 }
