@@ -39,8 +39,8 @@ object AutRecordLoader {
         val nested = if (http.isDefined) {
           if (!httpInvalidated) {
             httpInvalidated = true
-            http.map(_.payload)
-          } else HttpMessage.get(payload).map(_.payload)
+            http.map(_.body)
+          } else HttpMessage.get(payload).map(_.body)
         } else None
         nested.getOrElse(payload)
       }
