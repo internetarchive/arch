@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.io
 
-import java.io.InputStream
+import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 
 import io.archivesunleashed.ArchiveRecord
 import io.archivesunleashed.matchbox.ExtractDomain
@@ -35,23 +35,44 @@ object AutRecordLoader {
         http
       }
 
-      def nestedPayload: InputStream = {
-        val nested = if (http.isDefined) {
+      private def nestedHttp[A](get: HttpMessage => A): Option[A] = {
+        if (http.isDefined) {
           if (!httpInvalidated) {
             httpInvalidated = true
-            http.map(_.body)
-          } else HttpMessage.get(payload).map(_.body)
+            http.map(get)
+          } else HttpMessage.get(payload).map(get)
         } else None
-        nested.getOrElse(payload)
       }
+
+      def nestedPayload: InputStream = nestedHttp(_.body).getOrElse(payload)
 
       def getArchiveFilename: String = filename
       def getCrawlDate: String = warc.timestamp.filter(_.length >= 8).map(_.take(8)).getOrElse("")
       def getCrawlMonth: String =
         warc.timestamp.filter(_.length >= 6).map(_.take(6)).getOrElse("")
 
-      def getContentBytes: Array[Byte] = IOUtil.bytes(payload)
-      def getContentString: String = StringUtil.fromBytes(getContentBytes)
+      def getContentBytes: Array[Byte] = {
+        nestedHttp { http =>
+          val bytes = new ByteArrayOutputStream()
+          val print = IOUtil.print(bytes, closing = false)
+          print.println(http.statusLine)
+          for ((k, v) <- http.headers) print.println(k + ": " + v)
+          print.println("")
+          print.close()
+          IOUtil.copy(http.body, bytes)
+          bytes.flush()
+          bytes.toByteArray
+        }.getOrElse(IOUtil.bytes(payload))
+      }
+
+      def getContentString: String = {
+        nestedHttp[String] { http =>
+          (Seq(http.statusLine) ++
+            http.headers.map { case (k, v) => k + ": " + v } ++
+            Seq("") ++
+            Seq(http.bodyString)).mkString("\t")
+        }.getOrElse(StringUtil.fromBytes(getContentBytes))
+      }
 
       def getMimeType: String = http.flatMap(_.mime).getOrElse("unknown")
 
