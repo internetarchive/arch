@@ -7,7 +7,7 @@ import io.archivesunleashed.matchbox.ExtractDomain
 import org.archive.helge.sparkling.http.HttpMessage
 import org.archive.helge.sparkling.io.{ByteArray, IOUtil}
 import org.archive.helge.sparkling.util.StringUtil
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.helge.sparkling.warc.{WarcHeaders, WarcRecord}
 
 object AutRecordLoader {
   def fromWarc(filename: String, warc: WarcRecord, bufferBytes: Boolean = false): ArchiveRecord =
@@ -54,11 +54,7 @@ object AutRecordLoader {
       def getContentBytes: Array[Byte] = {
         nestedHttp { http =>
           val bytes = new ByteArrayOutputStream()
-          val print = IOUtil.print(bytes, closing = false)
-          print.println(http.statusLine)
-          for ((k, v) <- http.headers) print.println(k + ": " + v)
-          print.println("")
-          print.close()
+          bytes.write(WarcHeaders.http(http.statusLine, http.headers))
           IOUtil.copy(http.body, bytes)
           bytes.flush()
           bytes.toByteArray
@@ -70,7 +66,7 @@ object AutRecordLoader {
           (Seq(http.statusLine) ++
             http.headers.map { case (k, v) => k + ": " + v } ++
             Seq("") ++
-            Seq(http.bodyString)).mkString("\n")
+            Seq(http.bodyString)).mkString(WarcHeaders.Br)
         }.getOrElse(StringUtil.fromBytes(getContentBytes))
       }
 
