@@ -70,7 +70,7 @@ object AutRecordLoader {
           (Seq(http.statusLine) ++
             http.headers.map { case (k, v) => k + ": " + v } ++
             Seq("") ++
-            Seq(http.bodyString)).mkString("\t")
+            Seq(http.bodyString)).mkString("\n")
         }.getOrElse(StringUtil.fromBytes(getContentBytes))
       }
 
