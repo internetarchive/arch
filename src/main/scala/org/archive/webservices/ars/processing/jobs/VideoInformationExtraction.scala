@@ -5,12 +5,10 @@ import java.io.PrintStream
 import io.archivesunleashed.ArchiveRecord
 import io.archivesunleashed.app.VideoInformationExtractor
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArsCloudJobCategories
-import org.archive.webservices.ars.processing.jobs.shared.AutJob
+import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
-object VideoInformationExtraction extends AutJob {
+object VideoInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract video information"
-  val category = ArsCloudJobCategories.BinaryInformation
   val description =
     "Create a CSV with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
 

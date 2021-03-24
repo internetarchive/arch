@@ -5,12 +5,10 @@ import java.io.PrintStream
 import io.archivesunleashed.ArchiveRecord
 import io.archivesunleashed.app.SpreadsheetInformationExtractor
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArsCloudJobCategories
-import org.archive.webservices.ars.processing.jobs.shared.AutJob
+import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
-object SpreadsheetInformationExtraction extends AutJob {
+object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract spreadsheet information"
-  val category = ArsCloudJobCategories.BinaryInformation
   val description =
     "Create a CSV with the following columns: crawl date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."
 
