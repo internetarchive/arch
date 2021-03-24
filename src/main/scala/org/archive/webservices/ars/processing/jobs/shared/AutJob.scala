@@ -25,11 +25,18 @@ abstract class AutJob extends ChainedJob {
 
   def df(rdd: RDD[ArchiveRecord]): Dataset[Row]
 
-  def runSpark(rdd: RDD[ArchiveRecord], conf: DerivationJobConf): Unit = {
+  def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
     df(rdd).write
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
-      .csv(conf.outputPath + relativeOutPath)
+      .csv(outPath + "/_" + targetFile)
+  }
+
+  def checkSparkState(outPath: String): Option[Int] = {
+    if (HdfsIO.exists(outPath + "/_" + targetFile)) Some {
+      if (HdfsIO.exists(outPath + "/_" + targetFile + "/_SUCCESS")) ProcessingState.Finished
+      else ProcessingState.Failed
+    } else None
   }
 
   def prepareOutputStream(out: OutputStream): Unit =
@@ -39,11 +46,12 @@ abstract class AutJob extends ChainedJob {
 
   def postProcess(outPath: String): Boolean = {
     IOHelper.concatLocal(
-      outPath,
+      outPath + "/_" + targetFile,
       targetFile,
       _.startsWith("part-"),
       compress = true,
       deleteSrcFiles = true,
+      deleteSrcPath = true,
       prepare = prepareOutputStream) { tmpFile =>
       val outFile = outPath + "/" + targetFile
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
@@ -51,10 +59,14 @@ abstract class AutJob extends ChainedJob {
     }
   }
 
-  object Spark extends PartialDerivationJob(this) with SparkJob {
-    def succeeded(conf: DerivationJobConf): Boolean =
-      HdfsIO.exists(conf.outputPath + relativeOutPath + "/_SUCCESS")
+  def checkFinishedState(outPath: String): Option[Int] = {
+    if (HdfsIO.exists(outPath + "/" + targetFile)) Some {
+      if (HdfsIO.files(outPath + "/part-*").isEmpty) ProcessingState.Finished
+      else ProcessingState.Failed
+    } else None
+  }
 
+  object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
         val rdd = IOHelper
@@ -70,18 +82,15 @@ abstract class AutJob extends ChainedJob {
                   in.close)
               },
             conf.sample)
-        runSpark(rdd, conf)
-        succeeded(conf)
+        val outPath = conf.outputPath + relativeOutPath
+        runSpark(rdd, outPath)
+        checkSparkState(outPath).contains(ProcessingState.Finished)
       }
     }
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
-      if (started) {
-        val completed = succeeded(conf)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
-      }
+      for (s <- checkSparkState(conf.outputPath + relativeOutPath)) instance.state = s
       instance
     }
   }
@@ -93,12 +102,7 @@ abstract class AutJob extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val outPath = conf.outputPath + relativeOutPath
-      if (HdfsIO.exists(outPath + "/" + targetFile)) {
-        instance.state =
-          if (HdfsIO.files(outPath + "/part-*").isEmpty) ProcessingState.Finished
-          else ProcessingState.Failed
-      }
+      for (s <- checkFinishedState(conf.outputPath + relativeOutPath)) instance.state = s
       instance
     }
 
@@ -110,8 +114,8 @@ abstract class AutJob extends ChainedJob {
       Seq("resultSize" -> size)
     }
 
-    override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] = Seq(
-      DerivativeOutput(targetFile, conf.outputPath + relativeOutPath, "application/gzip"))
+    override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
+      Seq(DerivativeOutput(targetFile, conf.outputPath + relativeOutPath, "application/gzip"))
   }
 
   override def templateName: Option[String] = Some("jobs/DefaultAutJob")

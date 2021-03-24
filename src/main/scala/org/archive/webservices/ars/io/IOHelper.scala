@@ -31,6 +31,7 @@ object IOHelper {
       filter: String => Boolean = _ => true,
       compress: Boolean = false,
       deleteSrcFiles: Boolean = false,
+      deleteSrcPath: Boolean = false,
       prepare: OutputStream => Unit = _ => {})(action: String => R): R = {
     val srcFiles =
       HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
@@ -46,6 +47,7 @@ object IOHelper {
       }
       val r = action(tmpOutFile)
       if (deleteSrcFiles) for (file <- srcFiles) HdfsIO.delete(file)
+      if (deleteSrcPath) HdfsIO.delete(srcPath)
       r
     }
   }

@@ -14,14 +14,12 @@
 
 <div class="row">
   <div class="large-12 columns">
-
     <%
     import org.archive.webservices.ars.model._
     for ((category, categoryDescription) <- Seq(
         (ArsCloudJobCategories.Collection, "Provides a basic overview of the collection."),
         (ArsCloudJobCategories.Network, "These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
         (ArsCloudJobCategories.Text, "The full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
-        (ArsCloudJobCategories.ImageData, "The following datasets contain information on images: their types, locations, and basic statistical information about them."),
         (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
     )) { %>
         <h2><%=category%></h2>
@@ -38,7 +36,7 @@
                         <div class="ng-scope">
                             <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</div>
                             <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
-                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Results</a>
+                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Sample Results</a>
                         </div>
                     </div>
                     <div class="job-card-full">
@@ -57,8 +55,6 @@
             </div>
           <% } %>
         </div>
-        <br /><br />
     <% } %>
-
   </div>
 </div>
