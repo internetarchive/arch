@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 
 object PresentationProgramInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract presentation program information"
+
   val description =
     "Create a CSV with the following columns: crawl date, URL of the presentation program file, filename, presentation program extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, presentation program MD5 hash and presentation program SHA1 hash."
 

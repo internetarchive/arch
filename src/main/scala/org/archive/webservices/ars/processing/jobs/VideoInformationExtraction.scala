@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 
 object VideoInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract video information"
+
   val description =
     "Create a CSV with the following columns: crawl date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."
 

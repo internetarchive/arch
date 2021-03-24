@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 
 object ImageInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract image information"
+
   val description =
     "Create a CSV with the following columns: crawl date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
 

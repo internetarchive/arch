@@ -15,46 +15,43 @@
 <div class="row">
   <div class="large-12 columns">
     <%
-    import org.archive.webservices.ars.model._
-    for ((category, categoryDescription) <- Seq(
-        (ArsCloudJobCategories.Collection, "Provides a basic overview of the collection."),
-        (ArsCloudJobCategories.Network, "These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
-        (ArsCloudJobCategories.Text, "The full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
-        (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
-    )) { %>
-        <h2><%=category%></h2>
-        <p><%=categoryDescription%></p>
-        <div class="card-deck">
-          <% for ((instance, sampleInstance) <- jobs(category)) { %>
-            <div class="card" id="card-<%=unescape(instance.job.id)%>">
-              <div class="card-body">
-                <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
-                <p class="card-text"><%=instance.job.description%></p>
-                <hr />
-                <div class="job-card-flex">
-                    <div class="job-card-sample">
-                        <div class="ng-scope">
-                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</div>
-                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
-                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Sample Results</a>
-                        </div>
-                    </div>
-                    <div class="job-card-full">
-                        <div class="ng-scope">
-                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button">Run Job</div>
-                            <div class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate"><%=sampleInstance.stateStr%></div>
-                            <a class="button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton job-button" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">View Results</a>
-                        </div>
-                    </div>
-                </div>
-                <script type="text/javascript">
-                    initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-                    initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
-                </script>
+      import org.archive.webservices.ars.model._
+      for ((category, categoryDescription) <- Seq(
+          (ArsCloudJobCategories.Collection, "Provides a basic overview of the collection."),
+          (ArsCloudJobCategories.Network, "These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
+          (ArsCloudJobCategories.Text, "The full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
+          (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
+      )) { %>
+      <h2><%=category%></h2>
+      <p><%=categoryDescription%></p>
+      <% for ((instance, sampleInstance) <- jobs(category)) { %>
+        <div class="card" id="card-<%=unescape(instance.job.id)%>">
+          <div class="card-body">
+            <h4 class="card-title ng-binding"><%=instance.job.name%></h4>
+            <p class="card-text"><%=instance.job.description%></p>
+            <div class="job-card-flex">
+              <div class="job-card-sample">
+                <button class="job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</button>
+                <button class="job-resultsbutton-disabled job-button jobstate"><%=sampleInstance.stateStr%></button>
+                <button class="job-resultsbutton job-button">
+                  <a class="results-page" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Sample Results</a>
+                </button>
+              </div>
+              <div class="job-card-full">
+                <button class="job-runbutton job-button">Run Job</button>
+                <button class="job-resultsbutton-disabled job-button jobstate"><%=sampleInstance.stateStr%></button>
+                <button class="job-resultsbutton job-button">
+                  <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">View Results</a>
+                </button>
               </div>
             </div>
-          <% } %>
+            <script type="text/javascript">
+              initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+              initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
+            </script>
+          </div>
         </div>
+      <% } %>
     <% } %>
   </div>
 </div>
