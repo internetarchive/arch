@@ -3,52 +3,80 @@ div.job-card-flex {
 }
 
 div.job-card-sample {
-    padding-right: 10px;
-    border-right: 1px solid #5c5c5c;
+    padding-right: 1%;
     font-size: 90%;
     display: flex;
     flex-direction: column;
-    width: 100%
+    align-items: center;
+    justify-content: center;
+    width: 50%
 }
 
 div.job-card-full {
-    padding-left: 10px;
+    padding-left: 1%;
     font-size: 90%;
     display: flex;
     flex-direction: column;
-    width: 100%
+    align-items: center;
+    justify-content: center;
+    width: 50%
 }
 
-div.button margin-top margin-bottom padding-top padding-bottom half job-runbutton job-button {
-    display: none;
+button.job-runbutton,job-button {
+    font-weight: bold;
+    min-width: 100%;
+    float: left;
+}
+
+button.job-resultsbutton-disabled,job-button,jobstate {
+    font-weight: bold;
+    min-width: 100%;
+    float: left;
+}
+
+button.job-resultsbutton,job-button {
+    font-weight: bold;
+    min-width: 100%;
+    float: left;
+}
+
+button.download-button {
+    display: block;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+a.results-page:link {
+    color: white;
     font-weight: bold;
 }
 
-div.button margin-top margin-bottom padding-top padding-bottom half job-resultsbutton-disabled secondary job-button jobstate {
-    display:none;
+a.results-page:visited {
+    color: white;
+    font-weight: bold;
 }
 
-div.button,download-button {
-  display: block;
-  margin: 10px;
-  padding: 10px;
+a.results:hover {
+    color: white;
+    font-weight: bold;
 }
 
 a.download:link {
-  color: white;
-  font-weight: bold;
+    color: white;
+    font-weight: bold;
 }
 
 a.download:visited {
-  color: white;
+    color: white;
 }
 
 a.download:hover {
-  color: white;
+    color: white;
 }
 
 a.download:active {
-  color: white;
+    color: white;
 }
 
 .small {
@@ -62,69 +90,68 @@ span.jobstate {
 [data-tooltip]:before {
     content: attr(data-tooltip);
     position: absolute;
-  opacity: 0;
-  transition: all 0.15s ease;
-  padding: 10px;
-  color: white;
-  border-radius: 10px;
+    opacity: 0;
+    transition: all 0.15s ease;
+    padding: 10px;
+    color: white;
+    border-radius: 10px;
 }
 
 [data-tooltip]:hover:before {
-  opacity: 1;
-  z-index: 1;
-  background: rgb(52, 143, 198);
-  width: 350px;
-  top: 110%;
-  left: 50%;
-  margin-left: -175px;
+    opacity: 1;
+    z-index: 1;
+    background: rgb(52, 143, 198);
+    width: 350px;
+    top: 110%;
+    left: 50%;
+    margin-left: -175px;
 }
 
 #tooltip {
-  background: rgb(52, 143, 198);
-  color: white;
-  /*font-weight: bold;*/
-  padding: 10px;
-  font-size: 20px;
-  border-radius: 4px;
-  display: none;
-  text-align: center;
-  z-index: 1;
+    background: rgb(52, 143, 198);
+    color: white;
+    padding: 10px;
+    font-size: 20px;
+    border-radius: 4px;
+    display: none;
+    text-align: center;
+    z-index: 1;
 }
 
 #tooltip[data-show] {
-  display: block;
+    display: block;
 }
 
 #arrow,
 #arrow::before {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: inherit;
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: inherit;
 }
 
 #arrow {
-  visibility: hidden;
+    visibility: hidden;
 }
 
 #arrow::before {
-  visibility: visible;
-  content: '';
-  transform: rotate(45deg);
+    visibility: visible;
+    content: '';
+    transform: rotate(45deg);
 }
 
 #tooltip[data-popper-placement^='top'] > #arrow {
-  bottom: -4px;
+    bottom: -4px;
 }
 
 #tooltip[data-popper-placement^='bottom'] > #arrow {
-  top: -4px;
+    top: -4px;
 }
 
 #tooltip[data-popper-placement^='left'] > #arrow {
-  right: -4px;
+    right: -4px;
 }
 
 #tooltip[data-popper-placement^='right'] > #arrow {
-  left: -4px;
+    left: -4px;
 }

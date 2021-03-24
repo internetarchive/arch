@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 
 object AudioInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract audio information"
+
   val description =
     "Create a CSV with the following columns: crawl date, URL of the audio file, filename, audio extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, audio MD5 hash and audio SHA1 hash."
 
