@@ -155,3 +155,42 @@ span.jobstate {
 #tooltip[data-popper-placement^='right'] > #arrow {
     left: -4px;
 }
+
+.collapsible {
+    max-height: 10px;
+    cursor: pointer;
+    color: black;
+    width: 100%;
+    background-color: #F7F7F7;
+}
+
+.active, .collapsible:hover {
+    background-color: #F7F7F7;
+}
+
+.collapsible:after {
+    content: "\2212";
+    font-weight: bold;
+    color: black;
+    float: right;
+    background-color: #F7F7F7;
+}
+
+.active:after {
+    content: '\002B';
+    background-color: #F7F7F7;
+}
+
+.collapsible-content {
+    padding: 0 5px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+.collapsible-content-open-by-default {
+    padding: 0 5px;
+    max-height: 100%;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
