@@ -116,11 +116,10 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/download/:collection_id/:job_id/:file_name") {
-    ensureUserBasePath("userid") { implicit user =>
+    ensureUserBasePath("userid", redirectOnForbidden = false) { implicit user =>
       val collectionId = params("collection_id")
       val jobId = params("job_id")
       (for {
-        collection <- ArsCloudCollection.get(collectionId)
         conf <- DerivationJobConf.collection(
           collectionId,
           sample = params.get("sample").contains("true"))
@@ -152,7 +151,7 @@ class DefaultController extends BaseController with ScalateSupport {
     try {
       val username = params("username")
       val password = params("password")
-      Ait.login(username, password) match {
+      Ait.login(username, password, response).left.toOption match {
         case Some(error) =>
           Ok(
             ssp(

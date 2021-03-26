@@ -27,13 +27,13 @@ class BaseController extends ScalatraServlet {
     } else action(AitUser.None)
   }
 
-  def ensureUserBasePath(userIdKey: String)(action: AitUser => ActionResult)(
-      implicit request: HttpServletRequest): ActionResult = {
+  def ensureUserBasePath(userIdKey: String, redirectOnForbidden: Boolean = true)(
+      action: AitUser => ActionResult)(implicit request: HttpServletRequest): ActionResult = {
     val userId = params(userIdKey)
     val path = requestPath.stripPrefix("/" + userId)
     Try(userId.toInt).toOption match {
       case Some(parsedId) =>
-        ensureLogin { loggedIn =>
+        ensureLogin(requiresLogin = true, redirect = redirectOnForbidden) { loggedIn =>
           (if (loggedIn.id == 0) Ait.user(parsedId) else Some(loggedIn)) match {
             case Some(user) =>
               if (parsedId != user.id) login(ArsCloud.BaseUrl + "/" + parsedId + path)
