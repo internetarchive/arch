@@ -34,15 +34,15 @@
           <div class="card-body">
             <h4 class="card-title">curl</h4>
             <p class="card-text">
-              <pre>$ curl <%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%> --output <%=unescape(file.filename)%></pre>
+              <pre>$ curl -u <%=user.userName%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" --output <%=unescape(file.filename)%></pre>
             </p>
           </div>
         </div>
         <div class="card" id="card-download-wget">
           <div class="card-body">
-            <h4 class="card-title">
+            <h4 class="card-title">wget</h4>
             <p class="card-text">
-              <pre>$ wget <%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%></pre>
+              <pre>$ wget --user=<%=user.userName%> --ask-password --auth-no-challenge -O <%=unescape(file.filename)%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>"</pre>
             </p>
           </div>
         </div>

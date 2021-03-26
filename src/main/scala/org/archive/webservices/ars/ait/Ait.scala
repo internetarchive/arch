@@ -2,11 +2,13 @@ package org.archive.webservices.ars.ait
 
 import java.io.{InputStream, PrintWriter}
 import java.net.{HttpURLConnection, URL, URLEncoder}
+import java.util.Base64
 
 import io.circe.HCursor
 import io.circe.parser._
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import org.archive.helge.sparkling.util.StringUtil
 import org.scalatra.Cookie
 import org.scalatra.servlet.ServletApiImplicits._
 
@@ -15,6 +17,7 @@ import scala.io.Source
 import scala.util.Try
 
 object Ait {
+  val AitSessionRequestAttribute = "AIT-sessionid"
   val AitSessionCookie = "sessionid"
   val SystemUserId = 188
 
@@ -40,9 +43,16 @@ object Ait {
       } yield AitUser(id, userName, fullName)
     }
 
+  def login(username: String, password: String, response: HttpServletResponse)(
+      implicit request: HttpServletRequest): Either[String, String] = {
+    val either = login(username, password)
+    for (sessionid <- either.right.toOption)
+      response.addCookie(Cookie(AitSessionCookie, sessionid))
+    either
+  }
+
   def login(username: String, password: String)(
-      implicit request: HttpServletRequest,
-      response: HttpServletResponse): Option[String] = {
+      implicit request: HttpServletRequest): Either[String, String] = {
     val ait = new URL("https://partner.archive-it.org/login").openConnection
       .asInstanceOf[HttpsURLConnection]
     try {
@@ -77,26 +87,49 @@ object Ait {
           .find(_.startsWith(AitSessionCookie + "="))
           .map(_.split(';').head.stripPrefix(AitSessionCookie + "=")) match {
           case Some(sessionid) =>
-            response.addCookie(Cookie(AitSessionCookie, sessionid))
-            None
+            request.setAttribute(AitSessionRequestAttribute, sessionid)
+            Right(sessionid)
           case None =>
-            Some("Login failed.")
+            Left("Login failed.")
         }
       } else {
-        Some("Incorrect Username/Password.")
+        Left("Incorrect Username/Password.")
       }
     } finally {
       Try(ait.disconnect())
     }
   }
 
+  def sessionId(implicit request: HttpServletRequest): Option[String] =
+    Option(request.getAttribute(AitSessionRequestAttribute)).map(_.toString).orElse {
+      Try {
+        request.cookies
+          .get(AitSessionCookie)
+          .filter(_ != null)
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .orElse {
+            request
+              .header("Authorization")
+              .filter(_ != null)
+              .map(_.trim)
+              .filter(_.toLowerCase.startsWith("basic "))
+              .map(StringUtil.stripPrefixBySeparator(_, " "))
+              .flatMap { base64 =>
+                val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
+                val Array(user, password) = userPassword.split(":", 2)
+                login(user, password).right.toOption
+              }
+          }
+      }.getOrElse(None)
+    }
+
   def get[R](path: String, contentType: String = "text/html")(action: InputStream => Option[R])(
       implicit request: HttpServletRequest): Option[R] = {
     val ait = new URL("https://partner.archive-it.org" + path).openConnection
       .asInstanceOf[HttpURLConnection]
     try {
-      for (sessionid <- request.cookies.get(AitSessionCookie))
-        ait.setRequestProperty("Cookie", AitSessionCookie + "=" + sessionid)
+      for (sid <- sessionId) ait.setRequestProperty("Cookie", AitSessionCookie + "=" + sid)
       ait.setRequestProperty("Accept", contentType)
       val in = ait.getInputStream
       try {
