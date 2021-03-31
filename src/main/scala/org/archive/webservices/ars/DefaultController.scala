@@ -116,8 +116,11 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/download/:collection_id/:job_id/:file_name") {
-    ensureUserBasePath("userid", redirectOnForbidden = false) { implicit user =>
-      val collectionId = params("collection_id")
+    val collectionId = params("collection_id")
+    ensureUserBasePath(
+      "userid",
+      redirectOnForbidden = false,
+      validateCollection = Some(collectionId)) { implicit user =>
       val jobId = params("job_id")
       (for {
         conf <- DerivationJobConf.collection(

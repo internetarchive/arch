@@ -1,0 +1,162 @@
+<%@ val user: org.archive.webservices.ars.ait.AitUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
+<%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
+<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
+<%@ val resultSize: Long %>
+<%@ val nodes: Seq[(String, Int)] %>
+<%@ val edges: Seq[(Int, Int)] %>
+
+<% layout("/layouts/job.ssp") { %>
+  <div class="row">
+    <div class="large-12 columns">
+      <div class="charts">
+        <h1>Top Hosts Sample</h1>
+          <div class="card card-body">
+            <div id="card-body graph-wrapper">
+              <button type="button" id="zoom-in" class="zoom-in">
+                <span class="fa fa-search-plus"></span>
+              </button>
+              <button type="button" id="zoom-out" class="zoom-out">
+                <span class="fa fa-search-minus"></span>
+              </button>
+              <button type="button" id="default" class="default">
+                <span class="fa fa-refresh"></span>
+              </button>
+              <a href="#" id="image-link" download="<%=collection.name + "-"%>-image.png">
+                <button type="button" id="graph-image" class="graph-image">
+                  <span class="fa fa-image"></span>
+                </button>
+              </a>
+              <div id="graph"></div>
+            </div>
+          </div>
+          <script src="/ait/js/sigma.min.js"></script>
+          <script src="/ait/js/sigma-worker.js"></script>
+          <script src="/ait/js/sigma-supervisor.js"></script>
+          <script src="/ait/js/ars-cloud-sigma-graphs.js"></script>
+          <script>
+            var data = {
+                "nodes": [
+                  <% for ((nlabel, nid) <- nodes) { %>
+                    {
+                      "id": "n<%=unescape(nid)%>",
+                      "label": "<%=unescape(nlabel)%>",
+                      "x": Math.random(),
+                      "y": Math.random(),
+                      "size": 10,
+                    },
+                  <% } %>
+                ],
+                "edges": [
+                  <% for (((srcId, dstId), eid) <- edges.zipWithIndex) { %>
+                    {
+                      "id": "e<%=unescape(eid)%>",
+                      "source": "n<%=unescape(srcId)%>",
+                      "target": "n<%=unescape(dstId)%>"
+                    },
+                  <% } %>
+                ]
+            };
+
+            var s = new sigma({
+                graph: data,
+                renderer: {
+                  container: document.getElementById('graph'),
+                  type: sigma.renderers.canvas,
+                },
+                settings: {
+                  edgeColor: 'default',
+                  defaultEdgeColor: '#d8dbdc',
+                  defaultNodeColor: '#a05195',
+                  minEdgeSize: 2.5
+                }
+            });
+            s.startForceAtlas2({worker: true, barnesHutOptimize: false});
+            s.stopForceAtlas2();
+            s.killForceAtlas2();
+
+            // Buttons and camera controls
+            $('.zoom-in').on('click', function () {
+              zoomIn(s);
+            });
+
+            $('.zoom-out').on('click', function () {
+              zoomOut(s);
+            });
+
+            $('.default').on('click', function () {
+              refresh(s);
+            });
+
+            $('#image-link').on('click', function () {
+              var button = document.getElementById('image-link');
+              var canvas = $('.sigma-scene');
+              var camera = s.camera;
+              var fn = button.getAttribute('download').replace('-image.png', '');
+              var img = canvas[0].toDataURL('image/png');
+              button.setAttribute('download', fn + 'xyr-' + Math.abs(Math.round(camera.x))
+                + '-' + Math.abs(Math.round(camera.y)) + '-' + Math.abs(Math.round(camera.ratio))
+                + '-image.png');
+              button.href = img;
+            });
+          </script>
+        </div>
+        <div class="text-right">
+          <a id="button" aria-describedby="tooltip">What does this graph show?</a>
+            <div id="tooltip" role="tooltip">
+              This graph shows up to the top 100 nodes with highest degree (number of inlinks + outlinks) along with their edges.
+              <div id="arrow" data-popper-arrow></div>
+            </div>
+        </div>
+        <script>
+          const button = document.querySelector('#button');
+          const tooltip = document.querySelector('#tooltip');
+
+          const popperInstance = Popper.createPopper(button, tooltip, {
+            modifiers: [
+              {
+                name: 'offset',
+                options: {
+                  offset: [20, 20],
+                },
+              },
+            ],
+          });
+
+          function show() {
+            // Make the tooltip visible
+            tooltip.setAttribute('data-show', '');
+
+            // Enable the event listeners
+            popperInstance.setOptions({
+              modifiers: [{ name: 'eventListeners', enabled: true }],
+            });
+
+            // Update its position
+            popperInstance.update();
+          }
+
+          function hide() {
+            // Hide the tooltip
+            tooltip.removeAttribute('data-show');
+
+            // Disable the event listeners
+            popperInstance.setOptions({
+              modifiers: [{ name: 'eventListeners', enabled: false }],
+            });
+          }
+
+          const showEvents = ['mouseenter', 'focus'];
+          const hideEvents = ['mouseleave', 'blur'];
+
+          showEvents.forEach(event => {
+            button.addEventListener(event, show);
+          });
+
+          hideEvents.forEach(event => {
+            button.addEventListener(event, hide);
+          });
+        </script>
+      </div>
+    </div>
+<% } %>

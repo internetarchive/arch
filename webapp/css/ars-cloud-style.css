@@ -194,3 +194,66 @@ span.jobstate {
     overflow: hidden;
     transition: max-height 0.2s ease-out;
 }
+
+/*
+ * Sigma instances
+ */
+
+div#sigma-fullscreen {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+@media (min-width: 576px) {
+    div.modal-dialog { max-width: none; }
+}
+
+div.modal {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+div.modal-dialog {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+div.modal-content {
+    height: auto;
+    border-radius: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+div.modal-body {
+    width: 100%;
+    max-width: none;
+}
+
+div#graph-wrapper {
+    padding: 2px;
+    border-radius: 5px;
+    border: 1px solid grey;
+}
+
+div#graph {
+    width: 100%;
+    height: 700px;
+}
+
+div#graph-modal-wrapper {
+    padding: 2px;
+    border-radius: 5px;
+    border: 1px solid grey;
+}
+
+div#graph-modal {
+    min-height: 200px;
+}

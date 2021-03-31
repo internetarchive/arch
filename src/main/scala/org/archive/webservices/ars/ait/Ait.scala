@@ -9,6 +9,7 @@ import io.circe.parser._
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.helge.sparkling.util.StringUtil
+import org.archive.webservices.ars.ait.Ait.getJson
 import org.scalatra.Cookie
 import org.scalatra.servlet.ServletApiImplicits._
 
@@ -19,19 +20,27 @@ import scala.util.Try
 object Ait {
   val AitSessionRequestAttribute = "AIT-sessionid"
   val AitSessionCookie = "sessionid"
+  val UserSessionAttribute = "ait-user"
   val SystemUserId = 188
 
-  def user(implicit request: HttpServletRequest): Option[AitUser] = getJson("/api/auth/list") {
-    json =>
-      for {
-        userName <- json.get[String]("username").toOption
-        fullName <- json.get[String]("full_name").toOption
-        id <- json
-          .downField("account")
-          .get[Int]("id")
-          .toOption
-          .map(id => if (id == SystemUserId) 0 else id)
-      } yield AitUser(id, userName, fullName)
+  def user(implicit request: HttpServletRequest): Option[AitUser] = user(useSession = false)
+
+  def user(useSession: Boolean)(implicit request: HttpServletRequest): Option[AitUser] = {
+    (if (useSession)
+       Option(request.getSession.getAttribute(UserSessionAttribute)).map(_.asInstanceOf[AitUser])
+     else None).orElse {
+      getJson("/api/auth/list") { json =>
+        for {
+          userName <- json.get[String]("username").toOption
+          fullName <- json.get[String]("full_name").toOption
+          id <- json
+            .downField("account")
+            .get[Int]("id")
+            .toOption
+            .map(id => if (id == SystemUserId) 0 else id)
+        } yield AitUser(id, userName, fullName)
+      }
+    }
   }
 
   def user(id: Int)(implicit request: HttpServletRequest): Option[AitUser] =
