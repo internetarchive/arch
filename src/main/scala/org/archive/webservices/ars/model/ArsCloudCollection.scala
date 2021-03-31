@@ -7,6 +7,7 @@ import org.scalatra.guavaCache.GuavaCache
 
 case class ArsCloudCollection(id: String, name: String, public: Boolean) {
   def info: ArsCloudCollectionInfo = ArsCloudCollectionInfo.get(id)
+  var user: Option[AitUser] = None
 }
 
 object ArsCloudCollection {
@@ -14,7 +15,7 @@ object ArsCloudCollection {
 
   def inputPath(id: String): Option[String] = {
     if (id.startsWith(AitPrefix)) {
-      val aitId = id.stripPrefix(ArsCloudCollection.AitPrefix)
+      val aitId = id.stripPrefix(AitPrefix)
       Some(
         ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz")
     } else None
@@ -23,11 +24,20 @@ object ArsCloudCollection {
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
   def get(id: String)(implicit request: HttpServletRequest): Option[ArsCloudCollection] = {
-    GuavaCache.get[ArsCloudCollection](cacheKey(id)).orElse {
-      if (id.startsWith(AitPrefix)) {
-        Ait.getJson("/api/collection?id=" + id)(parseJson).flatMap(_.headOption)
-      } else None
-    }
+    val key = cacheKey(id)
+    GuavaCache
+      .get[ArsCloudCollection](key)
+      .filter(c => c.user.isEmpty || Ait.user.exists(_.id == c.user.get.id))
+      .orElse {
+        if (id.startsWith(AitPrefix)) {
+          val aitId = id.stripPrefix(AitPrefix)
+          Ait.getJson("/api/collection?id=" + aitId)(parseJson).flatMap(_.headOption).map {
+            collection =>
+              collection.user = Ait.user(useSession = true)
+              GuavaCache.put(key, collection, None)
+          }
+        } else None
+      }
   }
 
   private def parseJson(cursor: HCursor): Option[Seq[ArsCloudCollection]] = {
