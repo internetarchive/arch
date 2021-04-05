@@ -9,7 +9,6 @@ import io.circe.parser._
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.helge.sparkling.util.StringUtil
-import org.archive.webservices.ars.ait.Ait.getJson
 import org.scalatra.Cookie
 import org.scalatra.servlet.ServletApiImplicits._
 

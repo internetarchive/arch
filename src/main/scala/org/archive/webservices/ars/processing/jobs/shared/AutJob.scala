@@ -25,6 +25,8 @@ abstract class AutJob extends ChainedJob {
 
   def df(rdd: RDD[ArchiveRecord]): Dataset[Row]
 
+  def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] = rdd
+
   def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
     df(rdd).write
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
@@ -81,7 +83,8 @@ abstract class AutJob extends ChainedJob {
                     .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
                   in.close)
               },
-            conf.sample)
+            conf.sample,
+            filterRecords)
         val outPath = conf.outputPath + relativeOutPath
         runSpark(rdd, outPath)
         checkSparkState(outPath).contains(ProcessingState.Finished)
