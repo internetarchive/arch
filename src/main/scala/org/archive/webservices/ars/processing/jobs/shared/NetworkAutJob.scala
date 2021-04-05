@@ -9,6 +9,8 @@ import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 
+import scala.util.Try
+
 abstract class NetworkAutJob extends AutJob {
   val SampleTopNNodes = 50
 
@@ -17,6 +19,9 @@ abstract class NetworkAutJob extends AutJob {
   val sampleGraphFile: String = "sample-graph.tsv.gz"
 
   def srcDstFields: (String, String)
+
+  override def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] =
+    rdd.filter(r => Try(r.getContentString).isSuccess)
 
   override def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
     val data = df(rdd).cache

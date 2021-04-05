@@ -8,10 +8,15 @@ import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 
+import scala.util.Try
+
 abstract class BinaryInformationAutJob extends AutJob {
   val category: ArsCloudJobCategory = ArsCloudJobCategories.BinaryInformation
 
   val mimeTypeCountFile: String = "mime-type-count.csv.gz"
+
+  override def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] =
+    rdd.filter(r => Try(r.getBinaryBytes).isSuccess)
 
   override def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
     val data = df(rdd).cache

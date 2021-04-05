@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.io
 
-import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
+import java.io.{ByteArrayOutputStream, InputStream}
 
 import io.archivesunleashed.ArchiveRecord
 import io.archivesunleashed.matchbox.ExtractDomain
@@ -51,7 +51,7 @@ object AutRecordLoader {
       def getCrawlMonth: String =
         warc.timestamp.filter(_.length >= 6).map(_.take(6)).getOrElse("")
 
-      def getContentBytes: Array[Byte] = {
+      lazy val getContentBytes: Array[Byte] = {
         nestedHttp { http =>
           val bytes = new ByteArrayOutputStream()
           bytes.write(WarcHeaders.http(http.statusLine, http.headers))
@@ -61,7 +61,7 @@ object AutRecordLoader {
         }.getOrElse(IOUtil.bytes(payload))
       }
 
-      def getContentString: String = {
+      lazy val getContentString: String = {
         nestedHttp[String] { http =>
           (Seq(http.statusLine) ++
             http.headers.map { case (k, v) => k + ": " + v } ++
@@ -75,10 +75,10 @@ object AutRecordLoader {
       def getUrl: String = warc.url.getOrElse("")
       def getDomain: String = ExtractDomain(getUrl)
 
-      def getBinaryBytes: Array[Byte] = IOUtil.bytes(nestedPayload)
+      lazy val getBinaryBytes: Array[Byte] = IOUtil.bytes(nestedPayload)
 
       def getHttpStatus: String = http.map(_.status).map(_.toString).getOrElse("000")
 
-      def getPayloadDigest: String = WarcRecord.defaultDigestHash(nestedPayload)
+      lazy val getPayloadDigest: String = WarcRecord.defaultDigestHash(nestedPayload)
     }
 }

@@ -52,17 +52,21 @@ object IOHelper {
     }
   }
 
-  def load[A: ClassTag](path: String, rdd: String => RDD[A], sample: Int = -1): RDD[A] = {
-    if (sample < 0) rdd(path)
+  def load[A: ClassTag](
+      path: String,
+      rdd: String => RDD[A],
+      sample: Int = -1,
+      filter: RDD[A] => RDD[A] = (rdd: RDD[A]) => rdd): RDD[A] = {
+    if (sample < 0) filter(rdd(path))
     else
-      HdfsIO
-        .files(path)
-        .toSeq
-        .sorted
-        .headOption
-        .map(rdd)
-        .getOrElse(RddUtil.emptyRDD)
-        .mapPartitions(_.take(sample))
+      filter(
+        HdfsIO
+          .files(path)
+          .toSeq
+          .sorted
+          .headOption
+          .map(rdd)
+          .getOrElse(RddUtil.emptyRDD)).mapPartitions(_.take(sample))
   }
 
   def size(path: String): Long = HdfsIO.files(path).map(HdfsIO.length).sum

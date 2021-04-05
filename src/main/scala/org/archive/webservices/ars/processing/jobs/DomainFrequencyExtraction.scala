@@ -10,6 +10,8 @@ import org.archive.webservices.ars.model.ArsCloudJobCategories
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.shared.AutJob
 
+import scala.util.Try
+
 object DomainFrequencyExtraction extends AutJob {
   val name = "Domain Frequency"
   val category = ArsCloudJobCategories.Collection
@@ -19,6 +21,9 @@ object DomainFrequencyExtraction extends AutJob {
   val targetFile: String = "domain-frequency.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit = out.println("domain, count")
+
+  override def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] =
+    rdd.filter(r => Try(r.getBinaryBytes).isSuccess)
 
   def df(rdd: RDD[ArchiveRecord]) = DomainFrequencyExtractor(rdd.webpages())
 
