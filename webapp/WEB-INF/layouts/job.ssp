@@ -5,11 +5,11 @@
 <%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
 
 #set (title)
-    <%=collection.name%>: <%=job.job.name%>
+  <%=collection.name%>: <%=job.job.name%>
 #end
 
 #set (subtitle)
-  Web Archive Derivative Datasets
+  <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Cloud Documentation</a>
 #end
 
 <br><br>

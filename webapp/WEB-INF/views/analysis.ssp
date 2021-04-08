@@ -3,11 +3,11 @@
 <%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
 
 #set (title)
-    Analyze <%=collection.name%>
+  Analyze <%=collection.name%>
 #end
 
 #set (subtitle)
-    Web Archive Derivative Datasets
+  <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Cloud Documentation</a>
 #end
 
 <br /><br />
