@@ -9,6 +9,7 @@
 <% layout("/layouts/job.ssp") { %>
   <div class="row">
     <div class="large-12 columns">
+    <% if (edges.nonEmpty) { %>
       <div class="charts">
         <h1>Top Hosts Sample</h1>
           <div class="card card-body">
@@ -158,5 +159,6 @@
           });
         </script>
       </div>
+    <% } %>  
     </div>
 <% } %>
