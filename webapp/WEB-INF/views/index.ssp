@@ -2,78 +2,64 @@
 <%@ val collections: Seq[(org.archive.webservices.ars.model.ArsCloudCollection, org.archive.webservices.ars.model.ArsCloudCollectionInfo, String)] %>
 
 #set (title)
-    Datasets
+  Datasets
 #end
 
 #set (subtitle)
-    <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Documentation</a>
+  <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Cloud Documentation</a>
 #end
 
 <subnav data="state.menus.research_services" class="ng-isolate-scope">
-    <div class="row subnav">
-        <div class="small-12 columns">
-
-            <div class="row">
-
-                <div class="subnav-box columns">
-
-                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services active" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
-                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collection Analysis</a></span>
-                    </div>
-
-                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
-                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services/download">Downloading Datasets</a></span>
-                    </div>
-
-                    <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
-                        <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services/learning_resources">Learning Resources</a></span>
-                    </div>
-
-                    <hr>
-
-                </div>
-
-            </div>
+  <div class="row subnav">
+    <div class="small-12 columns">
+      <div class="row">
+        <div class="subnav-box columns">
+          <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services active" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
+            <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collection Analysis</a></span>
+          </div>
+          <hr />
         </div>
-        <div ng-transclude=""></div>
+      </div>
     </div>
+    <div ng-transclude=""></div>
+  </div>
 </subnav>
 
 <div class="row">
-    <div class="large-12 columns">
-        <table class="large-12 columns margin-top one sortable">
-            <thead>
-                <tr>
-                    <th>Collection Name</th>
-                    <th>Public Collection</th>
-                    <th>Recently Created</th>
-                    <th>Last Created</th>
-                    <th>Size</th>
-                </tr>
-            </thead>
-            <tbody class="ng-scope">
-                <% for ((collection, info, sizeStr) <- collections) { %>
-                    <tr>
-                        <td class="ng-binding">
-                            <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>">
-                                <%=collection.name%>
-                            </a>
-                        </td>
-                        <td class="ng-scope">
-                          <%=if (collection.public) {"Yes"} else {"No"}%>
-                        </td>
-                        <td class="ng-scope">
-                          <%=info.lastJobName.getOrElse("-")%>
-                        </td>
-                        <td class="ng-scope">
-                          <%=info.lastJobTime.map(_.toString.stripSuffix("Z").replace("T", " ")).getOrElse("-")%>
-                        </td>
-                        <td class="ng-scope">
-                            <%=sizeStr%>
-                        </td>
-                    </tr>
-                <% } %>
-            </tbody>
-        </table>
-    </div>
+  <div class="large-12 columns">
+    <table class="large-12 columns margin-top one sortable">
+      <thead>
+        <tr>
+          <th>Collection Name</th>
+          <th>Public Collection</th>
+          <th>Recently Created</th>
+          <th>Last Created</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody class="ng-scope">
+        <% for ((collection, info, sizeStr) <- collections) { %>
+          <tr>
+            <td class="ng-binding">
+              <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>">
+                <%=collection.name%>
+              </a>
+            </td>
+            <td class="ng-scope">
+              <%=if (collection.public) {"Yes"} else {"No"}%>
+            </td>
+            <td class="ng-scope">
+              <%=info.lastJobName.getOrElse("-")%>
+            </td>
+            <td class="ng-scope">
+              <%=info.lastJobTime.map(_.toString.stripSuffix("Z").replace("T", " ")).getOrElse("-")%>
+            </td>
+            <td class="ng-scope">
+              <%=sizeStr%>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
 </div>
