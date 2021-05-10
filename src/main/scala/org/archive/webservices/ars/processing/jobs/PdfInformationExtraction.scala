@@ -1,10 +1,8 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.PDFInformationExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object PdfInformationExtraction extends BinaryInformationAutJob {
@@ -15,9 +13,8 @@ object PdfInformationExtraction extends BinaryInformationAutJob {
 
   val targetFile: String = "pdf-information.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit =
-    out.println(
-      "crawl_date, url, filename, extension, mime_type_web_server, mime_type_tika, width, height, md5, sha1")
+  override def checkMime(url: String, server: String, tika: String): Boolean =
+    tika == "application/pdf"
 
-  def df(rdd: RDD[ArchiveRecord]) = PDFInformationExtractor(rdd.pdfs())
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

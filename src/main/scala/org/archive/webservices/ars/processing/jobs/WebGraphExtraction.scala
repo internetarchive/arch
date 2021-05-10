@@ -2,12 +2,15 @@ package org.archive.webservices.ars.processing.jobs
 
 import java.io.PrintStream
 
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.WebGraphExtractor
+import io.archivesunleashed.matchbox.ExtractLinks
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Dataset, Row}
+import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
+import org.archive.webservices.ars.util.Common
 
-object WebGraphExtraction extends NetworkAutJob {
+object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Extract web graph"
   val description =
     "Create a CSV with the following columns: crawl date, source, destination, and anchor text. Note that this contains all links and is not aggregated into domains."
@@ -17,7 +20,25 @@ object WebGraphExtraction extends NetworkAutJob {
   val srcDstFields: (String, String) = ("src", "dest")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date, source, destination, anchor_text")
+    out.println("crawl_date,source,destination,anchor_text")
 
-  def df(rdd: RDD[ArchiveRecord]) = WebGraphExtractor(rdd.webgraph())
+  override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webGraph(rdd)
+
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = {
+    rdd.flatMap { r =>
+      r.http.filter(AutUtil.validPage(r, _)).toIterator.flatMap { http =>
+        Common
+          .tryOrElse(Seq.empty[Row]) {
+            val url = AutUtil.url(r)
+            ExtractLinks(url, http.bodyString)
+              .filter { case (s, t, _) => s != "" && t != "" }
+              .map {
+                case (source, target, alt) =>
+                  Row(AutUtil.crawlDate(r), source, target, alt)
+              }
+          }
+          .toIterator
+      }
+    }
+  }
 }

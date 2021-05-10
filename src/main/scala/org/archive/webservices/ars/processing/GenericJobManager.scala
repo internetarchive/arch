@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.archive.helge.sparkling.Sparkling.executionContext
 
 object GenericJobManager {
   val MaxRunning = 5

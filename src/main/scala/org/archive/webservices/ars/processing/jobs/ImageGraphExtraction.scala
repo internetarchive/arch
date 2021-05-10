@@ -2,12 +2,15 @@ package org.archive.webservices.ars.processing.jobs
 
 import java.io.PrintStream
 
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.ImageGraphExtractor
+import io.archivesunleashed.matchbox.ExtractImageLinks
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Dataset, Row}
+import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
+import org.archive.webservices.ars.util.{Common, HttpUtil}
 
-object ImageGraphExtraction extends NetworkAutJob {
+object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Extract image graph"
   val description =
     "Create a CSV with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
@@ -17,7 +20,25 @@ object ImageGraphExtraction extends NetworkAutJob {
   val srcDstFields: (String, String) = ("src", "image_url")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date, source, url, alt_text")
+    out.println("crawl_date,source,url,alt_text")
 
-  def df(rdd: RDD[ArchiveRecord]) = ImageGraphExtractor(rdd.imagegraph())
+  override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.imageGraph(rdd)
+
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = {
+    rdd.flatMap { r =>
+      r.http.filter(AutUtil.validPage(r, _)).toIterator.flatMap { http =>
+        Common
+          .tryOrElse(Seq.empty[Row]) {
+            val url = AutUtil.url(r)
+            ExtractImageLinks(url, HttpUtil.bodyString(http.body, http))
+              .filter { case (s, t, _) => s != "" && t != "" }
+              .map {
+                case (source, target, alt) =>
+                  Row(AutUtil.crawlDate(r), source, target, alt)
+              }
+          }
+          .toIterator
+      }
+    }
+  }
 }

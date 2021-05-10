@@ -1,10 +1,8 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.PresentationProgramInformationExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object PresentationProgramInformationExtraction extends BinaryInformationAutJob {
@@ -15,10 +13,23 @@ object PresentationProgramInformationExtraction extends BinaryInformationAutJob 
 
   val targetFile: String = "presentation-program-information.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit =
-    out.println(
-      "crawl_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
+  val PresentationMimeTypes: Set[String] = Set(
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.presentation",
+    "application/vnd.oasis.opendocument.presentation-template",
+    "application/vnd.sun.xml.impress",
+    "application/vnd.sun.xml.impress.template",
+    "application/vnd.stardivision.impress",
+    "application/x-starimpress",
+    "application/vnd.ms-powerpoint.addin.macroEnabled.12",
+    "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+    "application/vnd.ms-powerpoint.slide.macroEnabled.12",
+    "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
+    "application/vnd.ms-powerpoint.template.macroEnabled.12")
 
-  def df(rdd: RDD[ArchiveRecord]) =
-    PresentationProgramInformationExtractor(rdd.presentationProgramFiles())
+  override def checkMime(url: String, server: String, tika: String): Boolean =
+    PresentationMimeTypes.contains(tika)
+
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

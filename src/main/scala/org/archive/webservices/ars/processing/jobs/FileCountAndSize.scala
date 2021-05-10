@@ -7,7 +7,7 @@ import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudJobCategories, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.archive.helge.sparkling.Sparkling.executionContext
 import scala.concurrent.Future
 
 object FileCountAndSize extends SparkJob {
@@ -20,7 +20,7 @@ object FileCountAndSize extends SparkJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { _ =>
       val singlePartition = IOHelper
-        .load(
+        .load[String](
           conf.inputPath,
           RddUtil.loadFilesLocality(_, setPartitionFiles = false),
           conf.sample)

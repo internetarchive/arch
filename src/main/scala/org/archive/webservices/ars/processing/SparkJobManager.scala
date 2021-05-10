@@ -5,7 +5,7 @@ import org.apache.spark.sql.SparkSession
 import org.archive.helge.sparkling.util.SparkUtil
 import org.archive.webservices.ars.model.ArsCloudConf
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.archive.helge.sparkling.Sparkling.executionContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
@@ -22,7 +22,7 @@ object SparkJobManager {
       appName = "ARS-cloud",
       executors = 5,
       executorCores = 4,
-      executorMemory = "2g",
+      executorMemory = "4g",
       queue = ArsCloudConf.hadoopQueue,
       additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
       verbose = true)

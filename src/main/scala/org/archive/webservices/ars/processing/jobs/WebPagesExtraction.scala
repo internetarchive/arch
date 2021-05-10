@@ -1,17 +1,21 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
+import java.io.{InputStream, PrintStream}
 
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.WebPagesExtractor
+import io.archivesunleashed.matchbox.{DetectLanguage, RemoveHTML, RemoveHTTPHeader}
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArsCloudJobCategories
+import org.apache.spark.sql.{Dataset, Row}
+import org.archive.helge.sparkling.http.HttpMessage
+import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
+import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
+import org.archive.webservices.ars.util.HttpUtil
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Extract webpages"
 
-  override val category = ArsCloudJobCategories.Text
+  override val category: ArsCloudJobCategory = ArsCloudJobCategories.Text
 
   val description =
     "Create a CSV with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
@@ -19,7 +23,31 @@ object WebPagesExtraction extends BinaryInformationAutJob {
   val targetFile: String = "web-pages.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date, domain, url, mime_type_web_server, mime_type_tika, content")
+    out.println("crawl_date,domain,url,mime_type_web_server,mime_type_tika,language,content")
 
-  def df(rdd: RDD[ArchiveRecord]) = WebPagesExtractor(rdd.webpages())
+  override def checkMime(url: String, server: String, tika: String): Boolean =
+    AutUtil.checkPageMime(url, server)
+
+  override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webpages(rdd)
+
+  override def row(
+      url: String,
+      http: HttpMessage,
+      body: InputStream,
+      tikaMime: String,
+      crawlDate: String): Row = {
+    val bodyString = HttpUtil.bodyString(body, http)
+    val content = RemoveHTML(RemoveHTTPHeader(bodyString))
+
+    Row(
+      crawlDate,
+      AutUtil.extractDomainRemovePrefixWWW(url),
+      url,
+      AutUtil.mime(http),
+      tikaMime,
+      DetectLanguage(content),
+      content)
+  }
+
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

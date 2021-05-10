@@ -22,19 +22,24 @@ div.job-card-full {
     width: 50%
 }
 
-button.job-runbutton,job-button {
+button.job-button {
+    display: none;
+}
+
+button.job-runbutton {
     font-weight: bold;
     min-width: 100%;
     float: left;
 }
 
-button.job-resultsbutton-disabled,job-button,jobstate {
+button.job-statebutton {
     font-weight: bold;
     min-width: 100%;
+    background-color: #d8dbdc;
     float: left;
 }
 
-button.job-resultsbutton,job-button {
+button.job-resultsbutton {
     font-weight: bold;
     min-width: 100%;
     float: left;
@@ -81,10 +86,6 @@ a.download:active {
 
 .small {
     font-size: 90%;
-}
-
-span.jobstate {
-    font-weight: bold;
 }
 
 [data-tooltip]:before {
@@ -164,7 +165,7 @@ span.jobstate {
     background-color: #F7F7F7;
 }
 
-.active, .collapsible:hover {
+.collapsible:hover {
     background-color: #F7F7F7;
 }
 
@@ -176,7 +177,7 @@ span.jobstate {
     background-color: #F7F7F7;
 }
 
-.active:after {
+.collapsible.active:after {
     content: '\002B';
     background-color: #F7F7F7;
 }

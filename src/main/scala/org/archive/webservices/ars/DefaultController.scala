@@ -28,13 +28,8 @@ class DefaultController extends BaseController with ScalateSupport {
   get("/:userid/research_services/?*") {
     ensureUserBasePath("userid") { user =>
       val aitCollections = ArsCloudCollection.userCollections(user)
-      val collections = aitCollections.flatMap { collection =>
-        DerivationJobConf.collection(collection.id).map { conf =>
-          (collection, collection.info, IOHelper.sizeStr(conf.inputPath))
-        }
-      }
       Ok(
-        ssp("index", "collections" -> collections, "user" -> user),
+        ssp("index", "collections" -> aitCollections, "user" -> user),
         Map("Content-Type" -> "text/html"))
     }
   }

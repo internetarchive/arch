@@ -1,17 +1,19 @@
 package org.archive.webservices.ars.processing.jobs.shared
 
-import io.archivesunleashed.ArchiveRecord
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Dataset, Row}
+import org.apache.spark.storage.StorageLevel
 import org.archive.helge.sparkling.Sparkling
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{RddUtil, SurtUtil}
+import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 
-import scala.util.Try
+import scala.reflect.ClassTag
 
-abstract class NetworkAutJob extends AutJob {
+abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
   val SampleTopNNodes = 50
 
   val category: ArsCloudJobCategory = ArsCloudJobCategories.Network
@@ -20,23 +22,20 @@ abstract class NetworkAutJob extends AutJob {
 
   def srcDstFields: (String, String)
 
-  override def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] =
-    rdd.filter(r => Try(r.getContentString).isSuccess)
-
-  override def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
-    val data = df(rdd).cache
-
+  def createVizSample[O](df: Dataset[Row])(action: RDD[(String, String)] => O): O = {
     val (srcField, dstField) = srcDstFields
 
-    val hostEdges = data.rdd.flatMap { row =>
-      val src = row.getAs[String](srcField)
-      val dst = row.getAs[String](dstField)
-      val srcHost = SurtUtil.validateHost(SurtUtil.fromUrl(src))
-      val dstHost = SurtUtil.validateHost(SurtUtil.fromUrl(dst))
-      if (srcHost.isDefined && dstHost.isDefined && srcHost.get != dstHost.get) {
-        Iterator((srcHost.get, dstHost.get))
-      } else Iterator.empty
-    }.cache
+    val hostEdges = df.rdd
+      .flatMap { row =>
+        val src = row.getAs[String](srcField)
+        val dst = row.getAs[String](dstField)
+        val srcHost = SurtUtil.validateHost(SurtUtil.fromUrl(src))
+        val dstHost = SurtUtil.validateHost(SurtUtil.fromUrl(dst))
+        if (srcHost.isDefined && dstHost.isDefined && srcHost.get != dstHost.get) {
+          Iterator((srcHost.get, dstHost.get))
+        } else Iterator.empty
+      }
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val nodes = hostEdges
       .flatMap {
@@ -48,22 +47,30 @@ abstract class NetworkAutJob extends AutJob {
       .take(SampleTopNNodes)
       .map(_._1)
       .toSet
+
     val nodesBc = hostEdges.context.broadcast(nodes)
 
-    val sample = hostEdges.filter {
-      case (src, dst) =>
+    try {
+      action(hostEdges.mapPartitions { partition =>
         val nodes = nodesBc.value
-        nodes.contains(src) && nodes.contains(dst)
+        partition.filter {
+          case (src, dst) =>
+            nodes.contains(src) && nodes.contains(dst)
+        }
+      })
+    } finally {
+      hostEdges.unpersist(true)
     }
+  }
 
-    data.write
-      .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
-      .format("csv")
-      .csv(outPath + "/_" + targetFile)
+  override def runSpark(rdd: RDD[R], outPath: String): Unit = {
+    val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
-    RddUtil.saveAsTextFile(
-      sample.map { case (s, d) => s"$s\t$d" },
-      outPath + "/_" + sampleGraphFile)
+    createVizSample(data) { derivative =>
+      RddUtil.saveAsTextFile(
+        derivative.map { case (s, d) => s"$s\t$d" },
+        outPath + "/_" + sampleGraphFile)
+    }
   }
 
   override def checkSparkState(outPath: String): Option[Int] =

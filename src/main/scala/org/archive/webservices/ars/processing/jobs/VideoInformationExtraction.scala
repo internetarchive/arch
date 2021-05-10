@@ -1,10 +1,8 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.VideoInformationExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object VideoInformationExtraction extends BinaryInformationAutJob {
@@ -15,9 +13,8 @@ object VideoInformationExtraction extends BinaryInformationAutJob {
 
   val targetFile: String = "video-information.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit =
-    out.println(
-      "crawl_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
+  override def checkMime(url: String, server: String, tika: String): Boolean =
+    tika.startsWith("video/")
 
-  def df(rdd: RDD[ArchiveRecord]) = VideoInformationExtractor(rdd.videos())
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

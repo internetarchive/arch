@@ -14,12 +14,13 @@
 <meta name="description" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/normalize.css?c=datetimenow">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/main.css?c=datetimenow">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/foundation-datepicker/css/foundation-datepicker.min.css?c=datetimenow">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css?c=datetimenow">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css?c=datetimenow">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css?c=datetimenow">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/normalize.css">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/main.css">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/foundation-datepicker/css/foundation-datepicker.min.css">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css">
+<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css">
+<%--<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css">--%>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="/ait/css/ars-cloud-style.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
 <link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
@@ -47,7 +48,7 @@
 
 <script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
 <script src="/ait/js/pagetransitions.js"></script>
-<script src="/ait/js/jobs.js"></script>
+<script src="/ait/js/ars-cloud.js"></script>
 <script src="/ait/js/sorttable.js"></script>
 <script src="/ait/js/Chart.min.js"></script>
 <script src="/ait/js/popper.min.js"></script>

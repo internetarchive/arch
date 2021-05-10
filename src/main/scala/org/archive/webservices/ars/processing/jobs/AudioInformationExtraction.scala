@@ -1,10 +1,8 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.AudioInformationExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object AudioInformationExtraction extends BinaryInformationAutJob {
@@ -15,9 +13,8 @@ object AudioInformationExtraction extends BinaryInformationAutJob {
 
   val targetFile: String = "audio-information.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit =
-    out.println(
-      "crawl_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
+  def checkMime(url: String, server: String, tika: String): Boolean =
+    tika.startsWith("audio/")
 
-  def df(rdd: RDD[ArchiveRecord]) = AudioInformationExtractor(rdd.audio())
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

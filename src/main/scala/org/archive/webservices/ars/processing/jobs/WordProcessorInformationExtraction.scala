@@ -1,10 +1,8 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.WordProcessorInformationExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {
@@ -15,9 +13,28 @@ object WordProcessorInformationExtraction extends BinaryInformationAutJob {
 
   val targetFile: String = "word-processor-information.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit =
-    out.println(
-      "crawl_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
+  val WordProcessorMimeTypes: Set[String] = Set(
+    "application/vnd.lotus-wordpro",
+    "application/vnd.kde.kword",
+    "application/vnd.ms-word.document.macroEnabled.12",
+    "application/vnd.ms-word.template.macroEnabled.12",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document.glossary+xml",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    "application/vnd.wordperfect",
+    "application/wordperfect5.1",
+    "application/msword",
+    "application/vnd.ms-word.document.macroEnabled.12",
+    "application/vnd.ms-word.template.macroEnabled.12",
+    "application/vnd.apple.pages",
+    "application/macwriteii",
+    "application/vnd.ms-works",
+    "application/rtf")
 
-  def df(rdd: RDD[ArchiveRecord]) = WordProcessorInformationExtractor(rdd.wordProcessorFiles())
+  override def checkMime(url: String, server: String, tika: String): Boolean =
+    WordProcessorMimeTypes.contains(tika)
+
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

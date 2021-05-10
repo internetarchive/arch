@@ -2,30 +2,48 @@ package org.archive.webservices.ars.processing.jobs
 
 import java.io.PrintStream
 
-import io.archivesunleashed.ArchiveRecord
-import io.archivesunleashed.app.DomainFrequencyExtractor
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.desc
+import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.webservices.ars.model.ArsCloudJobCategories
+import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
+import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.shared.AutJob
+import org.archive.webservices.ars.util.Common
 
-import scala.util.Try
-
-object DomainFrequencyExtraction extends AutJob {
+object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain Frequency"
-  val category = ArsCloudJobCategories.Collection
+  val category: ArsCloudJobCategory = ArsCloudJobCategories.Collection
   val description =
     "Create a CSV with the following columns: domain and count."
 
   val targetFile: String = "domain-frequency.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit = out.println("domain, count")
+  override def printToOutputStream(out: PrintStream): Unit = out.println("domain,count")
 
-  override def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] =
-    rdd.filter(r => Try(r.getBinaryBytes).isSuccess)
+  override def df(rdd: RDD[(String, Long)]): Dataset[Row] = {
+    val rows = rdd
+      .reduceByKey(_ + _)
+      .map {
+        case (domain, count) =>
+          Row(domain, count)
+      }
+    AutLoader.domainFrequency(rows).orderBy(desc("count"))
+  }
 
-  def df(rdd: RDD[ArchiveRecord]) = DomainFrequencyExtractor(rdd.webpages())
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[(String, Long)] = {
+    rdd
+      .flatMap { r =>
+        Common.tryOrElse[Option[(String, Long)]](None) {
+          r.http.filter(AutUtil.validPage(r, _)).map { _ =>
+            val url = AutUtil.url(r)
+            (AutUtil.extractDomainRemovePrefixWWW(url), 1L)
+          }
+        }
+      }
+  }
 
   override def templateName: Option[String] = Some("jobs/DomainFrequencyExtraction")
 
@@ -33,10 +51,15 @@ object DomainFrequencyExtraction extends AutJob {
     val topDomains = HdfsIO
       .lines(conf.outputPath + relativeOutPath + "/" + targetFile, 11)
       .drop(1)
-      .map(_.split(','))
-      .map {
-        case Array(domain, freq) =>
-          (domain, freq.toInt)
+      .flatMap { line =>
+        val comma = line.lastIndexOf(',')
+        if (comma < 0) None
+        else
+          Some {
+            val (domain, freq) =
+              (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
+            (domain, freq.toInt)
+          }
       }
     super.templateVariables(conf) ++ Seq("topDomains" -> topDomains)
   }
