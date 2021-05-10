@@ -34,14 +34,14 @@
               <div class="job-card-flex">
                 <div class="job-card-sample">
                   <button class="job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</button>
-                  <button class="job-resultsbutton-disabled job-button jobstate"><%=sampleInstance.stateStr%></button>
+                  <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
                   <button class="job-resultsbutton job-button">
                     <a class="results-page" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">View Sample Results</a>
                   </button>
                 </div>
                 <div class="job-card-full">
                   <button class="job-runbutton job-button">Run Job</button>
-                  <button class="job-resultsbutton-disabled job-button jobstate"><%=sampleInstance.stateStr%></button>
+                  <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
                   <button class="job-resultsbutton job-button">
                     <a class="results-page" href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">View Results</a>
                   </button>
@@ -51,8 +51,8 @@
           </div>
           <script>
             // Job status
-            initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-            initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
+            arsCloud.initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+            arsCloud.initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
           </script>
         <% } %>
       </div>

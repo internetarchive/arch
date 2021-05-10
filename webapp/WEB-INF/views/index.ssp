@@ -1,5 +1,5 @@
 <%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collections: Seq[(org.archive.webservices.ars.model.ArsCloudCollection, org.archive.webservices.ars.model.ArsCloudCollectionInfo, String)] %>
+<%@ val collections: Seq[org.archive.webservices.ars.model.ArsCloudCollection] %>
 
 #set (title)
   Datasets
@@ -38,8 +38,8 @@
         </tr>
       </thead>
       <tbody class="ng-scope">
-        <% for ((collection, info, sizeStr) <- collections) { %>
-          <tr>
+        <% for (collection <- collections) { %>
+          <tr id="collection-row-<%=unescape(collection.id)%>">
             <td class="ng-binding">
               <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>">
                 <%=collection.name%>
@@ -48,16 +48,19 @@
             <td class="ng-scope">
               <%=if (collection.public) {"Yes"} else {"No"}%>
             </td>
-            <td class="ng-scope">
-              <%=info.lastJobName.getOrElse("-")%>
+            <td class="ng-scope collection-lastjob-name">
+              <span class="spinner small"></span>
             </td>
-            <td class="ng-scope">
-              <%=info.lastJobTime.map(_.toString.stripSuffix("Z").replace("T", " ")).getOrElse("-")%>
+            <td class="ng-scope collection-lastjob-time">
+              <span class="spinner small"></span>
             </td>
-            <td class="ng-scope">
-              <%=sizeStr%>
+            <td class="ng-scope collection-size">
+              <span class="spinner small"></span>
             </td>
           </tr>
+          <script>
+            arsCloud.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>");
+          </script>
         <% } %>
       </tbody>
     </table>

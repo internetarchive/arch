@@ -2,37 +2,34 @@ package org.archive.webservices.ars.processing.jobs.shared
 
 import java.io.{OutputStream, PrintStream}
 
-import io.archivesunleashed.ArchiveRecord
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql._
+import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
-import org.archive.helge.sparkling.warc.WarcLoader
-import org.archive.webservices.ars.io.{AutRecordLoader, IOHelper}
+import org.archive.helge.sparkling.warc.{WarcLoader, WarcRecord}
+import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
+import org.archive.helge.sparkling.Sparkling.executionContext
+import org.archive.webservices.ars.aut.AutLoader
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 import scala.util.Try
 
-abstract class AutJob extends ChainedJob {
+abstract class AutJob[R: ClassTag] extends ChainedJob {
   val relativeOutPath = s"/$id"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
 
   def targetFile: String
 
-  def df(rdd: RDD[ArchiveRecord]): Dataset[Row]
+  def prepareRecords(rdd: RDD[WarcRecord]): RDD[R]
 
-  def filterRecords(rdd: RDD[ArchiveRecord]): RDD[ArchiveRecord] = rdd
+  def df(rdd: RDD[R]): Dataset[Row]
 
-  def runSpark(rdd: RDD[ArchiveRecord], outPath: String): Unit = {
-    df(rdd).write
-      .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
-      .format("csv")
-      .csv(outPath + "/_" + targetFile)
-  }
+  def runSpark(rdd: RDD[R], outPath: String): Unit =
+    AutLoader.save(df(rdd), outPath + "/_" + targetFile)
 
   def checkSparkState(outPath: String): Option[Int] = {
     if (HdfsIO.exists(outPath + "/_" + targetFile)) Some {
@@ -79,12 +76,11 @@ abstract class AutJob extends ChainedJob {
                 IteratorUtil.cleanup(
                   WarcLoader
                     .load(in)
-                    .filter(r => r.isResponse || r.isRevisit)
-                    .map(AutRecordLoader.fromWarc(filename, _, bufferBytes = true)),
+                    .filter(r => r.isResponse || r.isRevisit),
                   in.close)
               },
-            conf.sample,
-            filterRecords)
+            prepareRecords,
+            conf.sample)
         val outPath = conf.outputPath + relativeOutPath
         runSpark(rdd, outPath)
         checkSparkState(outPath).contains(ProcessingState.Finished)

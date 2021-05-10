@@ -22,6 +22,7 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
+  "commons-codec" % "commons-codec" % "1.12",
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
   "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
@@ -39,8 +40,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.ArsCloud"),
   resolvers += Resolver.mavenLocal,
-  publishMavenStyle := false,
-  libraryDependencies ++= dependencies)
+  publishMavenStyle := false)
 
 lazy val root = (project in file("."))
   .settings(
@@ -52,6 +52,7 @@ lazy val dev = (project in file("build/dev"))
   .dependsOn(root)
   .settings(libraryDependencies ++= prodProvided)
   .settings(buildSettings: _*)
+  .settings(fork in run := true, outputStrategy := Some(StdoutOutput), baseDirectory in run := file("."))
 
 lazy val prod = (project in file("build/prod"))
   .dependsOn(root)
