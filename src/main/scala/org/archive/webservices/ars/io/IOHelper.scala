@@ -57,18 +57,20 @@ object IOHelper {
       rdd: String => RDD[A],
       filter: RDD[A] => RDD[F],
       sample: Int = -1): RDD[F] = {
-    if (sample < 0) filter(rdd(path))
-    else
-      HdfsIO
-        .files(path)
-        .toSeq
-        .sorted
-        .toIterator
-        .map(rdd)
-        .map(filter)
-        .find(_.mapPartitions(p => Iterator(p.hasNext)).collect.head)
-        .getOrElse(RddUtil.emptyRDD[F])
-        .mapPartitions(_.take(sample))
+    val data = filter(rdd(path))
+    if (sample < 0) data
+    else {
+      data
+        .mapPartitionsWithIndex((idx, p) => if (p.hasNext) Iterator(idx) else Iterator.empty)
+        .take(1)
+        .headOption match {
+        case Some(sampleParitionIdx) =>
+          data.mapPartitionsWithIndex((idx, p) =>
+            if (idx == sampleParitionIdx) p.take(sample) else Iterator.empty)
+        case None =>
+          RddUtil.emptyRDD
+      }
+    }
   }
 
   def load[A: ClassTag](path: String, rdd: String => RDD[A], sample: Int): RDD[A] =
