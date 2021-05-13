@@ -19,13 +19,27 @@
 <% for (file <- files) { %>
   <div class="row">
     <div class="large-12 columns">
-      <h1>Dataset Download Options</h1>
+      <h1>Dataset Info</h1>
+      <div class="card">
+        <div class="card-body">
+          <p class="card-text">
+            <strong>File name</strong>: <%=file.filename%>
+            <br />
+            <strong>File size</strong>: <%=file.sizeStr%>
+            <br />
+            <strong>Result count</strong>: <%=if (file.lineCount == "0") {"None"} else {file.lineCount + " lines"}%>
+            <br />
+            <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
+          </p>
+        </div>
+      </div>
+      <h1>Download Options</h1>
         <div class="card" id="card-download-browser">
           <div class="card-body">
             <h4 class="card-title">Browser</h4>
             <button class="download-button">
               <a class="download" href="/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" target="_blank">
-                Download <%=file.filename%> (<%=file.sizeStr%> - <%=file.timeStr%>)
+                Download
               </a>
             </button>
           </div>
