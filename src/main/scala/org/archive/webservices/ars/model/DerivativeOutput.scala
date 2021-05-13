@@ -13,6 +13,9 @@ case class DerivativeOutput(filename: String, dir: String, mimeType: String) {
     (status.getLen, status.getModificationTime)
   }
   lazy val sizeStr: String = IOHelper.sizeStr(path)
+
+  lazy val lineCount: String = (HdfsIO.countLines(path) - 1).toString
+
   lazy val timeStr: String =
     Instant.ofEpochMilli(time).toString.stripSuffix("Z").replace("T", " ")
 }
