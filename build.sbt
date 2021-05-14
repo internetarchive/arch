@@ -52,7 +52,10 @@ lazy val dev = (project in file("build/dev"))
   .dependsOn(root)
   .settings(libraryDependencies ++= prodProvided)
   .settings(buildSettings: _*)
-  .settings(fork in run := true, outputStrategy := Some(StdoutOutput), baseDirectory in run := file("."))
+  .settings(
+    fork in run := true,
+    outputStrategy := Some(StdoutOutput),
+    baseDirectory in run := file("."))
 
 lazy val prod = (project in file("build/prod"))
   .dependsOn(root)

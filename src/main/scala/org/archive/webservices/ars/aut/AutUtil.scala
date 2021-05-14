@@ -26,17 +26,40 @@ object AutUtil {
   }
 
   def extractDomainRemovePrefixWWW(url: String): String = {
-    if (url.trim.isEmpty) "" else ExtractDomain(url).replaceAll("^\\s*www\\.", "")
+    Option(if (url.trim.isEmpty) "" else ExtractDomain(url).replaceAll("^\\s*www\\.", ""))
+      .map(_.trim)
+      .getOrElse("")
   }
 
   // see io.archivesunleashed.matchbox.ComputeImageSize
   def computeImageSize(in: InputStream): (Int, Int) = {
     val nullImage = (0, 0)
     try {
-      val image = ImageIO.read(in)
-      if (image == null) nullImage else (image.getWidth, image.getHeight)
+      val stream = ImageIO.createImageInputStream(in)
+      try {
+        val readers = ImageIO.getImageReaders(stream)
+        if (readers.hasNext) {
+          val reader = readers.next
+          (reader.getWidth(0), reader.getHeight(0))
+        } else nullImage
+      } finally {
+        stream.close()
+      }
     } catch {
       case e: Throwable => nullImage
+    }
+  }
+
+  def extractLinks(
+      func: (String, String) => Seq[(String, String, String)],
+      url: String,
+      body: String): Seq[(String, String, String)] = {
+    func(url, body).flatMap {
+      case (s, t, a) =>
+        for {
+          source <- Option(s).map(_.trim).filter(_.nonEmpty)
+          target <- Option(t).map(_.trim).filter(_.nonEmpty)
+        } yield (source, target, Option(a).map(_.trim).getOrElse(""))
     }
   }
 }

@@ -43,7 +43,8 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
           Common
             .tryOrElse(Seq.empty[((String, String, String), Long)]) {
               val url = AutUtil.url(r)
-              ExtractLinks(url, http.bodyString)
+              AutUtil
+                .extractLinks(ExtractLinks.apply, url, http.bodyString)
                 .map {
                   case (source, target, _) =>
                     (
@@ -61,38 +62,16 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
       }
   }
 
-  override def createVizSample[O](df: Dataset[Row])(action: RDD[(String, String)] => O): O = {
+  override def edgeCounts(df: Dataset[Row]): RDD[((String, String), Long)] = {
     val (srcField, dstField) = srcDstFields
-
-    val hostEdges = df.rdd
-      .map { row =>
-        (row.getAs[String](srcField), row.getAs[String](dstField), row.getAs[Long]("count"))
-      }
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    val nodes = hostEdges
-      .flatMap {
-        case (src, dst, count) =>
-          Iterator((src, count), (dst, count))
-      }
-      .reduceByKey(_ + _)
-      .sortBy(-_._2)
-      .take(SampleTopNNodes)
-      .map(_._1)
-      .toSet
-
-    val nodesBc = hostEdges.context.broadcast(nodes)
-
-    try {
-      action(hostEdges.map { case (src, dst, _) => (src, dst) }.mapPartitions { partition =>
-        val nodes = nodesBc.value
-        partition.filter {
-          case (src, dst) =>
-            nodes.contains(src) && nodes.contains(dst)
+    df.rdd
+      .flatMap { row =>
+        Common.tryOrElse[Option[((String, String), Long)]](None) {
+          Some(
+            (
+              (row.getAs[String](srcField), row.getAs[String](dstField)),
+              row.getAs[Long]("count")))
         }
-      })
-    } finally {
-      hostEdges.unpersist(true)
-    }
+      }
   }
 }
