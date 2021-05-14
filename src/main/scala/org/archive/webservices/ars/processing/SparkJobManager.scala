@@ -22,7 +22,7 @@ object SparkJobManager {
       appName = "ARS-cloud",
       executors = 5,
       executorCores = 4,
-      executorMemory = "4g",
+      executorMemory = "8g",
       queue = ArsCloudConf.hadoopQueue,
       additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
       verbose = true)

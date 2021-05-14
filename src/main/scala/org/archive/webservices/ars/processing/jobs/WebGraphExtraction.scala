@@ -30,8 +30,8 @@ object WebGraphExtraction extends NetworkAutJob[Row] {
         Common
           .tryOrElse(Seq.empty[Row]) {
             val url = AutUtil.url(r)
-            ExtractLinks(url, http.bodyString)
-              .filter { case (s, t, _) => s != "" && t != "" }
+            AutUtil
+              .extractLinks(ExtractLinks.apply, url, http.bodyString)
               .map {
                 case (source, target, alt) =>
                   Row(AutUtil.crawlDate(r), source, target, alt)

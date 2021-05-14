@@ -10,6 +10,7 @@ import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
+import org.archive.webservices.ars.util.Common
 
 import scala.reflect.ClassTag
 
@@ -22,38 +23,42 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
 
   def srcDstFields: (String, String)
 
-  def createVizSample[O](df: Dataset[Row])(action: RDD[(String, String)] => O): O = {
+  def edgeCounts(df: Dataset[Row]): RDD[((String, String), Long)] = {
     val (srcField, dstField) = srcDstFields
-
-    val hostEdges = df.rdd
+    df.rdd
       .flatMap { row =>
-        val src = row.getAs[String](srcField)
-        val dst = row.getAs[String](dstField)
-        val srcHost = SurtUtil.validateHost(SurtUtil.fromUrl(src))
-        val dstHost = SurtUtil.validateHost(SurtUtil.fromUrl(dst))
-        if (srcHost.isDefined && dstHost.isDefined && srcHost.get != dstHost.get) {
-          Iterator((srcHost.get, dstHost.get))
-        } else Iterator.empty
-      }
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    val nodes = hostEdges
-      .flatMap {
-        case (src, dst) =>
-          Iterator((src, 1L), (dst, 1L))
+        Common.tryOrElse[Option[((String, String), Long)]](None) {
+          val src = row.getAs[String](srcField)
+          val dst = row.getAs[String](dstField)
+          val srcHost = SurtUtil.validateHost(SurtUtil.fromUrl(src))
+          val dstHost = SurtUtil.validateHost(SurtUtil.fromUrl(dst))
+          if (srcHost.isDefined && dstHost.isDefined && srcHost.get != dstHost.get) {
+            Some(((srcHost.get, dstHost.get), 1L))
+          } else None
+        }
       }
       .reduceByKey(_ + _)
-      .sortBy(-_._2)
-      .take(SampleTopNNodes)
-      .map(_._1)
-      .toSet
+  }
 
-    val nodesBc = hostEdges.context.broadcast(nodes)
+  def createVizSample[O](df: Dataset[Row])(action: RDD[(String, String)] => O): O = {
+    val hostEdges = edgeCounts(df).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     try {
+      val nodes = hostEdges
+        .flatMap {
+          case ((src, dst), count) =>
+            Iterator((src, count), (dst, count))
+        }
+        .reduceByKey(_ + _)
+        .sortBy(-_._2)
+        .take(SampleTopNNodes)
+        .map(_._1)
+        .toSet
+
+      val nodesBc = hostEdges.context.broadcast(nodes)
       action(hostEdges.mapPartitions { partition =>
         val nodes = nodesBc.value
-        partition.filter {
+        partition.map(_._1).filter {
           case (src, dst) =>
             nodes.contains(src) && nodes.contains(dst)
         }

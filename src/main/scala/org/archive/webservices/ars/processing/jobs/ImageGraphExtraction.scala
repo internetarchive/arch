@@ -30,8 +30,8 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
         Common
           .tryOrElse(Seq.empty[Row]) {
             val url = AutUtil.url(r)
-            ExtractImageLinks(url, HttpUtil.bodyString(http.body, http))
-              .filter { case (s, t, _) => s != "" && t != "" }
+            AutUtil
+              .extractLinks(ExtractImageLinks.apply, url, HttpUtil.bodyString(http.body, http))
               .map {
                 case (source, target, alt) =>
                   Row(AutUtil.crawlDate(r), source, target, alt)
