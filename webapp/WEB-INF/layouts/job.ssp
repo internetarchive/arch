@@ -27,8 +27,10 @@
             <br />
             <strong>File size</strong>: <%=file.sizeStr%>
             <br />
-            <strong>Result count</strong>: <%=if (file.lineCount == "0") {"None"} else {file.lineCount + " lines"}%>
-            <br />
+            <% for (lineCount <- file.lineCountStr) { %>
+              <strong>Result count</strong>: <%=lineCount%> lines
+              <br />
+            <% } %>
             <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
           </p>
         </div>

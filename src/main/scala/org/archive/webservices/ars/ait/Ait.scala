@@ -31,24 +31,27 @@ object Ait {
       getJson("/api/auth/list") { json =>
         for {
           userName <- json.get[String]("username").toOption
-          fullName <- json.get[String]("full_name").toOption
           id <- json
             .downField("account")
             .get[Int]("id")
             .toOption
             .map(id => if (id == SystemUserId) 0 else id)
-        } yield AitUser(id, userName, fullName)
+        } yield {
+          val user =
+            AitUser(id, userName, json.get[String]("full_name").toOption.getOrElse(userName))
+          request.getSession.setAttribute(UserSessionAttribute, user)
+          user
+        }
       }
     }
   }
 
   def user(id: Int)(implicit request: HttpServletRequest): Option[AitUser] =
     getJson("/api/user?limit=1&account=" + (if (id == 0) SystemUserId else id)) { json =>
-      val user = json.downArray.first
+      val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
-        fullName <- user.get[String]("full_name").toOption
-      } yield AitUser(id, userName, fullName)
+      } yield AitUser(id, userName, user.get[String]("full_name").toOption.getOrElse(userName))
     }
 
   def login(username: String, password: String, response: HttpServletResponse)(

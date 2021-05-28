@@ -44,4 +44,7 @@ object ArsCloudConf {
 
   lazy val production: Boolean =
     cursor.get[Boolean]("production").toOption.getOrElse(false)
+
+  lazy val port: Int =
+    cursor.get[Int]("port").toOption.getOrElse(12341)
 }

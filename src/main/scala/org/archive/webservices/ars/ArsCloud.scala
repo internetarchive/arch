@@ -7,7 +7,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
 object ArsCloud {
-  val Port = 12341
+  val Port: Int = ArsCloudConf.port
   val BasePath = "/ait"
   val BaseUrl: String = ArsCloudConf.baseUrl + BasePath
   val BaseDir = "/research_services"

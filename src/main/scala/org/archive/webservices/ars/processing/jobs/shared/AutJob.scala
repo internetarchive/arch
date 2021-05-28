@@ -54,7 +54,14 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       prepare = prepareOutputStream) { tmpFile =>
       val outFile = outPath + "/" + targetFile
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
-      HdfsIO.exists(outFile)
+      if (HdfsIO.exists(outFile)) {
+        HdfsIO.writeLines(
+          outFile + DerivativeOutput.lineCountFileSuffix,
+          Seq((HdfsIO.countLines(outFile) - 1).toString))
+        true
+      } else {
+        false
+      }
     }
   }
 

@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model
 
 import io.circe.HCursor
 import javax.servlet.http.HttpServletRequest
+import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.scalatra.guavaCache.GuavaCache
 
@@ -15,7 +16,7 @@ object ArsCloudCollection {
 
   def inputPath(id: String): Option[String] = {
     if (id.startsWith(AitPrefix)) {
-      val aitId = id.stripPrefix(AitPrefix)
+      val aitId = id.stripPrefix(AitPrefix).toInt
       Some(
         ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz")
     } else None
@@ -30,7 +31,7 @@ object ArsCloudCollection {
       .filter(c => c.user.isEmpty || Ait.user.exists(_.id == c.user.get.id))
       .orElse {
         if (id.startsWith(AitPrefix)) {
-          val aitId = id.stripPrefix(AitPrefix)
+          val aitId = id.stripPrefix(AitPrefix).toInt
           Ait.getJson("/api/collection?id=" + aitId)(parseJson).flatMap(_.headOption).map {
             collection =>
               collection.user = Ait.user(useSession = true)
@@ -43,7 +44,7 @@ object ArsCloudCollection {
   private def parseJson(cursor: HCursor): Option[Seq[ArsCloudCollection]] = {
     cursor.values.map(_.map(_.hcursor).flatMap { c =>
       c.get[Int]("id").right.toOption.map { aitId =>
-        val collectionId = AitPrefix + aitId
+        val collectionId = AitPrefix + StringUtil.padNum(aitId, 5)
         GuavaCache.put(
           cacheKey(collectionId), {
             ArsCloudCollection(
