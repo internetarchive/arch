@@ -7,5 +7,6 @@
   "baseUrl": "https://webdata.archive-it.org",
   "loginUrl": "https://partner.archive-it.org/login?next=",
   "hadoopQueue": "webdata",
+  "port": 12353,
   "production": true
 }
