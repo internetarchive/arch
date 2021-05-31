@@ -39,11 +39,7 @@
         <div class="card" id="card-download-browser">
           <div class="card-body">
             <h4 class="card-title">Browser</h4>
-            <button class="download-button">
-              <a class="download" href="/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" target="_blank">
-                Download
-              </a>
-            </button>
+            <button class="download-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>';" type="button">Download</button>
           </div>
         </div>
         <div class="card" id="card-download-curl">
