@@ -92,6 +92,10 @@
             $('#image-link').on('click', function () {
               var button = document.getElementById('image-link');
               var canvas = $('.sigma-scene');
+              var ctx = canvas[0].getContext("2d");
+              ctx.fillStyle = "white";
+              ctx.globalCompositeOperation='destination-over';
+              ctx.fillRect(0, 0, 928, 700);
               var camera = s.camera;
               var fn = button.getAttribute('download').replace('-image.png', '');
               var img = canvas[0].toDataURL('image/png');
