@@ -42,6 +42,7 @@ button.job-statebutton {
 button.job-resultsbutton {
     font-weight: bold;
     min-width: 100%;
+    background-color: #28a745;
     float: left;
 }
 
@@ -50,6 +51,7 @@ button.download-button {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
+    font-weight: bold;
 }
 
 a.results-page:link {
