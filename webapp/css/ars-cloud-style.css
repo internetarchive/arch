@@ -54,38 +54,6 @@ button.download-button {
     font-weight: bold;
 }
 
-a.results-page:link {
-    color: white;
-    font-weight: bold;
-}
-
-a.results-page:visited {
-    color: white;
-    font-weight: bold;
-}
-
-a.results:hover {
-    color: white;
-    font-weight: bold;
-}
-
-a.download:link {
-    color: white;
-    font-weight: bold;
-}
-
-a.download:visited {
-    color: white;
-}
-
-a.download:hover {
-    color: white;
-}
-
-a.download:active {
-    color: white;
-}
-
 .small {
     font-size: 90%;
 }
