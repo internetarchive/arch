@@ -6,12 +6,12 @@ import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object PresentationProgramInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract presentation program information"
+  val name = "Extract PowerPoint (all software types) information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of the presentation program file, filename, presentation program extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, presentation program MD5 hash and presentation program SHA1 hash."
+    "Create a CSV with the following columns: crawl date, URL of a PowerPoint or similar file, filename, PowerPoint or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PowerPoint or similar file MD5 hash and PowerPoint or similar file SHA1 hash."
 
-  val targetFile: String = "presentation-program-information.csv.gz"
+  val targetFile: String = "powerpoint-information.csv.gz"
 
   val PresentationMimeTypes: Set[String] = Set(
     "application/vnd.ms-powerpoint",

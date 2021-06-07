@@ -14,7 +14,7 @@ import org.archive.webservices.ars.processing.jobs.shared.AutJob
 import org.archive.webservices.ars.util.Common
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
-  val name = "Domain Frequency"
+  val name = "Domain frequency"
   val category: ArsCloudJobCategory = ArsCloudJobCategories.Collection
   val description =
     "Create a CSV with the following columns: domain and count."

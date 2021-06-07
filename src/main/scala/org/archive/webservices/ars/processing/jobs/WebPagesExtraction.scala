@@ -13,7 +13,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 import org.archive.webservices.ars.util.HttpUtil
 
 object WebPagesExtraction extends BinaryInformationAutJob {
-  val name = "Extract webpages"
+  val name = "Extract plain text of webpages"
 
   override val category: ArsCloudJobCategory = ArsCloudJobCategories.Text
 
