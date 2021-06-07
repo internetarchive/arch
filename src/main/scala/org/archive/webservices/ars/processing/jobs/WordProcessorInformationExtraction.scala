@@ -6,12 +6,12 @@ import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract word processor information"
+  val name = "Extract Word Documents (all software types) information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of the word processor program file, filename, word processor program extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, word processor program MD5 hash and word processor program SHA1 hash."
+    "Create a CSV with the following columns: crawl date, URL of the word document or similar file, filename, word document or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, word document or similar file MD5 hash and word document or similar file SHA1 hash."
 
-  val targetFile: String = "word-processor-information.csv.gz"
+  val targetFile: String = "word-document-information.csv.gz"
 
   val WordProcessorMimeTypes: Set[String] = Set(
     "application/vnd.lotus-wordpro",

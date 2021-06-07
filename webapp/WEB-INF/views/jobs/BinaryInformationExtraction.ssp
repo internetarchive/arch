@@ -11,7 +11,7 @@
     <div class="row">
       <div class="large-12 columns">
         <div class="charts">
-          <h1>MIME type distribution</h1>
+          <h1>File Format Distribution</h1>
             <p>
               <div class="chartjs-wrapper">
                 <canvas id="chartjs-1" class="chartjs" width="undefined" height="undefined"></canvas>
@@ -35,7 +35,7 @@
             <div class="text-right">
               <a id="button" aria-describedby="tooltip">What does this graph show?</a>
               <div id="tooltip" role="tooltip">
-                This graph shows the MIME type distribution.
+                This graph shows the distribution of the various file formats in the web archive collection.
                 <div id="arrow" data-popper-arrow></div>
               </div>
             </div>
