@@ -13,14 +13,14 @@ import org.archive.webservices.ars.util.Common
 object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Extract web graph"
   val description =
-    "Create a CSV with the following columns: crawl date, source, destination, and anchor text. Note that this contains all links and is not aggregated into domains."
+    "Create a CSV with the following columns: crawl date, source, target, and anchor text. Note that this contains all links and is not aggregated into domains."
 
   val targetFile: String = "web-graph.csv.gz"
 
   val srcDstFields: (String, String) = ("src", "dest")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,destination,anchor_text")
+    out.println("crawl_date,source,target,anchor_text")
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webGraph(rdd)
 
