@@ -15,14 +15,14 @@ import org.archive.webservices.ars.util.Common
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Extract domain graph"
   val description =
-    "Create a CSV with the following columns: crawl date, source domain, destination domain, and count."
+    "Create a CSV with the following columns: crawl date, source domain, target domain, and count."
 
   val targetFile: String = "domain-graph.csv.gz"
 
   val srcDstFields: (String, String) = ("src_domain", "dest_domain")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,destination,count")
+    out.println("crawl_date,source,target,count")
 
   override def df(rdd: RDD[((String, String, String), Long)]): Dataset[Row] = {
     val rows =
