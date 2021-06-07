@@ -19,45 +19,41 @@
 <% for (file <- files) { %>
   <div class="row">
     <div class="large-12 columns">
-      <h1>Dataset Info</h1>
+      <h1>Dataset</h1>
       <div class="card">
         <div class="card-body">
-          <p class="card-text">
-            <strong>File name</strong>: <%=file.filename%>
-            <br />
-            <strong>File size</strong>: <%=file.sizeStr%>
-            <br />
-            <% for (lineCount <- file.lineCountStr) { %>
-              <strong>Result count</strong>: <%=lineCount%> lines
-              <br />
-            <% } %>
-            <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
-          </p>
+          <div class="job-card-flex">
+            <div class="dataset-info">
+              <p class="card-text">
+                <strong>File name</strong>: <%=file.filename%>
+                <br />
+                <strong>File size</strong>: <%=file.sizeStr%>
+                <br />
+                <% for (lineCount <- file.lineCountStr) { %>
+                  <strong>Result count</strong>: <%=lineCount%> lines
+                  <br />
+                <% } %>
+                <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
+              </p>
+            </div>
+            <div class="dataset-download">
+              <a href="/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" target="_blank">
+                <i class="fa fa-download fa-5x" aria-hidden="true"></i>
+              </a>
+              <p class="card-text center">Download dataset with <a><code><clipboard-copy value='wget --user=<%=user.userName%> --ask-password --auth-no-challenge -O <%=unescape(file.filename)%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>"'>wget <i class="fa fa-clipboard"></i><span class="notice" hidden>Copied to clipboard!</span></clipboard-copy></code></a> or <a><code><clipboard-copy value='curl -u <%=user.userName%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" --output <%=unescape(file.filename)%>'>curl <i class="fa fa-clipboard"></i><span class="notice" hidden>Copied to clipboard!</span></clipboard-copy></code></a>?</p>
+            </div>
+            <script>
+              document.addEventListener('clipboard-copy', function(event) {
+                var notice = event.target.querySelector('.notice')
+                notice.hidden = false
+                setTimeout(function() {
+                  notice.hidden = true
+                }, 1000)
+              })
+            </script>
+          </div>
         </div>
       </div>
-      <h1>Download Options</h1>
-        <div class="card" id="card-download-browser">
-          <div class="card-body">
-            <h4 class="card-title">Browser</h4>
-            <button class="download-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>';" type="button">Download</button>
-          </div>
-        </div>
-        <div class="card" id="card-download-curl">
-          <div class="card-body">
-            <h4 class="card-title">curl</h4>
-            <p class="card-text">
-              <pre>$ curl -u <%=user.userName%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" --output <%=unescape(file.filename)%></pre>
-            </p>
-          </div>
-        </div>
-        <div class="card" id="card-download-wget">
-          <div class="card-body">
-            <h4 class="card-title">wget</h4>
-            <p class="card-text">
-              <pre>$ wget --user=<%=user.userName%> --ask-password --auth-no-challenge -O <%=unescape(file.filename)%> "<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/<%=unescape(user.idStr)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>"</pre>
-            </p>
-          </div>
-        </div>
     </div>
   </div>
 <% } %>

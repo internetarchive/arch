@@ -22,6 +22,20 @@ div.job-card-full {
     width: 50%
 }
 
+div.dataset-info {
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    width: 80%
+}
+
+div.dataset-download {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20%
+}
+
 button.job-button {
     display: none;
 }
@@ -58,6 +72,21 @@ button.download-button {
     font-size: 90%;
 }
 
+.notice {
+    width: 120px;
+    background-color: #555;
+    color: white;
+    padding: 5px 0;
+    border-radius: 6px;
+    text-align: center;
+    position: absolute;
+    z-index: 1;
+    top: 90%;
+    left: 75%;
+    margin-left: 50px
+}
+
+
 [data-tooltip]:before {
     content: attr(data-tooltip);
     position: absolute;
@@ -71,7 +100,7 @@ button.download-button {
 [data-tooltip]:hover:before {
     opacity: 1;
     z-index: 1;
-    background: rgb(52, 143, 198);
+    background: #555;
     width: 350px;
     top: 110%;
     left: 50%;
@@ -79,7 +108,7 @@ button.download-button {
 }
 
 #tooltip {
-    background: rgb(52, 143, 198);
+    background: #555;
     color: white;
     padding: 10px;
     font-size: 20px;
