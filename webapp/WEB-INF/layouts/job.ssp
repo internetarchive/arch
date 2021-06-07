@@ -34,6 +34,8 @@
                   <br />
                 <% } %>
                 <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
+                <br />
+                <strong>Description</strong>: <%=job.job.description.replace("Create a", "A")%>
               </p>
             </div>
             <div class="dataset-download">
