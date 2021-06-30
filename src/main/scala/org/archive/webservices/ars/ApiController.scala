@@ -1,13 +1,41 @@
 package org.archive.webservices.ars
 
-import org.scalatra.{NotFound, NotImplemented, Ok}
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
-import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager, ProcessingState}
-import org.archive.webservices.ars.util.CacheUtil
+import org.archive.webservices.ars.model.ArsCloudCollection
+import org.archive.webservices.ars.processing.{
+  DerivationJobConf,
+  DerivationJobInstance,
+  JobManager,
+  ProcessingState
+}
+import org.archive.webservices.ars.util.FormatUtil
+import org.scalatra.{ActionResult, NotFound, NotImplemented, Ok}
+
+import scala.collection.immutable.ListMap
 
 class ApiController extends BaseController {
+  private def jobStateResponse(instance: DerivationJobInstance): ActionResult = {
+    val jsonMap = ListMap(
+      "state" -> instance.stateStr.asJson,
+      "started" -> (instance.state != ProcessingState.NotStarted).asJson,
+      "finished" -> (instance.state == ProcessingState.Finished).asJson,
+      "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
+      val active = instance.active
+      Seq("activeStage" -> active.job.id.asJson, "activeState" -> active.stateStr.asJson) ++ {
+        active.queue match {
+          case Some(queue) =>
+            Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)
+          case None => Seq.empty
+        }
+      }
+    } ++ {
+      val info = instance.info
+      info.startTime.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++
+        info.finishedTime.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
+    }
+    Ok(jsonMap.asJson.spaces4, Map("Content-Type" -> "application/json"))
+  }
+
   get("/runjob/:jobid/:collectionid") {
     val collectionId = params("collectionid")
     ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
@@ -16,13 +44,7 @@ class ApiController extends BaseController {
           case Some(job) =>
             DerivationJobConf.collection(collectionId, params.get("sample").contains("true")) match {
               case Some(conf) =>
-                val instance = job.enqueue(conf).getOrElse(job.history(conf))
-                Ok(
-                  Map(
-                    "state" -> instance.stateStr.asJson,
-                    "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-                    "finished" -> (instance.state == ProcessingState.Finished).asJson).asJson.spaces4,
-                  Map("Content-Type" -> "application/json"))
+                jobStateResponse(job.enqueue(conf).getOrElse(job.history(conf)))
               case None =>
                 NotImplemented()
             }
@@ -41,12 +63,7 @@ class ApiController extends BaseController {
           .collection(collectionId, params.get("sample").contains("true"))
           .flatMap(JobManager.getInstance(jobId, _)) match {
           case Some(instance) =>
-            Ok(
-              Map(
-                "state" -> instance.stateStr.asJson,
-                "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-                "finished" -> (instance.state == ProcessingState.Finished).asJson).asJson.spaces4,
-              Map("Content-Type" -> "application/json"))
+            jobStateResponse(instance)
           case None =>
             NotFound()
         }
@@ -54,32 +71,26 @@ class ApiController extends BaseController {
   }
 
   get("/collection/:collectionid") {
-    CacheUtil.cacheRequest(request, enabled = ArsCloudConf.production) {
-      val collectionId = params("collectionid")
-
-      ensureLogin(redirect = false, useSession = true) { _ =>
-        ArsCloudCollection.get(collectionId).flatMap { collection =>
-          DerivationJobConf.collection(collection.id).map { conf =>
-            (collection, collection.info, IOHelper.sizeStr(conf.inputPath))
-          }
-        } match {
-          case Some((collection, info, sizeStr)) =>
-            Ok(
-              {
-                Map(
-                  "id" -> collection.id.asJson,
-                  "name" -> collection.name.asJson,
-                  "public" -> collection.public.asJson)
-                info.lastJobName.map("lastJobName" -> _.asJson).toMap ++
-                  info.lastJobTime
-                    .map("lastJobTime" -> _.toString.stripSuffix("Z").replace("T", " ").asJson)
-                    .toMap ++
-                  Map("size" -> sizeStr.asJson)
-              }.asJson.spaces4,
-              Map("Content-Type" -> "application/json"))
-          case None =>
-            NotFound()
-        }
+    ensureLogin(redirect = false, useSession = true) { _ =>
+      ArsCloudCollection.get(params("collectionid")) match {
+        case Some(collection) =>
+          collection.ensureStats()
+          val info = collection.info
+          Ok(
+            {
+              ListMap(
+                "id" -> collection.id.asJson,
+                "name" -> collection.name.asJson,
+                "public" -> collection.public.asJson)
+              info.lastJobName.map("lastJobName" -> _.asJson).toMap ++
+                info.lastJobTime
+                  .map("lastJobTime" -> FormatUtil.instantTimeString(_).asJson)
+                  .toMap ++
+                Map("size" -> FormatUtil.formatBytes(collection.size).asJson)
+            }.asJson.spaces4,
+            Map("Content-Type" -> "application/json"))
+        case None =>
+          NotFound()
       }
     }
   }

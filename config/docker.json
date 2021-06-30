@@ -1,10 +1,11 @@
 {
   "aitCollectionPath": "/data/in",
   "aitCollectionWarcDir": "arcs",
+  "collectionCachePath": "/data/cache",
   "jobOutPath": "/data/out",
   "localTempPath": "/data/tmp",
   "sparkMaster": "local[*]",
-  "baseUrl": "http://localhost:12341",
-  "loginUrl": "http://localhost:12341/ait/login?next=",
+  "baseUrl": "http://127.0.0.1:12341",
+  "loginUrl": "http://127.0.0.1:12341/ait/login?next=",
   "port": 12341
 }

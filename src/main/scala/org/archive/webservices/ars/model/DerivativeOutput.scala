@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.Path
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.util.FormatUtil
 
 import scala.util.Try
 
@@ -28,8 +29,7 @@ case class DerivativeOutput(filename: String, dir: String, mimeType: String) {
   lazy val lineCountStr: Option[String] =
     if (lineCount < 0) None else Some(StringUtil.formatNumber(lineCount, 0))
 
-  lazy val timeStr: String =
-    Instant.ofEpochMilli(time).toString.stripSuffix("Z").replace("T", " ")
+  lazy val timeStr: String = FormatUtil.instantTimeString(Instant.ofEpochMilli(time))
 }
 
 object DerivativeOutput {

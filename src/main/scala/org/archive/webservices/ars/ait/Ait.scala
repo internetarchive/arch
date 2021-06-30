@@ -137,10 +137,21 @@ object Ait {
 
   def get[R](path: String, contentType: String = "text/html")(action: InputStream => Option[R])(
       implicit request: HttpServletRequest): Option[R] = {
-    val ait = new URL("https://partner.archive-it.org" + path).openConnection
+    getWithAuth(path, contentType, sessionId)(action)
+  }
+
+  def getWithAuth[R](
+      path: String,
+      contentType: String = "text/html",
+      sessionId: Option[String] = None,
+      basicAuth: Option[String] = None)(action: InputStream => Option[R]): Option[R] = {
+    val ait = new URL(
+      if (path.startsWith("https:")) path
+      else "https://partner.archive-it.org" + path).openConnection
       .asInstanceOf[HttpURLConnection]
     try {
       for (sid <- sessionId) ait.setRequestProperty("Cookie", AitSessionCookie + "=" + sid)
+      for (auth <- basicAuth) ait.setRequestProperty("Authorization", auth)
       ait.setRequestProperty("Accept", contentType)
       val in = ait.getInputStream
       try {
@@ -158,22 +169,37 @@ object Ait {
   }
 
   def getString[R](path: String, contentType: String = "text/html")(action: String => Option[R])(
-      implicit request: HttpServletRequest): Option[R] = get(path, contentType) { in =>
-    val source = Source.fromInputStream(in, "utf-8")
-    try {
-      action(source.mkString)
-    } finally {
-      Try(source.close())
+      implicit request: HttpServletRequest): Option[R] =
+    getStringWithAuth(path, contentType, sessionId)(action)
+
+  def getStringWithAuth[R](
+      path: String,
+      contentType: String = "text/html",
+      sessionId: Option[String] = None,
+      basicAuth: Option[String] = None)(action: String => Option[R]): Option[R] =
+    getWithAuth(path, contentType, sessionId, basicAuth) { in =>
+      val source = Source.fromInputStream(in, "utf-8")
+      try {
+        action(source.mkString)
+      } finally {
+        Try(source.close())
+      }
     }
-  }
 
   def getJson[R](path: String)(action: HCursor => Option[R])(
-      implicit request: HttpServletRequest): Option[R] = getString(path, "application/json") {
-    str =>
+      implicit request: HttpServletRequest): Option[R] = {
+    getJsonWithAuth(path, sessionId)(action)
+  }
+
+  def getJsonWithAuth[R](
+      path: String,
+      sessionId: Option[String] = None,
+      basicAuth: Option[String] = None)(action: HCursor => Option[R]): Option[R] =
+    getStringWithAuth(path, "application/json", sessionId, basicAuth) { str =>
       parse(str).right.toOption.flatMap { json =>
         action(json.hcursor)
       }
-  }
+    }
 
   def logout()(implicit request: HttpServletRequest, response: HttpServletResponse): Unit =
     get("/logout") { _ =>

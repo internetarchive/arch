@@ -7,7 +7,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
 import org.archive.helge.sparkling.warc.{WarcLoader, WarcRecord}
-import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
 import org.archive.helge.sparkling.Sparkling.executionContext
@@ -76,17 +76,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
         val rdd = IOHelper
-          .load(
-            conf.inputPath,
-            RddUtil
-              .loadBinary(_, decompress = false, close = false) { (filename, in) =>
-                IteratorUtil.cleanup(
-                  WarcLoader
-                    .load(in)
-                    .filter(r => r.isResponse || r.isRevisit),
-                  in.close)
-              },
-            prepareRecords,
+          .sample(
+            prepareRecords(CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath)),
             conf.sample)
         val outPath = conf.outputPath + relativeOutPath
         runSpark(rdd, outPath)

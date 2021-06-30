@@ -20,10 +20,7 @@ object FileCountAndSize extends SparkJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { _ =>
       val singlePartition = IOHelper
-        .load[String](
-          conf.inputPath,
-          RddUtil.loadFilesLocality(_, setPartitionFiles = false),
-          conf.sample)
+        .sample(RddUtil.loadFilesLocality(conf.inputPath, setPartitionFiles = false), conf.sample)
         .map { file =>
           (true, (1L, HdfsIO.length(file)))
         }

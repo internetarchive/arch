@@ -46,8 +46,8 @@
             </div>
             <script>
               document.addEventListener('clipboard-copy', function(event) {
-                var notice = event.target.querySelector('.notice')
-                notice.hidden = false
+                var notice = event.target.querySelector('.notice');
+                notice.hidden = false;
                 setTimeout(function() {
                   notice.hidden = true
                 }, 1000)

@@ -5,10 +5,12 @@ import java.nio.file.Files
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{RddUtil, StringUtil}
 import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.util.FormatUtil
 
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -52,12 +54,8 @@ object IOHelper {
     }
   }
 
-  def load[A: ClassTag, F: ClassTag](
-      path: String,
-      rdd: String => RDD[A],
-      filter: RDD[A] => RDD[F],
-      sample: Int = -1): RDD[F] = {
-    val data = filter(rdd(path))
+  def sample[F: ClassTag](rdd: RDD[F], sample: Int = -1): RDD[F] = {
+    val data = rdd
     if (sample < 0) data
     else {
       data
@@ -73,19 +71,26 @@ object IOHelper {
     }
   }
 
-  def load[A: ClassTag](path: String, rdd: String => RDD[A], sample: Int): RDD[A] =
-    load[A, A](path, rdd, identity, sample)
-
   def size(path: String): Long = HdfsIO.files(path).map(HdfsIO.length).sum
 
-  def sizeStr(path: String): String = {
-    val units = Seq("B", "KB", "MB", "GB", "TB", "PB")
-    var bytes = size(path).toDouble
-    var unitIdx = 0
-    while (bytes > 1024 && unitIdx < units.length - 1) {
-      unitIdx += 1
-      bytes = bytes / 1024
+  def sizeStr(path: String): String = FormatUtil.formatBytes(size(path))
+
+  def syncHdfs[R](path: String)(action: => R): R = {
+    var out: Option[OutputStream] = None
+    while (out.isEmpty) {
+      try {
+        out = Some(HdfsIO.fs.create(new Path(path), false))
+      } catch {
+        case _: Exception => // do nothing
+      }
     }
-    StringUtil.formatNumber(bytes, 1) + " " + units(unitIdx)
+    try {
+      out.get.write(Array.empty[Byte])
+    } finally {
+      out.get.close()
+    }
+    val r = action
+    HdfsIO.delete(path)
+    r
   }
 }

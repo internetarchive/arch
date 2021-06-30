@@ -1,6 +1,7 @@
 {
   "aitCollectionPath": "/search/ait",
   "aitCollectionWarcDir": "arcs",
+  "collectionCachePath": "/tmp/ars-cloud-cache",
   "jobOutPath": "/user/helge/ars-cloud",
   "localTempPath": "/tmp",
   "sparkMaster": "yarn",

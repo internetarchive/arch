@@ -169,7 +169,7 @@ button.download-button {
 }
 
 .collapsible:after {
-    content: "\2212";
+    content: '\002B';
     font-weight: bold;
     color: black;
     float: right;
@@ -177,7 +177,7 @@ button.download-button {
 }
 
 .collapsible.active:after {
-    content: '\002B';
+    content: "\2212";
     background-color: #F7F7F7;
 }
 
@@ -256,4 +256,25 @@ div#graph-modal-wrapper {
 
 div#graph-modal {
     min-height: 200px;
+}
+
+tr.running-tr, tr.finished-tr {
+    display: none;
+}
+
+.collapsed {
+    max-height: 0;
+}
+
+#summary-running, #summary-finished, #summary-empty {
+    display: none;
+}
+
+a.new-job-link {
+    font-weight: bold;
+}
+
+#summary-empty {
+    font-size: 90%;
+    margin: 20px 0;
 }
