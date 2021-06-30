@@ -24,6 +24,9 @@ object ArsCloudConf {
   lazy val aitCollectionWarcDir: String =
     cursor.get[String]("aitCollectionWarcDir").toOption.getOrElse("arcs")
 
+  lazy val collectionCachePath: String =
+    cursor.get[String]("collectionCachePath").toOption.getOrElse("/data/cache")
+
   lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
 
   lazy val localTempPath: String =
@@ -47,4 +50,11 @@ object ArsCloudConf {
 
   lazy val port: Int =
     cursor.get[Int]("port").toOption.getOrElse(12341)
+
+  /**
+   * import requests, base64
+   * base64.b64encode("user:pass".encode())
+    **/
+  lazy val aitAuthHeader: Option[String] =
+    cursor.get[String]("aitAuthHeader").toOption.map("Basic " + _)
 }

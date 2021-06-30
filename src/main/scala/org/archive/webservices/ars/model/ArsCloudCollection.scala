@@ -1,64 +1,53 @@
 package org.archive.webservices.ars.model
 
-import io.circe.HCursor
 import javax.servlet.http.HttpServletRequest
-import org.archive.helge.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.model.collections.{
+  AitCollectionSpecifics,
+  CohortCollectionSpecifics,
+  CollectionSpecifics
+}
 import org.scalatra.guavaCache.GuavaCache
 
 case class ArsCloudCollection(id: String, name: String, public: Boolean) {
   def info: ArsCloudCollectionInfo = ArsCloudCollectionInfo.get(id)
   var user: Option[AitUser] = None
+
+  private var statsLoaded = false
+  def ensureStats()(implicit request: HttpServletRequest): Unit = {
+    if (!statsLoaded) {
+      statsLoaded = true
+      for (c <- CollectionSpecifics.get(id)) _size = c.size
+    }
+  }
+
+  private var _size: Long = -1
+  def size: Long = _size
 }
 
 object ArsCloudCollection {
-  val AitPrefix = "ARCHIVEIT-"
-
-  def inputPath(id: String): Option[String] = {
-    if (id.startsWith(AitPrefix)) {
-      val aitId = id.stripPrefix(AitPrefix).toInt
-      Some(
-        ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir + "/*.warc.gz")
-    } else None
-  }
+  def inputPath(id: String): Option[String] = CollectionSpecifics.get(id).map(_.inputPath)
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
   def get(id: String)(implicit request: HttpServletRequest): Option[ArsCloudCollection] = {
-    val key = cacheKey(id)
-    GuavaCache
-      .get[ArsCloudCollection](key)
+    (if (ArsCloudConf.production) GuavaCache.get[ArsCloudCollection](cacheKey(id)) else None)
       .filter(c => c.user.isEmpty || Ait.user.exists(_.id == c.user.get.id))
       .orElse {
-        if (id.startsWith(AitPrefix)) {
-          val aitId = id.stripPrefix(AitPrefix).toInt
-          Ait.getJson("/api/collection?id=" + aitId)(parseJson).flatMap(_.headOption).map {
-            collection =>
-              collection.user = Ait.user(useSession = true)
-              GuavaCache.put(key, collection, None)
-          }
-        } else None
+        val c = CollectionSpecifics.get(id).flatMap(_.getCollection)
+        if (ArsCloudConf.production && c.isDefined) GuavaCache.put(cacheKey(id), c.get, None)
+        c
       }
-  }
-
-  private def parseJson(cursor: HCursor): Option[Seq[ArsCloudCollection]] = {
-    cursor.values.map(_.map(_.hcursor).flatMap { c =>
-      c.get[Int]("id").right.toOption.map { aitId =>
-        val collectionId = AitPrefix + StringUtil.padNum(aitId, 5)
-        GuavaCache.put(
-          cacheKey(collectionId), {
-            ArsCloudCollection(
-              collectionId,
-              c.get[String]("name").right.getOrElse(collectionId),
-              c.get[Boolean]("publicly_visible").right.getOrElse(false))
-          },
-          None)
-      }
-    }.toSeq)
   }
 
   def userCollections(user: AitUser)(
       implicit request: HttpServletRequest): Seq[ArsCloudCollection] = {
-    Ait.getJson("/api/collection?limit=100&account=" + user.id)(parseJson).getOrElse(Seq.empty)
+    (AitCollectionSpecifics.userCollections(user) ++ CohortCollectionSpecifics.userCollections(
+      user))
+      .map { c =>
+        if (ArsCloudConf.production) GuavaCache.put(cacheKey(c.id), c, None)
+        else c
+      }
+      .sortBy(_.name.toLowerCase)
   }
 }

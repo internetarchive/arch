@@ -1,35 +1,3 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.helge.sparkling.Sparkling.executionContext
-
-object GenericJobManager {
-  val MaxRunning = 5
-
-  private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
-  private var running = 0
-
-  def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] =
-    queue.synchronized {
-      if (JobManager.register(instance)) {
-        queue.enqueue(instance)
-        processQueue()
-        Some(instance)
-      } else None
-    }
-
-  private def processQueue(): Unit = queue.synchronized {
-    if (running < MaxRunning && queue.nonEmpty) {
-      val instance = queue.dequeue
-      instance.updateState(ProcessingState.Running)
-      running += 1
-      instance.job.run(instance.conf).onComplete { opt =>
-        JobManager.unregister(instance)
-        val success = opt.toOption.getOrElse(false)
-        instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
-        running -= 1
-        if (!success && opt.isFailure) opt.failed.get.printStackTrace()
-        processQueue()
-      }
-    }
-  }
-}
+object GenericJobManager extends JobManagerBase("Generic", 3)

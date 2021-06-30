@@ -2,20 +2,66 @@ package org.archive.webservices.ars.processing
 
 import java.time.Instant
 
-import org.archive.webservices.ars.model.{ArsCloudCollectionInfo, DerivativeOutput}
+import org.archive.webservices.ars.model.{
+  ArsCloudCollectionInfo,
+  ArsCloudJobInstanceInfo,
+  DerivativeOutput
+}
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var state: Int = ProcessingState.NotStarted
 
+  private var activeStage: Option[DerivationJobInstance] = None
+
+  private var _queue: Option[JobQueue] = None
+  private var queuePos: Int = -1
+
+  def unsetQueue(): Unit = {
+    _queue = None
+    queuePos = -1
+  }
+
+  def setQueue(queue: JobQueue, pos: Int): Unit = {
+    _queue = Some(queue)
+    queuePos = pos
+  }
+
+  def queue: Option[JobQueue] = _queue
+
+  def queueIndex: Int =
+    _queue
+      .map { q =>
+        if (queuePos >= q.pos) queuePos - q.pos else queuePos + (Int.MaxValue - q.pos)
+      }
+      .getOrElse(-1)
+
+  def setStage(instance: DerivationJobInstance): Unit = activeStage = Some(instance)
+
+  def unsetStage(): Unit = activeStage = None
+
+  def active: DerivationJobInstance = activeStage.getOrElse(this)
+
+  def info: ArsCloudJobInstanceInfo = ArsCloudJobInstanceInfo.get(conf.outputPath + "/" + job.id)
+
   def updateState(value: Int): Unit = {
+    val prevState = state
     state = value
     for (func <- _onStateChanged) func()
-    if (job.partialOf.isEmpty && value == ProcessingState.Finished) {
-      val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
-      ArsCloudCollectionInfo
-        .get(conf.collectionId)
-        .setLastJob(job.name + nameSuffix, Instant.now)
-        .save()
+    if (job.partialOf.isEmpty && state > prevState) {
+      val now = Instant.now
+      var info = this.info
+      if (prevState == ProcessingState.NotStarted) {
+        info = info.setStartTime(now)
+      }
+      if (state == ProcessingState.Finished) {
+        info = info.setFinishedTime(now)
+        val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
+        ArsCloudCollectionInfo
+          .get(conf.collectionId)
+          .setLastJob(job.name + nameSuffix, now)
+          .save()
+      }
+      info.save(conf.outputPath + "/" + job.id)
     }
   }
 

@@ -10,9 +10,118 @@
   <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Cloud Documentation</a>
 #end
 
-<br /><br />
+<subnav data="state.menus.research_services" class="ng-isolate-scope">
+  <div class="row subnav">
+    <div class="small-12 columns">
+      <div class="row">
+        <div class="subnav-box columns">
+          <div class="left subnav-link ng-scope research_services active" id="summary-tab-link">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Summary</a></span>
+          </div>
+          <div class="left subnav-link ng-scope research_services" id="jobs-tab-link">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Jobs</a></span>
+          </div>
+          <hr />
+        </div>
+      </div>
+    </div>
+  </div>
+</subnav>
 
-<div class="row">
+<div class="row page-tab" id="summary-tab">
+  <div class="large-12 columns">
+
+    <div id="summary-empty">
+      There are currently no active jobs, click <a class="new-job-link" href="#">here</a> to start a new job.
+      <span style="font-style: italic;">(Choose a sample job for a test run or if main queues are too long)</span>
+    </div>
+
+    <div id="summary-running">
+      <h2>Running</h2>
+
+      <div class="row">
+        <div class="large-12 columns">
+          <table class="large-12 columns margin-top one sortable">
+            <thead>
+              <tr>
+                <th>Job Name</th>
+                <th>Active Stage</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
+                <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-full">
+                  <td style="font-style: italic;">
+                    <%=instance.job.name%>
+                  </td>
+                  <td class="running-td-active-stage">-</td>
+                  <td class="running-td-state">-</td>
+                </tr>
+                <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-sample">
+                  <td style="font-style: italic;">
+                    <%=instance.job.name%> (Sample)
+                  </td>
+                  <td class="running-td-active-stage">-</td>
+                  <td class="running-td-state">-</td>
+                </tr>
+              <% } %>
+              <tr>
+                <td colspan="3" style="text-align: center; border-top: 1px solid #DDDDDD;">
+                  <a class="new-job-link" href="#">Start new job</a> (Choose a sample job if main queues are too long)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="summary-finished">
+      <h2>Finished</h2>
+
+      <div class="row">
+        <div class="large-12 columns">
+          <table class="large-12 columns margin-top one sortable">
+            <thead>
+              <tr>
+                <th>Job Name</th>
+                <th>Finished</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
+              <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-full">
+                <td>
+                  <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">
+                  <%=instance.job.name%>
+                  </a>
+                </td>
+                <td class="finished-td-finished">-</td>
+              </tr>
+              <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-sample">
+                <td>
+                  <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">
+                  <%=instance.job.name%> (Sample)
+                  </a>
+                </td>
+                <td class="finished-td-finished">-</td>
+              </tr>
+              <% } %>
+              <tr>
+                <td colspan="2" style="text-align: center; border-top: 1px solid #DDDDDD;">
+                  <a class="new-job-link" href="#">Start new job</a> (Choose a sample job if main queues are too long)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row page-tab" id="jobs-tab" style="display: none;">
   <div class="large-12 columns">
     <%
       import org.archive.webservices.ars.model._
@@ -23,7 +132,7 @@
           (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
       )) { %>
       <h2><%=category%></h2>
-      <p class="collapsible"></p>
+      <p class="collapsible active"></p>
       <div class="collapsible-content-open-by-default">
         <p><%=categoryDescription%></p>
         <% for ((instance, sampleInstance) <- jobs(category)) { %>
@@ -39,37 +148,56 @@
                 </div>
                 <div class="job-card-full">
                   <button class="job-runbutton job-button">Run Job</button>
-                  <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
+                  <button class="job-statebutton job-button"><%=instance.stateStr%></button>
                   <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Results</button>
                 </div>
               </div>
             </div>
           </div>
-          <script>
-            // Job status
-            arsCloud.initJob("#card-<%=unescape(instance.job.id)%> .job-card-full", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-            arsCloud.initJob("#card-<%=unescape(instance.job.id)%> .job-card-sample", "<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
-          </script>
         <% } %>
       </div>
     <% } %>
   </div>
 </div>
-<script>
-  // Collapsibles
-  var coll = document.getElementsByClassName("collapsible");
-  var i;
 
-  for (i = 0; i < coll.length; i++) {
-    coll[i].addEventListener("click", function() {
-      this.classList.toggle("active");
-      var content = this.nextElementSibling;
-      var mHeight = window.getComputedStyle(content).maxHeight;
-      if (mHeight !== "0px") {
-        content.style.maxHeight = "0px";
+<script>
+  function switchTabSummary() {
+    $(".subnav-link").removeClass("active");
+    $(".page-tab").hide();
+    $("#summary-tab").show();
+    $("#summary-tab-link").addClass("active");
+    window.scrollTo(0,0);
+    return false;
+  }
+
+  function switchTabJobs() {
+    $(".subnav-link").removeClass("active");
+    $(".page-tab").hide();
+    $("#jobs-tab").show();
+    $("#jobs-tab-link").addClass("active");
+    window.scrollTo(0,0);
+    return false;
+  }
+
+  $(function() {
+    <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
+      arsCloud.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+      arsCloud.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
+    <% } %>
+
+    $("#summary-tab-link").click(switchTabSummary);
+    $("#jobs-tab-link").click(switchTabJobs);
+    $(".new-job-link").click(switchTabJobs);
+
+    $(".collapsible").click(function () {
+      var $self = $(this);
+      if ($self.hasClass("active")) {
+        $self.next().addClass("collapsed");
+        $self.removeClass("active");
       } else {
-        content.style.maxHeight = "100%";
+        $self.next().removeClass("collapsed");
+        $self.addClass("active");
       }
     });
-  }
+  });
 </script>
