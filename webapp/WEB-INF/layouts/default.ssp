@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="/ait/css/ars-cloud-style.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
+<link rel="stylesheet" href="/ait/css/bootstrap-alerts.css">
 <link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
 <link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
 <link rel="apple-touch-icon" sizes="72x72" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-72x72.png">
