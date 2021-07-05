@@ -60,7 +60,7 @@ class DefaultController extends BaseController with ScalateSupport {
             .groupBy(_.category)
             .map {
               case (category, jobs) =>
-                category -> jobs.sortBy(_.name).flatMap { job =>
+                category -> jobs.sortBy(_.name.toLowerCase).flatMap { job =>
                   for {
                     instance <- JobManager.getInstance(job.id, conf)
                     sampleInstance <- JobManager.getInstance(job.id, sampleConf)
