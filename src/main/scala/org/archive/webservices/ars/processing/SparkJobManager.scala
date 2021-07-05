@@ -15,7 +15,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3) {
   lazy val context: Future[SparkContext] = {
     val context = SparkUtil.config(
       SparkSession.builder,
-      appName = "ARS-cloud",
+      appName = "ARCH",
       executors = 5,
       executorCores = 3,
       executorMemory = "12g",

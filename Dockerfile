@@ -3,7 +3,7 @@ FROM ubuntu:20.04
 
 # Metadata
 LABEL maintainer="Nick Ruest <ruestn@gmail.com>, Helge Holzmann <helge@archive.org>"
-LABEL description="Docker image for ars-cloud development"
+LABEL description="Docker image for ARCH development"
 LABEL website="https://archive-it.org"
 
 EXPOSE 12341
