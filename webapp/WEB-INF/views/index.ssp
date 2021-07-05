@@ -6,7 +6,7 @@
 #end
 
 #set (subtitle)
-  <strong>Learn More:</strong> <a href="https://webarchive.jira.com/wiki/display/ARS/Archive-It+Research+Services" target="_blank">ARS Cloud Documentation</a>
+  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
 #end
 
 <subnav data="state.menus.research_services" class="ng-isolate-scope">
