@@ -86,27 +86,6 @@ button.download-button {
     margin-left: 50px
 }
 
-
-[data-tooltip]:before {
-    content: attr(data-tooltip);
-    position: absolute;
-    opacity: 0;
-    transition: all 0.15s ease;
-    padding: 10px;
-    color: white;
-    border-radius: 10px;
-}
-
-[data-tooltip]:hover:before {
-    opacity: 1;
-    z-index: 1;
-    background: #555;
-    width: 350px;
-    top: 110%;
-    left: 50%;
-    margin-left: -175px;
-}
-
 #tooltip {
     background: #555;
     color: white;

@@ -33,7 +33,7 @@
 
     <div id="summary-empty">
       There are currently no active jobs, click <a class="new-job-link" href="#">here</a> to start a new job.
-      <span style="font-style: italic;">(Choose a sample job for a test run or if main queues are too long)</span>
+      <span style="font-style: italic;">(Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> for a test run or if main queues are too long)</span>
     </div>
 
     <div id="summary-running">
@@ -68,7 +68,7 @@
               <% } %>
               <tr>
                 <td colspan="3" style="text-align: center; border-top: 1px solid #DDDDDD;">
-                  <a class="new-job-link" href="#">Start new job</a> (Choose a sample job if main queues are too long)
+                  <a class="new-job-link" href="#">Start new job</a> (Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> if main queues are too long)
                 </td>
               </tr>
             </tbody>
@@ -110,7 +110,7 @@
               <% } %>
               <tr>
                 <td colspan="2" style="text-align: center; border-top: 1px solid #DDDDDD;">
-                  <a class="new-job-link" href="#">Start new job</a> (Choose a sample job if main queues are too long)
+                  <a class="new-job-link" href="#">Start new job</a> (Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> if main queues are too long)
                 </td>
               </tr>
             </tbody>
@@ -142,7 +142,7 @@
               <p class="card-text"><%=instance.job.description%></p>
               <div class="job-card-flex">
                 <div class="job-card-sample">
-                  <button class="job-runbutton job-button" data-tooltip="Uses 100 records from the collection.">Run Sample Job</button>
+                  <button class="job-runbutton job-button">Run Sample Job</button>
                   <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
                   <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Results</button>
                 </div>
