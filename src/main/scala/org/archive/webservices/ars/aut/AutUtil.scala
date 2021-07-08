@@ -40,6 +40,7 @@ object AutUtil {
         val readers = ImageIO.getImageReaders(stream)
         if (readers.hasNext) {
           val reader = readers.next
+          reader.setInput(stream)
           (reader.getWidth(0), reader.getHeight(0))
         } else nullImage
       } finally {
