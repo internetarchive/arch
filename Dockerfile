@@ -21,7 +21,7 @@ WORKDIR /tmp
 
 RUN wget -q http://scala-lang.org/files/archive/scala-2.12.8.deb && dpkg -i scala-2.12.8.deb
 
-RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
 RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add
 RUN apt-get -qq update && apt-get -qq install -y sbt=1.3.8
 
