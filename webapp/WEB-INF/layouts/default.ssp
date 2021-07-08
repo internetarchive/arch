@@ -53,7 +53,7 @@
 <script src="/ait/js/sorttable.js"></script>
 <script src="/ait/js/Chart.min.js"></script>
 <script src="/ait/js/popper.min.js"></script>
-<script src="/ait/js/clipboard-copy-element/dist/index.esm.js" type="module"></script>
+<script src="/ait/js/clipboard-copy-element.js" type="module"></script>
 
 </head>
 <body style="padding-top: 70px;">
