@@ -4,7 +4,7 @@ import java.time.Instant
 
 import org.apache.hadoop.fs.Path
 import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.StringUtil
+import org.archive.helge.sparkling.util.{DigestUtil, StringUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.util.FormatUtil
 
@@ -30,6 +30,8 @@ case class DerivativeOutput(filename: String, dir: String, mimeType: String) {
     if (lineCount < 0) None else Some(StringUtil.formatNumber(lineCount, 0))
 
   lazy val timeStr: String = FormatUtil.instantTimeString(Instant.ofEpochMilli(time))
+
+  lazy val accessToken: String = DigestUtil.sha1Base32(filename + size + time)
 }
 
 object DerivativeOutput {

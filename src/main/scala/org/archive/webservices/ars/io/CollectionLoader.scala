@@ -9,15 +9,28 @@ import org.archive.webservices.ars.model.ArsCloudConf
 import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics}
 
 object CollectionLoader {
-  def loadWarcs(inputPath: String): RDD[WarcRecord] = {
-    RddUtil
-      .loadBinary(inputPath + "/*arc.gz", decompress = false, close = false) { (filename, in) =>
-        IteratorUtil.cleanup(
-          WarcLoader
-            .load(in)
-            .filter(r => r.isResponse || r.isRevisit),
-          in.close)
-      }
+  def loadWarcs(
+      inputPath: String,
+      hdfsHostPort: Option[(String, Int)] = None): RDD[WarcRecord] = {
+    (hdfsHostPort match {
+      case Some((host, port)) =>
+        RddUtil
+          .parallelize(HdfsIO(host, port).files(inputPath + "/*.warc.gz").toSeq)
+          .mapPartitions { paths =>
+            val hdfsIO = HdfsIO(host, port)
+            paths.map(hdfsIO.open(_, decompress = false))
+          }
+      case None =>
+        RddUtil
+          .loadFilesLocality(inputPath + "/*.warc.gz")
+          .map(HdfsIO.open(_, decompress = false))
+    }).flatMap { in =>
+      IteratorUtil.cleanup(
+        WarcLoader
+          .load(in)
+          .filter(r => r.isResponse || r.isRevisit),
+        in.close)
+    }
   }
 
   def loadWarcs(id: String, inputPath: String): RDD[WarcRecord] =
@@ -29,25 +42,31 @@ object CollectionLoader {
 
   def loadAitWarcs(aitId: Int, inputPath: String, cacheId: String): RDD[WarcRecord] = {
     val basicAuth = ArsCloudConf.aitAuthHeader
+    val hdfsHostPort = ArsCloudConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
       val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&collection=" + aitId + "&page_size="
-      val fileCount = Ait
+      val apiFileCount = Ait
         .getJsonWithAuth(wasapiUrl + 1, basicAuth = basicAuth) { json =>
           json.get[Int]("count").toOption
         }
         .getOrElse(0)
-      val actualFileCount = HdfsIO.files(inputPath + "/*.warc.gz", recursive = false).size
-      if (actualFileCount == fileCount) {
-        loadWarcs(inputPath)
+      val hdfsFileCount = hdfsHostPort
+        .map { case (host, port) => HdfsIO(host, port) }
+        .getOrElse(HdfsIO)
+        .files(inputPath + "/*.warc.gz", recursive = false)
+        .size
+      if (hdfsFileCount == apiFileCount) {
+        loadWarcs(inputPath, hdfsHostPort)
       } else {
         CollectionCache.cache(cacheId) { cachePath =>
           val cacheFileCount = HdfsIO.files(cachePath + "/*.warc.gz", recursive = false).size
-          if (actualFileCount + cacheFileCount == fileCount) {
-            loadWarcs(inputPath).union(loadWarcs(cachePath))
+          if (hdfsFileCount + cacheFileCount == apiFileCount) {
+            loadWarcs(inputPath, hdfsHostPort)
+              .union(loadWarcs(cachePath))
           } else {
             RddUtil
               .parallelize(
-                (fileCount.toDouble / AitCollectionSpecifics.WasapiPageSize).ceil.toInt)
+                (apiFileCount.toDouble / AitCollectionSpecifics.WasapiPageSize).ceil.toInt)
               .flatMap { idx =>
                 Ait
                   .getJsonWithAuth(
@@ -70,46 +89,55 @@ object CollectionLoader {
                   }
                   .getOrElse(Iterator.empty)
               }
-              .flatMap {
-                case (file, location) =>
-                  val inputFilePath = inputPath + "/" + file
-                  if (HdfsIO.exists(inputFilePath)) Some(inputFilePath)
-                  else {
-                    val cacheFilePath = cachePath + "/" + file
-                    if (HdfsIO.exists(cacheFilePath)) Some(cacheFilePath)
-                    else {
-                      IOHelper.syncHdfs(cachePath + "/_caching") {
-                        if (HdfsIO.exists(cacheFilePath)) Some(cacheFilePath)
+              .mapPartitions { partition =>
+                val hdfsIO = hdfsHostPort
+                  .map { case (host, port) => HdfsIO(host, port) }
+                  .getOrElse(HdfsIO)
+                partition
+                  .flatMap {
+                    case (file, location) =>
+                      val inputFilePath = inputPath + "/" + file
+                      if (hdfsIO.exists(inputFilePath)) Some((inputFilePath, true))
+                      else {
+                        val cacheFilePath = cachePath + "/" + file
+                        if (HdfsIO.exists(cacheFilePath)) Some((cacheFilePath, false))
                         else {
-                          Ait.getWithAuth(location, contentType = "*/*", basicAuth = basicAuth) {
-                            in =>
-                              val out =
-                                HdfsIO.out(cacheFilePath, compress = false, overwrite = true)
-                              try {
-                                IOUtil.copy(in, out)
-                                Some(cacheFilePath)
-                              } finally {
-                                out.close()
+                          IOHelper.syncHdfs(cacheFilePath + "_caching") {
+                            if (HdfsIO.exists(cacheFilePath)) Some((cacheFilePath, false))
+                            else {
+                              Ait.getWithAuth(
+                                location,
+                                contentType = "*/*",
+                                basicAuth = basicAuth) { in =>
+                                val out =
+                                  HdfsIO.out(cacheFilePath, compress = false, overwrite = true)
+                                try {
+                                  IOUtil.copy(in, out)
+                                  Some((cacheFilePath, false))
+                                } finally {
+                                  out.close()
+                                }
                               }
+                            }
                           }
                         }
                       }
-                    }
                   }
-              }
-              .flatMap { path =>
-                val in = HdfsIO.open(path, decompress = false)
-                IteratorUtil.cleanup(
-                  WarcLoader
-                    .load(in)
-                    .filter(r => r.isResponse || r.isRevisit),
-                  in.close)
+                  .flatMap {
+                    case (path, ait) =>
+                      val in = (if (ait) hdfsIO else HdfsIO).open(path, decompress = false)
+                      IteratorUtil.cleanup(
+                        WarcLoader
+                          .load(in)
+                          .filter(r => r.isResponse || r.isRevisit),
+                        in.close)
+                  }
               }
           }
         }
       }
     } else {
-      loadWarcs(inputPath)
+      loadWarcs(inputPath, hdfsHostPort)
     }
   }
 }

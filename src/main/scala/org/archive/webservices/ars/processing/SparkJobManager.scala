@@ -16,9 +16,9 @@ object SparkJobManager extends JobManagerBase("Spark", 3) {
     val context = SparkUtil.config(
       SparkSession.builder,
       appName = "ARCH",
-      executors = 5,
-      executorCores = 3,
-      executorMemory = "12g",
+      executors = 10,
+      executorCores = 4,
+      executorMemory = "16g",
       queue = ArsCloudConf.hadoopQueue,
       additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
       verbose = true)

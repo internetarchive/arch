@@ -47,7 +47,7 @@ class CohortCollectionSpecifics(id: String) extends CollectionSpecifics {
   }
 
   def loadWarcs(inputPath: String): RDD[WarcRecord] =
-    CollectionLoader.loadAitWarcs(aitId, inputPath, id)
+    CollectionLoader.loadAitWarcs(aitId, inputPath, "ARCHIVEIT-" + aitId)
 }
 
 object CohortCollectionSpecifics {
