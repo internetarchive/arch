@@ -103,7 +103,7 @@ class DefaultController extends BaseController with ScalateSupport {
                 "files" -> instance.outFiles) ++ instance.templateVariables
               Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
             case None =>
-              NotImplemented()
+              NotFound()
           }
         }).getOrElse(NotFound())
       }
@@ -112,28 +112,50 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/download/:collection_id/:job_id/:file_name") {
     val collectionId = params("collection_id")
-    ensureUserBasePath(
-      "userid",
-      redirectOnForbidden = false,
-      validateCollection = Some(collectionId)) { implicit user =>
-      val jobId = params("job_id")
-      (for {
-        conf <- DerivationJobConf.collection(
-          collectionId,
-          sample = params.get("sample").contains("true"))
-        instance <- JobManager.getInstance(jobId, conf)
-      } yield {
-        instance.outFiles.find(_.filename == params("file_name")) match {
-          case Some(file) =>
-            Ok(
-              HdfsIO.open(file.path, decompress = false),
-              Map(
-                "Content-Type" -> file.mimeType,
-                "Content-Disposition" -> ("attachment; filename=" + file.filename)))
-          case None =>
-            NotImplemented()
+    val sample = params.get("sample").contains("true")
+    val filename = params("file_name")
+    params.get("access") match {
+      case Some(accessToken) =>
+        val jobId = params("job_id")
+        (for {
+          conf <- DerivationJobConf.collection(collectionId, sample = sample)
+          instance <- JobManager.getInstance(jobId, conf)
+        } yield {
+          instance.outFiles.find(_.filename == filename) match {
+            case Some(file) =>
+              if (file.accessToken == accessToken) {
+                Ok(
+                  HdfsIO.open(file.path, decompress = false),
+                  Map(
+                    "Content-Type" -> file.mimeType,
+                    "Content-Disposition" -> ("attachment; filename=" + file.filename)))
+              } else Forbidden()
+            case None =>
+              NotFound()
+          }
+        }).getOrElse(NotFound())
+      case None =>
+        ensureUserBasePath(
+          "userid",
+          redirectOnForbidden = false,
+          validateCollection = Some(collectionId)) { implicit user =>
+          val jobId = params("job_id")
+          (for {
+            conf <- DerivationJobConf.collection(collectionId, sample = sample)
+            instance <- JobManager.getInstance(jobId, conf)
+          } yield {
+            instance.outFiles.find(_.filename == filename) match {
+              case Some(file) =>
+                Ok(
+                  HdfsIO.open(file.path, decompress = false),
+                  Map(
+                    "Content-Type" -> file.mimeType,
+                    "Content-Disposition" -> ("attachment; filename=" + file.filename)))
+              case None =>
+                NotFound()
+            }
+          }).getOrElse(NotFound())
         }
-      }).getOrElse(NotFound())
     }
   }
 

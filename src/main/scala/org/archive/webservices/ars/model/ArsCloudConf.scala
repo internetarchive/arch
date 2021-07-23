@@ -18,6 +18,12 @@ object ArsCloudConf {
     }
   }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor)
 
+  lazy val aitCollectionHdfsHostPort: Option[(String, Int)] =
+    cursor
+      .get[String]("aitCollectionHdfsHost")
+      .toOption
+      .map((_, cursor.get[Int]("aitCollectionHdfsPort").toOption.getOrElse(6000)))
+
   lazy val aitCollectionPath: String =
     cursor.get[String]("aitCollectionPath").toOption.getOrElse("data/in")
 

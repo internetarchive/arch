@@ -1,14 +1,16 @@
 package org.archive.webservices.ars.io
 
-import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
+import java.io.{BufferedOutputStream, File, FileNotFoundException, FileOutputStream, OutputStream}
 import java.nio.file.Files
+import java.util
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.permission.FsPermission
+import org.apache.hadoop.fs.{CreateFlag, Path}
 import org.apache.spark.rdd.RDD
 import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{RddUtil, StringUtil}
+import org.archive.helge.sparkling.util.RddUtil
 import org.archive.webservices.ars.model.ArsCloudConf
 import org.archive.webservices.ars.util.FormatUtil
 
@@ -76,21 +78,25 @@ object IOHelper {
   def sizeStr(path: String): String = FormatUtil.formatBytes(size(path))
 
   def syncHdfs[R](path: String)(action: => R): R = {
+    val p = new Path(path)
     var out: Option[OutputStream] = None
+    var exists: Boolean = true
     while (out.isEmpty) {
       try {
-        out = Some(HdfsIO.fs.create(new Path(path), false))
+        out = Some(if (exists) HdfsIO.fs.append(p) else HdfsIO.fs.create(p, false))
       } catch {
-        case _: Exception => // do nothing
+        case _: FileNotFoundException =>
+          exists = false
+        case _: Exception =>
+          exists = true
+          Thread.sleep(1000)
       }
     }
     try {
-      out.get.write(Array.empty[Byte])
+      action
     } finally {
       out.get.close()
+      Try(HdfsIO.delete(path))
     }
-    val r = action
-    HdfsIO.delete(path)
-    r
   }
 }

@@ -9,7 +9,7 @@ import org.archive.webservices.ars.processing.{
   ProcessingState
 }
 import org.archive.webservices.ars.util.FormatUtil
-import org.scalatra.{ActionResult, NotFound, NotImplemented, Ok}
+import org.scalatra.{ActionResult, NotFound, Ok}
 
 import scala.collection.immutable.ListMap
 
@@ -46,7 +46,7 @@ class ApiController extends BaseController {
               case Some(conf) =>
                 jobStateResponse(job.enqueue(conf).getOrElse(job.history(conf)))
               case None =>
-                NotImplemented()
+                NotFound()
             }
           case None =>
             NotFound()
