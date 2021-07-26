@@ -15,6 +15,9 @@
     <div class="small-12 columns">
       <div class="row">
         <div class="subnav-box columns">
+          <div class="left subnav-link ng-scope research_services">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collections</a></span>
+          </div>
           <div class="left subnav-link ng-scope research_services active" id="summary-tab-link">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Summary</a></span>
           </div>
@@ -126,15 +129,15 @@
     <%
       import org.archive.webservices.ars.model._
       for ((category, categoryDescription) <- Seq(
-          (ArsCloudJobCategories.Collection, "Provides a basic overview of the collection."),
-          (ArsCloudJobCategories.Network, "These files provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
-          (ArsCloudJobCategories.Text, "The full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
-          (ArsCloudJobCategories.BinaryInformation, "The following datasets contain information on certain types of binary files found within a web archive.")
+          (ArsCloudJobCategories.Collection, "This job provides a basic overview of the collection."),
+          (ArsCloudJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
+          (ArsCloudJobCategories.Text, "This job provides the full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
+          (ArsCloudJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.")
       )) { %>
       <h2><%=category%></h2>
+      <p><%=categoryDescription%></p>
       <p class="collapsible active"></p>
-      <div class="collapsible-content-open-by-default">
-        <p><%=categoryDescription%></p>
+      <div class="collapsible-content">
         <% for ((instance, sampleInstance) <- jobs(category)) { %>
           <div class="card" id="card-<%=unescape(instance.job.id)%>">
             <div class="card-body">
@@ -192,10 +195,10 @@
     $(".collapsible").click(function () {
       var $self = $(this);
       if ($self.hasClass("active")) {
-        $self.next().addClass("collapsed");
+        $self.next().addClass("expanded");
         $self.removeClass("active");
       } else {
-        $self.next().removeClass("collapsed");
+        $self.next().removeClass("expanded");
         $self.addClass("active");
       }
     });
