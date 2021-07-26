@@ -141,6 +141,7 @@ button.download-button {
     color: black;
     width: 100%;
     background-color: #F7F7F7;
+    padding-bottom: 1em;
 }
 
 .collapsible:hover {
@@ -148,30 +149,29 @@ button.download-button {
 }
 
 .collapsible:after {
-    content: '\002B';
+    font-family: FontAwesome;
+    content: "\f078"; /* chevron-down */
     font-weight: bold;
     color: black;
-    float: right;
+    float: left;
     background-color: #F7F7F7;
 }
 
 .collapsible.active:after {
-    content: "\2212";
+    font-family: FontAwesome;
+    content: "\f054"; /* chevron-right */
     background-color: #F7F7F7;
 }
 
 .collapsible-content {
     padding: 0 5px;
-    max-height: 0;
     overflow: hidden;
+    max-height: 0;
     transition: max-height 0.2s ease-out;
 }
 
-.collapsible-content-open-by-default {
-    padding: 0 5px;
+.expanded {
     max-height: 100%;
-    overflow: hidden;
-    transition: max-height 0.2s ease-out;
 }
 
 /*
@@ -239,10 +239,6 @@ div#graph-modal {
 
 tr.running-tr, tr.finished-tr {
     display: none;
-}
-
-.collapsed {
-    max-height: 0;
 }
 
 #summary-running, #summary-finished, #summary-empty {
