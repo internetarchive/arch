@@ -73,6 +73,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
+    override def name: String = "Processing"
+
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
         val rdd = IOHelper
@@ -93,6 +95,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
+    override def name: String = "Post-Processing"
+
     def run(conf: DerivationJobConf): Future[Boolean] = Future {
       Try(postProcess(conf.outputPath + relativeOutPath)).getOrElse(false)
     }

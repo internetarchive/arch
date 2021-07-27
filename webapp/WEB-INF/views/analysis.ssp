@@ -40,16 +40,16 @@
     </div>
 
     <div id="summary-running">
-      <h2>Running</h2>
+      <h2>Jobs in Process</h2>
 
       <div class="row">
         <div class="large-12 columns">
           <table class="large-12 columns margin-top one sortable">
             <thead>
               <tr>
-                <th>Job Name</th>
-                <th>Active Stage</th>
-                <th>State</th>
+                <th>Job</th>
+                <th>Stage</th>
+                <th>Queue</th>
               </tr>
             </thead>
             <tbody>
@@ -81,14 +81,14 @@
     </div>
 
     <div id="summary-finished">
-      <h2>Finished</h2>
+      <h2>Completed Jobs</h2>
 
       <div class="row">
         <div class="large-12 columns">
           <table class="large-12 columns margin-top one sortable">
             <thead>
               <tr>
-                <th>Job Name</th>
+                <th>Job</th>
                 <th>Finished</th>
               </tr>
             </thead>

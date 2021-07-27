@@ -83,7 +83,7 @@ var arsCloud = (function () {
 
             if (json.started && !json.finished && !json.failed) {
                 $runningTr.children(".running-td-active-stage").text(json.activeStage);
-                $runningTr.children(".running-td-state").text(json.queue ? json.queue + " #" + json.queuePos : json.activeState);
+                $runningTr.children(".running-td-state").text(json.queue ? json.queue + " #" + (json.queuePos + 1) : json.activeState);
             }
 
             $stateButton.text(json.state);
