@@ -21,7 +21,7 @@ class ApiController extends BaseController {
       "finished" -> (instance.state == ProcessingState.Finished).asJson,
       "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
       val active = instance.active
-      Seq("activeStage" -> active.job.id.asJson, "activeState" -> active.stateStr.asJson) ++ {
+      Seq("activeStage" -> active.job.name.asJson, "activeState" -> active.stateStr.asJson) ++ {
         active.queue match {
           case Some(queue) =>
             Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)
