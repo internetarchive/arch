@@ -15,7 +15,7 @@ import org.archive.helge.sparkling.util.DigestUtil
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 import org.archive.webservices.ars.util.Common
 
@@ -24,7 +24,7 @@ import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 abstract class BinaryInformationAutJob extends AutJob[Row] {
-  val category: ArsCloudJobCategory = ArsCloudJobCategories.BinaryInformation
+  val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
   val mimeTypeCountFile: String = "mime-type-count.csv.gz"
 

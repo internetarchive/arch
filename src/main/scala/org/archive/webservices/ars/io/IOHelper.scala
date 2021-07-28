@@ -11,7 +11,7 @@ import org.apache.hadoop.fs.{CreateFlag, Path}
 import org.apache.spark.rdd.RDD
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.RddUtil
-import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.util.FormatUtil
 
 import scala.reflect.ClassTag
@@ -19,7 +19,7 @@ import scala.util.Try
 
 object IOHelper {
   def tempDir[R](action: String => R): R = {
-    val tmpPath = new File(ArsCloudConf.localTempPath)
+    val tmpPath = new File(ArchConf.localTempPath)
     tmpPath.mkdirs()
     val dir = Files.createTempDirectory(tmpPath.toPath, "ars-")
     try {

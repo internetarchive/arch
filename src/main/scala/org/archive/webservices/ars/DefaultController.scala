@@ -2,8 +2,8 @@ package org.archive.webservices.ars
 
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf, ArsCloudJobCategories}
+import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, ArchJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.ars.util.CacheUtil
 import org.scalatra._
@@ -14,22 +14,22 @@ import scala.util.Try
 class DefaultController extends BaseController with ScalateSupport {
   get("/?") {
     ensureLogin { implicit user =>
-      if (user.id == 0) chooseAccount()
+      if (user.isAdmin) TemporaryRedirect(Arch.BaseUrl + "/admin")
       else TemporaryRedirect(relativePath(""))
     }
   }
 
   get("/:userid/?*") {
-    ensureUserBasePath("userid") { _ =>
-      TemporaryRedirect("https://partner.archive-it.org" + requestPath)
+    ensureUserBasePath("userid") { implicit user =>
+      TemporaryRedirect(relativePath("")) //TemporaryRedirect("https://partner.archive-it.org" + requestPath)
     }
   }
 
   get("/:userid/research_services/?*") {
     ensureUserBasePath("userid") { user =>
-      val aitCollections = ArsCloudCollection.userCollections(user)
+      val collections = ArchCollection.userCollections(user)
       Ok(
-        ssp("index", "collections" -> aitCollections, "user" -> user),
+        ssp("index", "collections" -> collections, "user" -> user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -50,13 +50,13 @@ class DefaultController extends BaseController with ScalateSupport {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
       (for {
-        collection <- ArsCloudCollection.get(collectionId)
+        collection <- ArchCollection.get(collectionId)
         conf <- DerivationJobConf.collection(collectionId)
         sampleConf <- DerivationJobConf.collection(collectionId, sample = true)
       } yield {
         val jobs =
           JobManager.jobs.values.toSeq
-            .filter(_.category != ArsCloudJobCategories.None)
+            .filter(_.category != ArchJobCategories.None)
             .groupBy(_.category)
             .map {
               case (category, jobs) =>
@@ -80,12 +80,12 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/analysis/:collection_id/:job_id") {
-    CacheUtil.cacheRequest(request, enabled = ArsCloudConf.production) {
+    CacheUtil.cacheRequest(request, enabled = ArchConf.production) {
       ensureUserBasePath("userid") { implicit user =>
         val collectionId = params("collection_id")
         val jobId = params("job_id")
         (for {
-          collection <- ArsCloudCollection.get(collectionId)
+          collection <- ArchCollection.get(collectionId)
           conf <- DerivationJobConf.collection(
             collectionId,
             sample = params.get("sample").contains("true"))
@@ -160,24 +160,25 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/login") {
-    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArsCloud.BaseUrl)
+    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(Arch.BaseUrl)
     Ok(
-      ssp("login", "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login")), "next" -> next),
+      ssp("login", "breadcrumbs" -> Seq((Arch.BasePath + "/login", "Login")), "next" -> next),
       Map("Content-Type" -> "text/html"))
   }
 
   post("/login") {
-    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArsCloud.BaseUrl)
+    val next = Try(params("next")).toOption.filter(_ != null).getOrElse(Arch.BaseUrl)
     try {
       val username = params("username")
       val password = params("password")
-      Ait.login(username, password, response).left.toOption match {
+      ArchUser.login(username, password) match {
         case Some(error) =>
           Ok(
             ssp(
               "login",
               "error" -> Some(error),
-              "breadcrumbs" -> Seq((ArsCloud.BasePath + "/login", "Login"))),
+              "next" -> next,
+              "breadcrumbs" -> Seq((Arch.BasePath + "/login", "Login"))),
             Map("Content-Type" -> "text/html"))
         case None =>
           Found(next)
@@ -190,7 +191,7 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/logout") {
-    Ait.logout()
-    login(ArsCloud.BaseUrl)
+    ArchUser.logout()
+    login(Arch.BaseUrl)
   }
 }

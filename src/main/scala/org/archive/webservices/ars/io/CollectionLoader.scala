@@ -5,10 +5,12 @@ import org.archive.helge.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
 import org.archive.helge.sparkling.warc.{WarcLoader, WarcRecord}
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.model.ArsCloudConf
-import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics}
+import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.CollectionSpecifics
 
 object CollectionLoader {
+  val WasapiPageSize = 10
+
   def loadWarcs(
       inputPath: String,
       hdfsHostPort: Option[(String, Int)] = None): RDD[WarcRecord] = {
@@ -41,8 +43,8 @@ object CollectionLoader {
     }
 
   def loadAitWarcs(aitId: Int, inputPath: String, cacheId: String): RDD[WarcRecord] = {
-    val basicAuth = ArsCloudConf.aitAuthHeader
-    val hdfsHostPort = ArsCloudConf.aitCollectionHdfsHostPort
+    val basicAuth = ArchConf.foreignAitAuthHeader
+    val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
       val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&collection=" + aitId + "&page_size="
       val apiFileCount = Ait
@@ -65,12 +67,11 @@ object CollectionLoader {
               .union(loadWarcs(cachePath))
           } else {
             RddUtil
-              .parallelize(
-                (apiFileCount.toDouble / AitCollectionSpecifics.WasapiPageSize).ceil.toInt)
+              .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
               .flatMap { idx =>
                 Ait
                   .getJsonWithAuth(
-                    wasapiUrl + AitCollectionSpecifics.WasapiPageSize + "&page=" + (idx + 1),
+                    wasapiUrl + WasapiPageSize + "&page=" + (idx + 1),
                     basicAuth = basicAuth) { json =>
                     json
                       .downField("files")

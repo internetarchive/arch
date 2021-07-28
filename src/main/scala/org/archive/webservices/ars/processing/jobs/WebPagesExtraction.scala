@@ -8,14 +8,14 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.http.HttpMessage
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
-import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 import org.archive.webservices.ars.util.HttpUtil
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Extract plain text of webpages"
 
-  override val category: ArsCloudJobCategory = ArsCloudJobCategories.Text
+  override val category: ArchJobCategory = ArchJobCategories.Text
 
   val description =
     "Create a CSV with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."

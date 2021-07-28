@@ -1,7 +1,7 @@
 package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.ArsCloudCollection
+import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.{
   DerivationJobConf,
   DerivationJobInstance,
@@ -72,7 +72,7 @@ class ApiController extends BaseController {
 
   get("/collection/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { _ =>
-      ArsCloudCollection.get(params("collectionid")) match {
+      ArchCollection.get(params("collectionid")) match {
         case Some(collection) =>
           collection.ensureStats()
           val info = collection.info

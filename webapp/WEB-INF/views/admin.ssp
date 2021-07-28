@@ -1,0 +1,22 @@
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val baseUrl: String %>
+
+#set (title)
+    ARCH: Archive Research Compute Hub
+#end
+
+#set (subtitle)
+    Admin Area
+#end
+
+<div class="row">
+<div class="large-12 columns">
+<p>
+    <br>
+    You're logged in as an admin user, please replace <code>admin</code> in the URL with the ID of the desired account you wish to access, or click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
+    <br>
+    <a href="/ait/admin/edit">Manage users and collections</a>
+</p>
+</div>
+</div>
+

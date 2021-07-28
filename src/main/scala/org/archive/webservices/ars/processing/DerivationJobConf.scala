@@ -3,7 +3,7 @@ package org.archive.webservices.ars.processing
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Decoder
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 
 case class DerivationJobConf(
     collectionId: String,
@@ -18,9 +18,9 @@ object DerivationJobConf {
   val SampleSize = 100
 
   def collection(collectionId: String, sample: Boolean = false): Option[DerivationJobConf] = {
-    ArsCloudCollection.inputPath(collectionId).map { inputPath =>
+    ArchCollection.inputPath(collectionId).map { inputPath =>
       val outDir = if (sample) "samples" else "out"
-      val outputPath = ArsCloudConf.jobOutPath + s"/$collectionId/" + outDir
+      val outputPath = ArchConf.jobOutPath + s"/$collectionId/" + outDir
       DerivationJobConf(collectionId, inputPath, outputPath, if (sample) SampleSize else -1)
     }
   }

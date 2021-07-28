@@ -1,5 +1,5 @@
-<%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collections: Seq[org.archive.webservices.ars.model.ArsCloudCollection] %>
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val collections: Seq[org.archive.webservices.ars.model.ArchCollection] %>
 
 #set (title)
   Datasets
@@ -15,7 +15,7 @@
       <div class="row">
         <div class="subnav-box columns">
           <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services active" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
-            <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collection Analysis</a></span>
+            <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services">Collection Analysis</a></span>
           </div>
           <hr />
         </div>
@@ -41,7 +41,7 @@
         <% for (collection <- collections) { %>
           <tr id="collection-row-<%=unescape(collection.id)%>">
             <td class="ng-binding">
-              <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>">
+              <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>">
                 <%=collection.name%>
               </a>
             </td>
@@ -59,7 +59,7 @@
             </td>
           </tr>
           <script>
-            arsCloud.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>");
+            arch.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>");
           </script>
         <% } %>
       </tbody>

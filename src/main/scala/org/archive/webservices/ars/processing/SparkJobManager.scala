@@ -4,7 +4,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 import org.archive.helge.sparkling.Sparkling.executionContext
 import org.archive.helge.sparkling.util.SparkUtil
-import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.model.ArchConf
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -19,8 +19,8 @@ object SparkJobManager extends JobManagerBase("Spark", 3) {
       executors = 10,
       executorCores = 4,
       executorMemory = "16g",
-      queue = ArsCloudConf.hadoopQueue,
-      additionalConfigs = Map("spark.master" -> ArsCloudConf.sparkMaster),
+      queue = ArchConf.hadoopQueue,
+      additionalConfigs = Map("spark.master" -> ArchConf.sparkMaster),
       verbose = true)
     context.setLogLevel("INFO")
     println("Spark context initialized: " + context.applicationId)

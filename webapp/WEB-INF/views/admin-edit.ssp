@@ -1,0 +1,102 @@
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val usersJson: String %>
+<%@ val aitCollectionsJson: String %>
+<%@ val specialCollectionsJson: String %>
+<%@ val message: Option[String] = None %>
+
+#set (title)
+    ARCH: Archive Research Compute Hub
+#end
+
+#set (subtitle)
+    Admin Area
+#end
+
+<div class="row">
+<div class="small-12 columns">
+
+<form method="post" style="display: none;" id="edit-form">
+    <textarea name="users-json" id="users-textarea"></textarea>
+    <textarea name="ait-collections-json" id="ait-collections-textarea"></textarea>
+    <textarea name="special-collections-json" id="special-collections-textarea"></textarea>
+</form>
+
+<% if (message.isDefined) { %>
+    <div class="alert-box" style="margin-top: 30px; margin-bottom: -20px;"><span class="fa fa-exclamation-triangle"></span> <%=message.get%></div>
+<% } %>
+
+<subnav class="ng-isolate-scope">
+    <div class="row subnav">
+        <div class="small-12 columns">
+            <div class="row">
+                <div class="subnav-box columns">
+                    <div class="left subnav-link ng-scope research_services active" id="users-tab-link">
+                        <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Users</a></span>
+                    </div>
+                    <div class="left subnav-link ng-scope research_services" id="ait-collections-tab-link">
+                        <span class="ng-scope"><a class="ng-binding ng-scope" href="#">AIT collections</a></span>
+                    </div>
+                    <div class="left subnav-link ng-scope research_services" id="special-collections-tab-link">
+                        <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Special collections</a></span>
+                    </div>
+                    <hr />
+                </div>
+            </div>
+        </div>
+    </div>
+</subnav>
+
+<div id="users-tab" class="page-tab">
+    <div class="small-12">
+        You can enter passwords here in plain text (without the <code>sha1:</code> prefix), they will automatically be encrypted when you click save.
+    </div>
+    <br>
+    <div id="users-editor" style="width: 100%; height: 400px; margin: auto;"></div>
+</div>
+<div id="ait-collections-tab" class="page-tab" style="display: none;">
+    <div id="ait-collections-editor" style="width: 100%; height: 400px; margin: auto;"></div>
+</div>
+<div id="special-collections-tab" class="page-tab" style="display: none;">
+    <div id="special-collections-editor" style="width: 100%; height: 400px; margin: auto;"></div>
+</div>
+
+<br><br>
+
+<button id="save-button" class="green-bg"><span class="fa fa-save"></span> Save</button>
+
+<script type="text/javascript">
+    $(function () {
+        arch.registerTab("users-tab");
+        arch.registerTab("ait-collections-tab");
+        arch.registerTab("special-collections-tab");
+
+        var options = {
+            "mode": "code",
+            "indentation": 4,
+            "search": false,
+            "mainMenuBar": false,
+            "navigationBar": false,
+            "statusBar": false
+        };
+
+        var usersEditor = new JSONEditor(document.getElementById("users-editor"), options);
+        usersEditor.setText("<%=unescape(usersJson.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", ""))%>");
+
+        var aitCollectionsEditor = new JSONEditor(document.getElementById("ait-collections-editor"), options);
+        aitCollectionsEditor.setText("<%=unescape(aitCollectionsJson.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", ""))%>");
+
+        var specialCollectionsEditor = new JSONEditor(document.getElementById("special-collections-editor"), options);
+        specialCollectionsEditor.setText("<%=unescape(specialCollectionsJson.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", ""))%>");
+
+        $("#save-button").click(function() {
+            $("#users-textarea").val(usersEditor.getText());
+            $("#ait-collections-textarea").val(aitCollectionsEditor.getText());
+            $("#special-collections-textarea").val(specialCollectionsEditor.getText());
+            $("#edit-form").first().submit();
+        });
+    });
+</script>
+
+</div>
+</div>
+

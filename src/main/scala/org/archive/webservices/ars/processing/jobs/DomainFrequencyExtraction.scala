@@ -8,14 +8,14 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
-import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.shared.AutJob
 import org.archive.webservices.ars.util.Common
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
-  val category: ArsCloudJobCategory = ArsCloudJobCategories.Collection
+  val category: ArchJobCategory = ArchJobCategories.Collection
   val description =
     "Create a CSV with the following columns: domain and count."
 

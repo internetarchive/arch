@@ -1,15 +1,15 @@
 package org.archive.webservices.ars
 
-import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.SparkJobManager
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
-object ArsCloud {
-  val Port: Int = ArsCloudConf.port
+object Arch {
+  val Port: Int = ArchConf.port
   val BasePath = "/ait"
-  val BaseUrl: String = ArsCloudConf.baseUrl + BasePath
+  val BaseUrl: String = ArchConf.baseUrl + BasePath
   val BaseDir = "/research_services"
 
   def start(contextPath: String, port: Int): Unit = {
@@ -25,7 +25,7 @@ object ArsCloud {
     context.setInitParameter(
       ScalatraListener.LifeCycleKey,
       classOf[ScalatraBootstrap].getCanonicalName)
-//    context.setInitParameter(org.scalatra.EnvironmentKey, "production")
+    if (ArchConf.production) context.setInitParameter(org.scalatra.EnvironmentKey, "production")
     context.setEventListeners(Array(new ScalatraListener))
 
     server.setHandler(context)

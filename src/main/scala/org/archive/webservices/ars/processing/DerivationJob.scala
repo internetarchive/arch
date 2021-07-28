@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.{ArsCloudJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -12,7 +12,7 @@ trait DerivationJob {
 
   def name: String
 
-  def category: ArsCloudJobCategory
+  def category: ArchJobCategory
 
   def description: String
 

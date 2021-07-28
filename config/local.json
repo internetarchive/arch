@@ -1,7 +1,7 @@
 {
   "aitCollectionPath": "data/in",
   "aitCollectionWarcDir": "arcs",
-  "collectionCachePath": "/tmp/ars-cloud-cache",
+  "collectionCachePath": "/tmp/arch-cache",
   "jobOutPath": "data/out",
   "localTempPath": "data/tmp",
   "sparkMaster": "local[*]",

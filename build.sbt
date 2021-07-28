@@ -1,6 +1,6 @@
 import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
 
-lazy val commonSettings = Seq(name := "ars-cloud", version := "0.1.0", scalaVersion := "2.12.8")
+lazy val commonSettings = Seq(name := "arch", version := "0.1.0", scalaVersion := "2.12.8")
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
@@ -38,7 +38,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "io.circe" %% "circe-parser").map(_ % "0.10.0")
 
 val buildSettings = commonSettings ++ Seq(
-  mainClass in (Compile, run) := Some("org.archive.webservices.ars.ArsCloud"),
+  mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
