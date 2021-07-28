@@ -1,6 +1,6 @@
-<%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
-<%@ val jobs: Map[org.archive.webservices.ars.model.ArsCloudJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
+<%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
 
 #set (title)
   Analyze <%=collection.name%>
@@ -16,7 +16,7 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.idStr)%>/research_services">Collections</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/<%=unescape(user.urlId)%>/research_services">Collections</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active" id="summary-tab-link">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Summary</a></span>
@@ -96,7 +96,7 @@
               <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
               <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-full">
                 <td>
-                  <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">
+                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">
                   <%=instance.job.name%>
                   </a>
                 </td>
@@ -104,7 +104,7 @@
               </tr>
               <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-sample">
                 <td>
-                  <a href="/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">
+                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">
                   <%=instance.job.name%> (Sample)
                   </a>
                 </td>
@@ -129,10 +129,10 @@
     <%
       import org.archive.webservices.ars.model._
       for ((category, categoryDescription) <- Seq(
-          (ArsCloudJobCategories.Collection, "This job provides a basic overview of the collection."),
-          (ArsCloudJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
-          (ArsCloudJobCategories.Text, "This job provides the full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
-          (ArsCloudJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.")
+          (ArchJobCategories.Collection, "This job provides a basic overview of the collection."),
+          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
+          (ArchJobCategories.Text, "This job provides the full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
+          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.")
       )) { %>
       <h2><%=category%></h2>
       <p><%=categoryDescription%></p>
@@ -147,12 +147,12 @@
                 <div class="job-card-sample">
                   <button class="job-runbutton job-button">Run Sample Job</button>
                   <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Results</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Results</button>
                 </div>
                 <div class="job-card-full">
                   <button class="job-runbutton job-button">Run Job</button>
                   <button class="job-statebutton job-button"><%=instance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.idStr)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Results</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Results</button>
                 </div>
               </div>
             </div>
@@ -165,27 +165,17 @@
 
 <script>
   function switchTabSummary() {
-    $(".subnav-link").removeClass("active");
-    $(".page-tab").hide();
-    $("#summary-tab").show();
-    $("#summary-tab-link").addClass("active");
-    window.scrollTo(0,0);
-    return false;
+    return arch.switchTab("summary-tab");
   }
 
   function switchTabJobs() {
-    $(".subnav-link").removeClass("active");
-    $(".page-tab").hide();
-    $("#jobs-tab").show();
-    $("#jobs-tab-link").addClass("active");
-    window.scrollTo(0,0);
-    return false;
+    return arch.switchTab("jobs-tab");
   }
 
   $(function() {
     <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
-      arsCloud.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-      arsCloud.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
+      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
     <% } %>
 
     $("#summary-tab-link").click(switchTabSummary);

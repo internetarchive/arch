@@ -8,7 +8,7 @@ import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{RddUtil, SurtUtil}
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArsCloudJobCategories, ArsCloudJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 import org.archive.webservices.ars.util.Common
 
@@ -17,7 +17,7 @@ import scala.reflect.ClassTag
 abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
   val SampleTopNNodes = 50
 
-  val category: ArsCloudJobCategory = ArsCloudJobCategories.Network
+  val category: ArchJobCategory = ArchJobCategories.Network
 
   val sampleGraphFile: String = "sample-graph.tsv.gz"
 

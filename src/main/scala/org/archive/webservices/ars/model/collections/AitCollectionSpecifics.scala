@@ -1,35 +1,46 @@
 package org.archive.webservices.ars.model.collections
 
-import io.circe.Json
+import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.HttpServletRequest
 import org.apache.spark.rdd.RDD
 import org.archive.helge.sparkling.util.StringUtil
 import org.archive.helge.sparkling.warc.WarcRecord
-import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.CollectionLoader
-import org.archive.webservices.ars.model.{ArsCloudCollection, ArsCloudConf}
+import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+
+import scala.io.Source
+import scala.util.Try
 
 class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
   val aitId: Int = id.stripPrefix(AitCollectionSpecifics.Prefix).toInt
 
   def inputPath: String =
-    ArsCloudConf.aitCollectionPath + s"/$aitId/" + ArsCloudConf.aitCollectionWarcDir
+    ArchConf.aitCollectionPath + s"/$aitId/" + ArchConf.aitCollectionWarcDir
 
-  def getCollection(implicit request: HttpServletRequest): Option[ArsCloudCollection] = {
+  private def foreignAccess(implicit request: HttpServletRequest): Boolean = {
+    ArchUser.get.exists { u =>
+      AitCollectionSpecifics
+        .foreignCollectionIds(u)
+        .contains(aitId) || (u.isAdmin && u.aitUser.isEmpty)
+    }
+  }
+
+  def getCollection(implicit request: HttpServletRequest): Option[ArchCollection] = {
     Ait
-      .getJson("/api/collection?id=" + aitId)(c =>
+      .getJsonWithAuth(
+        "/api/collection?id=" + aitId,
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
         Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
       .flatMap(_.headOption)
-      .map { c =>
-        c.user = Ait.user(useSession = true)
-        c
-      }
   }
 
   def size(implicit request: HttpServletRequest): Long = {
     Ait
-      .getJson(
-        "/api/crawl_job?__group=collection&__sum=warc_content_bytes&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId)(
+      .getJsonWithAuth(
+        "/api/crawl_job?__group=collection&__sum=warc_content_bytes&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
         _.downField("groups").downArray
           .get[Long]("warc_content_bytes__sum")
           .toOption)
@@ -42,15 +53,38 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
 
 object AitCollectionSpecifics {
   val Prefix = "ARCHIVEIT-"
-  val WasapiPageSize = 10
 
-  def parseCollections(json: Iterator[Json], prefix: String = Prefix): Seq[ArsCloudCollection] = {
+  private var _foreignCollectionsCursor: Option[HCursor] = None
+  private def foreignCollectionsCursor: HCursor = _foreignCollectionsCursor.getOrElse {
+    _foreignCollectionsCursor = Some(Try {
+      val source = Source.fromFile("data/ait-collections.json", "utf-8")
+      try {
+        parser.parse(source.mkString).right.get.hcursor
+      } finally {
+        source.close()
+      }
+    }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor))
+    _foreignCollectionsCursor.get
+  }
+
+  def invalidateData(): Unit = _foreignCollectionsCursor = None
+
+  def foreignCollectionIds(user: ArchUser): Seq[Int] = {
+    foreignCollectionsCursor
+      .downField(user.id)
+      .values
+      .toSeq
+      .flatten
+      .flatMap(_.asNumber.flatMap(_.toInt))
+  }
+
+  def parseCollections(json: Iterator[Json]): Seq[ArchCollection] = {
     json
       .map(_.hcursor)
       .flatMap { c =>
         c.get[Int]("id").right.toOption.map { aitId =>
-          val collectionId = prefix + StringUtil.padNum(aitId, 5)
-          ArsCloudCollection(
+          val collectionId = Prefix + StringUtil.padNum(aitId, 5)
+          ArchCollection(
             collectionId,
             c.get[String]("name").right.getOrElse(collectionId),
             c.get[Boolean]("publicly_visible").right.getOrElse(false))
@@ -59,15 +93,29 @@ object AitCollectionSpecifics {
       .toSeq
   }
 
-  def userCollections(user: AitUser)(
-      implicit request: HttpServletRequest): Seq[ArsCloudCollection] = {
-    Ait
-      .getJson("/api/collection?limit=100&account=" + user.id)(c =>
-        Some(parseCollections(c.values.toIterator.flatten)))
-      .getOrElse(Seq.empty)
-      .map { c =>
-        c.user = Some(user)
-        c
+  def userCollections(user: ArchUser)(
+      implicit request: HttpServletRequest): Seq[ArchCollection] = {
+    val foreignAccess =
+      ArchUser.get.exists(u => u.isAdmin && u.aitUser.isEmpty)
+    user.aitUser.map(_.id).toSeq.flatMap { userId =>
+      Ait
+        .getJsonWithAuth(
+          "/api/collection?limit=100&account=" + userId,
+          basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
+          Some(parseCollections(c.values.toIterator.flatten)))
+        .getOrElse(Seq.empty)
+    }
+  }
+
+  def foreignUserCollections(user: ArchUser)(
+      implicit request: HttpServletRequest): Seq[ArchCollection] = {
+    foreignCollectionIds(user)
+      .flatMap { aitId =>
+        Ait
+          .getJsonWithAuth(
+            "/api/collection?id=" + aitId,
+            basicAuth = ArchConf.foreignAitAuthHeader)(c =>
+            parseCollections(c.values.toIterator.flatten).headOption)
       }
   }
 }

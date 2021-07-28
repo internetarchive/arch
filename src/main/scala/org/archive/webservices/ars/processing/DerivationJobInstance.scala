@@ -3,8 +3,8 @@ package org.archive.webservices.ars.processing
 import java.time.Instant
 
 import org.archive.webservices.ars.model.{
-  ArsCloudCollectionInfo,
-  ArsCloudJobInstanceInfo,
+  ArchCollectionInfo,
+  ArchJobInstanceInfo,
   DerivativeOutput
 }
 
@@ -41,7 +41,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def active: DerivationJobInstance = activeStage.getOrElse(this)
 
-  def info: ArsCloudJobInstanceInfo = ArsCloudJobInstanceInfo.get(conf.outputPath + "/" + job.id)
+  def info: ArchJobInstanceInfo = ArchJobInstanceInfo.get(conf.outputPath + "/" + job.id)
 
   def updateState(value: Int): Unit = {
     val prevState = state
@@ -56,7 +56,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
       if (state == ProcessingState.Finished) {
         info = info.setFinishedTime(now)
         val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
-        ArsCloudCollectionInfo
+        ArchCollectionInfo
           .get(conf.collectionId)
           .setLastJob(job.name + nameSuffix, now)
           .save()

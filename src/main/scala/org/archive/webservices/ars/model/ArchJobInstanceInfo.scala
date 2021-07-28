@@ -10,21 +10,21 @@ import org.scalatra.guavaCache.GuavaCache
 
 import scala.collection.immutable.ListMap
 
-case class ArsCloudJobInstanceInfo private (started: Long = -1, finished: Long = -1) {
+case class ArchJobInstanceInfo private (started: Long = -1, finished: Long = -1) {
   def startTime: Option[Instant] = Some(started).filter(_ != -1).map(Instant.ofEpochSecond)
   def finishedTime: Option[Instant] = Some(finished).filter(_ != -1).map(Instant.ofEpochSecond)
 
-  def setStartTime(time: Instant): ArsCloudJobInstanceInfo = {
+  def setStartTime(time: Instant): ArchJobInstanceInfo = {
     copy(started = time.getEpochSecond)
   }
 
-  def setFinishedTime(time: Instant): ArsCloudJobInstanceInfo = {
+  def setFinishedTime(time: Instant): ArchJobInstanceInfo = {
     copy(finished = time.getEpochSecond)
   }
 
   def save(jobOutPath: String): Unit = {
-    val file = ArsCloudJobInstanceInfo.infoFile(jobOutPath)
-    GuavaCache.put(ArsCloudJobInstanceInfo.CachePrefix + file, this, None)
+    val file = ArchJobInstanceInfo.infoFile(jobOutPath)
+    GuavaCache.put(ArchJobInstanceInfo.CachePrefix + file, this, None)
     HdfsIO.writeLines(
       file,
       Seq((ListMap.empty[String, Json] ++ {
@@ -36,14 +36,14 @@ case class ArsCloudJobInstanceInfo private (started: Long = -1, finished: Long =
   }
 }
 
-object ArsCloudJobInstanceInfo {
+object ArchJobInstanceInfo {
   val Charset = "utf-8"
   val CachePrefix = "job-instance-info#"
 
   def infoFile(jobOutPath: String): String =
     jobOutPath + "/info.json"
 
-  def get(jobOutPath: String): ArsCloudJobInstanceInfo = {
+  def get(jobOutPath: String): ArchJobInstanceInfo = {
     val file = infoFile(jobOutPath)
     GuavaCache.get(CachePrefix + file).getOrElse {
       val info = if (HdfsIO.exists(file)) {
@@ -51,10 +51,10 @@ object ArsCloudJobInstanceInfo {
           case Some(cursor) =>
             val started = cursor.get[Long]("started").toOption.getOrElse(-1L)
             val finished = cursor.get[Long]("finished").toOption.getOrElse(-1L)
-            ArsCloudJobInstanceInfo(started, finished)
-          case None => ArsCloudJobInstanceInfo()
+            ArchJobInstanceInfo(started, finished)
+          case None => ArchJobInstanceInfo()
         }
-      } else ArsCloudJobInstanceInfo()
+      } else ArchJobInstanceInfo()
       GuavaCache.put(CachePrefix + file, info, None)
     }
   }

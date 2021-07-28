@@ -5,7 +5,7 @@ import java.time.Instant
 import org.apache.hadoop.fs.Path
 import org.archive.helge.sparkling._
 import org.archive.helge.sparkling.io.HdfsIO._
-import org.archive.webservices.ars.model.ArsCloudConf
+import org.archive.webservices.ars.model.ArchConf
 
 import scala.util.Try
 
@@ -31,13 +31,13 @@ object CollectionCache {
   }
 
   def cachePath(collectionId: String): String =
-    ArsCloudConf.collectionCachePath + "/" + collectionId
+    ArchConf.collectionCachePath + "/" + collectionId
 
   def clearCache(): Unit = synchronized {
-    var length = Try(fs.getContentSummary(new Path(ArsCloudConf.collectionCachePath)).getLength)
+    var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)
       .getOrElse(0L)
     if (length > CacheClearThresholdBytes) {
-      for (dir <- fs.listStatus(new Path(ArsCloudConf.collectionCachePath))
+      for (dir <- fs.listStatus(new Path(ArchConf.collectionCachePath))
            if dir.isDirectory) {
         val path = dir.getPath
         val collectionId = path.getName

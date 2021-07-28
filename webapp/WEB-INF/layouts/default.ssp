@@ -1,7 +1,7 @@
 <%@ val title: String = "Archive Research Compute Hub" %>
 <%@ val subtitle: String = "" %>
 <%@ val body: String %>
-<%@ val user: org.archive.webservices.ars.ait.AitUser = org.archive.webservices.ars.ait.AitUser.None %>
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser = org.archive.webservices.ars.model.users.ArchUser.NoUser %>
 <%@ val breadcrumbs: Seq[(String, String)] = Seq.empty %>
 
 <!DOCTYPE html>
@@ -21,9 +21,10 @@
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css">
 <%--<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css">--%>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
-<link rel="stylesheet" href="/ait/css/ars-cloud-style.css">
+<link rel="stylesheet" href="/ait/css/arch-style.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-alerts.css">
+<link rel="stylesheet" href="/ait/css/jsoneditor.min.css">
 <link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
 <link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
 <link rel="apple-touch-icon" sizes="72x72" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-72x72.png">
@@ -49,11 +50,12 @@
 
 <script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
 <script src="/ait/js/pagetransitions.js"></script>
-<script src="/ait/js/ars-cloud.js"></script>
+<script src="/ait/js/arch.js"></script>
 <script src="/ait/js/sorttable.js"></script>
 <script src="/ait/js/Chart.min.js"></script>
 <script src="/ait/js/popper.min.js"></script>
 <script src="/ait/js/clipboard-copy-element.js" type="module"></script>
+<script src="/ait/js/jsoneditor.min.js"></script>
 
 </head>
 <body style="padding-top: 70px;">
@@ -67,24 +69,24 @@
         <% if (user.isLoggedIn) { %>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
             <ul class="left ng-scope">
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>">Home</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/collections">Collections</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/crawls">Crawls</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/archives">Archives</a></li>
-                <li><a href="/ait/<%=unescape(user.idStr)%>/research_services">Datasets</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>">Home</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/collections">Collections</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/crawls">Crawls</a></li>
+                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/archives">Archives</a></li>
+                <li><a href="/ait/<%=unescape(user.urlId)%>/research_services">Datasets</a></li>
             </ul>
         </section>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
             <ul id="secondary-menu" class="right show-for-large-up ng-scope">
                 <li><a target="_blank" href="https://support.archive-it.org/">Help Center</a></li>
-                <li class="has-dropdown ng-isolate-scope not-click" ng-transclude="" has-dropdown="" ng-show="user.username">
-                    <a name="_welcome" class="ng-scope">Welcome, <span ng-bind="user.full_name||user.username" class="ng-binding"><%=user.fullName%></span></a>
+                <li class="has-dropdown ng-isolate-scope not-click" ng-transclude="" has-dropdown="">
+                    <a name="_welcome" class="ng-scope">Welcome, <span class="ng-binding"><%=user.fullName%></span></a>
                     <ul class="dropdown ng-scope ng-isolate-scope" ng-transclude="" top-bar-dropdown=""><li class="title back js-generated ng-scope"><h5><a href="" ng-click="back($event);" class="ng-binding">Back</a></h5></li>
-                        <li class="ng-scope"><a href="https://partner.archive-it.org/<%=unescape(user.idStr)%>/settings">Administration</a></li>
-                        <li class="ng-scope"><a href="<%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>/logout" target="_self">Log Out</a></li>
+                        <li class="ng-scope"><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/settings">Administration</a></li>
+                        <li class="ng-scope"><a href="<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/logout" target="_self">Log Out</a></li>
                     </ul>
                 </li>
-                <li ng-hide="user.username" class="ng-hide"><a href="<%=unescape(org.archive.webservices.ars.model.ArsCloudConf.loginUrl)%><%=unescape(org.archive.webservices.ars.ArsCloud.BaseUrl)%>">Log In</a></li>
+                <li ng-hide="user.username" class="ng-hide"><a href="<%=unescape(org.archive.webservices.ars.model.ArchConf.loginUrl)%><%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>">Log In</a></li>
             </ul>
         </section>
         <% } %>
@@ -103,7 +105,7 @@
     <div class="small-12 columns">
         <ul class="breadcrumbs ng-isolate-scope" ncy-breadcrumb="">
             <li ng-repeat="step in steps" class="ng-scope">
-                <a href="<%=(if (user.isLoggedIn) "ait/" + user.idStr + "/research_services" else "/ait")%>" class="ng-binding">ARCH</a>
+                <a href="<%=(if (user.isLoggedIn) "ait/" + user.urlId + "/research_services" else "/ait")%>" class="ng-binding">ARCH</a>
             </li>
             <% for ((href, text) <- breadcrumbs) { %>
                 <li ng-repeat="step in steps" class="ng-scope">

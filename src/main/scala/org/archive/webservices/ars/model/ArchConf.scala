@@ -1,12 +1,12 @@
 package org.archive.webservices.ars.model
 
 import _root_.io.circe.{Json, JsonObject, parser}
-import org.archive.webservices.ars.ArsCloud
+import org.archive.webservices.ars.Arch
 
 import scala.io.Source
 import scala.util.Try
 
-object ArsCloudConf {
+object ArchConf {
   val ConfFile = "config/config.json"
 
   private val cursor = Try {
@@ -41,12 +41,12 @@ object ArsCloudConf {
   lazy val sparkMaster: String = cursor.get[String]("sparkMaster").toOption.getOrElse("local[*]")
 
   lazy val baseUrl: String =
-    cursor.get[String]("baseUrl").toOption.getOrElse("http://127.0.0.1:" + ArsCloud.Port)
+    cursor.get[String]("baseUrl").toOption.getOrElse("http://127.0.0.1:" + Arch.Port)
 
   lazy val loginUrl: String = cursor
     .get[String]("loginUrl")
     .toOption
-    .getOrElse("http://127.0.0.1:" + ArsCloud.Port + "/ait/login?next=")
+    .getOrElse("http://127.0.0.1:" + Arch.Port + "/ait/login?next=")
 
   lazy val hadoopQueue: String =
     cursor.get[String]("hadoopQueue").toOption.getOrElse("default")
@@ -57,10 +57,10 @@ object ArsCloudConf {
   lazy val port: Int =
     cursor.get[Int]("port").toOption.getOrElse(12341)
 
-  /**
+  /** python:
    * import requests, base64
    * base64.b64encode("user:pass".encode())
     **/
-  lazy val aitAuthHeader: Option[String] =
-    cursor.get[String]("aitAuthHeader").toOption.map("Basic " + _)
+  lazy val foreignAitAuthHeader: Option[String] =
+    cursor.get[String]("foreignAitAuthHeader").toOption.map("Basic " + _)
 }

@@ -20,7 +20,6 @@ object Ait {
   val AitSessionRequestAttribute = "AIT-sessionid"
   val AitSessionCookie = "sessionid"
   val UserSessionAttribute = "ait-user"
-  val SystemUserId = 188
 
   def user(implicit request: HttpServletRequest): Option[AitUser] = user(useSession = false)
 
@@ -35,7 +34,6 @@ object Ait {
             .downField("account")
             .get[Int]("id")
             .toOption
-            .map(id => if (id == SystemUserId) 0 else id)
         } yield {
           val user =
             AitUser(id, userName, json.get[String]("full_name").toOption.getOrElse(userName))
@@ -47,7 +45,7 @@ object Ait {
   }
 
   def user(id: Int)(implicit request: HttpServletRequest): Option[AitUser] =
-    getJson("/api/user?limit=1&account=" + (if (id == 0) SystemUserId else id)) { json =>
+    getJson("/api/user?limit=1&account=" + id) { json =>
       val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
@@ -201,7 +199,7 @@ object Ait {
       }
     }
 
-  def logout()(implicit request: HttpServletRequest, response: HttpServletResponse): Unit =
+  def logout()(implicit request: HttpServletRequest): Unit =
     get("/logout") { _ =>
       None
     }

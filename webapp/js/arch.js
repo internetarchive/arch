@@ -1,4 +1,4 @@
-var arsCloud = (function () {
+var arch = (function () {
     var activeRequests = {};
     var jobUpdateHandlers = [];
 
@@ -116,8 +116,25 @@ var arsCloud = (function () {
         update();
     }
 
+    function switchTab(id) {
+        $(".subnav-link").removeClass("active");
+        $(".page-tab").hide();
+        $("#" + id).show();
+        $("#" + id + "-link").addClass("active");
+        window.scrollTo(0,0);
+        return false;
+    }
+
+    function registerTab(id) {
+        $("#" + id + "-link").click(function() {
+            return switchTab(id);
+        });
+    }
+
     return {
         loadCollectionInfo: loadCollectionInfo,
-        initJob: initJob
+        initJob: initJob,
+        registerTab: registerTab,
+        switchTab: switchTab
     };
 })();

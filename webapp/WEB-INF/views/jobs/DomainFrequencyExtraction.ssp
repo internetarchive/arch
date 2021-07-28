@@ -1,5 +1,5 @@
-<%@ val user: org.archive.webservices.ars.ait.AitUser %>
-<%@ val collection: org.archive.webservices.ars.model.ArsCloudCollection %>
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
 <%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
 <%@ val resultSize: Long %>

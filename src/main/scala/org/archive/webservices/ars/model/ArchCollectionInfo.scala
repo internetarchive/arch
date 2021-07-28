@@ -10,19 +10,19 @@ import org.scalatra.guavaCache.GuavaCache
 
 import scala.collection.immutable.ListMap
 
-case class ArsCloudCollectionInfo private (
+case class ArchCollectionInfo private (
     collectionId: String,
     lastJob: Option[(String, Long)] = None) {
   def lastJobName: Option[String] = lastJob.map(_._1)
   def lastJobTime: Option[Instant] = lastJob.map(_._2).map(Instant.ofEpochSecond)
 
-  def setLastJob(id: String, time: Instant): ArsCloudCollectionInfo = {
+  def setLastJob(id: String, time: Instant): ArchCollectionInfo = {
     copy(collectionId, Some(id, time.getEpochSecond))
   }
 
   def save(): Unit = {
-    val file = ArsCloudCollectionInfo.infoFile(collectionId)
-    GuavaCache.put(ArsCloudCollectionInfo.CachePrefix + file, this, None)
+    val file = ArchCollectionInfo.infoFile(collectionId)
+    GuavaCache.put(ArchCollectionInfo.CachePrefix + file, this, None)
     HdfsIO.writeLines(
       file,
       Seq((ListMap.empty[String, Json] ++ {
@@ -35,14 +35,14 @@ case class ArsCloudCollectionInfo private (
   }
 }
 
-object ArsCloudCollectionInfo {
+object ArchCollectionInfo {
   val Charset = "utf-8"
   val CachePrefix = "collection-info#"
 
   def infoFile(collectionId: String): String =
-    ArsCloudConf.jobOutPath + s"/$collectionId/info.json"
+    ArchConf.jobOutPath + s"/$collectionId/info.json"
 
-  def get(collectionId: String): ArsCloudCollectionInfo = {
+  def get(collectionId: String): ArchCollectionInfo = {
     val file = infoFile(collectionId)
     GuavaCache.get(CachePrefix + file).getOrElse {
       val info = if (HdfsIO.exists(file)) {
@@ -52,10 +52,10 @@ object ArsCloudCollectionInfo {
               name <- cursor.get[String]("lastJobName").toOption
               epoch <- cursor.get[Long]("lastJobEpoch").toOption
             } yield (name, epoch)
-            ArsCloudCollectionInfo(collectionId, lastJob)
-          case None => ArsCloudCollectionInfo(collectionId)
+            ArchCollectionInfo(collectionId, lastJob)
+          case None => ArchCollectionInfo(collectionId)
         }
-      } else ArsCloudCollectionInfo(collectionId)
+      } else ArchCollectionInfo(collectionId)
       GuavaCache.put(CachePrefix + file, info, None)
     }
   }
