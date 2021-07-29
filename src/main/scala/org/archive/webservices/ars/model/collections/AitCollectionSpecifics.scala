@@ -29,7 +29,7 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
 
   def getCollection(implicit request: HttpServletRequest): Option[ArchCollection] = {
     Ait
-      .getJsonWithAuth(
+      .getJson(
         "/api/collection?id=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
         Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
@@ -38,7 +38,7 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
 
   def size(implicit request: HttpServletRequest): Long = {
     Ait
-      .getJsonWithAuth(
+      .getJson(
         "/api/crawl_job?__group=collection&__sum=warc_content_bytes&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
         _.downField("groups").downArray
@@ -99,7 +99,7 @@ object AitCollectionSpecifics {
       ArchUser.get.exists(u => u.isAdmin && u.aitUser.isEmpty)
     user.aitUser.map(_.id).toSeq.flatMap { userId =>
       Ait
-        .getJsonWithAuth(
+        .getJson(
           "/api/collection?limit=100&account=" + userId,
           basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
           Some(parseCollections(c.values.toIterator.flatten)))
@@ -112,9 +112,7 @@ object AitCollectionSpecifics {
     foreignCollectionIds(user)
       .flatMap { aitId =>
         Ait
-          .getJsonWithAuth(
-            "/api/collection?id=" + aitId,
-            basicAuth = ArchConf.foreignAitAuthHeader)(c =>
+          .getJson("/api/collection?id=" + aitId, basicAuth = ArchConf.foreignAitAuthHeader)(c =>
             parseCollections(c.values.toIterator.flatten).headOption)
       }
   }
