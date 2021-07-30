@@ -1,0 +1,2 @@
+<% layout("/layouts/job.ssp") { %>
+<% } %>

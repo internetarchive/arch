@@ -94,6 +94,42 @@
           </div>
         </div>
       </div>
+      <% if (file.lineCount > 0) { %>
+        <div class="card">
+          <div class="card-body">
+            <h3 class="card-title">Preview</h3>
+            <div id="csv-preview">
+              <script>
+                d3.text('/ait/<%=unescape(user.urlId)%>/research_services/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
+                  var previewCSV  = d3.csv.parseRows(data);
+                  var previewTbl  = d3.select("#csv-preview")
+                                      .append("table")
+                                      .attr("class", "large-12 columns margin-top one csv-preview");
+
+                  previewTbl.append("thead")
+                            .append("tr")
+                            .selectAll("th")
+                              .data(previewCSV[0])
+                              .enter().append("th")
+                              .text(function(d) {
+                                return d;
+                              });
+
+                  previewTbl.append("tbody")
+                            .selectAll("tr")
+                              .data(previewCSV.slice(1))
+                              .enter().append("tr")
+
+                            .selectAll("td")
+                              .data(function(d) { return d; }).enter()
+                              .append("td")
+                              .text(function(d) { return d; });
+                });
+              </script>
+            </div>
+          </div>
+        </div>
+      <% } %>
     </div>
   </div>
 <% } %>

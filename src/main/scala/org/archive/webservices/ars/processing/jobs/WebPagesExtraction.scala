@@ -50,4 +50,6 @@ object WebPagesExtraction extends BinaryInformationAutJob {
   }
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
+
+  override def templateName: Option[String] = Some("jobs/WebPagesExtraction")
 }

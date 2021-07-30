@@ -24,6 +24,8 @@ object AutLoader {
     data.write
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
+      .option("escape", "\"")
+      .option("encoding", "utf-8")
       .save(path)
   }
 
@@ -32,6 +34,8 @@ object AutLoader {
     session.read
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
+      .option("escape", "\"")
+      .option("encoding", "utf-8")
       .schema(data.schema)
       .load(path)
   }
