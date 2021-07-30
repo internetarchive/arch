@@ -56,6 +56,7 @@
 <script src="/ait/js/popper.min.js"></script>
 <script src="/ait/js/clipboard-copy-element.js" type="module"></script>
 <script src="/ait/js/jsoneditor.min.js"></script>
+<script src="/ait/js/d3.v3.min.js"></script>
 
 </head>
 <body style="padding-top: 70px;">
