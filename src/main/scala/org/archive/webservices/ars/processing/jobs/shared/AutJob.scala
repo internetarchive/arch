@@ -57,7 +57,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       if (HdfsIO.exists(outFile)) {
         HdfsIO.writeLines(
           outFile + DerivativeOutput.lineCountFileSuffix,
-          Seq((HdfsIO.countLines(outFile) - 1).toString))
+          Seq((HdfsIO.countLines(outFile, copyLocal = false) - 1).toString))
         true
       } else {
         false
@@ -120,4 +120,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   override def templateName: Option[String] = Some("jobs/DefaultAutJob")
+
+  override def reset(conf: DerivationJobConf): Unit =
+    HdfsIO.delete(conf.outputPath + relativeOutPath)
 }

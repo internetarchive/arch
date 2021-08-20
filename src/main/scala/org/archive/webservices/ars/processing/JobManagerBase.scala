@@ -1,13 +1,15 @@
 package org.archive.webservices.ars.processing
 
+import java.time.Instant
+
 import org.archive.webservices.ars.processing.SparkJobManager.run
 import org.archive.helge.sparkling.Sparkling.executionContext
 
-class JobManagerBase(name: String, maxJobsRunning: Int = 5) {
+class JobManagerBase(name: String, maxJobsRunning: Int = 5, timeoutSeconds: Int = -1) {
   private val mainQueue = new JobQueue(name + " Queue")
   private val sampleQueue = new JobQueue(name + " Sample Queue")
 
-  private var running = 0
+  private val running = collection.mutable.Queue.empty[(DerivationJobInstance, Long)]
 
   private var nextQueueIdx = 0
   private val queues = Seq(mainQueue, sampleQueue)
@@ -29,24 +31,41 @@ class JobManagerBase(name: String, maxJobsRunning: Int = 5) {
     }
   }
 
+  private def checkTimeout(queue: JobQueue): Unit = {
+    if (timeoutSeconds >= 0) {
+      queue.synchronized {
+        val timeout = Instant.now.getEpochSecond - timeoutSeconds
+        if (running.nonEmpty && running.forall(_._2 < timeout)) {
+          onTimeout(running.map(_._1))
+        }
+      }
+    }
+  }
+
+  protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = {}
+
+  protected def onAllJobsFinished(): Unit = {}
+
   private def processQueue(queue: JobQueue): Unit = queues.synchronized {
     for (queue <- nextQueue) {
       queue.synchronized {
-        if (running < maxJobsRunning && queue.nonEmpty) {
+        if (running.size < maxJobsRunning && queue.nonEmpty) {
           val instance = queue.dequeue
           instance.unsetQueue()
           instance.updateState(ProcessingState.Running)
-          running += 1
+          running.enqueue((instance, Instant.now.getEpochSecond))
           run(instance.job, instance.conf).onComplete { opt =>
             JobManager.unregister(instance)
             val success = opt.toOption.getOrElse(false)
             instance.updateState(
               if (success) ProcessingState.Finished else ProcessingState.Failed)
-            running -= 1
+            running.dequeueFirst(_._1 == instance)
+            if (running.isEmpty) onAllJobsFinished()
+            else checkTimeout(queue)
             if (!success && opt.isFailure) opt.failed.get.printStackTrace()
             processQueue(queue)
           }
-        }
+        } else checkTimeout(queue)
       }
     }
   }

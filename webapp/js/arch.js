@@ -100,12 +100,9 @@ var arch = (function () {
         }
 
         $runButton.click(function () {
-            $runningTr.show();
-            $("#summary-running").show();
-            switchTabSummary();
-
             var url = "/ait/api/runjob/" + jobId + "/" + collectionId + (sample ? "?sample=true" : "");
             activeRequests[url] = $.getJSON(url, updateState);
+            switchTabSummary();
         });
 
         function update() {

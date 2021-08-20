@@ -48,7 +48,8 @@ object JobManager {
     val collectionJobs = instances.getOrElseUpdate(instance.conf, mutable.Map.empty)
     if (!collectionJobs.contains(instance.job.id)) {
       collectionJobs.update(instance.job.id, instance)
-      println("Registered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
+      println(
+        "Registered job " + instance.job.id + " (" + instance.hashCode.abs + ") [" + instance.conf + "]")
       true
     } else false
   }
@@ -59,7 +60,8 @@ object JobManager {
       val removed = collectionJobs.get.remove(instance.job.id)
       if (removed.nonEmpty) {
         if (collectionJobs.get.isEmpty) instances.remove(instance.conf)
-        println("Unregistered job " + instance.job.id + " (" + instance.hashCode.abs + ")")
+        println(
+          "Unregistered job " + instance.job.id + " (" + instance.hashCode.abs + ") [" + instance.conf + "]")
         true
       } else false
     } else false

@@ -1,6 +1,7 @@
 package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
+import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.{
   DerivationJobConf,
@@ -36,14 +37,18 @@ class ApiController extends BaseController {
     Ok(jsonMap.asJson.spaces4, Map("Content-Type" -> "application/json"))
   }
 
-  get("/runjob/:jobid/:collectionid") {
-    val collectionId = params("collectionid")
+  private def runJob(
+      collectionId: String,
+      jobId: String,
+      sample: Boolean,
+      rerun: Boolean = false) = {
     ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
       _ =>
-        JobManager.get(params("jobid")) match {
+        JobManager.get(jobId) match {
           case Some(job) =>
-            DerivationJobConf.collection(collectionId, params.get("sample").contains("true")) match {
+            DerivationJobConf.collection(collectionId, sample) match {
               case Some(conf) =>
+                if (rerun) job.reset(conf)
                 jobStateResponse(job.enqueue(conf).getOrElse(job.history(conf)))
               case None =>
                 NotFound()
@@ -52,6 +57,18 @@ class ApiController extends BaseController {
             NotFound()
         }
     }
+  }
+
+  get("/runjob/:jobid/:collectionid") {
+    runJob(params("collectionid"), params("jobid"), params.get("sample").contains("true"))
+  }
+
+  get("/rerunjob/:jobid/:collectionid") {
+    runJob(
+      params("collectionid"),
+      params("jobid"),
+      params.get("sample").contains("true"),
+      rerun = true)
   }
 
   get("/jobstate/:jobid/:collectionid") {

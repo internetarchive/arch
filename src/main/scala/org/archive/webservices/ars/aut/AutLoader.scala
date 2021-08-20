@@ -12,7 +12,7 @@ import org.apache.spark.sql.types.{
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 object AutLoader {
-  lazy val session: SparkSession = SparkSession.builder.getOrCreate
+  def session: SparkSession = SparkSession.builder.getOrCreate
 
   private def df(rows: RDD[Row], fields: (String, DataType)*): DataFrame = {
     val schema = new StructType(

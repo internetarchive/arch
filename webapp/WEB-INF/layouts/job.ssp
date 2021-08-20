@@ -133,3 +133,39 @@
     </div>
   </div>
 <% } %>
+
+<div class="row">
+  <div class="large-12 columns">
+    <h1>Re-run job?</h1>
+    <div class="card" id="card-re-run-job">
+      <div class="card-body">
+      <p>Have you or a member of your team run additional crawls since the last job was run, and you would like to re-run this job? Please note that the existing derivatives will be permanently deleted.</p>
+      <button class="job-rerunbutton">Re-run Job</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(function() {
+    var collectionId = "<%=unescape(collection.id)%>";
+    var jobId = "<%=unescape(job.job.id)%>";
+    var isSample = <%=unescape(if (job.conf.isSample) "true" else "false")%>;
+
+    var $reRunCard = $("#card-re-run-job");
+    var $reRunButton = $reRunCard.find(".job-rerunbutton");
+
+    $reRunButton.click(function () {
+      var url = "/ait/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
+      var reRunCofirm = confirm('Are you sure that you want to delete your existing derivatives, and re-run this job?');
+
+      if (reRunCofirm) {
+        $reRunCard.hide();
+        $.getJSON(url, function () {
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>";
+        });
+      }
+    });
+  });
+</script>
+

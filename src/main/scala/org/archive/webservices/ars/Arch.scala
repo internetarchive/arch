@@ -13,8 +13,6 @@ object Arch {
   val BaseDir = "/research_services"
 
   def start(contextPath: String, port: Int): Unit = {
-    SparkJobManager.init()
-
     val server = new Server(port)
 
     val context = new WebAppContext()
