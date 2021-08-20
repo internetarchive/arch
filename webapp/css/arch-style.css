@@ -46,6 +46,17 @@ button.job-runbutton {
     float: left;
 }
 
+button.job-rerunbutton {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+    display: block;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: bold;
+}
+
 button.job-statebutton {
     font-weight: bold;
     min-width: 100%;

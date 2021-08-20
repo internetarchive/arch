@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs
 
 import org.archive.helge.sparkling.Sparkling
-import org.archive.helge.sparkling.io.HdfsIO
+import org.archive.helge.sparkling.io._
 import org.archive.helge.sparkling.util.RddUtil
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, DerivativeOutput}
@@ -58,4 +58,7 @@ object FileCountAndSize extends SparkJob {
       val (path, name) = file.splitAt(file.lastIndexOf('/'))
       DerivativeOutput(name, path, "application/gzip")
     }
+
+  override def reset(conf: DerivationJobConf): Unit =
+    HdfsIO.delete(conf.outputPath + relativeOutPath)
 }

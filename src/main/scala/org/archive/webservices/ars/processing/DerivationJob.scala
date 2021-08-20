@@ -37,4 +37,6 @@ trait DerivationJob {
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
   def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] = Seq.empty
+
+  def reset(conf: DerivationJobConf): Unit = {}
 }
