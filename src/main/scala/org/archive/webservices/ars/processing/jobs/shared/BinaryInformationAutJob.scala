@@ -15,7 +15,7 @@ import org.archive.helge.sparkling.util.DigestUtil
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 import org.archive.webservices.ars.util.Common
 
@@ -37,6 +37,14 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
+
+    val lineCount = data
+      .count()
+
+    HdfsIO.writeLines(
+      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
+      Seq(lineCount.toString),
+      overwrite = true)
 
     val derivative = data
       .groupBy("mime_type_web_server")

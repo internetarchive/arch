@@ -10,6 +10,7 @@ import org.archive.webservices.ars.model.collections.CollectionSpecifics
 
 object CollectionLoader {
   val WasapiPageSize = 10
+  val CoalescePartitions = 1000
 
   def loadWarcs(
       inputPath: String,
@@ -35,12 +36,13 @@ object CollectionLoader {
     }
   }
 
-  def loadWarcs(id: String, inputPath: String): RDD[WarcRecord] =
+  def loadWarcs(id: String, inputPath: String): RDD[WarcRecord] = {
     CollectionSpecifics.get(id) match {
       case Some(specifics) =>
         specifics.loadWarcs(inputPath)
       case None => loadWarcs(inputPath)
     }
+  }.coalesce(CoalescePartitions)
 
   def loadAitWarcs(aitId: Int, inputPath: String, cacheId: String): RDD[WarcRecord] = {
     val basicAuth = ArchConf.foreignAitAuthHeader

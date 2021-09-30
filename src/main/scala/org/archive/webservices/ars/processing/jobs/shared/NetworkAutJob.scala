@@ -8,7 +8,7 @@ import org.archive.helge.sparkling.io.HdfsIO
 import org.archive.helge.sparkling.util.{RddUtil, SurtUtil}
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 import org.archive.webservices.ars.util.Common
 
@@ -70,6 +70,14 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
 
   override def runSpark(rdd: RDD[R], outPath: String): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
+
+    val lineCount = data
+      .count()
+
+    HdfsIO.writeLines(
+      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
+      Seq(lineCount.toString),
+      overwrite = true)
 
     createVizSample(data) { derivative =>
       RddUtil.saveAsTextFile(

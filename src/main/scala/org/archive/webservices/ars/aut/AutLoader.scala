@@ -34,6 +34,7 @@ object AutLoader {
     session.read
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ")
       .format("csv")
+      .option("multiline", true)
       .option("escape", "\"")
       .option("encoding", "utf-8")
       .schema(data.schema)
@@ -110,4 +111,19 @@ object AutLoader {
       ("md5", StringType),
       ("sha1", StringType))
   }
+
+  def textFiles(rows: RDD[Row]): DataFrame = {
+    df(
+      rows,
+      ("crawl_date", StringType),
+      ("url", StringType),
+      ("filename", StringType),
+      ("extension", StringType),
+      ("mime_type_web_server", StringType),
+      ("mime_type_tika", StringType),
+      ("md5", StringType),
+      ("sha1", StringType),
+      ("content", StringType))
+  }
+
 }

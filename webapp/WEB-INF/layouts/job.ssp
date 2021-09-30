@@ -16,14 +16,13 @@
 
 <%=unescape(body)%>
 
-<% for (file <- files) { %>
-  <div class="row">
-    <div class="large-12 columns">
-      <h1>Dataset</h1>
-      <div class="alert alert-warning text-center" id="macos-warning">
-        <p>We've detected macOS, and there is <a href="https://apple.stackexchange.com/questions/388759/archive-utility-cant-open-some-gzipped-text-files-based-on-their-contents" target="_blank">a known issue with Safari and Finder extracting gzipped text</a>. <br />Please use <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a> to extract <%=file.filename%>.</p>
-      </div>
-      <script>
+
+<div class="row">
+  <div class="large-12 columns">
+    <div class="alert alert-warning text-center" id="macos-warning">
+      <p>We've detected macOS, and there is <a href="https://apple.stackexchange.com/questions/388759/archive-utility-cant-open-some-gzipped-text-files-based-on-their-contents" target="_blank">a known issue with Safari and Finder extracting gzipped text</a>. <br />Please use <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a> to extract your datasets.</p>
+    </div>
+    <script>
         function macosWarning() {
           var userAgent = window.navigator.userAgent,
           platform = window.navigator.platform,
@@ -46,7 +45,10 @@
           return os;
         }
         macosWarning();
-      </script>
+    </script>
+    <h1>Dataset(s)</h1>
+    <%=job.job.description.replace("Create a", "A")%></p>
+    <% for (file <- files) { %>
       <div class="card">
         <div class="card-body">
           <div class="job-card-flex">
@@ -61,8 +63,6 @@
                   <br />
                 <% } %>
                 <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
-                <br />
-                <strong>Description</strong>: <%=job.job.description.replace("Create a", "A")%>
               </p>
             </div>
             <div class="dataset-download">
@@ -94,7 +94,7 @@
           </div>
         </div>
       </div>
-      <% if (file.lineCount > 0) { %>
+      <% if (file.lineCount > 0 && job.job.name != "Extract text files (html, text, css, js, json, xml) information") { %>
         <div class="card">
           <div class="card-body">
             <h3 class="card-title">Preview</h3>
@@ -130,9 +130,9 @@
           </div>
         </div>
       <% } %>
-    </div>
+    <% } %>
   </div>
-<% } %>
+</div>
 
 <div class="row">
   <div class="large-12 columns">
@@ -168,4 +168,3 @@
     });
   });
 </script>
-
