@@ -34,12 +34,12 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
   }
 
   def stopContext(): Unit = synchronized {
-    for (context <- _context) {
-      if (!new File("_debugging").exists) {
+    if (!new File("_debugging").exists) {
+      for (context <- _context) {
         context.stop()
         while (!context.isStopped) Thread.`yield`()
+        _context = None
       }
-      _context = None
     }
   }
 

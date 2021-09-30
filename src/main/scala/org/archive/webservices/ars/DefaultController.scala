@@ -163,20 +163,20 @@ class DefaultController extends BaseController with ScalateSupport {
     val collectionId = params("collection_id")
     val sample = params.get("sample").contains("true")
     val filename = params("file_name")
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) { implicit user =>
-      val jobId = params("job_id")
-      (for {
-        conf <- DerivationJobConf.collection(collectionId, sample = sample)
-        instance <- JobManager.getInstance(jobId, conf)
+    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
+      implicit user =>
+        val jobId = params("job_id")
+        (for {
+          conf <- DerivationJobConf.collection(collectionId, sample = sample)
+          instance <- JobManager.getInstance(jobId, conf)
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
               Ok(
                 HdfsIO.lines(file.path, n = 51).mkString("\n"),
-                Map(
-                  "Content-Type" -> file.mimeType))
-              case None =>
-                NotFound()
+                Map("Content-Type" -> file.mimeType))
+            case None =>
+              NotFound()
           }
         }).getOrElse(NotFound())
     }

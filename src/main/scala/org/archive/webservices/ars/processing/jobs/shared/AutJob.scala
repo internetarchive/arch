@@ -28,8 +28,17 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def df(rdd: RDD[R]): Dataset[Row]
 
-  def runSpark(rdd: RDD[R], outPath: String): Unit =
-    AutLoader.save(df(rdd), outPath + "/_" + targetFile)
+  def runSpark(rdd: RDD[R], outPath: String): Unit = {
+    val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
+
+    val lineCount = data
+      .count()
+
+    HdfsIO.writeLines(
+      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
+      Seq(lineCount.toString),
+      overwrite = true)
+  }
 
   def checkSparkState(outPath: String): Option[Int] = {
     if (HdfsIO.exists(outPath + "/_" + targetFile)) Some {
@@ -54,14 +63,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       prepare = prepareOutputStream) { tmpFile =>
       val outFile = outPath + "/" + targetFile
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
-      if (HdfsIO.exists(outFile)) {
-        HdfsIO.writeLines(
-          outFile + DerivativeOutput.lineCountFileSuffix,
-          Seq((HdfsIO.countLines(outFile, copyLocal = false) - 1).toString))
-        true
-      } else {
-        false
-      }
+      HdfsIO.exists(outFile)
     }
   }
 

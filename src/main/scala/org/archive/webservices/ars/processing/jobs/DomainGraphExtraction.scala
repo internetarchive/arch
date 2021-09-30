@@ -10,7 +10,7 @@ import org.apache.spark.storage.StorageLevel
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{Common, HttpUtil}
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Extract domain graph"
@@ -44,7 +44,7 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
             .tryOrElse(Seq.empty[((String, String, String), Long)]) {
               val url = AutUtil.url(r)
               AutUtil
-                .extractLinks(ExtractLinks.apply, url, http.bodyString)
+                .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
                 .map {
                   case (source, target, _) =>
                     (

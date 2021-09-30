@@ -8,7 +8,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{Common, HttpUtil}
 
 object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Extract web graph"
@@ -31,7 +31,7 @@ object WebGraphExtraction extends NetworkAutJob[Row] {
           .tryOrElse(Seq.empty[Row]) {
             val url = AutUtil.url(r)
             AutUtil
-              .extractLinks(ExtractLinks.apply, url, http.bodyString)
+              .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
               .map {
                 case (source, target, alt) =>
                   Row(AutUtil.crawlDate(r), source, target, alt)
