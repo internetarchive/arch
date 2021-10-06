@@ -223,6 +223,12 @@ a.new-job-link {
     font-weight: bold;
 }
 
+div.new-job-link {
+    text-align: center;
+    margin: auto;
+    width: 50%;
+}
+
 #summary-empty {
     font-size: 90%;
     margin: 20px 0;
