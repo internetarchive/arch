@@ -79,6 +79,12 @@ button.download-button {
     font-weight: bold;
 }
 
+div.graph-description {
+    text-align: center !important;
+    margin-bottom: 2em;
+    font-weight: bold;
+}
+
 .small {
     font-size: 90%;
 }
@@ -97,62 +103,13 @@ button.download-button {
     margin-left: 50px
 }
 
-#tooltip {
-    background: #555;
-    color: white;
-    padding: 10px;
-    font-size: 20px;
-    border-radius: 4px;
-    display: none;
-    text-align: center;
-    z-index: 1;
-}
-
-#tooltip[data-show] {
-    display: block;
-}
-
-#arrow,
-#arrow::before {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: inherit;
-}
-
-#arrow {
-    visibility: hidden;
-}
-
-#arrow::before {
-    visibility: visible;
-    content: '';
-    transform: rotate(45deg);
-}
-
-#tooltip[data-popper-placement^='top'] > #arrow {
-    bottom: -4px;
-}
-
-#tooltip[data-popper-placement^='bottom'] > #arrow {
-    top: -4px;
-}
-
-#tooltip[data-popper-placement^='left'] > #arrow {
-    right: -4px;
-}
-
-#tooltip[data-popper-placement^='right'] > #arrow {
-    left: -4px;
-}
-
 .collapsible {
     max-height: 10px;
     cursor: pointer;
     color: black;
     width: 100%;
     background-color: #F7F7F7;
-    padding-bottom: 1em;
+    padding-bottom: 3em;
 }
 
 .collapsible:hover {
@@ -170,7 +127,8 @@ button.download-button {
 
 .collapsible.active:after {
     font-family: FontAwesome;
-    content: "\f054"; /* chevron-right */
+    content: "Show Jobs \f054"; /* chevron-right */
+    text-decoration: underline;
     background-color: #F7F7F7;
 }
 

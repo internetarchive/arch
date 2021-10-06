@@ -34,7 +34,7 @@
           <th>Public Collection</th>
           <th>Recently Created</th>
           <th>Last Created</th>
-          <th>Size</th>
+          <th class="sorttable_numeric">Size</th>
         </tr>
       </thead>
       <tbody class="ng-scope">

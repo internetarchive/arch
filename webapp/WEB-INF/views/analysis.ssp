@@ -19,10 +19,10 @@
             <span class="ng-scope"><a class="ng-binding ng-scope" href="<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/<%=unescape(user.urlId)%>/research_services">Collections</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active" id="summary-tab-link">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services" id="jobs-tab-link">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Jobs</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Generate Datasets</a></span>
           </div>
           <hr />
         </div>
@@ -33,10 +33,23 @@
 
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
+    <h2>Collection overview</h2>
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text">
+          <strong>Collection size</strong>: <span class="collection-size"></span>
+          <br />
+          <strong>Public</strong>: <%=if (collection.public) {"Yes"} else {"No"}%>
+          <br />
+        </p>
+      </div>
+    </div>
+    <script>
+      arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>");
+    </script>
 
     <div id="summary-empty">
-      There are currently no active jobs, click <a class="new-job-link" href="#">here</a> to start a new job.
-      <span style="font-style: italic;">(Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> for a test run or if main queues are too long)</span>
+      There are currently no active jobs, <a class="new-job-link" href="#">start a new job</a>.
     </div>
 
     <div id="summary-running">
@@ -44,6 +57,7 @@
 
       <div class="row">
         <div class="large-12 columns">
+          Status will automatically update.
           <table class="large-12 columns margin-top one sortable">
             <thead>
               <tr>
@@ -71,7 +85,7 @@
               <% } %>
               <tr>
                 <td colspan="3" style="text-align: center; border-top: 1px solid #DDDDDD;">
-                  <a class="new-job-link" href="#">Start new job</a> (Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> if main queues are too long)
+                  <a class="new-job-link" href="#">Start new job</a>.
                 </td>
               </tr>
             </tbody>
@@ -113,7 +127,7 @@
               <% } %>
               <tr>
                 <td colspan="2" style="text-align: center; border-top: 1px solid #DDDDDD;">
-                  <a class="new-job-link" href="#">Start new job</a> (Choose a <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">sample job</a> if main queues are too long)
+                  <a class="new-job-link" href="#">Start new job</a>.
                 </td>
               </tr>
             </tbody>
@@ -131,7 +145,7 @@
       for ((category, categoryDescription) <- Seq(
           (ArchJobCategories.Collection, "This job provides a basic overview of the collection."),
           (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
-          (ArchJobCategories.Text, "This job provides the full text of a web collection can be invaluable for analysis. The following datasets provide access to the \"plain text\" of a collection, extracted from web page HTML."),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", HTML , css, and other web elements."),
           (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.")
       )) { %>
       <h2><%=category%></h2>
@@ -145,14 +159,14 @@
               <p class="card-text"><%=instance.job.description%></p>
               <div class="job-card-flex">
                 <div class="job-card-sample">
-                  <button class="job-runbutton job-button">Run Sample Job</button>
+                  <button class="job-runbutton job-button">Generate Sample Dataset</button>
                   <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Results</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Dataset</button>
                 </div>
                 <div class="job-card-full">
-                  <button class="job-runbutton job-button">Run Job</button>
+                  <button class="job-runbutton job-button">Generate Dataset</button>
                   <button class="job-statebutton job-button"><%=instance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Results</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Dataset</button>
                 </div>
               </div>
             </div>

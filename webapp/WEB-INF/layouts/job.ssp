@@ -66,21 +66,10 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="/ait/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>" target="_blank">
-                <i class="fa fa-download fa-5x" aria-hidden="true"></i>
+              <a href="/ait/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+                <i class="fa fa-cloud-download fa-5x" aria-hidden="true"></i>
+                <p class="card-text center">Download</p>
               </a>
-              <p class="card-text center">Download dataset with
-                <a>
-                  <code>
-                    <clipboard-copy value='wget -O <%=unescape(file.filename)%> "<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>"'>wget <i class="fa fa-clipboard"></i><span class="notice" hidden>Copied to clipboard!</span></clipboard-copy>
-                  </code>
-                </a> /
-                <a>
-                  <code>
-                    <clipboard-copy value='curl "<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" --output <%=unescape(file.filename)%>'>curl <i class="fa fa-clipboard"></i><span class="notice" hidden>Copied to clipboard!</span></clipboard-copy>
-                  </code>
-                </a> ?
-              </p>
             </div>
             <script>
               document.addEventListener('clipboard-copy', function(event) {
