@@ -33,6 +33,7 @@ var arch = (function () {
             $lastJobNameCell.text(json.lastJobName || "-");
             $lastJobTimeCell.text(json.lastJobTime || "-");
             $sizeCell.text(json.size);
+            $sizeCell.attr("sorttable_customkey", json.sortSize);
         });
     }
 
@@ -102,7 +103,6 @@ var arch = (function () {
         $runButton.click(function () {
             var url = "/ait/api/runjob/" + jobId + "/" + collectionId + (sample ? "?sample=true" : "");
             activeRequests[url] = $.getJSON(url, updateState);
-            switchTabSummary();
         });
 
         function update() {

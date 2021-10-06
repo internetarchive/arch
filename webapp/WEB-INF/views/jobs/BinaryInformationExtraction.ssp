@@ -25,69 +25,16 @@
                                 "label": "",
                                 "data":[<%=mimeCount.map(_._2).mkString(",") %>],
                                 "fill":false,
-                                "backgroundColor":['#003f5c', '#ae5d80', '#ffa600', '#ff6b95', '#93003a']
+                                "backgroundColor":['#006fff', '#53b4e8', '#68ff00', '#ffa638', '#ff005c']
                             }]},
                       }
                   );
                 </script>
               </div>
             </p>
-            <div class="text-right">
-              <a id="button" aria-describedby="tooltip">What does this graph show?</a>
-              <div id="tooltip" role="tooltip">
-                This graph shows the distribution of the various file formats in the web archive collection.
-                <div id="arrow" data-popper-arrow></div>
-              </div>
+            <div class="graph-description">
+              <p>This graph shows the distribution of the various file formats in the web archive collection.</p>
             </div>
-            <script>
-              const button = document.querySelector('#button');
-              const tooltip = document.querySelector('#tooltip');
-
-              const popperInstance = Popper.createPopper(button, tooltip, {
-                modifiers: [
-                  {
-                    name: 'offset',
-                    options: {
-                      offset: [20, 20],
-                    },
-                  },
-                ],
-              });
-
-              function show() {
-                // Make the tooltip visible
-                tooltip.setAttribute('data-show', '');
-
-                // Enable the event listeners
-                popperInstance.setOptions({
-                  modifiers: [{ name: 'eventListeners', enabled: true }],
-                });
-
-                // Update its position
-                popperInstance.update();
-              }
-
-              function hide() {
-                // Hide the tooltip
-                tooltip.removeAttribute('data-show');
-
-                // Disable the event listeners
-                popperInstance.setOptions({
-                  modifiers: [{ name: 'eventListeners', enabled: false }],
-                });
-              }
-
-              const showEvents = ['mouseenter', 'focus'];
-              const hideEvents = ['mouseleave', 'blur'];
-
-              showEvents.forEach(event => {
-                button.addEventListener(event, show);
-              });
-
-              hideEvents.forEach(event => {
-                button.addEventListener(event, hide);
-              });
-            </script>
           </div>
         </div>
       </div>
