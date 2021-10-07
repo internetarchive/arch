@@ -14,17 +14,17 @@
         <h1>Top Hosts Sample</h1>
           <div class="card card-body">
             <div id="card-body graph-wrapper">
-              <button type="button" id="zoom-in" class="zoom-in">
+              <button type="button" id="zoom-in" class="zoom-in" aria-label="Zoom in">
                 <span class="fa fa-search-plus"></span>
               </button>
-              <button type="button" id="zoom-out" class="zoom-out">
+              <button type="button" id="zoom-out" class="zoom-out" aria-label="Zoom out">
                 <span class="fa fa-search-minus"></span>
               </button>
-              <button type="button" id="default" class="default">
+              <button type="button" id="default" class="default" aria-label="Refresh graph">
                 <span class="fa fa-refresh"></span>
               </button>
               <a href="#" id="image-link" download="<%=collection.name + "-"%>-image.png">
-                <button type="button" id="graph-image" class="graph-image">
+                <button type="button" id="graph-image" class="graph-image" aria-label="Save image of graph">
                   <span class="fa fa-image"></span>
                 </button>
               </a>

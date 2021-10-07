@@ -67,7 +67,7 @@
             </div>
             <div class="dataset-download">
               <a href="/ait/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
-                <i class="fa fa-cloud-download fa-5x" aria-hidden="true"></i>
+                <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
             </div>
@@ -86,7 +86,7 @@
       <% if (file.lineCount > 0 && job.job.name != "Extract text files (html, text, css, js, json, xml) information") { %>
         <div class="card">
           <div class="card-body">
-            <h3 class="card-title">Preview</h3>
+            <h2 class="card-title">Preview</h3>
             <div id="csv-preview">
               <script>
                 d3.text('/ait/<%=unescape(user.urlId)%>/research_services/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
