@@ -127,7 +127,7 @@ div.graph-description {
 
 .collapsible.active:after {
     font-family: FontAwesome;
-    content: "Show Jobs \f054"; /* chevron-right */
+    content: "Available Jobs \f054"; /* chevron-right */
     text-decoration: underline;
     background-color: #F7F7F7;
 }
@@ -146,6 +146,24 @@ div.graph-description {
 div#csv-preview {
     height: 30em;
     overflow: auto;
+}
+
+.category-wrapper {
+    display: flow-root;
+}
+
+.category-image {
+    float: left;
+    max-width: 8%;
+    height: auto;
+}
+
+.category-title {
+    float: left;
+}
+
+.category-clear: {
+    clear: left
 }
 
 /*
