@@ -77,7 +77,7 @@
                 </tr>
                 <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-sample">
                   <td style="font-style: italic;">
-                    <%=instance.job.name%> (Sample)
+                    <%=instance.job.name%> (Example)
                   </td>
                   <td class="running-td-active-stage">-</td>
                   <td class="running-td-state">-</td>
@@ -116,7 +116,7 @@
               <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-sample">
                 <td>
                   <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">
-                  <%=instance.job.name%> (Sample)
+                  <%=instance.job.name%> (Example)
                   </a>
                 </td>
                 <td class="finished-td-finished">-</td>
@@ -135,28 +135,36 @@
 
 <div class="row page-tab" id="jobs-tab" style="display: none;">
   <div class="large-12 columns">
+    <p>Example datasets can be used to ensure analysis will produce desired data, and uses the first 100 relative records from the collection if they are available. We strongly recommend running example jobs on any collections over 100GB.</p>
+    <hr />
     <%
       import org.archive.webservices.ars.model._
-      for ((category, categoryDescription) <- Seq(
-          (ArchJobCategories.Collection, "This job provides a basic overview of the collection."),
-          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other."),
-          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", HTML , css, and other web elements."),
-          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.")
+      for ((category, categoryDescription, categoryImage) <- Seq(
+          (ArchJobCategories.Collection, "This job provides a basic overview of the collection.", "ait/img/collection.png"),
+          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png"),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", HTML, css, and other web elements.", "ait/img/text.png"),
+          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png")
       )) { %>
-      <h2><%=category%></h2>
-      <p><%=categoryDescription%></p>
-      <p class="collapsible active"></p>
+      <div class="category-wrapper">
+        <img class="category-image" src="<%=categoryImage%>" alt="Icon for <%=category%>" />
+        <h2 class="category-title"><%=category%></h2>
+        <br />
+        <br />
+        <br />
+        <p><%=categoryDescription%></p>
+      </div>
+      <p class="collapsible active category-clear"></p>
       <div class="collapsible-content">
         <% for ((instance, sampleInstance) <- jobs(category)) { %>
           <div class="card" id="card-<%=unescape(instance.job.id)%>">
             <div class="card-body">
-              <h4 class="card-title"><%=instance.job.name%></h4>
+              <h3 class="card-title"><%=instance.job.name%></h3>
               <p class="card-text"><%=instance.job.description%></p>
               <div class="job-card-flex">
                 <div class="job-card-sample">
-                  <button class="job-runbutton job-button">Generate Sample Dataset</button>
+                  <button class="job-runbutton job-button">Generate Example Dataset</button>
                   <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Sample Dataset</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Example Dataset</button>
                 </div>
                 <div class="job-card-full">
                   <button class="job-runbutton job-button">Generate Dataset</button>
