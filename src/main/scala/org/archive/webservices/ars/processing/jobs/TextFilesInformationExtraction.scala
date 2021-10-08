@@ -111,18 +111,22 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
       body: InputStream,
       tikaMime: String,
       crawlDate: String): Row = {
-    val bodyString = HttpUtil.bodyString(body, http)
-    val content = RemoveHTTPHeader(bodyString)
     val forker = InputStreamForker(body)
-    val Array(md5In, sha1In) = forker.fork(2).map(Future(_))
-    val Seq(md5, sha1) =
+    val Array(md5In, sha1In, contentIn) = forker.fork(3).map(Future(_))
+    val Seq(md5, sha1, content) =
       try {
         Await.result(
-          Future.sequence(Seq(md5In.map(DigestUtil.md5Hex), sha1In.map(DigestUtil.sha1Hex))),
+          Future.sequence(
+            Seq(
+              md5In.map(DigestUtil.md5Hex),
+              sha1In.map(DigestUtil.sha1Hex),
+              contentIn.map(in =>
+                Common.cleanup(RemoveHTTPHeader(HttpUtil.bodyString(in, http)))(in.close)))),
           Duration.Inf)
       } finally {
         for (s <- md5In) Try(s.close())
         for (s <- sha1In) Try(s.close())
+        for (s <- contentIn) Try(s.close())
         Try(body.close())
       }
 
