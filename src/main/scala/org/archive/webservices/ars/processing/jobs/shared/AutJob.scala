@@ -4,14 +4,13 @@ import java.io.{OutputStream, PrintStream}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
+import org.archive.helge.sparkling.Sparkling.executionContext
 import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
-import org.archive.helge.sparkling.warc.{WarcLoader, WarcRecord}
+import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
-import org.archive.helge.sparkling.Sparkling.executionContext
-import org.archive.webservices.ars.aut.AutLoader
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -28,15 +27,14 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def df(rdd: RDD[R]): Dataset[Row]
 
+  def samplingConditions: Seq[R => Boolean] = Seq.empty
+
   def runSpark(rdd: RDD[R], outPath: String): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
-    val lineCount = data
-      .count()
-
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
-      Seq(lineCount.toString),
+      Seq(data.count.toString),
       overwrite = true)
   }
 
@@ -69,7 +67,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def checkFinishedState(outPath: String): Option[Int] = {
     if (HdfsIO.exists(outPath + "/" + targetFile)) Some {
-      if (HdfsIO.files(outPath + "/part-*").isEmpty) ProcessingState.Finished
+      if (HdfsIO.files(outPath + "/_*").isEmpty) ProcessingState.Finished
       else ProcessingState.Failed
     } else None
   }
@@ -82,7 +80,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
         val rdd = IOHelper
           .sample(
             prepareRecords(CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath)),
-            conf.sample)
+            conf.sample,
+            samplingConditions)
         val outPath = conf.outputPath + relativeOutPath
         runSpark(rdd, outPath)
         checkSparkState(outPath).contains(ProcessingState.Finished)

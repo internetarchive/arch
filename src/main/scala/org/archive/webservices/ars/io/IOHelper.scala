@@ -1,16 +1,15 @@
 package org.archive.webservices.ars.io
 
-import java.io.{BufferedOutputStream, File, FileNotFoundException, FileOutputStream, OutputStream}
+import java.io._
 import java.nio.file.Files
-import java.util
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
-import org.apache.hadoop.fs.permission.FsPermission
-import org.apache.hadoop.fs.{CreateFlag, Path}
+import org.apache.hadoop.fs.Path
+import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.RddUtil
+import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.util.FormatUtil
 
@@ -18,6 +17,9 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object IOHelper {
+  val SamplingScaleUpFactor = 4 // see RDD#take (conf.getInt("spark.rdd.limit.scaleUpFactor", 4))
+  val SamplingMaxReadPerPartitionFactor = 2
+
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)
     tmpPath.mkdirs()
@@ -56,19 +58,81 @@ object IOHelper {
     }
   }
 
-  def sample[F: ClassTag](rdd: RDD[F], sample: Int = -1): RDD[F] = {
-    val data = rdd
-    if (sample < 0) data
+  def sample[F: ClassTag](
+      rdd: RDD[F],
+      sample: Int = -1,
+      samplingConditions: Seq[F => Boolean] = Seq.empty): RDD[F] = {
+    if (sample < 0) rdd
     else {
-      data
-        .mapPartitionsWithIndex((idx, p) => if (p.hasNext) Iterator(idx) else Iterator.empty)
-        .take(1)
-        .headOption match {
-        case Some(sampleParitionIdx) =>
-          data.mapPartitionsWithIndex((idx, p) =>
-            if (idx == sampleParitionIdx) p.take(sample) else Iterator.empty)
-        case None =>
-          RddUtil.emptyRDD
+      val sc = rdd.sparkContext
+      val conditions = if (samplingConditions.isEmpty) Seq((_: F) => true) else samplingConditions
+      val conditionsBc = sc.broadcast(conditions)
+      val maxPartitions = rdd.getNumPartitions
+      var start = 0
+      var totalResults = Seq.empty[(Int, Set[Int], Int)]
+      val partitions = IteratorUtil
+        .last {
+          Iterator
+            .continually(true)
+            .zipWithIndex
+            .map(_._2)
+            .map(Math.pow(SamplingScaleUpFactor, _).toInt)
+            .flatMap { numPartitions =>
+              val end = start + numPartitions
+              val partitions = (start until maxPartitions.min(end)).toList
+              val results =
+                sc.runJob(
+                  rdd,
+                  (context: TaskContext, partition: Iterator[F]) => {
+                    var read = 0
+                    var take = 0
+                    (context.partitionId, {
+                      val conditions = conditionsBc.value.zipWithIndex
+                      val candidates = partition.take(sample * SamplingMaxReadPerPartitionFactor)
+                      var matches = Set.empty[Int]
+                      while (matches.size < conditions.size && candidates.hasNext) {
+                        val r = candidates.next
+                        read += 1
+                        val matching = conditions.filter(_._1(r)).map(_._2).toSet
+                        if ((matching -- matches).nonEmpty) {
+                          matches ++= matching
+                          take = read
+                        }
+                      }
+                      matches
+                    }, take)
+                  },
+                  partitions)
+              var matches = Set.empty[Int]
+              totalResults = (totalResults ++ results).sortBy(-_._2.size)
+              val matchingPartitions = totalResults.flatMap {
+                case (p, c, t) =>
+                  if ((c -- matches).nonEmpty) {
+                    matches ++= c
+                    Some((p, t))
+                  } else None
+              }.sorted
+              val continue = end < maxPartitions && matches.size < conditions.size
+              if (continue) {
+                start = start + numPartitions
+                Iterator(Some(matchingPartitions))
+              } else Iterator(Some(matchingPartitions), None)
+            }
+            .takeWhile(_.isDefined)
+            .flatten
+        }
+        .toSet
+        .flatten
+      val numRecords = partitions.map(_._2).sum
+      val takeMap = partitions.toMap
+      val firstIdx = takeMap.keySet.min
+      val requiredBc = sc.broadcast(
+        takeMap.updated(
+          firstIdx,
+          takeMap(firstIdx) + (if (numRecords < sample) sample - numRecords else 0)))
+      rdd.mapPartitionsWithIndex { (idx, p) =>
+        val take = requiredBc.value
+        if (take.keySet.contains(idx)) p.take(take(idx)) else Iterator.empty
       }
     }
   }
