@@ -6,12 +6,12 @@ import java.net.URL
 import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.{Dataset, Row}
+import org.archive.helge.sparkling.Sparkling
 import org.archive.helge.sparkling.Sparkling.executionContext
 import org.archive.helge.sparkling.http.HttpMessage
 import org.archive.helge.sparkling.io.{HdfsIO, InputStreamForker}
-import org.archive.helge.sparkling.util.DigestUtil
+import org.archive.helge.sparkling.util.{DigestUtil, RddUtil}
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
@@ -26,7 +26,7 @@ import scala.util.Try
 abstract class BinaryInformationAutJob extends AutJob[Row] {
   val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
-  val mimeTypeCountFile: String = "mime-type-count.csv.gz"
+  val MimeTypeCountFile: String = "mime-type-count.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println("crawl_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1")
@@ -35,24 +35,25 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.binaryInformation(rdd)
 
+  protected def computeMimeTypeCounts(dataset: Dataset[Row], outPath: String): Unit = {
+    RddUtil.saveAsTextFile(
+      dataset.rdd
+        .map(r => (r.getAs[String]("mime_type_web_server"), 1L))
+        .reduceByKey(_ + _)
+        .sortBy(-_._2)
+        .map { case (m, c) => m + "," + c },
+      outPath + "/_" + MimeTypeCountFile)
+  }
+
   override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
-    val lineCount = data
-      .count()
-
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
-      Seq(lineCount.toString),
+      Seq(data.count.toString),
       overwrite = true)
 
-    val derivative = data
-      .groupBy("mime_type_web_server")
-      .count()
-      .orderBy(desc("count"))
-      .limit(5)
-
-    AutLoader.save(derivative, outPath + "/_" + mimeTypeCountFile)
+    computeMimeTypeCounts(data, outPath)
   }
 
   def row(
@@ -99,35 +100,38 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override def checkSparkState(outPath: String): Option[Int] =
     super.checkSparkState(outPath).map { state =>
-      if (!HdfsIO.exists(outPath + "/_" + mimeTypeCountFile + "/_SUCCESS")) ProcessingState.Failed
-      else state
+      if (HdfsIO.exists(outPath + "/_" + MimeTypeCountFile + "/" + Sparkling.CompleteFlagFile))
+        state
+      else ProcessingState.Failed
     }
 
-  override def postProcess(outPath: String): Boolean = super.postProcess(outPath) && {
+  protected def postProcessMimeTypeCounts(outPath: String): Boolean = {
     IOHelper.concatLocal(
-      outPath + "/_" + mimeTypeCountFile,
-      mimeTypeCountFile,
-      _.startsWith("part-"),
+      outPath + "/_" + MimeTypeCountFile,
+      MimeTypeCountFile,
+      _.endsWith(".csv.gz"),
       compress = true,
       deleteSrcFiles = true,
       deleteSrcPath = true) { tmpFile =>
-      val outFile = outPath + "/" + mimeTypeCountFile
+      val outFile = outPath + "/" + MimeTypeCountFile
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
       HdfsIO.exists(outFile)
     }
   }
 
+  override def postProcess(outPath: String): Boolean =
+    super.postProcess(outPath) && postProcessMimeTypeCounts(outPath)
+
   override def checkFinishedState(outPath: String): Option[Int] =
     super.checkFinishedState(outPath).map { state =>
-      if (!HdfsIO.exists(outPath + "/" + mimeTypeCountFile)) ProcessingState.Failed
-      else state
+      if (HdfsIO.exists(outPath + "/" + MimeTypeCountFile)) state else ProcessingState.Failed
     }
 
   override def templateName: Option[String] = Some("jobs/BinaryInformationExtraction")
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
     val mimeCount = HdfsIO
-      .lines(conf.outputPath + relativeOutPath + "/" + mimeTypeCountFile)
+      .lines(conf.outputPath + relativeOutPath + "/" + MimeTypeCountFile, n = 5)
       .flatMap { line =>
         val comma = line.lastIndexOf(',')
         if (comma < 0) None

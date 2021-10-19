@@ -8,10 +8,12 @@ import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.sql.functions.{col, desc}
+import org.apache.spark.storage.StorageLevel
+import org.archive.helge.sparkling.Sparkling
 import org.archive.helge.sparkling.Sparkling.executionContext
 import org.archive.helge.sparkling.http.HttpMessage
 import org.archive.helge.sparkling.io.{HdfsIO, InputStreamForker}
-import org.archive.helge.sparkling.util.{Common, DigestUtil}
+import org.archive.helge.sparkling.util.{Common, DigestUtil, RddUtil}
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.util.HttpUtil
@@ -25,6 +27,8 @@ import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 object TextFilesInformationExtraction extends BinaryInformationAutJob {
+  val MimeTypeColumnIndex: Int = 4
+
   override val category: ArchJobCategory = ArchJobCategories.Text
 
   val name = "Extract text files (html, text, css, js, json, xml) information"
@@ -34,7 +38,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   val targetFile: String = "file-information.csv.gz"
 
-  val textFilesJobs: Map[String, String] = Map(
+  val TextTypes: Map[String, String] = Map(
     "css" -> "text/css",
     "html" -> "text/html",
     "js" -> "javascript",
@@ -47,62 +51,51 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
       "crawl_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1,content")
 
   override def checkSparkState(outPath: String): Option[Int] = {
-    if (textFilesJobs.forall {
+    if (TextTypes.forall {
           case (prefix, _) => HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile)
         }) Some {
-      if (textFilesJobs.forall {
+      if (TextTypes.forall {
             case (prefix, _) =>
               HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile + "/_SUCCESS")
           }) ProcessingState.Finished
       else ProcessingState.Failed
     } else None
   }.map { state =>
-    if (!HdfsIO.exists(outPath + "/_" + mimeTypeCountFile + "/_SUCCESS")) ProcessingState.Failed
-    else state
+    if (HdfsIO.exists(outPath + "/_" + MimeTypeCountFile + "/" + Sparkling.CompleteFlagFile))
+      state
+    else ProcessingState.Failed
   }
 
   override def prepareOutputStream(out: OutputStream): Unit =
     printToOutputStream(new PrintStream(out, true, "utf-8"))
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
-    textFilesJobs.values.exists(server.contains)
+    TextTypes.values.exists(server.contains)
+
+  override val samplingConditions: Seq[Row => Boolean] = TextTypes.values
+    .map(t => (r: Row) => r.getString(MimeTypeColumnIndex).contains(t))
+    .toSeq
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.textFiles(rdd)
 
   override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
-    val targetData = df(rdd).cache
+    val cachedRdd = rdd.persist(StorageLevel.DISK_ONLY)
+    val targetData = df(cachedRdd)
 
-    for ((jobPrefix, mimeTypePattern) <- textFilesJobs) {
+    for ((jobPrefix, mimeTypePattern) <- TextTypes) {
       val data = AutLoader.saveAndLoad(
         targetData.filter(col("mime_type_web_server").contains(mimeTypePattern)),
         outPath + "/_" + jobPrefix + "-" + targetFile)
 
-      val lineCount = data
-        .count()
-
       HdfsIO.writeLines(
         outPath + "/" + jobPrefix + "-" + targetFile + DerivativeOutput.lineCountFileSuffix,
-        Seq(lineCount.toString),
+        Seq(data.count.toString),
         overwrite = true)
     }
 
-    val lineCount = targetData
-      .count()
+    computeMimeTypeCounts(targetData, outPath)
 
-    HdfsIO.writeLines(
-      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
-      Seq(lineCount.toString),
-      overwrite = true)
-
-    val derivative = targetData
-      .groupBy("mime_type_web_server")
-      .count()
-      .orderBy(desc("count"))
-      .limit(5)
-
-    AutLoader.save(derivative, outPath + "/_" + mimeTypeCountFile)
-
-    targetData.unpersist(true)
+    cachedRdd.unpersist(true)
   }
 
   override def row(
@@ -139,8 +132,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 
-  override def postProcess(outPath: String): Boolean = super.postProcess(outPath) && {
-    for ((jobPrefix, mimeTypePattern) <- textFilesJobs) {
+  override def postProcess(outPath: String): Boolean = postProcessMimeTypeCounts(outPath) && {
+    for ((jobPrefix, mimeTypePattern) <- TextTypes) {
       IOHelper.concatLocal(
         outPath + "/_" + jobPrefix + "-" + targetFile,
         jobPrefix + "-" + targetFile,
@@ -154,13 +147,19 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         HdfsIO.exists(outFile)
       }
     }
-    textFilesJobs.forall {
+    TextTypes.forall {
       case (prefix, _) => HdfsIO.exists(outPath + "/" + prefix + "-" + targetFile)
     }
   }
 
+  override def checkFinishedState(outPath: String): Option[Int] =
+    if (HdfsIO.exists(outPath + "/" + MimeTypeCountFile)) Some {
+      if (HdfsIO.files(outPath + "/_*").isEmpty) ProcessingState.Finished
+      else ProcessingState.Failed
+    } else None
+
   override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
-    textFilesJobs.keys.toSeq.map(
+    TextTypes.keys.toSeq.map(
       p =>
         DerivativeOutput(
           p + "-" + targetFile,

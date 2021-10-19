@@ -71,12 +71,9 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
   override def runSpark(rdd: RDD[R], outPath: String): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
-    val lineCount = data
-      .count()
-
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
-      Seq(lineCount.toString),
+      Seq(data.count.toString),
       overwrite = true)
 
     createVizSample(data) { derivative =>
