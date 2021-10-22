@@ -49,7 +49,7 @@
     </script>
 
     <div id="summary-empty">
-      There are currently no active jobs, <a class="new-job-link" href="#">start a new job</a>.
+      There are currently no active jobs, <a class="new-job-link" href="#">start new job</a>.
     </div>
 
     <div id="summary-running">
