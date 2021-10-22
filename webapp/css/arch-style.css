@@ -248,6 +248,7 @@ div.new-job-link {
 }
 
 #summary-empty {
-    font-size: 90%;
-    margin: 20px 0;
+    text-align: center;
+    margin: auto;
+    width: 50%;
 }
