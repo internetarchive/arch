@@ -40,13 +40,7 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  get("/:userid/research_services/learning_resources") {
-    ensureUserBasePath("userid") { user =>
-      Ok(ssp("learning", "user" -> user), Map("Content-Type" -> "text/html"))
-    }
-  }
-
-  get("/:userid/research_services/analysis/:collection_id") {
+  get("/:userid/research_services/:collection_id/analysis") {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
       (for {
@@ -70,7 +64,7 @@ class DefaultController extends BaseController with ScalateSupport {
         Ok(
           ssp(
             "analysis",
-            "breadcrumbs" -> Seq((relativePath("/analysis/" + collectionId), collectionId)),
+            "breadcrumbs" -> Seq((relativePath(collectionId + "/analysis"), collectionId)),
             "jobs" -> jobs,
             "user" -> user,
             "collection" -> collection),
@@ -79,7 +73,7 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  get("/:userid/research_services/analysis/:collection_id/:job_id") {
+  get("/:userid/research_services/:collection_id/analysis/:job_id") {
     CacheUtil.cacheRequest(request, enabled = ArchConf.production) {
       ensureUserBasePath("userid") { implicit user =>
         val collectionId = params("collection_id")
@@ -95,8 +89,8 @@ class DefaultController extends BaseController with ScalateSupport {
             case Some(templateName) =>
               val attributes = Seq(
                 "breadcrumbs" -> Seq(
-                  (relativePath("/analysis/" + collectionId), collectionId),
-                  (relativePath("/analysis/" + collectionId + "/" + jobId), instance.job.name)),
+                  (relativePath("/" + collectionId + "/analysis"), collectionId),
+                  (relativePath("/" + collectionId + "/analysis/" + jobId), instance.job.name)),
                 "user" -> user,
                 "collection" -> collection,
                 "job" -> instance,

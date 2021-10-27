@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css">
 <link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css">
 <%--<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css">--%>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="/ait/css/arch-style.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
 <link rel="stylesheet" href="/ait/css/bootstrap-alerts.css">
@@ -75,7 +75,7 @@
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/collections">Collections</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/crawls">Crawls</a></li>
                 <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/archives">Archives</a></li>
-                <li><a href="/ait/<%=unescape(user.urlId)%>/research_services">Datasets</a></li>
+                <li><a href="/ait/<%=unescape(user.urlId)%>/research_services">ARCH</a></li>
             </ul>
         </section>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
@@ -107,7 +107,10 @@
     <div class="small-12 columns">
         <ul class="breadcrumbs ng-isolate-scope" ncy-breadcrumb="">
             <li ng-repeat="step in steps" class="ng-scope">
-                <a href="<%=(if (user.isLoggedIn) "ait/" + user.urlId + "/research_services" else "/ait")%>" class="ng-binding">ARCH</a>
+                <a href="<%=(if (user.isLoggedIn) "https://partner.archive-it.org/" + user.urlId)%>" class="ng-binding">Home</a>
+            </li>
+            <li ng-repeat="step in steps" class="ng-scope">
+                <a href="<%=(if (user.isLoggedIn) "ait/" + user.urlId + "/research_services" else "/ait")%>" class="ng-binding">Archive Research Compute Hub</a>
             </li>
             <% for ((href, text) <- breadcrumbs) { %>
                 <li ng-repeat="step in steps" class="ng-scope">
