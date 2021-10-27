@@ -170,12 +170,12 @@
                 <div class="job-card-sample">
                   <button class="job-runbutton job-button">Generate Example Dataset</button>
                   <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Example Dataset</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Example Dataset</button>
                 </div>
                 <div class="job-card-full">
                   <button class="job-runbutton job-button">Generate Dataset</button>
                   <button class="job-statebutton job-button"><%=instance.stateStr%></button>
-                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>';" type="button">View Dataset</button>
+                  <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>';" type="button">View Dataset</button>
                 </div>
               </div>
             </div>
