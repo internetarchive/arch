@@ -2,7 +2,7 @@
 <%@ val collections: Seq[org.archive.webservices.ars.model.ArchCollection] %>
 
 #set (title)
-  Datasets
+  Archive Research Compute Hub
 #end
 
 #set (subtitle)
@@ -15,7 +15,7 @@
       <div class="row">
         <div class="subnav-box columns">
           <div ng-repeat="link in link_data" class="left subnav-link ng-scope research_services active" ng-class="[link.class, match_active(link) &amp;&amp; &quot;active&quot; || &quot;&quot;]">
-            <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services">Collection Analysis</a></span>
+            <span step-text="" step-title="" step-index="" class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services">Collections</a></span>
           </div>
           <hr />
         </div>
@@ -41,7 +41,7 @@
         <% for (collection <- collections) { %>
           <tr id="collection-row-<%=unescape(collection.id)%>">
             <td class="ng-binding">
-              <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>">
+              <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">
                 <%=collection.name%>
               </a>
             </td>

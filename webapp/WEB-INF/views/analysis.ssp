@@ -3,7 +3,7 @@
 <%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
 
 #set (title)
-  Analyze <%=collection.name%>
+  <%=collection.name%> Analysis
 #end
 
 #set (subtitle)
@@ -15,9 +15,6 @@
     <div class="small-12 columns">
       <div class="row">
         <div class="subnav-box columns">
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/<%=unescape(user.urlId)%>/research_services">Collections</a></span>
-          </div>
           <div class="left subnav-link ng-scope research_services active" id="summary-tab-link">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="#">Job Summary</a></span>
           </div>
@@ -36,12 +33,21 @@
     <h2>Collection overview</h2>
     <div class="card">
       <div class="card-body">
-        <p class="card-text">
-          <strong>Collection size</strong>: <span class="collection-size"></span>
-          <br />
-          <strong>Public</strong>: <%=if (collection.public) {"Yes"} else {"No"}%>
-          <br />
-        </p>
+        <div class="job-card-flex">
+          <div class="job-card-sample">
+            <h3><span class="collection-size"></span></h3>
+            <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
+          </div>
+          <div class="job-card-full">
+            <% if (collection.public) { %>
+              <h3>Public Collection</h3>
+              <p><i class="fa fa-unlock fa-4x" aria-hidden="true"></i></p>
+            <% } else { %>
+              <h3>Private Collection</h3>
+              <p><i class="fa fa-lock fa-4x" aria-hidden="true"></i></p>
+            <% } %>
+          </div>
+        </div>
       </div>
     </div>
     <script>
@@ -107,7 +113,7 @@
               <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
               <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-full">
                 <td>
-                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>">
+                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>">
                   <%=instance.job.name%>
                   </a>
                 </td>
@@ -115,7 +121,7 @@
               </tr>
               <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-sample">
                 <td>
-                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>/<%=unescape(instance.job.id)%>?sample=true">
+                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>?sample=true">
                   <%=instance.job.name%> (Example)
                   </a>
                 </td>
