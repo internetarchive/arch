@@ -151,7 +151,7 @@
       if (reRunCofirm) {
         $reRunCard.hide();
         $.getJSON(url, function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/analysis/<%=unescape(collection.id)%>";
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis";
         });
       }
     });
