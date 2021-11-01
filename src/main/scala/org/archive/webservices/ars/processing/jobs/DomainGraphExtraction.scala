@@ -10,7 +10,7 @@ import org.apache.spark.storage.StorageLevel
 import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
-import org.archive.webservices.ars.util.{Common, HttpUtil}
+import org.archive.webservices.ars.util.{Common, HttpUtil, PublicSuffixUtil}
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Extract domain graph"
@@ -37,6 +37,7 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
   }
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[((String, String, String), Long)] = {
+    val publicSuffixes = PublicSuffixUtil.broadcast(rdd.context)
     rdd
       .flatMap { r =>
         r.http.filter(AutUtil.validPage(r, _)).toIterator.flatMap { http =>
@@ -48,8 +49,8 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
                 .map {
                   case (source, target, _) =>
                     (
-                      AutUtil.extractDomainRemovePrefixWWW(source),
-                      AutUtil.extractDomainRemovePrefixWWW(target))
+                      AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
+                      AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
                 }
                 .filter { case (s, t) => s != "" && t != "" }
                 .map {

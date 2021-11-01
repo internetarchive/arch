@@ -49,7 +49,7 @@
 <meta class="foundation-mq-topbar"><meta class="foundation-mq-small"><meta class="foundation-mq-medium"><meta class="foundation-mq-large">
 
 <script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
-<script src="/ait/js/pagetransitions.js"></script>
+<script src="/ait/js/URI.min.js"></script>
 <script src="/ait/js/arch.js"></script>
 <script src="/ait/js/sorttable.js"></script>
 <script src="/ait/js/Chart.min.js"></script>

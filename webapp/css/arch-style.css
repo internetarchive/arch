@@ -103,42 +103,6 @@ div.graph-description {
     margin-left: 50px
 }
 
-.collapsible {
-    max-height: 10px;
-    cursor: pointer;
-    color: black;
-    width: 100%;
-    background-color: #F7F7F7;
-    padding-bottom: 3em;
-}
-
-.collapsible:hover {
-    background-color: #F7F7F7;
-}
-
-.collapsible:after {
-    font-family: FontAwesome;
-    content: "\f078"; /* chevron-down */
-    font-weight: bold;
-    color: black;
-    float: left;
-    background-color: #F7F7F7;
-}
-
-.collapsible.active:after {
-    font-family: FontAwesome;
-    content: "Available Jobs \f054"; /* chevron-right */
-    text-decoration: underline;
-    background-color: #F7F7F7;
-}
-
-.collapsible-content {
-    padding: 0 5px;
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.2s ease-out;
-}
-
 .expanded {
     max-height: 100%;
 }
@@ -149,21 +113,39 @@ div#csv-preview {
 }
 
 .category-wrapper {
-    display: flow-root;
+    display: block;
+}
+
+.category-wrapper p {
+    line-height: 1.5
+}
+
+.job-category.collapsed .category-wrapper {
+    padding: 5px;
+    padding-top: 15px;
+    border: 1px solid #DFDFDF;
+    border-radius: 4px;
+    margin: 1px;
+    margin-bottom: 20px;
+}
+
+.job-category.collapsed .category-wrapper:hover {
+    background-color: #FFFFFF;
+    cursor: pointer;
+}
+
+.job-category .collapsible-content {
+    display: none;
+}
+
+.job-category.expanded .collapsible-content {
+    display: block;
 }
 
 .category-image {
     float: left;
     max-width: 8%;
     height: auto;
-}
-
-.category-title {
-    float: left;
-}
-
-.category-clear: {
-    clear: left
 }
 
 /*

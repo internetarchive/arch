@@ -38,7 +38,11 @@ object Ait {
             .toOption
         } yield {
           val user =
-            AitUser(id, userName, json.get[String]("full_name").toOption.getOrElse(userName))
+            AitUser(
+              id,
+              userName,
+              json.get[String]("full_name").toOption.getOrElse(userName),
+              json.get[String]("email").toOption)
           request.getSession.setAttribute(UserSessionAttribute, user)
           user
         }
@@ -55,7 +59,12 @@ object Ait {
       val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
-      } yield AitUser(id, userName, user.get[String]("full_name").toOption.getOrElse(userName))
+      } yield
+        AitUser(
+          id,
+          userName,
+          user.get[String]("full_name").toOption.getOrElse(userName),
+          user.get[String]("email").toOption)
     }
   }
 

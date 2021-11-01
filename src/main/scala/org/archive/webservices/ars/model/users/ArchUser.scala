@@ -12,6 +12,7 @@ trait ArchUser {
   def id: String
   def userName: String
   def fullName: String
+  def email: Option[String]
   def isAdmin: Boolean
   def isLoggedIn: Boolean
   def aitUser: Option[AitUser] = None
@@ -24,7 +25,7 @@ object ArchUser {
 
   val UserSessionAttribute = "arch-user"
 
-  val NoUser = DefaultArchUser("", "", "", isAdmin = false, isLoggedIn = false)
+  val NoUser = DefaultArchUser("", "", "", None, isAdmin = false, isLoggedIn = false)
 
   private def archUser(name: String, password: Option[String] = None): Option[ArchUser] =
     Try {
@@ -43,6 +44,15 @@ object ArchUser {
           ArchPrefix + ":" + name,
           name,
           cursor.get[String]("name").getOrElse(name),
+          cursor.get[String]("email").toOption.map(_.trim).filter { email =>
+            !email.contains(" ") && {
+              val split = email.split("@")
+              split.length == 2 && split(0).nonEmpty && {
+                val domainSplit = split(1).split(".")
+                domainSplit.length > 1 && domainSplit.forall(_.nonEmpty)
+              }
+            }
+          },
           cursor.get[Boolean]("admin").getOrElse(false))
       }
 

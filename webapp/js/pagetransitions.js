@@ -9,10 +9,12 @@ $(function () {
         currentTransition = transitionId;
         $.get(url, function (data) {
             if (currentTransition === transitionId) {
-                var $newBody = $(data.match(/<body.*<\/body>/s)[0]);
-                var title = data.match(/<title>(.*?)<\/title>/s)[1];
+                var afterHead = (data.match(/<\/head>.*/s) || [data])[0];
+                var $newBody = $(afterHead.match(/<body.*<\/body>/s)[0]);
+                var titleMatch = data.match(/<title>(.*?)<\/title>/s);
                 initPageTransitions($newBody);
                 $("body").empty().append($newBody);
+                var title = titleMatch ? titleMatch[1] : document.title;
                 $("title").html(title);
                 document.body.scrollTop = 0;
                 document.documentElement.scrollTop = 0;

@@ -10,7 +10,7 @@ import org.archive.helge.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
-import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.ars.util.{HttpUtil, PublicSuffixUtil}
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Extract plain text of webpages"
@@ -30,26 +30,34 @@ object WebPagesExtraction extends BinaryInformationAutJob {
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webpages(rdd)
 
-  override def row(
-      url: String,
-      http: HttpMessage,
-      body: InputStream,
-      tikaMime: String,
-      crawlDate: String): Row = {
-    val bodyString = HttpUtil.bodyString(body, http)
-    val content = RemoveHTML(RemoveHTTPHeader(bodyString))
+  override def prepareRecord(r: WarcRecord): Option[Row] =
+    throw new RuntimeException(
+      "This method should not be called in WebPagesExtraction, see #prepareRecords")
 
-    Row(
-      crawlDate,
-      AutUtil.extractDomainRemovePrefixWWW(url),
-      url,
-      AutUtil.mime(http),
-      tikaMime,
-      DetectLanguage(content),
-      content)
+  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = {
+    val publicSuffixes = PublicSuffixUtil.broadcast(rdd.context)
+    rdd.flatMap { r =>
+      prepareBinaryRow(
+        r,
+        (
+            url: String,
+            http: HttpMessage,
+            body: InputStream,
+            tikaMime: String,
+            crawlDate: String) => {
+          val bodyString = HttpUtil.bodyString(body, http)
+          val content = RemoveHTML(RemoveHTTPHeader(bodyString))
+          Row(
+            crawlDate,
+            AutUtil.extractDomainRemovePrefixWWW(url, publicSuffixes.value),
+            url,
+            AutUtil.mime(http),
+            tikaMime,
+            DetectLanguage(content),
+            content)
+        })
+    }
   }
-
-  override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 
   override def templateName: Option[String] = Some("jobs/WebPagesExtraction")
 }
