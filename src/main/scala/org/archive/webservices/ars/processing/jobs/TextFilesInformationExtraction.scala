@@ -20,6 +20,7 @@ import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
+import org.archive.webservices.ars.processing.jobs.ImageInformationExtraction.prepareBinaryRow
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 import scala.concurrent.duration.Duration
@@ -98,37 +99,40 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
     cachedRdd.unpersist(true)
   }
 
-  override def row(
-      url: String,
-      http: HttpMessage,
-      body: InputStream,
-      tikaMime: String,
-      crawlDate: String): Row = {
-    val forker = InputStreamForker(body)
-    val Array(md5In, sha1In, contentIn) = forker.fork(3).map(Future(_))
-    val Seq(md5, sha1, content) =
-      try {
-        Await.result(
-          Future.sequence(
-            Seq(
-              md5In.map(DigestUtil.md5Hex),
-              sha1In.map(DigestUtil.sha1Hex),
-              contentIn.map(in =>
-                Common.cleanup(RemoveHTTPHeader(HttpUtil.bodyString(in, http)))(in.close)))),
-          Duration.Inf)
-      } finally {
-        for (s <- md5In) Try(s.close())
-        for (s <- sha1In) Try(s.close())
-        for (s <- contentIn) Try(s.close())
-        Try(body.close())
-      }
+  override def prepareRecord(r: WarcRecord): Option[Row] =
+    prepareBinaryRow(
+      r,
+      (
+          url: String,
+          http: HttpMessage,
+          body: InputStream,
+          tikaMime: String,
+          crawlDate: String) => {
+        val forker = InputStreamForker(body)
+        val Array(md5In, sha1In, contentIn) = forker.fork(3).map(Future(_))
+        val Seq(md5, sha1, content) =
+          try {
+            Await.result(
+              Future.sequence(
+                Seq(
+                  md5In.map(DigestUtil.md5Hex),
+                  sha1In.map(DigestUtil.sha1Hex),
+                  contentIn.map(in =>
+                    Common.cleanup(RemoveHTTPHeader(HttpUtil.bodyString(in, http)))(in.close)))),
+              Duration.Inf)
+          } finally {
+            for (s <- md5In) Try(s.close())
+            for (s <- sha1In) Try(s.close())
+            for (s <- contentIn) Try(s.close())
+            Try(body.close())
+          }
 
-    val jUrl = new URL(url)
-    val filename = FilenameUtils.getName(jUrl.getPath)
-    val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
+        val jUrl = new URL(url)
+        val filename = FilenameUtils.getName(jUrl.getPath)
+        val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
 
-    Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1, content)
-  }
+        Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1, content)
+      })
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 

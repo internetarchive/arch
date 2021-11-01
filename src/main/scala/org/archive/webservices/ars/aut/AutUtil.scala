@@ -6,6 +6,7 @@ import io.archivesunleashed.matchbox.ExtractDomain
 import javax.imageio.ImageIO
 import org.archive.helge.sparkling.http.HttpMessage
 import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.ars.util.PublicSuffixUtil
 
 object AutUtil {
   def url(r: WarcRecord): String = r.url.getOrElse("")
@@ -23,6 +24,13 @@ object AutUtil {
 
   def validPage(r: WarcRecord, http: HttpMessage): Boolean = {
     crawlDate(r).nonEmpty && checkPageMime(url(r), http.mime.getOrElse("")) && http.status == 200
+  }
+
+  def extractDomainRemovePrefixWWW(url: String, publicSuffixes: Set[String]): String = {
+    Option(if (url.trim.isEmpty) "" else ExtractDomain(url).replaceAll("^\\s*www\\.", ""))
+      .map(_.trim)
+      .map(PublicSuffixUtil.resolve(_, publicSuffixes))
+      .getOrElse("")
   }
 
   def extractDomainRemovePrefixWWW(url: String): String = {

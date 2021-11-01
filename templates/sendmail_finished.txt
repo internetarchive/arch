@@ -1,0 +1,20 @@
+From: ARCH
+To: $to
+Subject: ARCH job finished: $jobname
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=ARCHARCHARCH
+
+--ARCHARCHARCH
+Content-Type: text/plain; charset=utf-8
+
+Your job has finished: $jobname ($collection)
+
+--ARCHARCHARCH
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<body>
+<p>Your job has finished: $jobname ($collection)</p>
+</body>
+
+--ARCHARCHARCH--

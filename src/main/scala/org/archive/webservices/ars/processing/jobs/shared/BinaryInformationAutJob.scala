@@ -56,33 +56,9 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
     computeMimeTypeCounts(data, outPath)
   }
 
-  def row(
-      url: String,
-      http: HttpMessage,
-      body: InputStream,
-      tikaMime: String,
-      crawlDate: String): Row = {
-    val forker = InputStreamForker(body)
-    val Array(md5In, sha1In) = forker.fork(2).map(Future(_))
-    val Seq(md5, sha1) =
-      try {
-        Await.result(
-          Future.sequence(Seq(md5In.map(DigestUtil.md5Hex), sha1In.map(DigestUtil.sha1Hex))),
-          Duration.Inf)
-      } finally {
-        for (s <- md5In) Try(s.close())
-        for (s <- sha1In) Try(s.close())
-        Try(body.close())
-      }
-
-    val jUrl = new URL(url)
-    val filename = FilenameUtils.getName(jUrl.getPath)
-    val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
-
-    Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1)
-  }
-
-  def prepareRecord(r: WarcRecord): Option[Row] = {
+  def prepareBinaryRow(
+      r: WarcRecord,
+      row: (String, HttpMessage, InputStream, String, String) => Row): Option[Row] = {
     Common.tryOrElse[Option[Row]](None) {
       r.http.filter(_.status == 200).flatMap { http =>
         val url = AutUtil.url(r)
@@ -97,6 +73,35 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
       }
     }
   }
+
+  def prepareRecord(r: WarcRecord): Option[Row] =
+    prepareBinaryRow(
+      r,
+      (
+          url: String,
+          http: HttpMessage,
+          body: InputStream,
+          tikaMime: String,
+          crawlDate: String) => {
+        val forker = InputStreamForker(body)
+        val Array(md5In, sha1In) = forker.fork(2).map(Future(_))
+        val Seq(md5, sha1) =
+          try {
+            Await.result(
+              Future.sequence(Seq(md5In.map(DigestUtil.md5Hex), sha1In.map(DigestUtil.sha1Hex))),
+              Duration.Inf)
+          } finally {
+            for (s <- md5In) Try(s.close())
+            for (s <- sha1In) Try(s.close())
+            Try(body.close())
+          }
+
+        val jUrl = new URL(url)
+        val filename = FilenameUtils.getName(jUrl.getPath)
+        val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
+
+        Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1)
+      })
 
   override def checkSparkState(outPath: String): Option[Int] =
     super.checkSparkState(outPath).map { state =>

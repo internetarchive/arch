@@ -36,46 +36,49 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.images(rdd)
 
-  override def row(
-      url: String,
-      http: HttpMessage,
-      body: InputStream,
-      tikaMime: String,
-      crawlDate: String): Row = {
-    val forker = InputStreamForker(body)
-    val Array(imageIn, md5In, sha1In) = forker.fork(3).map(Future(_))
-    val Seq((width: Int, height: Int), md5: String, sha1: String) =
-      try {
-        Await.result(
-          Future.sequence(
-            Seq(
-              imageIn.map(in => Common.cleanup(AutUtil.computeImageSize(in))(in.close)),
-              md5In.map(DigestUtil.md5Hex),
-              sha1In.map(DigestUtil.sha1Hex))),
-          Duration.Inf)
-      } finally {
-        for (s <- imageIn) Try(s.close())
-        for (s <- md5In) Try(s.close())
-        for (s <- sha1In) Try(s.close())
-        Try(body.close())
-      }
+  override def prepareRecord(r: WarcRecord): Option[Row] =
+    prepareBinaryRow(
+      r,
+      (
+          url: String,
+          http: HttpMessage,
+          body: InputStream,
+          tikaMime: String,
+          crawlDate: String) => {
+        val forker = InputStreamForker(body)
+        val Array(imageIn, md5In, sha1In) = forker.fork(3).map(Future(_))
+        val Seq((width: Int, height: Int), md5: String, sha1: String) =
+          try {
+            Await.result(
+              Future.sequence(
+                Seq(
+                  imageIn.map(in => Common.cleanup(AutUtil.computeImageSize(in))(in.close)),
+                  md5In.map(DigestUtil.md5Hex),
+                  sha1In.map(DigestUtil.sha1Hex))),
+              Duration.Inf)
+          } finally {
+            for (s <- imageIn) Try(s.close())
+            for (s <- md5In) Try(s.close())
+            for (s <- sha1In) Try(s.close())
+            Try(body.close())
+          }
 
-    val jUrl = new URL(url)
-    val filename = FilenameUtils.getName(jUrl.getPath)
-    val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
+        val jUrl = new URL(url)
+        val filename = FilenameUtils.getName(jUrl.getPath)
+        val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
 
-    Row(
-      crawlDate,
-      url,
-      filename,
-      extension,
-      AutUtil.mime(http),
-      tikaMime,
-      width,
-      height,
-      md5,
-      sha1)
-  }
+        Row(
+          crawlDate,
+          url,
+          filename,
+          extension,
+          AutUtil.mime(http),
+          tikaMime,
+          width,
+          height,
+          md5,
+          sha1)
+      })
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }

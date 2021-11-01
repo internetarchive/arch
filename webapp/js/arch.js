@@ -5,11 +5,11 @@ var arch = (function () {
     var runningJobs = 0;
     var finishedJobs = 0;
 
-    onPageTransition.push(function () {
-        jobUpdateHandlers = [];
-        for (const request of Object.values(activeRequests)) request.abort();
-        activeRequests = {};
-    });
+    // onPageTransition.push(function () {
+    //     jobUpdateHandlers = [];
+    //     for (const request of Object.values(activeRequests)) request.abort();
+    //     activeRequests = {};
+    // });
 
     $(function () {
         function timeoutHandler() {

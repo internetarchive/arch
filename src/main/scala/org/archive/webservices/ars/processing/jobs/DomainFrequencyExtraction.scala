@@ -11,7 +11,7 @@ import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.shared.AutJob
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{Common, PublicSuffixUtil}
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
@@ -34,12 +34,13 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   }
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[(String, Long)] = {
+    val publicSuffixes = PublicSuffixUtil.broadcast(rdd.context)
     rdd
       .flatMap { r =>
         Common.tryOrElse[Option[(String, Long)]](None) {
           r.http.filter(AutUtil.validPage(r, _)).map { _ =>
             val url = AutUtil.url(r)
-            (AutUtil.extractDomainRemovePrefixWWW(url), 1L)
+            (AutUtil.extractDomainRemovePrefixWWW(url, publicSuffixes.value), 1L)
           }
         }
       }
