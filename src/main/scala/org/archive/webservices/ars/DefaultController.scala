@@ -64,7 +64,42 @@ class DefaultController extends BaseController with ScalateSupport {
         Ok(
           ssp(
             "analysis",
-            "breadcrumbs" -> Seq((relativePath(collectionId + "/analysis"), collectionId)),
+            "breadcrumbs" -> Seq((relativePath("/" + collectionId + "/analysis"), collectionId)),
+            "jobs" -> jobs,
+            "user" -> user,
+            "collection" -> collection),
+          Map("Content-Type" -> "text/html"))
+      }).getOrElse(NotFound())
+    }
+  }
+
+  get("/:userid/research_services/:collection_id/jobs") {
+    ensureUserBasePath("userid") { implicit user =>
+      val collectionId = params("collection_id")
+      (for {
+        collection <- ArchCollection.get(collectionId)
+        conf <- DerivationJobConf.collection(collectionId)
+        sampleConf <- DerivationJobConf.collection(collectionId, sample = true)
+      } yield {
+        val jobs =
+          JobManager.jobs.values.toSeq
+            .filter(_.category != ArchJobCategories.None)
+            .groupBy(_.category)
+            .map {
+              case (category, jobs) =>
+                category -> jobs.sortBy(_.name.toLowerCase).flatMap { job =>
+                  for {
+                    instance <- JobManager.getInstance(job.id, conf)
+                    sampleInstance <- JobManager.getInstance(job.id, sampleConf)
+                  } yield (instance, sampleInstance)
+                }
+            }
+        Ok(
+          ssp(
+            "jobs",
+            "breadcrumbs" -> Seq(
+              (relativePath("/" + collectionId + "/analysis"), collectionId),
+              (relativePath("/" + collectionId + "/jobs"), "Generate Datasets")),
             "jobs" -> jobs,
             "user" -> user,
             "collection" -> collection),
