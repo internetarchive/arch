@@ -1,0 +1,94 @@
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
+<%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
+
+#set (title)
+  <%=collection.name%> Jobs
+#end
+
+#set (subtitle)
+  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#end
+
+<subnav data="state.menus.research_services" class="ng-isolate-scope">
+  <div class="row subnav">
+    <div class="small-12 columns">
+      <div class="row">
+        <div class="subnav-box columns">
+          <div class="left subnav-link ng-scope research_services">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">Job Summary</a></span>
+          </div>
+          <div class="left subnav-link ng-scope research_services active">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate Datasets</a></span>
+          </div>
+          <hr />
+        </div>
+      </div>
+    </div>
+  </div>
+</subnav>
+
+<div class="row page-tab" id="jobs-tab">
+  <div class="large-12 columns">
+    <p>Example datasets can be used to ensure analysis will produce desired data, and uses the first 100 relative records from the collection if they are available. We strongly recommend running example jobs on any collections over 100GB.</p>
+    <hr />
+    <%
+      import org.archive.webservices.ars.model._
+      for (((category, categoryDescription, categoryImage), categoryIdx) <- Seq(
+          (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "ait/img/collection.png"),
+          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png"),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", HTML, css, and other web elements.", "ait/img/text.png"),
+          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png")
+      ).zipWithIndex) { %>
+      <div class="job-category <%=unescape(if (categoryIdx == 0) "expanded" else "collapsed")%>">
+        <div class="category-wrapper">
+          <img class="category-image" src="<%=categoryImage%>" alt="Icon for <%=category%>" />
+          <h2 class="category-title"><%=category%></h2>
+          <p><%=categoryDescription%></p>
+        </div>
+        <div class="collapsible-content">
+          <% for ((instance, sampleInstance) <- jobs(category)) { %>
+            <div class="card" id="card-<%=unescape(instance.job.id)%>">
+              <div class="card-body">
+                <h3 class="card-title"><%=instance.job.name%></h3>
+                <p class="card-text"><%=instance.job.description%></p>
+                <div class="job-card-flex">
+                  <div class="job-card-sample">
+                    <button class="job-runbutton job-button">Generate Example Dataset</button>
+                    <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Example Dataset</button>
+                  </div>
+                  <div class="job-card-full">
+                    <button class="job-runbutton job-button">Generate Dataset</button>
+                    <button class="job-statebutton job-button"><%=instance.stateStr%></button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>';" type="button">View Dataset</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+  $(function() {
+    <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
+      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
+      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
+    <% } %>
+
+    $jobCategories = $(".job-category");
+
+    $(".category-wrapper").click(function () {
+      $jobCategories.removeClass("expanded");
+      $jobCategories.addClass("collapsed");
+      var $thisCategory = $(this).parent(".job-category");
+      $thisCategory.removeClass("collapsed");
+      $thisCategory.addClass("expanded");
+      $("html").animate({ scrollTop: parseInt($thisCategory.offset().top) - 100}, 200);
+    });
+  });
+</script>
