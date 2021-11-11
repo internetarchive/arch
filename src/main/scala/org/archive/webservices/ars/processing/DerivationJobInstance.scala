@@ -51,6 +51,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def updateState(value: Int): Unit = {
     val prevState = state
+
     state = value
     for (func <- _onStateChanged) func()
     if (job.partialOf.isEmpty && state > prevState) {
@@ -75,9 +76,10 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             Map(
               "to" -> email,
               "jobName" -> job.name,
-              "collection" -> conf.collectionId,
+              "jobId" -> job.id,
+              "collectionId" -> conf.collectionId,
               "collectionName" -> collection.map(_.name).getOrElse(conf.collectionId),
-              "accountId" -> u.id,
+              "accountId" -> u.urlId,
               "userName" -> u.fullName))
         }
       }
