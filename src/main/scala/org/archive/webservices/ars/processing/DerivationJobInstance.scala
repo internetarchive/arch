@@ -4,6 +4,7 @@ import java.time.Instant
 
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{
+  ArchCollection,
   ArchCollectionInfo,
   ArchJobInstanceInfo,
   DerivativeOutput
@@ -12,6 +13,7 @@ import org.archive.webservices.ars.util.MailUtil
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var user: Option[ArchUser] = None
+  var collection: Option[ArchCollection] = None
 
   var state: Int = ProcessingState.NotStarted
 
@@ -64,10 +66,19 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
           .get(conf.collectionId)
           .setLastJob(job.name + nameSuffix, now)
           .save()
-        for (email <- user.flatMap(_.email)) {
+        for {
+          u <- user
+          email <- u.email
+        } {
           MailUtil.sendTemplate(
             "finished",
-            Map("to" -> email, "jobname" -> job.name, "collection" -> conf.collectionId))
+            Map(
+              "to" -> email,
+              "jobName" -> job.name,
+              "collection" -> conf.collectionId,
+              "collectionName" -> collection.map(_.name).getOrElse(conf.collectionId),
+              "accountId" -> u.id,
+              "userName" -> u.fullName))
         }
       }
       info.save(conf.outputPath + "/" + job.id)

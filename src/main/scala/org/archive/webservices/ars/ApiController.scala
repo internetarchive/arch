@@ -42,22 +42,20 @@ class ApiController extends BaseController {
       jobId: String,
       sample: Boolean,
       rerun: Boolean = false): ActionResult = {
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-      user =>
-        JobManager.get(jobId) match {
-          case Some(job) =>
-            DerivationJobConf.collection(collectionId, sample) match {
-              case Some(conf) =>
-                if (rerun) job.reset(conf)
-                val instance = job.enqueue(conf).getOrElse(job.history(conf))
-                instance.user = Some(user)
-                jobStateResponse(instance)
-              case None =>
-                NotFound()
-            }
-          case None =>
-            NotFound()
+    ensureLogin(redirect = false, useSession = true) { user =>
+      {
+        for {
+          collection <- ArchCollection.get(collectionId)
+          job <- JobManager.get(jobId)
+          conf <- DerivationJobConf.collection(collectionId, sample)
+        } yield {
+          if (rerun) job.reset(conf)
+          val instance = job.enqueue(conf).getOrElse(job.history(conf))
+          instance.user = Some(user)
+          instance.collection = Some(collection)
+          jobStateResponse(instance)
         }
+      }.getOrElse(NotFound())
     }
   }
 

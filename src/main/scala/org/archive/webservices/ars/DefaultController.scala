@@ -64,7 +64,7 @@ class DefaultController extends BaseController with ScalateSupport {
         Ok(
           ssp(
             "analysis",
-            "breadcrumbs" -> Seq((relativePath("/" + collectionId + "/analysis"), collectionId)),
+            "breadcrumbs" -> Seq((relativePath("/" + collectionId + "/analysis"), collection.name)),
             "jobs" -> jobs,
             "user" -> user,
             "collection" -> collection),
@@ -98,7 +98,7 @@ class DefaultController extends BaseController with ScalateSupport {
           ssp(
             "jobs",
             "breadcrumbs" -> Seq(
-              (relativePath("/" + collectionId + "/analysis"), collectionId),
+              (relativePath("/" + collectionId + "/analysis"), collection.name),
               (relativePath("/" + collectionId + "/jobs"), "Generate Datasets")),
             "jobs" -> jobs,
             "user" -> user,
@@ -124,7 +124,7 @@ class DefaultController extends BaseController with ScalateSupport {
             case Some(templateName) =>
               val attributes = Seq(
                 "breadcrumbs" -> Seq(
-                  (relativePath("/" + collectionId + "/analysis"), collectionId),
+                  (relativePath("/" + collectionId + "/analysis"), collection.name),
                   (relativePath("/" + collectionId + "/analysis/" + jobId), instance.job.name)),
                 "user" -> user,
                 "collection" -> collection,
