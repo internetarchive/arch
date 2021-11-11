@@ -13,7 +13,7 @@ VOLUME /app
 VOLUME /data
 
 # noninteractive + --no-install-recommends to avoid user input for package `tzdata`, which is a dependency of the following
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && apt-get -qq install -y --no-install-recommends curl gnupg openjdk-11-jdk maven git wget sendmail
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && apt-get -qq install -y --no-install-recommends curl gnupg openjdk-11-jdk maven git wget
 
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
@@ -25,8 +25,10 @@ RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee -a /etc/apt/so
 RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add
 RUN apt-get -qq update && apt-get -qq install -y sbt=1.3.8
 
-ADD ./ /app/
+COPY ./ /app/
 WORKDIR /app
+
+RUN chmod +x /app/src/main/bash/sendmail && ln -s /app/src/main/bash/sendmail /usr/sbin/sendmail
 RUN ["sbt", "dev/clean", "dev/update", "dev/compile"]
 
 ENTRYPOINT ["sbt"]
