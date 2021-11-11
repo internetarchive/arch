@@ -1,20 +1,31 @@
-From: ARCH
+From: arch-no-reply@archive-it.org
 To: $to
-Subject: ARCH job finished: $jobname
+Subject: ARCH: $collectionName $jobName job has completed!
 MIME-Version: 1.0
 Content-Type: multipart/alternative; boundary=ARCHARCHARCH
 
 --ARCHARCHARCH
 Content-Type: text/plain; charset=utf-8
+Hi $userName,
+===============================================
 
-Your job has finished: $jobname ($collection)
+Your Archive-It Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobName
 
+Thank you for using the Archive-It Research Compute Hub, and have a great day!
+
+ARCH Team
 --ARCHARCHARCH
 Content-Type: text/html; charset=utf-8
 
 <!DOCTYPE html>
-<body>
-<p>Your job has finished: $jobname ($collection)</p>
-</body>
-
+  <head>
+    <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  </head>
+  <body>
+    <p>Hi $userName,</p>
+    <p>Your Archive-It Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobName</p>
+    <p>Thank you for using the Archive-It Research Compute Hub, and have a great day!</p>
+    <p>ARCH Team</p>
+  </body>
+</html>
 --ARCHARCHARCH--
