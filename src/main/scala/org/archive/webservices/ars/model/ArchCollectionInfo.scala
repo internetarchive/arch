@@ -5,7 +5,7 @@ import java.time.Instant
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
-import org.archive.helge.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
 
 import scala.collection.immutable.ListMap

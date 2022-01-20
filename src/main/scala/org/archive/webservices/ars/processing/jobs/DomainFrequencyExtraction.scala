@@ -5,8 +5,8 @@ import java.io.PrintStream
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
@@ -46,7 +46,7 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
       }
   }
 
-  override def templateName: Option[String] = Some("jobs/DomainFrequencyExtraction")
+  override val templateName: Option[String] = Some("jobs/DomainFrequencyExtraction")
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
     val topDomains = HdfsIO

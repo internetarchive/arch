@@ -5,7 +5,7 @@ import java.io.PrintStream
 import io.archivesunleashed.matchbox.ExtractLinks
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
 import org.archive.webservices.ars.util.{Common, HttpUtil}
@@ -34,7 +34,7 @@ object WebGraphExtraction extends NetworkAutJob[Row] {
               .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
               .map {
                 case (source, target, alt) =>
-                  Row(AutUtil.crawlDate(r), source, target, alt)
+                  Row(AutUtil.timestamp(r), source, target, alt)
               }
           }
           .toIterator

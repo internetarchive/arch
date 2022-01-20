@@ -3,9 +3,9 @@ package org.archive.webservices.ars.processing.jobs.shared
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.storage.StorageLevel
-import org.archive.helge.sparkling.Sparkling
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{RddUtil, SurtUtil}
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil}
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
@@ -93,7 +93,6 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
   override def postProcess(outPath: String): Boolean = super.postProcess(outPath) && {
     IOHelper.concatLocal(
       outPath + "/_" + sampleGraphFile,
-      sampleGraphFile,
       _.endsWith(".tsv.gz"),
       compress = true,
       deleteSrcFiles = true,
@@ -110,7 +109,7 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       else state
     }
 
-  override def templateName: Option[String] = Some("jobs/NetworkExtraction")
+  override val templateName: Option[String] = Some("jobs/NetworkExtraction")
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
     val edges = HdfsIO

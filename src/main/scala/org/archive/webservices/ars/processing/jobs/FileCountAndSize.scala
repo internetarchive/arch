@@ -1,13 +1,13 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.archive.helge.sparkling.Sparkling
-import org.archive.helge.sparkling.io._
-import org.archive.helge.sparkling.util.RddUtil
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.io._
+import org.archive.webservices.sparkling.util.RddUtil
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 
-import org.archive.helge.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.Sparkling.executionContext
 import scala.concurrent.Future
 
 object FileCountAndSize extends SparkJob {
@@ -19,15 +19,20 @@ object FileCountAndSize extends SparkJob {
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { _ =>
-      val singlePartition = IOHelper
-        .sample(RddUtil.loadFilesLocality(conf.inputPath, setPartitionFiles = false), conf.sample)
-        .map { file =>
-          (true, (1L, HdfsIO.length(file)))
-        }
-        .reduceByKey({
-          case ((c1, s1), (c2, s2)) =>
-            (c1 + c2, s1 + s2)
-        }, numPartitions = 1)
+      val singlePartition =
+        IOHelper
+          .sample(
+            RddUtil.loadFilesLocality(conf.inputPath, setPartitionFiles = false),
+            conf.sample) { sample =>
+            sample
+              .map { file =>
+                (true, (1L, HdfsIO.length(file)))
+              }
+              .reduceByKey({
+                case ((c1, s1), (c2, s2)) =>
+                  (c1 + c2, s1 + s2)
+              }, numPartitions = 1)
+          }
       val processed = RddUtil.saveAsTextFile(singlePartition.values.map {
         case (c, s) => c + "\t" + s
       }, conf.outputPath + relativeOutPath, skipIfExists = true, skipEmpty = false)
@@ -53,10 +58,10 @@ object FileCountAndSize extends SparkJob {
     Seq("resultFiles" -> split.head, "resultSize" -> split(1))
   }
 
-  override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
-    HdfsIO.files(conf.outputPath + relativeOutPath + "/*.gz").toSeq.map { file =>
+  override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+    HdfsIO.files(conf.outputPath + relativeOutPath + "/*.gz").map { file =>
       val (path, name) = file.splitAt(file.lastIndexOf('/'))
-      DerivativeOutput(name, path, "application/gzip")
+      DerivativeOutput(name, path, "tsv", "application/gzip")
     }
 
   override def reset(conf: DerivationJobConf): Unit =

@@ -6,22 +6,21 @@ import java.net.URL
 import io.archivesunleashed.matchbox.{GetExtensionMIME, RemoveHTTPHeader}
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.sql.functions.{col, desc}
 import org.apache.spark.storage.StorageLevel
-import org.archive.helge.sparkling.Sparkling
-import org.archive.helge.sparkling.Sparkling.executionContext
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.io.{HdfsIO, InputStreamForker}
-import org.archive.helge.sparkling.util.{Common, DigestUtil, RddUtil}
-import org.archive.helge.sparkling.warc.WarcRecord
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
+import org.archive.webservices.sparkling.util.{Common, DigestUtil}
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
+import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
-import org.archive.webservices.ars.processing.jobs.ImageInformationExtraction.prepareBinaryRow
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
+import org.archive.webservices.ars.util.HttpUtil
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -140,7 +139,6 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
     for ((jobPrefix, mimeTypePattern) <- TextTypes) {
       IOHelper.concatLocal(
         outPath + "/_" + jobPrefix + "-" + targetFile,
-        jobPrefix + "-" + targetFile,
         _.startsWith("part-"),
         compress = true,
         deleteSrcFiles = true,
@@ -162,11 +160,15 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
       else ProcessingState.Failed
     } else None
 
-  override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
-    TextTypes.keys.toSeq.map(
+  override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+    TextTypes.keys.iterator.map(
       p =>
         DerivativeOutput(
           p + "-" + targetFile,
           conf.outputPath + relativeOutPath,
+          "csv",
           "application/gzip"))
+
+  override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
+    super.templateVariables(conf) ++ Seq("showPreview" -> false)
 }

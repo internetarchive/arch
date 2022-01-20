@@ -3,14 +3,14 @@ package org.archive.webservices.ars.model
 import java.time.Instant
 
 import org.apache.hadoop.fs.Path
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{DigestUtil, StringUtil}
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.util.FormatUtil
 
 import scala.util.Try
 
-case class DerivativeOutput(filename: String, dir: String, mimeType: String) {
+case class DerivativeOutput(filename: String, dir: String, fileType: String, mimeType: String) {
   import DerivativeOutput._
 
   lazy val path: String = dir + "/" + filename

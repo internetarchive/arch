@@ -2,8 +2,8 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
-import org.archive.helge.sparkling.io.IOUtil
-import org.archive.helge.sparkling.util.DigestUtil
+import org.archive.webservices.sparkling.io.IOUtil
+import org.archive.webservices.sparkling.util.DigestUtil
 import org.archive.webservices.ars.model.collections.{
   AitCollectionSpecifics,
   SpecialCollectionSpecifics

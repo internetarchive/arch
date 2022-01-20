@@ -8,8 +8,8 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.util.FormatUtil
 
@@ -33,7 +33,6 @@ object IOHelper {
 
   def concatLocal[R](
       srcPath: String,
-      dstFile: String,
       filter: String => Boolean = _ => true,
       compress: Boolean = false,
       deleteSrcFiles: Boolean = false,
@@ -42,7 +41,7 @@ object IOHelper {
     val srcFiles =
       HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
     IOHelper.tempDir { dir =>
-      val tmpOutFile = dir + "/" + dstFile
+      val tmpOutFile = dir + "/concat.out"
       val out = new BufferedOutputStream(new FileOutputStream(tmpOutFile))
       val compressed = if (compress) new GzipCompressorOutputStream(out) else out
       prepare(compressed)
@@ -58,11 +57,21 @@ object IOHelper {
     }
   }
 
-  def sample[F: ClassTag](
+  def sample[F: ClassTag, R](
       rdd: RDD[F],
       sample: Int = -1,
-      samplingConditions: Seq[F => Boolean] = Seq.empty): RDD[F] = {
-    if (sample < 0) rdd
+      samplingConditions: Seq[F => Boolean] = Seq.empty)(action: RDD[F] => R): R =
+    sampleGrouped(
+      rdd.mapPartitions(p => Iterator((true, CleanupIterator(p)))),
+      sample,
+      samplingConditions)(rdd => action(rdd.flatMap(_._2)))
+
+  def sampleGrouped[K: ClassTag, F: ClassTag, R](
+      rdd: RDD[(K, CleanupIterator[F])],
+      sample: Int = -1,
+      samplingConditions: Seq[F => Boolean] = Seq.empty)(
+      action: RDD[(K, CleanupIterator[F])] => R): R = {
+    if (sample < 0) action(rdd)
     else {
       val sc = rdd.sparkContext
       val conditions = if (samplingConditions.isEmpty) Seq((_: F) => true) else samplingConditions
@@ -83,24 +92,30 @@ object IOHelper {
               val results =
                 sc.runJob(
                   rdd,
-                  (context: TaskContext, partition: Iterator[F]) => {
+                  (context: TaskContext, partition: Iterator[(K, CleanupIterator[F])]) => {
                     var read = 0
                     var take = 0
-                    (context.partitionId, {
-                      val conditions = conditionsBc.value.zipWithIndex
-                      val candidates = partition.take(sample * SamplingMaxReadPerPartitionFactor)
-                      var matches = Set.empty[Int]
-                      while (matches.size < conditions.size && candidates.hasNext) {
-                        val r = candidates.next
-                        read += 1
-                        val matching = conditions.filter(_._1(r)).map(_._2).toSet
-                        if ((matching -- matches).nonEmpty) {
-                          matches ++= matching
-                          take = read
-                        }
-                      }
-                      matches
-                    }, take)
+                    (
+                      context.partitionId,
+                      CleanupIterator
+                        .flatten(partition.map(_._2))
+                        .iter {
+                          iter =>
+                            val conditions = conditionsBc.value.zipWithIndex
+                            val candidates = iter.take(sample * SamplingMaxReadPerPartitionFactor)
+                            var matches = Set.empty[Int]
+                            while (matches.size < conditions.size && candidates.hasNext) {
+                              val r = candidates.next
+                              read += 1
+                              val matching = conditions.filter(_._1(r)).map(_._2).toSet
+                              if ((matching -- matches).nonEmpty) {
+                                matches ++= matching
+                                take = read
+                              }
+                            }
+                            matches
+                        },
+                      take)
                   },
                   partitions)
               var matches = Set.empty[Int]
@@ -130,10 +145,24 @@ object IOHelper {
         takeMap.updated(
           firstIdx,
           takeMap(firstIdx) + (if (numRecords < sample) sample - numRecords else 0)))
-      rdd.mapPartitionsWithIndex { (idx, p) =>
+      val r = action(rdd.mapPartitionsWithIndex { (idx, p) =>
         val take = requiredBc.value
-        if (take.keySet.contains(idx)) p.take(take(idx)) else Iterator.empty
-      }
+        if (take.keySet.contains(idx)) {
+          var remaining = take(idx)
+          IteratorUtil.whileDefined {
+            if (remaining > 0 && p.hasNext) Some {
+              val (k, records) = p.next
+              (k, records.chain(_.take(remaining).map { r =>
+                remaining -= 1
+                r
+              }))
+            } else None
+          }
+        } else Iterator.empty
+      })
+      conditionsBc.destroy()
+      requiredBc.destroy()
+      r
     }
   }
 

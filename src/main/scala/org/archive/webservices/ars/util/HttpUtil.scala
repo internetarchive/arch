@@ -3,9 +3,9 @@ package org.archive.webservices.ars.util
 import java.io.InputStream
 
 import org.apache.tika.io.BoundedInputStream
-import org.archive.helge.sparkling._
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.util.StringUtil
+import org.archive.webservices.sparkling._
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.util.StringUtil
 
 object HttpUtil {
   val MaxContentLength: Long = 1.mb

@@ -2,7 +2,7 @@ package org.archive.webservices.ars.util
 
 import java.time.Instant
 
-import org.archive.helge.sparkling.util.StringUtil
+import org.archive.webservices.sparkling.util.StringUtil
 
 object FormatUtil {
   def formatBytes(bytes: Long): String = {

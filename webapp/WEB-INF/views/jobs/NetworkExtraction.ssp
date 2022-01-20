@@ -1,12 +1,12 @@
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
-<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
+<%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
 <%@ val resultSize: Long %>
 <%@ val nodes: Seq[(String, Int)] %>
 <%@ val edges: Seq[(Int, Int)] %>
 
-<% layout("/layouts/job.ssp") { %>
+<% layout("/layouts/aut-job.ssp") { %>
   <div class="row">
     <div class="large-12 columns">
     <% if (edges.nonEmpty) { %>

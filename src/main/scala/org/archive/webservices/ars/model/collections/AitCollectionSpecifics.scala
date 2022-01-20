@@ -1,10 +1,11 @@
 package org.archive.webservices.ars.model.collections
 
+import java.io.InputStream
+
 import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.HttpServletRequest
 import org.apache.spark.rdd.RDD
-import org.archive.helge.sparkling.util.StringUtil
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.users.ArchUser
@@ -47,8 +48,8 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
       .getOrElse(-1L)
   }
 
-  def loadWarcs(inputPath: String): RDD[WarcRecord] =
-    CollectionLoader.loadAitWarcs(aitId, inputPath, id)
+  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
+    CollectionLoader.loadAitWarcFiles(aitId, inputPath, id)
 }
 
 object AitCollectionSpecifics {

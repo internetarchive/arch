@@ -4,9 +4,9 @@ import java.io.{OutputStream, PrintStream}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.Sparkling.executionContext
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.DerivativeOutput
@@ -53,7 +53,6 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   def postProcess(outPath: String): Boolean = {
     IOHelper.concatLocal(
       outPath + "/_" + targetFile,
-      targetFile,
       _.startsWith("part-"),
       compress = true,
       deleteSrcFiles = true,
@@ -73,18 +72,17 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
-    override def name: String = "Processing"
-
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
-        val rdd = IOHelper
+        IOHelper
           .sample(
             prepareRecords(CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath)),
             conf.sample,
-            samplingConditions)
-        val outPath = conf.outputPath + relativeOutPath
-        runSpark(rdd, outPath)
-        checkSparkState(outPath).contains(ProcessingState.Finished)
+            samplingConditions) { rdd =>
+            val outPath = conf.outputPath + relativeOutPath
+            runSpark(rdd, outPath)
+            checkSparkState(outPath).contains(ProcessingState.Finished)
+          }
       }
     }
 
@@ -96,7 +94,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
-    override def name: String = "Post-Processing"
+    override val stage: String = "Post-Processing"
 
     def run(conf: DerivationJobConf): Future[Boolean] = Future {
       Try(postProcess(conf.outputPath + relativeOutPath)).getOrElse(false)
@@ -116,11 +114,14 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       Seq("resultSize" -> size)
     }
 
-    override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
-      Seq(DerivativeOutput(targetFile, conf.outputPath + relativeOutPath, "application/gzip"))
+    override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+      Iterator(
+        DerivativeOutput(
+          targetFile,
+          conf.outputPath + relativeOutPath,
+          "csv",
+          "application/gzip"))
   }
-
-  override def templateName: Option[String] = Some("jobs/DefaultAutJob")
 
   override def reset(conf: DerivationJobConf): Unit =
     HdfsIO.delete(conf.outputPath + relativeOutPath)

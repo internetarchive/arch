@@ -1,6 +1,6 @@
 package org.archive.webservices.ars
 
-import org.archive.helge.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, ArchJobCategories}
@@ -34,12 +34,6 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  get("/:userid/research_services/download") {
-    ensureUserBasePath("userid") { user =>
-      Ok(ssp("download", "user" -> user), Map("Content-Type" -> "text/html"))
-    }
-  }
-
   get("/:userid/research_services/:collection_id/analysis") {
     ensureUserBasePath("userid") { implicit user =>
       val collectionId = params("collection_id")
@@ -64,7 +58,8 @@ class DefaultController extends BaseController with ScalateSupport {
         Ok(
           ssp(
             "analysis",
-            "breadcrumbs" -> Seq((relativePath("/" + collectionId + "/analysis"), collection.name)),
+            "breadcrumbs" -> Seq(
+              (relativePath("/" + collectionId + "/analysis"), collection.name)),
             "jobs" -> jobs,
             "user" -> user,
             "collection" -> collection),
@@ -136,78 +131,6 @@ class DefaultController extends BaseController with ScalateSupport {
           }
         }).getOrElse(NotFound())
       }
-    }
-  }
-
-  get("/:userid/research_services/download/:collection_id/:job_id/:file_name") {
-    val collectionId = params("collection_id")
-    val sample = params.get("sample").contains("true")
-    val filename = params("file_name")
-    params.get("access") match {
-      case Some(accessToken) =>
-        val jobId = params("job_id")
-        (for {
-          conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstance(jobId, conf)
-        } yield {
-          instance.outFiles.find(_.filename == filename) match {
-            case Some(file) =>
-              if (file.accessToken == accessToken) {
-                Ok(
-                  HdfsIO.open(file.path, decompress = false),
-                  Map(
-                    "Content-Type" -> file.mimeType,
-                    "Content-Disposition" -> ("attachment; filename=" + file.filename)))
-              } else Forbidden()
-            case None =>
-              NotFound()
-          }
-        }).getOrElse(NotFound())
-      case None =>
-        ensureUserBasePath(
-          "userid",
-          redirectOnForbidden = false,
-          validateCollection = Some(collectionId)) { implicit user =>
-          val jobId = params("job_id")
-          (for {
-            conf <- DerivationJobConf.collection(collectionId, sample = sample)
-            instance <- JobManager.getInstance(jobId, conf)
-          } yield {
-            instance.outFiles.find(_.filename == filename) match {
-              case Some(file) =>
-                Ok(
-                  HdfsIO.open(file.path, decompress = false),
-                  Map(
-                    "Content-Type" -> file.mimeType,
-                    "Content-Disposition" -> ("attachment; filename=" + file.filename)))
-              case None =>
-                NotFound()
-            }
-          }).getOrElse(NotFound())
-        }
-    }
-  }
-
-  get("/:userid/research_services/preview/:collection_id/:job_id/:file_name") {
-    val collectionId = params("collection_id")
-    val sample = params.get("sample").contains("true")
-    val filename = params("file_name")
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-      implicit user =>
-        val jobId = params("job_id")
-        (for {
-          conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstance(jobId, conf)
-        } yield {
-          instance.outFiles.find(_.filename == filename) match {
-            case Some(file) =>
-              Ok(
-                HdfsIO.lines(file.path, n = 51).mkString("\n"),
-                Map("Content-Type" -> file.mimeType))
-            case None =>
-              NotFound()
-          }
-        }).getOrElse(NotFound())
     }
   }
 

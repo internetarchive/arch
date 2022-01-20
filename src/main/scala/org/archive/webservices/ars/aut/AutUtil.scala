@@ -4,15 +4,15 @@ import java.io.InputStream
 
 import io.archivesunleashed.matchbox.ExtractDomain
 import javax.imageio.ImageIO
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.util.PublicSuffixUtil
 
 object AutUtil {
   def url(r: WarcRecord): String = r.url.getOrElse("")
 
-  def crawlDate(r: WarcRecord): String =
-    r.timestamp.filter(_.length >= 8).map(_.take(8)).getOrElse("")
+  def timestamp(r: WarcRecord): String =
+    r.timestamp.filter(_.length >= 14).map(_.take(14)).getOrElse("")
 
   def mime(http: HttpMessage): String = http.mime.getOrElse("unknown")
 
@@ -23,7 +23,7 @@ object AutUtil {
   }
 
   def validPage(r: WarcRecord, http: HttpMessage): Boolean = {
-    crawlDate(r).nonEmpty && checkPageMime(url(r), http.mime.getOrElse("")) && http.status == 200
+    timestamp(r).nonEmpty && checkPageMime(url(r), http.mime.getOrElse("")) && http.status == 200
   }
 
   def extractDomainRemovePrefixWWW(url: String, publicSuffixes: Set[String]): String = {

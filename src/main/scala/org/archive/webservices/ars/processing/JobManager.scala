@@ -1,6 +1,9 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.processing.jobs.{
+  ArsLgaGeneration,
+  ArsWaneGeneration,
+  ArsWatGeneration,
   AudioInformationExtraction,
   DomainFrequencyExtraction,
   DomainGraphExtraction,
@@ -9,8 +12,8 @@ import org.archive.webservices.ars.processing.jobs.{
   ImageInformationExtraction,
   PdfInformationExtraction,
   PresentationProgramInformationExtraction,
-  TextFilesInformationExtraction,
   SpreadsheetInformationExtraction,
+  TextFilesInformationExtraction,
   VideoInformationExtraction,
   WebGraphExtraction,
   WebPagesExtraction,
@@ -25,6 +28,9 @@ object JobManager {
     mutable.Map.empty[DerivationJobConf, mutable.Map[String, DerivationJobInstance]]
 
   val registeredJobs: Seq[DerivationJob] = Seq(
+    ArsLgaGeneration,
+    ArsWaneGeneration,
+    ArsWatGeneration,
     AudioInformationExtraction,
     DomainFrequencyExtraction,
     DomainGraphExtraction,

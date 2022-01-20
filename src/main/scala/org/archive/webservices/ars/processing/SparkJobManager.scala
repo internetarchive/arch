@@ -4,9 +4,10 @@ import java.io.File
 
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
-import org.archive.helge.sparkling.Sparkling.executionContext
-import org.archive.helge.sparkling.util.SparkUtil
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.util.SparkUtil
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.sparkling.Sparkling
 
 import scala.concurrent.Future
 
@@ -28,6 +29,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
         verbose = true)
       context.setLogLevel("INFO")
       _context = Some(context)
+      Sparkling.resetSparkContext(Some(context))
       println("New Spark context initialized: " + context.applicationId)
       context
     })
@@ -39,6 +41,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
         context.stop()
         while (!context.isStopped) Thread.`yield`()
         _context = None
+        Sparkling.resetSparkContext()
       }
     }
   }
@@ -51,6 +54,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = {
     super.onTimeout(instances)
     stopContext()
+    for (instance <- instances) instance.job.reset(instance.conf)
   }
 
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {

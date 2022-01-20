@@ -33,8 +33,8 @@ abstract class ChainedJob extends DerivationJob {
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
     children.flatMap(_.templateVariables(conf))
 
-  override def outFiles(conf: DerivationJobConf): Seq[DerivativeOutput] =
-    children.flatMap(_.outFiles(conf))
+  override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+    children.toIterator.flatMap(_.outFiles(conf))
 
   private def onChildComplete(
       instance: DerivationJobInstance,
