@@ -13,7 +13,7 @@ VOLUME /app
 VOLUME /data
 
 # noninteractive + --no-install-recommends to avoid user input for package `tzdata`, which is a dependency of the following
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && apt-get -qq install -y --no-install-recommends curl gnupg openjdk-11-jdk maven git wget
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && apt-get -qq install -y --no-install-recommends curl gnupg openjdk-11-jdk maven git wget unzip
 
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
@@ -29,6 +29,7 @@ COPY ./ /app/
 WORKDIR /app
 
 RUN chmod +x /app/src/main/bash/sendmail && ln -s /app/src/main/bash/sendmail /usr/sbin/sendmail
+
 RUN ["sbt", "dev/clean", "dev/update", "dev/compile"]
 
 ENTRYPOINT ["sbt"]

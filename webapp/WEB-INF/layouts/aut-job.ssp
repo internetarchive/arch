@@ -86,10 +86,10 @@
       <% if (showPreview && file.lineCount > 0) { %>
         <div class="card">
           <div class="card-body">
-            <h2 class="card-title">Preview</h3>
+            <h2 class="card-title">Preview</h2>
             <div id="csv-preview">
               <script>
-                d3.text('/ait/<%=unescape(user.urlId)%>/research_services/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
+                d3.text('/ait/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
                   var previewCSV  = d3.csv.parseRows(data);
                   var previewTbl  = d3.select("#csv-preview")
                                       .append("table")

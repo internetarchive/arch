@@ -20,9 +20,9 @@ import scala.util.Try
 object ArsWaneGeneration extends SparkJob with ArsJob {
   val MaxInputTextLength = 10000
 
-  val name = "Generate WANE files"
+  val name = "Extract named entities"
   val category: ArchJobCategory = ArchJobCategories.Text
-  def description = "Generate WANE (Named Entities)"
+  def description = "Creates Web Archive Named Entities (WANE) files which contain the named entities from each text resource, organized by originating URL and timestamp."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"
