@@ -225,3 +225,7 @@ project/project/
 # End of metals
 
 config/config.json
+
+lib/stanford-corenlp-4.3.1.jar
+lib/stanford-corenlp-4.3.1-models.jar
+lib/jollyday.jar

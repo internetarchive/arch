@@ -16,9 +16,9 @@ import org.archive.webservices.ars.processing.jobs.shared.ArsJob
 import scala.concurrent.Future
 
 object ArsWatGeneration extends SparkJob with ArsJob {
-  val name = "Generate WAT files"
+  val name = "Generate web archive transformation (WAT) files"
   val category: ArchJobCategory = ArchJobCategories.Collection
-  def description = "Generate WAT (Metadata Transform)"
+  def description = "Creates Web Archive Transformation (WAT) files that include a brief header which identifies its corresponding URL via \"WARC-Target-URI,\" corresponding W/ARC file via \"WARC-Refers-To,\" and additional mapping information."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wat.gz"

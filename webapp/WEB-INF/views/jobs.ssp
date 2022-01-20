@@ -37,7 +37,7 @@
       for (((category, categoryDescription, categoryImage), categoryIdx) <- Seq(
           (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "ait/img/collection.png"),
           (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png"),
-          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", HTML, css, and other web elements.", "ait/img/text.png"),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", named entities, HTML, css, and other web elements.", "ait/img/text.png"),
           (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png")
       ).zipWithIndex) { %>
       <div class="job-category <%=unescape(if (categoryIdx == 0) "expanded" else "collapsed")%>">
