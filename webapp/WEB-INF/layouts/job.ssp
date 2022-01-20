@@ -2,7 +2,7 @@
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
-<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
+<%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
 
 #set (title)
   <%=collection.name%>: <%=job.job.name%>
@@ -16,38 +16,10 @@
 
 <%=unescape(body)%>
 
-
 <div class="row">
   <div class="large-12 columns">
-    <div class="alert alert-warning text-center" id="macos-warning">
-      <p>We've detected macOS, and there is <a href="https://apple.stackexchange.com/questions/388759/archive-utility-cant-open-some-gzipped-text-files-based-on-their-contents" target="_blank">a known issue with Safari and Finder extracting gzipped text</a>. <br />Please use <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a> to extract your datasets.</p>
-    </div>
-    <script>
-        function macosWarning() {
-          var userAgent = window.navigator.userAgent,
-          platform = window.navigator.platform,
-          macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-          windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-          iosPlatforms = ['iPhone', 'iPad', 'iPod'],
-          os = null;
-
-          if (macosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "block";
-          } else if (iosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (windowsPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (/Android/.test(userAgent)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (!os && /Linux/.test(platform)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          }
-          return os;
-        }
-        macosWarning();
-    </script>
     <h1>Dataset(s)</h1>
-    <%=job.job.description.replace("Create a", "A")%></p>
+    <p><%=job.job.description%></p>
     <% for (file <- files) { %>
       <div class="card">
         <div class="card-body">
@@ -66,7 +38,7 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="/ait/<%=unescape(user.urlId)%>/research_services/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+              <a href="/ait/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
@@ -83,42 +55,6 @@
           </div>
         </div>
       </div>
-      <% if (file.lineCount > 0 && job.job.name != "Extract text files (html, text, css, js, json, xml) information") { %>
-        <div class="card">
-          <div class="card-body">
-            <h2 class="card-title">Preview</h3>
-            <div id="csv-preview">
-              <script>
-                d3.text('/ait/<%=unescape(user.urlId)%>/research_services/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
-                  var previewCSV  = d3.csv.parseRows(data);
-                  var previewTbl  = d3.select("#csv-preview")
-                                      .append("table")
-                                      .attr("class", "large-12 columns margin-top one csv-preview");
-
-                  previewTbl.append("thead")
-                            .append("tr")
-                            .selectAll("th")
-                              .data(previewCSV[0])
-                              .enter().append("th")
-                              .text(function(d) {
-                                return d;
-                              });
-
-                  previewTbl.append("tbody")
-                            .selectAll("tr")
-                              .data(previewCSV.slice(1))
-                              .enter().append("tr")
-
-                            .selectAll("td")
-                              .data(function(d) { return d; }).enter()
-                              .append("td")
-                              .text(function(d) { return d; });
-                });
-              </script>
-            </div>
-          </div>
-        </div>
-      <% } %>
     <% } %>
   </div>
 </div>

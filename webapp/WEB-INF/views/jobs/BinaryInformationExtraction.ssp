@@ -1,13 +1,12 @@
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
-<%@ val files: Seq[org.archive.webservices.ars.model.DerivativeOutput] %>
+<%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
 <%@ val resultSize: Long %>
 <%@ val mimeCount: Seq[(String, Int)] %>
 
-<% layout("/layouts/job.ssp") { %>
-
-  <% if (mimeCount.size > 0) { %>
+<% layout("/layouts/aut-job.ssp") { %>
+  <% if (mimeCount.nonEmpty) { %>
     <div class="row">
       <div class="large-12 columns">
         <div class="charts">

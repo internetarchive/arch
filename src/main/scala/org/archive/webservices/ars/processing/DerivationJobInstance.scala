@@ -89,7 +89,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def stateStr: String = ProcessingState.Strings(state)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
-  def outFiles: Seq[DerivativeOutput] = job.outFiles(conf)
+  def outFiles: Iterator[DerivativeOutput] = job.outFiles(conf)
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
   def onStateChanged(action: => Unit): Unit = _onStateChanged :+= (() => action)

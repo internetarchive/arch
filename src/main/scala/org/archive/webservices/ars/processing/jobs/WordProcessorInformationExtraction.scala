@@ -2,7 +2,7 @@ package org.archive.webservices.ars.processing.jobs
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {

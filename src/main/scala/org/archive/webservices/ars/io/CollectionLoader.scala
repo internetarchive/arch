@@ -1,9 +1,11 @@
 package org.archive.webservices.ars.io
 
+import java.io.InputStream
+
 import org.apache.spark.rdd.RDD
-import org.archive.helge.sparkling.io.{HdfsIO, IOUtil}
-import org.archive.helge.sparkling.util.{IteratorUtil, RddUtil}
-import org.archive.helge.sparkling.warc.{WarcLoader, WarcRecord}
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
+import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
@@ -12,39 +14,64 @@ object CollectionLoader {
   val WasapiPageSize = 10
   val CoalescePartitions = 1000
 
-  def loadWarcs(
+  def loadWarcFiles(id: String, inputPath: String): RDD[(String, InputStream)] = {
+    CollectionSpecifics.get(id) match {
+      case Some(specifics) =>
+        specifics.loadWarcFiles(inputPath)
+      case None => loadWarcFiles(inputPath)
+    }
+  }.coalesce(CoalescePartitions)
+
+  def loadWarcsWithPath(
+      id: String,
+      inputPath: String): RDD[(String, CleanupIterator[WarcRecord])] = {
+    loadWarcFiles(id, inputPath).map {
+      case (p, in) =>
+        (
+          p,
+          IteratorUtil.cleanup(
+            WarcLoader
+              .load(in)
+              .filter(r => r.isResponse || r.isRevisit),
+            in.close))
+    }
+  }
+
+  def loadWarcs(id: String, inputPath: String): RDD[WarcRecord] =
+    loadWarcsWithPath(id, inputPath).mapPartitions(_.flatMap(_._2))
+
+  def loadWarcFiles(
       inputPath: String,
-      hdfsHostPort: Option[(String, Int)] = None): RDD[WarcRecord] = {
+      hdfsHostPort: Option[(String, Int)] = None): RDD[(String, InputStream)] = {
     (hdfsHostPort match {
       case Some((host, port)) =>
         RddUtil
           .parallelize(HdfsIO(host, port).files(inputPath + "/*.warc.gz").toSeq)
           .mapPartitions { paths =>
             val hdfsIO = HdfsIO(host, port)
-            paths.map(hdfsIO.open(_, decompress = false))
+            paths.map(p => (p, hdfsIO.open(p, decompress = false)))
           }
       case None =>
         RddUtil
           .loadFilesLocality(inputPath + "/*.warc.gz")
-          .map(HdfsIO.open(_, decompress = false))
-    }).flatMap { in =>
-      IteratorUtil.cleanup(
-        WarcLoader
-          .load(in)
-          .filter(r => r.isResponse || r.isRevisit),
-        in.close)
+          .map(p => (p, HdfsIO.open(p, decompress = false)))
+    }).mapPartitions { partition =>
+      var prev: Option[InputStream] = None
+      partition.map {
+        case (p, in) =>
+          for (s <- prev) s.close()
+          prev = Some(in)
+          (p, prev.get)
+      } ++ IteratorUtil.noop {
+        for (s <- prev) s.close()
+      }
     }
   }
 
-  def loadWarcs(id: String, inputPath: String): RDD[WarcRecord] = {
-    CollectionSpecifics.get(id) match {
-      case Some(specifics) =>
-        specifics.loadWarcs(inputPath)
-      case None => loadWarcs(inputPath)
-    }
-  }.coalesce(CoalescePartitions)
-
-  def loadAitWarcs(aitId: Int, inputPath: String, cacheId: String): RDD[WarcRecord] = {
+  def loadAitWarcFiles(
+      aitId: Int,
+      inputPath: String,
+      cacheId: String): RDD[(String, InputStream)] = {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
@@ -60,13 +87,13 @@ object CollectionLoader {
         .files(inputPath + "/*.warc.gz", recursive = false)
         .size
       if (hdfsFileCount == apiFileCount) {
-        loadWarcs(inputPath, hdfsHostPort)
+        loadWarcFiles(inputPath, hdfsHostPort)
       } else {
         CollectionCache.cache(cacheId) { cachePath =>
           val cacheFileCount = HdfsIO.files(cachePath + "/*.warc.gz", recursive = false).size
           if (hdfsFileCount + cacheFileCount == apiFileCount) {
-            loadWarcs(inputPath, hdfsHostPort)
-              .union(loadWarcs(cachePath))
+            loadWarcFiles(inputPath, hdfsHostPort)
+              .union(loadWarcFiles(cachePath))
           } else {
             RddUtil
               .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
@@ -93,6 +120,7 @@ object CollectionLoader {
                   .getOrElse(Iterator.empty)
               }
               .mapPartitions { partition =>
+                var prev: Option[InputStream] = None
                 val hdfsIO = hdfsHostPort
                   .map { case (host, port) => HdfsIO(host, port) }
                   .getOrElse(HdfsIO)
@@ -100,13 +128,15 @@ object CollectionLoader {
                   .flatMap {
                     case (file, location) =>
                       val inputFilePath = inputPath + "/" + file
-                      if (hdfsIO.exists(inputFilePath)) Some((inputFilePath, true))
+                      if (hdfsIO.exists(inputFilePath)) Some((inputFilePath, inputFilePath, true))
                       else {
                         val cacheFilePath = cachePath + "/" + file
-                        if (HdfsIO.exists(cacheFilePath)) Some((cacheFilePath, false))
+                        if (HdfsIO.exists(cacheFilePath))
+                          Some((inputFilePath, cacheFilePath, false))
                         else {
                           IOHelper.syncHdfs(cacheFilePath + "_caching") {
-                            if (HdfsIO.exists(cacheFilePath)) Some((cacheFilePath, false))
+                            if (HdfsIO.exists(cacheFilePath))
+                              Some((inputFilePath, cacheFilePath, false))
                             else {
                               Ait.getWithAuth(
                                 location,
@@ -116,7 +146,7 @@ object CollectionLoader {
                                   HdfsIO.out(cacheFilePath, compress = false, overwrite = true)
                                 try {
                                   IOUtil.copy(in, out)
-                                  Some((cacheFilePath, false))
+                                  Some((inputFilePath, cacheFilePath, false))
                                 } finally {
                                   out.close()
                                 }
@@ -126,21 +156,21 @@ object CollectionLoader {
                         }
                       }
                   }
-                  .flatMap {
-                    case (path, ait) =>
+                  .map {
+                    case (originalPath, path, ait) =>
+                      for (s <- prev) s.close()
                       val in = (if (ait) hdfsIO else HdfsIO).open(path, decompress = false)
-                      IteratorUtil.cleanup(
-                        WarcLoader
-                          .load(in)
-                          .filter(r => r.isResponse || r.isRevisit),
-                        in.close)
-                  }
+                      prev = Some(in)
+                      (originalPath, in)
+                  } ++ IteratorUtil.noop {
+                  for (s <- prev) s.close()
+                }
               }
           }
         }
       }
     } else {
-      loadWarcs(inputPath, hdfsHostPort)
+      loadWarcFiles(inputPath, hdfsHostPort)
     }
   }
 }

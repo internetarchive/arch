@@ -5,8 +5,8 @@ import java.io.{InputStream, PrintStream}
 import io.archivesunleashed.matchbox.{DetectLanguage, RemoveHTML, RemoveHTTPHeader}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
@@ -59,5 +59,5 @@ object WebPagesExtraction extends BinaryInformationAutJob {
     }
   }
 
-  override def templateName: Option[String] = Some("jobs/WebPagesExtraction")
+  override val templateName: Option[String] = Some("jobs/DefaultAutJob")
 }

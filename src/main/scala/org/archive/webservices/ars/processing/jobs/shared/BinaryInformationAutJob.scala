@@ -7,12 +7,12 @@ import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.Sparkling
-import org.archive.helge.sparkling.Sparkling.executionContext
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.io.{HdfsIO, InputStreamForker}
-import org.archive.helge.sparkling.util.{DigestUtil, RddUtil}
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
+import org.archive.webservices.sparkling.util.{DigestUtil, RddUtil}
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
@@ -65,7 +65,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
         val body = http.body
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
-          val crawlDate = AutUtil.crawlDate(r)
+          val crawlDate = AutUtil.timestamp(r)
           if (crawlDate.nonEmpty) Some {
             row(url, http, body, tikaMime, crawlDate)
           } else None
@@ -113,7 +113,6 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
   protected def postProcessMimeTypeCounts(outPath: String): Boolean = {
     IOHelper.concatLocal(
       outPath + "/_" + MimeTypeCountFile,
-      MimeTypeCountFile,
       _.endsWith(".csv.gz"),
       compress = true,
       deleteSrcFiles = true,
@@ -132,7 +131,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
       if (HdfsIO.exists(outPath + "/" + MimeTypeCountFile)) state else ProcessingState.Failed
     }
 
-  override def templateName: Option[String] = Some("jobs/BinaryInformationExtraction")
+  override val templateName: Option[String] = Some("jobs/BinaryInformationExtraction")
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
     val mimeCount = HdfsIO

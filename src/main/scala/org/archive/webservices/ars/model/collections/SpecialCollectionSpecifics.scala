@@ -1,11 +1,12 @@
 package org.archive.webservices.ars.model.collections
 
+import java.io.InputStream
+
 import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.HttpServletRequest
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.helge.sparkling.io.HdfsIO
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.users.ArchUser
@@ -31,7 +32,8 @@ class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
   def size(implicit request: HttpServletRequest): Long =
     HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength
 
-  def loadWarcs(inputPath: String): RDD[WarcRecord] = CollectionLoader.loadWarcs(inputPath)
+  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
+    CollectionLoader.loadWarcFiles(inputPath)
 }
 
 object SpecialCollectionSpecifics {

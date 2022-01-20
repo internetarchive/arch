@@ -8,7 +8,7 @@ import io.circe.HCursor
 import io.circe.parser._
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.archive.helge.sparkling.util.StringUtil
+import org.archive.webservices.sparkling.util.StringUtil
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.{Cookie, CookieOptions}
@@ -59,11 +59,12 @@ object Ait {
       val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
-      } yield AitUser(
-        id,
-        userName,
-        user.get[String]("full_name").toOption.getOrElse(userName),
-        user.get[String]("email").toOption)
+      } yield
+        AitUser(
+          id,
+          userName,
+          user.get[String]("full_name").toOption.getOrElse(userName),
+          user.get[String]("email").toOption)
     }
   }
 
@@ -144,7 +145,8 @@ object Ait {
               .map(StringUtil.stripPrefixBySeparator(_, " "))
               .flatMap { base64 =>
                 val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
-                val Array(user, password) = userPassword.split(":", 2)
+                val Array(user, password) =
+                  userPassword.stripPrefix(ArchUser.AitPrefix + ":").split(":", 2)
                 login(user, password).right.toOption
               }
           }

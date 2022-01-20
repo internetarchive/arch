@@ -1,0 +1,89 @@
+<%@ val body: String %>
+<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
+<%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
+<%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
+<%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
+<%@ val wasapiUrl: String %>
+<%@ val wasapiPages: Int %>
+
+#set (title)
+  <%=collection.name%>: <%=job.job.name%>
+#end
+
+#set (subtitle)
+  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#end
+
+<br><br>
+
+<%=unescape(body)%>
+
+<div class="row">
+  <div class="large-12 columns">
+    <h1>Download</h1>
+    <p><%=job.job.description.stripPrefix("Generate ")%></p>
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text">
+          To download the files of this dataset, please use the <a href="https://github.com/WASAPI-Community/data-transfer-apis" target="_blank">WASAPI Data Transfer APIs</a> and follow the instructions on<br>
+          <a href="https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI" target="_blank">https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI</a><br>
+          <br>
+          The <a href="https://support.archive-it.org/hc/en-us/articles/360028548952" target="_blank">WASAPI result endpoint URL</a> of this dataset is:<br>
+          <i><a href="<%=unescape(wasapiUrl)%>" target="_blank"><%=unescape(wasapiUrl)%></a></i>
+        </p>
+      </div>
+    </div>
+    <h1>Command Line Example</h1>
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text" style="font-weight: bold;">
+        &gt; <code style="font-weight: normal;">
+            <% if (wasapiPages > 1) { %>
+            for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&page=$i" | jq -r .files[].locations[0]; done > url.list
+            <% } else { %>
+            curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r .files[].locations[0] > url.list
+            <% } %>
+          </code><br>
+          &gt; <code style="font-weight: normal;">
+              wget -i url.list
+            </code>
+          </p>
+        </div>
+      </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="large-12 columns">
+    <h1>Re-run job?</h1>
+    <div class="card" id="card-re-run-job">
+      <div class="card-body">
+      <p>Have you or a member of your team run additional crawls since the last job was run, and you would like to re-run this job? Please note that the existing derivatives will be permanently deleted.</p>
+      <button class="job-rerunbutton">Re-run Job</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(function() {
+    var collectionId = "<%=unescape(collection.id)%>";
+    var jobId = "<%=unescape(job.job.id)%>";
+    var isSample = <%=unescape(if (job.conf.isSample) "true" else "false")%>;
+
+    var $reRunCard = $("#card-re-run-job");
+    var $reRunButton = $reRunCard.find(".job-rerunbutton");
+
+    $reRunButton.click(function () {
+      var url = "/ait/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
+      var reRunCofirm = confirm('Are you sure that you want to delete your existing derivatives, and re-run this job?');
+
+      if (reRunCofirm) {
+        $reRunCard.hide();
+        $.getJSON(url, function () {
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis";
+        });
+      }
+    });
+  });
+</script>

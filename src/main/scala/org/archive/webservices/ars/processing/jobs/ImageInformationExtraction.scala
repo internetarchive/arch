@@ -7,13 +7,13 @@ import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.helge.sparkling.http.HttpMessage
-import org.archive.helge.sparkling.io.InputStreamForker
-import org.archive.helge.sparkling.util.{Common, DigestUtil}
-import org.archive.helge.sparkling.warc.WarcRecord
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.io.InputStreamForker
+import org.archive.webservices.sparkling.util.{Common, DigestUtil}
+import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
-import org.archive.helge.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.Sparkling.executionContext
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

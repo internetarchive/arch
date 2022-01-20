@@ -1,9 +1,12 @@
 package org.archive.webservices.ars.model.users
 
+import java.util.Base64
+
 import io.circe.parser
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.archive.helge.sparkling.util.{DigestUtil, StringUtil}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
+import org.scalatra.servlet.ServletApiImplicits._
 
 import scala.io.Source
 import scala.util.Try
@@ -36,7 +39,7 @@ object ArchUser {
         source.close()
       }
     }.toOption
-      .map(_.downField(name))
+      .map(_.downField(name.stripPrefix(ArchPrefix + "_")))
       .filter(password.isEmpty || _.get[String]("password")
         .contains("sha1:" + DigestUtil.sha1Base32(password.get)))
       .map { cursor =>
@@ -95,8 +98,19 @@ object ArchUser {
   def get(useSession: Boolean)(implicit request: HttpServletRequest): Option[ArchUser] = {
     Option(request.getSession.getAttribute(UserSessionAttribute))
       .map(_.asInstanceOf[ArchUser])
+      .orElse(Ait.user(useSession).map(AitArchUser(_)))
       .orElse {
-        Ait.user(useSession).map(AitArchUser(_))
+        request
+          .header("Authorization")
+          .filter(_ != null)
+          .map(_.trim)
+          .filter(_.toLowerCase.startsWith("basic "))
+          .map(StringUtil.stripPrefixBySeparator(_, " "))
+          .flatMap { base64 =>
+            val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
+            val Array(user, password) = userPassword.stripPrefix(ArchPrefix + ":").split(":", 2)
+            archUser(user, Some(password))
+          }
       }
   }
 

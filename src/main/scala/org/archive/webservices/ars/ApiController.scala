@@ -1,7 +1,7 @@
 package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
-import org.archive.helge.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.{
   DerivationJobConf,
@@ -22,7 +22,7 @@ class ApiController extends BaseController {
       "finished" -> (instance.state == ProcessingState.Finished).asJson,
       "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
       val active = instance.active
-      Seq("activeStage" -> active.job.name.asJson, "activeState" -> active.stateStr.asJson) ++ {
+      Seq("activeStage" -> active.job.stage.asJson, "activeState" -> active.stateStr.asJson) ++ {
         active.queue match {
           case Some(queue) =>
             Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)

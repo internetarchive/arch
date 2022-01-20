@@ -7,7 +7,7 @@ import org.apache.tools.ant.{DefaultLogger, Project}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
-import org.archive.helge.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.Sparkling.executionContext
 
 object SparkRunner {
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = Future {

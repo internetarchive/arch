@@ -6,7 +6,7 @@ import org.apache.commons.compress.compressors.bzip2.{
   BZip2CompressorInputStream,
   BZip2CompressorOutputStream
 }
-import org.archive.helge.sparkling.io.ByteArray
+import org.archive.webservices.sparkling.io.ByteArray
 
 object MemoryCompressor {
   val BufferSize = 1024
