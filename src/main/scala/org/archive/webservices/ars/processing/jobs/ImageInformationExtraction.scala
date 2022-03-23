@@ -8,7 +8,7 @@ import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.sparkling.http.HttpMessage
-import org.archive.webservices.sparkling.io.InputStreamForker
+import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
 import org.archive.webservices.sparkling.util.{Common, DigestUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}

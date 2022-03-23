@@ -22,7 +22,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
 
   val name = "Extract named entities"
   val category: ArchJobCategory = ArchJobCategories.Text
-  def description = "Creates Web Archive Named Entities (WANE) files which contain the named entities from each text resource, organized by originating URL and timestamp."
+  def description =
+    "Creates Web Archive Named Entities (WANE) files which contain the named entities from each text resource, organized by originating URL and timestamp."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"
@@ -67,6 +68,9 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
               },
               outPath,
               skipIfExists = true)
+          RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
+            for (file <- files) DerivativeOutput.hashFileHdfs(file)
+          }
           processed > 0
         }
     }

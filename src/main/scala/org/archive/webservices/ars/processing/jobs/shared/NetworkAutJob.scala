@@ -72,7 +72,7 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
     HdfsIO.writeLines(
-      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
+      outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
       overwrite = true)
 

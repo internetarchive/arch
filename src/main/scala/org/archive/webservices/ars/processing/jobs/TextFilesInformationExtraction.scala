@@ -88,7 +88,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         outPath + "/_" + jobPrefix + "-" + targetFile)
 
       HdfsIO.writeLines(
-        outPath + "/" + jobPrefix + "-" + targetFile + DerivativeOutput.lineCountFileSuffix,
+        outPath + "/" + jobPrefix + "-" + targetFile + DerivativeOutput.LineCountFileSuffix,
         Seq(data.count.toString),
         overwrite = true)
     }
@@ -145,6 +145,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         deleteSrcPath = true,
         prepare = prepareOutputStream) { tmpFile =>
         val outFile = outPath + "/" + jobPrefix + "-" + targetFile
+        DerivativeOutput.hashFileLocal(tmpFile, outFile)
         HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
         HdfsIO.exists(outFile)
       }

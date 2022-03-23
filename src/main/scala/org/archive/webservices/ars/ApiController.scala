@@ -1,7 +1,6 @@
 package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
-import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.{
   DerivationJobConf,
@@ -50,10 +49,16 @@ class ApiController extends BaseController {
           conf <- DerivationJobConf.collection(collectionId, sample)
         } yield {
           if (rerun) job.reset(conf)
-          val instance = job.enqueue(conf).getOrElse(job.history(conf))
-          instance.user = Some(user)
-          instance.collection = Some(collection)
-          jobStateResponse(instance)
+          val history = job.history(conf)
+          val queued =
+            if (history.state == ProcessingState.NotStarted) job.enqueue(conf) else None
+          queued match {
+            case Some(instance) =>
+              instance.user = Some(user)
+              instance.collection = Some(collection)
+              jobStateResponse(instance)
+            case None => jobStateResponse(history)
+          }
         }
       }.getOrElse(NotFound())
     }

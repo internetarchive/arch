@@ -38,27 +38,45 @@
     <div class="card">
       <div class="card-body">
         <h2 class="card-title">Download</h2>
-        <p>To download the files of this dataset, please use the <a href="https://github.com/WASAPI-Community/data-transfer-apis" target="_blank">WASAPI Data Transfer APIs</a> and follow the instructions <a href="https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI" target="_blank">here.</a></p>
+        <p>To download the files of this dataset, please use the <a href="https://github.com/WASAPI-Community/data-transfer-apis" target="_blank">WASAPI Data Transfer APIs</a> and follow the instructions <a href="https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI" target="_blank">here.</a>
+        </p>
         <p>The <a href="https://support.archive-it.org/hc/en-us/articles/360028548952" target="_blank">WASAPI result endpoint URL</a> of this dataset is:
           <br />
           <i><a href="<%=unescape(wasapiUrl)%>" target="_blank"><%=unescape(wasapiUrl)%></a></i>
         </p>
         <h3>Command line example</h3>
+        <hr />
+        <h4>Download files</h4>
         <p class="card-text" style="font-weight: bold;">
           $ <code style="font-weight: normal;">
             <% if (wasapiPages > 1) { %>
-              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&page=$i" | jq -r .files[].locations[0]; done > url.list
+              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r .files[].locations[0]; done &gt; url.list
               <% } else { %>
-              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r .files[].locations[0] > url.list
-              <% } %>
+              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r .files[].locations[0] &gt; url.list
+            <% } %>
           </code>
           <br />
           $ <code style="font-weight: normal;">
             wget -i url.list
           </code>
         </p>
-        </div>
+        <hr />
+        <h4>Validate files</h4>
+        <p class="card-text" style="font-weight: bold;">
+          $ <code style="font-weight: normal;">
+            <% if (wasapiPages > 1) { %>
+              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r '.files[] | .filename + "  " + .checksums[]' &gt; manifest
+              <% } else { %>
+              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r '.files[] | .filename + "  " + .checksums[]' &gt; manifest
+            <% } %>
+          </code>
+          <br />
+          $ <code style="font-weight: normal;">
+            md5sum -c manifest
+          </code>
+        </p>
       </div>
+    </div>
   </div>
 </div>
 

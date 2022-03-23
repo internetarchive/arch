@@ -4,7 +4,7 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.ars.LGA
 import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.util.RddUtil
+import org.archive.webservices.sparkling.util.{DigestUtil, RddUtil}
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
@@ -17,7 +17,8 @@ import scala.util.Try
 object ArsLgaGeneration extends ChainedJob with ArsJob {
   val name = "Extract longitudinal graph"
   val category: ArchJobCategory = ArchJobCategories.Network
-  def description = "Creates Longitudinal Graph Analysis (LGA) files which contain a complete list of what URLs link to what URLs, along with a timestamp."
+  def description =
+    "Creates Longitudinal Graph Analysis (LGA) files which contain a complete list of what URLs link to what URLs, along with a timestamp."
 
   val relativeOutPath = s"/$id"
   val MapFile = "id.map.gz"
@@ -79,6 +80,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
         deleteSrcFiles = true,
         deleteSrcPath = true) { tmpFile =>
         val outFile = conf.outputPath + relativeOutPath + "/" + MapFile
+        DerivativeOutput.hashFileLocal(tmpFile, outFile)
         HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
         HdfsIO.exists(outFile)
       } && IOHelper.concatLocal(
@@ -88,6 +90,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
         deleteSrcFiles = true,
         deleteSrcPath = true) { tmpFile =>
         val outFile = conf.outputPath + relativeOutPath + "/" + GraphFile
+        DerivativeOutput.hashFileLocal(tmpFile, outFile)
         HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
         HdfsIO.exists(outFile)
       }
