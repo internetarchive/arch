@@ -35,6 +35,10 @@
                   <br />
                 <% } %>
                 <strong>Date completed</strong>: <%=file.timeStr.take(10)%>
+                <% if (file.checksums.nonEmpty) { %>
+                  <br />
+                  <strong>Checksum<%=(if (file.checksums.size > 1) "s" else "")%></strong>: <%=file.checksums.map{case (k,v) => k + ":" + v}.mkString(", ")%>
+                <% } %>
               </p>
             </div>
             <div class="dataset-download">

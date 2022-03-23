@@ -6,6 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.DigestUtil
 import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
@@ -33,7 +34,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
 
     HdfsIO.writeLines(
-      outPath + "/" + targetFile + DerivativeOutput.lineCountFileSuffix,
+      outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
       overwrite = true)
   }
@@ -59,6 +60,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       deleteSrcPath = true,
       prepare = prepareOutputStream) { tmpFile =>
       val outFile = outPath + "/" + targetFile
+      DerivativeOutput.hashFileLocal(tmpFile, outFile)
       HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
       HdfsIO.exists(outFile)
     }

@@ -4,15 +4,16 @@ import java.io.InputStream
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
+import org.archive.webservices.sparkling.util.{CleanupIterator, Common, IteratorUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 
 object CollectionLoader {
-  val WasapiPageSize = 10
-  val CoalescePartitions = 1000
+  val WasapiPageSize = 100
+  val TargetPartitions = 1000
+  val RetrySleepMillis = 5000
 
   def loadWarcFiles(id: String, inputPath: String): RDD[(String, InputStream)] = {
     CollectionSpecifics.get(id) match {
@@ -20,7 +21,7 @@ object CollectionLoader {
         specifics.loadWarcFiles(inputPath)
       case None => loadWarcFiles(inputPath)
     }
-  }.coalesce(CoalescePartitions)
+  }.coalesce(TargetPartitions)
 
   def loadWarcsWithPath(
       id: String,
@@ -76,11 +77,17 @@ object CollectionLoader {
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
       val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&collection=" + aitId + "&page_size="
-      val apiFileCount = Ait
-        .getJsonWithAuth(wasapiUrl + 1, basicAuth = basicAuth) { json =>
-          json.get[Int]("count").toOption
+      var apiFileCount = -1
+      while (apiFileCount < 0) {
+        Ait
+          .getJsonWithAuth(wasapiUrl + 1, basicAuth = basicAuth) { json =>
+            json.get[Int]("count").toOption
+          } match {
+          case Right(i) => apiFileCount = i
+          case Left(status) =>
+            if (status / 100 != 5) Thread.sleep(RetrySleepMillis) else apiFileCount = 0
         }
-        .getOrElse(0)
+      }
       val hdfsFileCount = hdfsHostPort
         .map { case (host, port) => HdfsIO(host, port) }
         .getOrElse(HdfsIO)
@@ -98,27 +105,36 @@ object CollectionLoader {
             RddUtil
               .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
               .flatMap { idx =>
-                Ait
-                  .getJsonWithAuth(
-                    wasapiUrl + WasapiPageSize + "&page=" + (idx + 1),
-                    basicAuth = basicAuth) { json =>
-                    json
-                      .downField("files")
-                      .values
-                      .map(_.flatMap { fileJson =>
-                        val fileCursor = fileJson.hcursor
-                        for {
-                          filename <- fileCursor.get[String]("filename").toOption
-                          location <- fileCursor
-                            .downField("locations")
-                            .values
-                            .flatMap(_.flatMap(_.asString).find(
-                              _.startsWith("https://warcs.archive-it.org")))
-                        } yield (filename, location)
-                      })
+                var wasapiOpt: Option[Iterable[(String, String)]] = None
+                while (wasapiOpt.isEmpty) {
+                  Ait
+                    .getJsonWithAuth(
+                      wasapiUrl + WasapiPageSize + "&page=" + (idx + 1),
+                      basicAuth = basicAuth) { json =>
+                      json
+                        .downField("files")
+                        .values
+                        .map(_.flatMap { fileJson =>
+                          val fileCursor = fileJson.hcursor
+                          for {
+                            filename <- fileCursor.get[String]("filename").toOption
+                            location <- fileCursor
+                              .downField("locations")
+                              .values
+                              .flatMap(_.flatMap(_.asString).find(
+                                _.startsWith("https://warcs.archive-it.org")))
+                          } yield (filename, location)
+                        })
+                    } match {
+                    case Right(iter) => wasapiOpt = Some(iter)
+                    case Left(status) =>
+                      if (status / 100 == 5) Thread.sleep(RetrySleepMillis)
+                      else wasapiOpt = Some(Iterable.empty[(String, String)])
                   }
-                  .getOrElse(Iterator.empty)
+                }
+                wasapiOpt.get
               }
+              .repartition(TargetPartitions)
               .mapPartitions { partition =>
                 var prev: Option[InputStream] = None
                 val hdfsIO = hdfsHostPort
@@ -138,19 +154,22 @@ object CollectionLoader {
                             if (HdfsIO.exists(cacheFilePath))
                               Some((inputFilePath, cacheFilePath, false))
                             else {
-                              Ait.getWithAuth(
-                                location,
-                                contentType = "*/*",
-                                basicAuth = basicAuth) { in =>
-                                val out =
-                                  HdfsIO.out(cacheFilePath, compress = false, overwrite = true)
-                                try {
-                                  IOUtil.copy(in, out)
-                                  Some((inputFilePath, cacheFilePath, false))
-                                } finally {
-                                  out.close()
+                              Ait
+                                .getWithAuth(location, contentType = "*/*", basicAuth = basicAuth) {
+                                  in =>
+                                    val out =
+                                      HdfsIO.out(
+                                        cacheFilePath,
+                                        compress = false,
+                                        overwrite = true)
+                                    try {
+                                      IOUtil.copy(in, out)
+                                      Some((inputFilePath, cacheFilePath, false))
+                                    } finally {
+                                      out.close()
+                                    }
                                 }
-                              }
+                                .toOption
                             }
                           }
                         }

@@ -71,6 +71,7 @@ class WasapiController extends BaseController {
                         "collection" -> collectionId.asJson,
                         "filename" -> file.filename.asJson,
                         "filetype" -> file.fileType.asJson,
+                        "checksums" -> file.checksums.asJson,
                         "locations" -> Seq(locationUrl).asJson,
                         "size" -> file.size.asJson).asJson
                     }.asJson).asJson.spaces4,

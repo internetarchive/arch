@@ -34,6 +34,7 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
         "/api/collection?id=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
         Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
+      .toOption
       .flatMap(_.headOption)
   }
 
@@ -115,6 +116,7 @@ object AitCollectionSpecifics {
         Ait
           .getJson("/api/collection?id=" + aitId, basicAuth = ArchConf.foreignAitAuthHeader)(c =>
             parseCollections(c.values.toIterator.flatten).headOption)
+          .toOption
       }
   }
 }

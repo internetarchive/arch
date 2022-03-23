@@ -46,7 +46,7 @@ object Ait {
           request.getSession.setAttribute(UserSessionAttribute, user)
           user
         }
-      }
+      }.toOption
     }
   }
 
@@ -65,7 +65,7 @@ object Ait {
           userName,
           user.get[String]("full_name").toOption.getOrElse(userName),
           user.get[String]("email").toOption)
-    }
+    }.toOption
   }
 
   def login(username: String, password: String, response: HttpServletResponse)(
@@ -154,7 +154,7 @@ object Ait {
     }
 
   def get[R](path: String, contentType: String = "text/html", basicAuth: Option[String] = None)(
-      action: InputStream => Option[R])(implicit request: HttpServletRequest): Option[R] = {
+      action: InputStream => Option[R])(implicit request: HttpServletRequest): Either[Int, R] = {
     getWithAuth(path, contentType, sessionId, basicAuth)(action)
   }
 
@@ -162,21 +162,28 @@ object Ait {
       path: String,
       contentType: String = "text/html",
       sessionId: Option[String] = None,
-      basicAuth: Option[String] = None)(action: InputStream => Option[R]): Option[R] = {
+      basicAuth: Option[String] = None)(action: InputStream => Option[R]): Either[Int, R] = {
     val ait = new URL(
       if (path.startsWith("https:")) path
       else "https://partner.archive-it.org" + path).openConnection
       .asInstanceOf[HttpURLConnection]
+    ait.setInstanceFollowRedirects(true)
     try {
       for (sid <- sessionId) ait.setRequestProperty("Cookie", AitSessionCookie + "=" + sid)
       for (auth <- basicAuth) ait.setRequestProperty("Authorization", auth)
       ait.setRequestProperty("Accept", contentType)
-      val in = ait.getInputStream
-      try {
-        action(in)
-      } finally {
-        Try(in.close())
-      }
+      val status = ait.getResponseCode
+      if (status / 100 == 2) {
+        val in = ait.getInputStream
+        try {
+          action(in) match {
+            case Some(r) => Right(r)
+            case None => Left(-1)
+          }
+        } finally {
+          Try(in.close())
+        }
+      } else Left(status)
     } catch {
       case e: Exception =>
         e.printStackTrace()
@@ -190,14 +197,14 @@ object Ait {
       path: String,
       contentType: String = "text/html",
       basicAuth: Option[String] = None)(action: String => Option[R])(
-      implicit request: HttpServletRequest): Option[R] =
+      implicit request: HttpServletRequest): Either[Int, R] =
     getStringWithAuth(path, contentType, sessionId, basicAuth)(action)
 
   def getStringWithAuth[R](
       path: String,
       contentType: String = "text/html",
       sessionId: Option[String] = None,
-      basicAuth: Option[String] = None)(action: String => Option[R]): Option[R] =
+      basicAuth: Option[String] = None)(action: String => Option[R]): Either[Int, R] =
     getWithAuth(path, contentType, sessionId, basicAuth) { in =>
       val source = Source.fromInputStream(in, "utf-8")
       try {
@@ -208,14 +215,14 @@ object Ait {
     }
 
   def getJson[R](path: String, basicAuth: Option[String] = None)(action: HCursor => Option[R])(
-      implicit request: HttpServletRequest): Option[R] = {
+      implicit request: HttpServletRequest): Either[Int, R] = {
     getJsonWithAuth(path, sessionId, basicAuth)(action)
   }
 
   def getJsonWithAuth[R](
       path: String,
       sessionId: Option[String] = None,
-      basicAuth: Option[String] = None)(action: HCursor => Option[R]): Option[R] =
+      basicAuth: Option[String] = None)(action: HCursor => Option[R]): Either[Int, R] =
     getStringWithAuth(path, "application/json", sessionId, basicAuth) { str =>
       parse(str).right.toOption.flatMap { json =>
         action(json.hcursor)
