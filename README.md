@@ -1,28 +1,44 @@
-# Archive-It Research Services Cloud
 
-A template for the integration of Archives Unleashed (AU) with Archive-It (AIT), designed as an independent web app, communicating with AIT only via APIs and direct HDFS access.
+![ARCH](https://user-images.githubusercontent.com/218561/160126144-2163c931-a8d4-49db-a3c0-cc5a6b4d8e0f.png)
 
-Demo running under https://webdata.archive-it.org/ait
+# Archives Research Compute Hub
 
-## Accomplishments
+[![Scala version](https://img.shields.io/badge/Scala%20version-2.12.8-blue)](https://scala-lang.org/)
+[![Scalatra version](https://img.shields.io/badge/Scalatra%20version-2.5.4-blue)](https://scalatra.org/)
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](./LICENSE)
 
-☑ Code compatibility with Java 11  
-☑ AUT integrated ([PR](https://github.com/archivesunleashed/aut/pull/510)), first job migrated ([WebPagesExtraction](src/main/scala/org/archive/webservices/ars/processing/jobs/FileCountAndSize.scala))   
-☑ Making use of Sparkling's WARC loader   
-☑ Chained jobs (e.g., Spark ➡ shell post-processing)    
-☑ Separation of queues (Spark, Generic, ...)  
-☑ Working Dockerfile
+## About
 
-## Docker
+Web application for distributed compute analysis of Archive-It web archive collections.
 
-1. `git clone git@github.com:helgeho/ars-cloud.git`
-2. `cd ars-cloud`
-3. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
-4. `docker build --no-cache -t ars-cloud .`
-5. `docker run -ti --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/ars-cloud:/data -v /home/nruest/Projects/au/ars-cloud:/app ars-cloud`
-6. Open [http://localhost:12341/ait](http://localhost:12341/ait)
-7. Open [http://localhost:54040](http://localhost:54040)
+## Building
 
-## Build
+### Production
 
-`sbt "prod/clean" "prod/assembly" "prod/assemblyPackageDependency"`
+* `sbt "prod/clean" "prod/assembly" "prod/assemblyPackageDependency"`
+
+### Docker
+
+1. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
+2. `docker build --no-cache -t ars-cloud .`
+3. `docker run -ti --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/ars-cloud:/data -v /home/nruest/Projects/au/ars-cloud:/app ars-cloud`
+
+Web application will be available at: [http://localhost:12341/ait](http://localhost:12341/ait), and Apache Spark interface will be available at [http://localhost:54040](http://localhost:54040).
+
+## Citing ARCH
+
+How to cite the ARCH in your research:
+
+> Holzmann, Helge, **Ruest, Nick**, Bailey, Jefferson, Dempsey, Alex, Fritz, Samantha, Lee, Peggy, and Milligan, Ian. ABCDEF - The 6 key features behind scalable, multi-tenant web archive processing with ARCH: Archive, Big Data, Concurrent, Distributed, Efficient, Flexible. Proceedings of the 2022 IEEE/ACM Joint Conference on Digital Libraries (JCDL 2022), Cologne, Germany.
+
+Your citations help to further the recognition of using open-source tools for scientific inquiry, assists in growing the web archiving community, and acknowledges the efforts of contributors to this project.
+
+## License
+
+[MIT](/LICENSE)
+
+## Acknowledgments
+
+This work is primarily supported by the [Andrew W. Mellon Foundation](https://mellon.org/). Other financial and in-kind support comes from the [Social Sciences and Humanities Research Council](http://www.sshrc-crsh.gc.ca/), [Compute Canada](https://www.computecanada.ca/), [York University Libraries](https://www.library.yorku.ca/web/), [Start Smart Labs](http://www.startsmartlabs.com/), and the [Faculty of Arts](https://uwaterloo.ca/arts/) at the [University of Waterloo](https://uwaterloo.ca/).
+
+Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.

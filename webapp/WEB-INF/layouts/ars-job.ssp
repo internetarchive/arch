@@ -67,7 +67,7 @@
             <% if (wasapiPages > 1) { %>
               for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r '.files[] | .filename + "  " + .checksums[]' &gt; manifest
               <% } else { %>
-              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r '.files[] | .filename + "  " + .checksums[]' &gt; manifest
+              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r '.files[] | .checksums[] + "  " + .filename' &gt; manifest
             <% } %>
           </code>
           <br />
@@ -85,7 +85,7 @@
     <h1>Re-run job?</h1>
     <div class="card" id="card-re-run-job">
       <div class="card-body">
-      <p>Have you or a member of your team run additional crawls since the last job was run, and you would like to re-run this job? Please note that the existing derivatives will be permanently deleted.</p>
+      <p>Have you or a member of your team run additional crawls since the last job was run, and would you like to re-run this job including this new data? Please note that the <strong>existing derivatives will be permanently deleted</strong>.</p>
       <button class="job-rerunbutton">Re-run Job</button>
       </div>
     </div>

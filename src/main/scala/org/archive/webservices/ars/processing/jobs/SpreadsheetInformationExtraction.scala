@@ -14,6 +14,7 @@ object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
   val targetFile: String = "spreadsheet-information.csv.gz"
 
   val SpreadsheetMimeTypes: Set[String] = Set(
+    " application/vnd.apple.numbers",
     "application/vnd.ms-excel",
     "application/vnd.ms-excel.workspace.3",
     "application/vnd.ms-excel.workspace.4",

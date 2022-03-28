@@ -55,7 +55,7 @@
     </script>
 
     <div id="summary-empty">
-      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">start new job</a>.
+      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">generate a new dataset</a>.
     </div>
 
     <div id="summary-running">
@@ -68,8 +68,7 @@
             <thead>
               <tr>
                 <th>Job</th>
-                <th>Stage</th>
-                <th>Queue</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -78,20 +77,18 @@
                   <td style="font-style: italic;">
                     <%=instance.job.name%>
                   </td>
-                  <td class="running-td-active-stage">-</td>
                   <td class="running-td-state">-</td>
                 </tr>
                 <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-sample">
                   <td style="font-style: italic;">
                     <%=instance.job.name%> (Example)
                   </td>
-                  <td class="running-td-active-stage">-</td>
                   <td class="running-td-state">-</td>
                 </tr>
               <% } %>
           </table>
           <div class="new-job-link">
-            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Start new job</a>
+            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate a new dataset</a>
           </div>
         </div>
       </div>
@@ -130,9 +127,6 @@
               <% } %>
             </tbody>
           </table>
-          <div class="new-job-link">
-            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Start new job</a>
-          </div>
         </div>
       </div>
     </div>

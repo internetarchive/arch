@@ -30,8 +30,13 @@
 
 <div class="row page-tab" id="jobs-tab">
   <div class="large-12 columns">
-    <p>Example datasets can be used to ensure analysis will produce desired data, and uses the first 100 relative records from the collection if they are available. We strongly recommend running example jobs on any collections over 100GB.</p>
-    <hr />
+    <div class="alert alert-secondary alert-dismissible fade show" role="alert">
+      <br />
+      <p>Example datasets can be quickly generated in order to ensure that the analysis will produce datasets that meet your needs. These datasets use the first 100 relative records from the collection if they are available. We strongly recommend running example jobs on any collections over 100GB.</p>
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="background-color: transparent;">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
     <%
       import org.archive.webservices.ars.model._
       for (((category, categoryDescription, categoryImage), categoryIdx) <- Seq(
@@ -75,6 +80,8 @@
 
 <script>
   $(function() {
+    $('.alert').alert()
+
     <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
       arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
       arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);

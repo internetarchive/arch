@@ -36,7 +36,7 @@
           </div>
         </p>
         <div class="graph-description">
-          <p>This graph shows the top 10 domains that occur in this collection.</p>
+          <p>This graph shows the top 10 domains and the number of times that they occur in this collection.</p>
         </div>
       </div>
     </div>
