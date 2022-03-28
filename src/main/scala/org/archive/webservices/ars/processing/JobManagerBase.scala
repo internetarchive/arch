@@ -6,8 +6,8 @@ import org.archive.webservices.ars.processing.SparkJobManager.run
 import org.archive.webservices.sparkling.Sparkling.executionContext
 
 class JobManagerBase(name: String, maxJobsRunning: Int = 5, timeoutSeconds: Int = -1) {
-  private val mainQueue = new JobQueue(name + " Queue")
-  private val sampleQueue = new JobQueue(name + " Sample Queue")
+  private val mainQueue = new JobQueue("Queue")
+  private val sampleQueue = new JobQueue("Example Queue")
 
   private val running = collection.mutable.Queue.empty[(DerivationJobInstance, Long)]
 

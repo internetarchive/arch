@@ -6,7 +6,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract Word Documents (all software types) information"
+  val name = "Extract Word Documents (e.g., .doc, .odt, .rtf, .wpd) information"
 
   val description =
     "Create a CSV with the following columns: crawl date, URL of the word document or similar file, filename, word document or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, word document or similar file MD5 hash and word document or similar file SHA1 hash."
