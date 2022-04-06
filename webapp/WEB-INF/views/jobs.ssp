@@ -39,16 +39,16 @@
     </div>
     <%
       import org.archive.webservices.ars.model._
-      for (((category, categoryDescription, categoryImage), categoryIdx) <- Seq(
-          (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "ait/img/collection.png"),
-          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png"),
-          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", named entities, HTML, css, and other web elements.", "ait/img/text.png"),
-          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png")
+      for (((category, categoryDescription, categoryImage, categoryId), categoryIdx) <- Seq(
+          (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "ait/img/collection.png", "collection"),
+          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png", "network"),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", named entities, HTML, css, and other web elements.", "ait/img/text.png", "text"),
+          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png", "file-formats")
       ).zipWithIndex) { %>
-      <div class="job-category <%=unescape(if (categoryIdx == 0) "expanded" else "collapsed")%>">
+      <div class="job-category <%=unescape(if (categoryIdx == 0) "expanded" else "collapsed")%>" aria-controls="<%=category%>" aria-expanded="<%=unescape(if (categoryIdx == 0) "true" else "false")%>">
         <div class="category-wrapper">
           <img class="category-image" src="<%=categoryImage%>" alt="Icon for <%=category%>" />
-          <h2 class="category-title"><%=category%></h2>
+          <h2 id="<%=categoryId%>" class="category-title"><%=category%></h2>
           <p><%=categoryDescription%></p>
         </div>
         <div class="collapsible-content">
@@ -80,22 +80,48 @@
 
 <script>
   $(function() {
+    /* Dismissible info box. */
     $('.alert').alert()
 
+    /* Start jobs. */
     <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
       arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
       arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
     <% } %>
 
+    /* Expandable job categories. */
     $jobCategories = $(".job-category");
 
     $(".category-wrapper").click(function () {
       $jobCategories.removeClass("expanded");
       $jobCategories.addClass("collapsed");
       var $thisCategory = $(this).parent(".job-category");
+      window.location.hash = $(this)[0].getElementsByTagName("h2")[0].id;
       $thisCategory.removeClass("collapsed");
       $thisCategory.addClass("expanded");
       $("html").animate({ scrollTop: parseInt($thisCategory.offset().top) - 100}, 200);
+    });
+
+    /* Expand job category for uri fragments. */
+    var uri = new URI();
+    if (uri.fragment()) {
+      $jobCategories.removeClass("expanded");
+      $jobCategories.addClass("collapsed");
+      var $thisCategory = $(this.getElementById(uri.fragment())).parent(".category-wrapper").parent(".job-category");
+      $thisCategory.removeClass("collapsed");
+      $thisCategory.addClass("expanded");
+      $("html").animate({ scrollTop: parseInt($thisCategory.offset().top) - 100}, 200);
+    }
+
+    /* Add permanent link for job category headers. */
+    $('h2').each(function() {
+    var jobHeader = $(this).attr('id');
+    if (jobHeader) {
+      $(this).append($('<a/>', {
+        href: window.location.href.split('#')[0] + '#' + $(this).attr('id'),
+        text: ' #'
+      }));
+    }
     });
   });
 </script>
