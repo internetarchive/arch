@@ -20,8 +20,8 @@ Web application for distributed compute analysis of Archive-It web archive colle
 ### Docker
 
 1. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
-2. `docker build --no-cache -t ars-cloud .`
-3. `docker run -ti --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/ars-cloud:/data -v /home/nruest/Projects/au/ars-cloud:/app ars-cloud`
+2. `docker build --no-cache -t arch .`
+3. `docker run -it --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/arch:/data -v /home/nruest/Projects/au/arch:/app arch`
 
 Web application will be available at: [http://localhost:12341/ait](http://localhost:12341/ait), and Apache Spark interface will be available at [http://localhost:54040](http://localhost:54040).
 
