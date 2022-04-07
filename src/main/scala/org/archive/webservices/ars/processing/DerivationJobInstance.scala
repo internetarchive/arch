@@ -62,10 +62,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
       }
       if (state == ProcessingState.Finished) {
         info = info.setFinishedTime(now)
-        val nameSuffix = if (conf.sample < 0) "" else " (Sample)"
         ArchCollectionInfo
           .get(conf.collectionId)
-          .setLastJob(job.name + nameSuffix, now)
+          .setLastJob(job.id, conf.isSample, now)
           .save()
         for {
           u <- user

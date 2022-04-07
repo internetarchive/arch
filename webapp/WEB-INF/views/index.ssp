@@ -46,7 +46,7 @@
               </a>
             </td>
             <td class="ng-scope">
-              <%=if (collection.public) {"Yes"} else {"No"}%>
+              <%= if (collection.public) "Yes" else "No" %>
             </td>
             <td class="ng-scope collection-lastjob-name">
               <span class="spinner small"></span>
@@ -59,7 +59,7 @@
             </td>
           </tr>
           <script>
-            arch.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>");
+            arch.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>");
           </script>
         <% } %>
       </tbody>

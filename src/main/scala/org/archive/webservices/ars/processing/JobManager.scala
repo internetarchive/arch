@@ -50,6 +50,10 @@ object JobManager {
     job.id -> job
   }: _*)
 
+  val nameLookup: Map[String, DerivationJob] = registeredJobs.map { job =>
+    job.name -> job
+  }.toMap
+
   def get(id: String): Option[DerivationJob] = jobs.get(id)
 
   def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
