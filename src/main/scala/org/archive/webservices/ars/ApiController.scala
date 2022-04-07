@@ -103,14 +103,21 @@ class ApiController extends BaseController {
               ListMap(
                 "id" -> collection.id.asJson,
                 "name" -> collection.name.asJson,
-                "public" -> collection.public.asJson)
-              info.lastJobName.map("lastJobName" -> _.asJson).toMap ++
+                "public" -> collection.public.asJson) ++ {
+                info.lastJobId.map("lastJobId" -> _.asJson).toMap
+              } ++ {
+                info.lastJobSample.map("lastJobSample" -> _.asJson).toMap
+              } ++ {
+                info.lastJobName.map("lastJobName" -> _.asJson).toMap
+              } ++ {
                 info.lastJobTime
                   .map("lastJobTime" -> FormatUtil.instantTimeString(_).asJson)
-                  .toMap ++
+                  .toMap
+              } ++ {
                 ListMap(
                   "size" -> FormatUtil.formatBytes(collection.size).asJson,
                   "sortSize" -> collection.size.asJson)
+              }
             }.asJson.spaces4,
             Map("Content-Type" -> "application/json"))
         case None =>
