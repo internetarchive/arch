@@ -37,6 +37,13 @@
         <span aria-hidden="true">&times;</span>
       </button>
     </div>
+    <div class="alert alert-primary alert-dismissible fade" role="alert" id="email-alert">
+      <br />
+      <p>Your job has been queued. An e-mail will be sent to <%=user.email%> once it is complete.</p>
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="background-color: transparent;">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
     <%
       import org.archive.webservices.ars.model._
       for (((category, categoryDescription, categoryImage, categoryId), categoryIdx) <- Seq(
@@ -80,6 +87,13 @@
 
 <script>
   $(function() {
+
+    /* Email alert. */
+    $("#email-alert").hide()
+    $(".job-runbutton.job-button").click(function(){
+      $("#email-alert").show()
+    })
+
     /* Dismissible info box. */
     $('.alert').alert()
 
