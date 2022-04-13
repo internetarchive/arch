@@ -1,5 +1,5 @@
 
-![ARCH](https://user-images.githubusercontent.com/218561/160126144-2163c931-a8d4-49db-a3c0-cc5a6b4d8e0f.png)
+![ARCH](https://user-images.githubusercontent.com/218561/163066221-c279c19c-855e-4040-af60-efe8a99b8c4f.png)
 
 # Archives Research Compute Hub
 
