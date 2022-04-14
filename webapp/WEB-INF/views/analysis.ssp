@@ -30,24 +30,38 @@
 
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
-    <h2>Collection overview</h2>
+    <h2>Collection Overview</h2>
     <div class="card">
       <div class="card-body">
         <div class="job-card-flex">
+          <% if (collection.id.startsWith("ARCHIVEIT")) { %>
+            <div class="job-card-sample">
+              <h4><span class="collection-seeds"></span> seeds</h4>
+              <p><i class="fa fa-files-o fa-4x" aria-hidden="true"></i></p>
+            </div>
+            <div class="job-card-full">
+              <h4>Crawled <span class="collection-last-crawl-date"></span></h4>
+              <p><i class="fa fa-calendar-o fa-4x" aria-hidden="true"></i></p>
+            </div>
+          <% } %>
           <div class="job-card-sample">
-            <h3><span class="collection-size"></span></h3>
+            <h4><span class="collection-size"></span></h4>
             <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
           </div>
           <div class="job-card-full">
             <% if (collection.public) { %>
-              <h3>Public Collection</h3>
+              <h4>Public Collection</h4>
               <p><i class="fa fa-unlock fa-4x" aria-hidden="true"></i></p>
             <% } else { %>
-              <h3>Private Collection</h3>
+              <h4>Private Collection</h4>
               <p><i class="fa fa-lock fa-4x" aria-hidden="true"></i></p>
             <% } %>
           </div>
         </div>
+        <% if (collection.id.startsWith("ARCHIVEIT")) { %>
+          <br />
+          <p class="text-center">Public Collection Link: <a href="https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%>" target="_blank">https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%></a></p>
+        <% } %>
       </div>
     </div>
     <script>

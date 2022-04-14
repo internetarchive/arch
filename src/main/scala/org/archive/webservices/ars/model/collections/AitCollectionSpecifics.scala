@@ -38,6 +38,26 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
       .flatMap(_.headOption)
   }
 
+  def seeds(implicit request: HttpServletRequest): Int = {
+    Ait
+      .getJson(
+        "/api/seed?__count=id&active=true&deleted=false&limit=-1&collection=" + aitId,
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
+        _.get[Int]("id__count").toOption)
+      .getOrElse(-1)
+  }
+
+  def lastCrawlDate(implicit request: HttpServletRequest): String = {
+    Ait
+      .getJson(
+        "/api/crawl_job_run?__group=collection&__max=processing_end_date&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
+        _.downField("groups").downArray
+          .get[String]("processing_end_date__max")
+          .toOption)
+      .getOrElse("")
+  }
+
   def size(implicit request: HttpServletRequest): Long = {
     Ait
       .getJson(

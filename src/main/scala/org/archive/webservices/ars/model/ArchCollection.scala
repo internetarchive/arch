@@ -18,12 +18,22 @@ case class ArchCollection(id: String, name: String, public: Boolean) {
   def ensureStats()(implicit request: HttpServletRequest): Unit = {
     if (!statsLoaded) {
       statsLoaded = true
-      for (c <- CollectionSpecifics.get(id)) _size = c.size
+      for (c <- CollectionSpecifics.get(id)) {
+        _size = c.size
+        _seeds = c.seeds
+        _lastCrawlDate = c.lastCrawlDate
+      }
     }
   }
 
   private var _size: Long = -1
   def size: Long = _size
+
+  private var _seeds: Int = -1
+  def seeds: Int = _seeds
+
+  private var _lastCrawlDate: String = ""
+  def lastCrawlDate: String = _lastCrawlDate
 }
 
 object ArchCollection {

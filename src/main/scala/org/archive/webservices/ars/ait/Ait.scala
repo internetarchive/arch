@@ -59,12 +59,11 @@ object Ait {
       val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
-      } yield
-        AitUser(
-          id,
-          userName,
-          user.get[String]("full_name").toOption.getOrElse(userName),
-          user.get[String]("email").toOption)
+      } yield AitUser(
+        id,
+        userName,
+        user.get[String]("full_name").toOption.getOrElse(userName),
+        user.get[String]("email").toOption)
     }.toOption
   }
 

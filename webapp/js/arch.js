@@ -27,6 +27,8 @@ var arch = (function () {
         var $lastJobNameCell = $container.find(".collection-lastjob-name");
         var $lastJobTimeCell = $container.find(".collection-lastjob-time");
         var $sizeCell = $container.find(".collection-size");
+        var $seedsCell = $container.find(".collection-seeds");
+        var $lastCrawlDateCell = $container.find(".collection-last-crawl-date");
 
         var url = "/ait/api/collection/" + collectionId;
         activeRequests[url] = $.getJSON(url, function (json) {
@@ -40,6 +42,9 @@ var arch = (function () {
             $lastJobTimeCell.text(json.lastJobTime || "-");
             $sizeCell.text(json.size);
             $sizeCell.attr("sorttable_customkey", json.sortSize);
+            $seedsCell.text(json.seeds);
+            var lastCrawlDate = new Date(json.lastCrawlDate);
+            $lastCrawlDateCell.text(lastCrawlDate.toLocaleDateString('en-us', {year:"numeric", month:"short", day:"numeric"}));
         });
     }
 

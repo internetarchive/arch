@@ -36,7 +36,11 @@ case class DerivativeOutput(filename: String, dir: String, fileType: String, mim
   lazy val checksums: Map[String, String] = {
     val p = path + ChecksumsFileSuffix
     if (HdfsIO.exists(p))
-      parser.decode[Map[String, String]](HdfsIO.lines(p).mkString).right.toOption.getOrElse(Map.empty)
+      parser
+        .decode[Map[String, String]](HdfsIO.lines(p).mkString)
+        .right
+        .toOption
+        .getOrElse(Map.empty)
     else Map.empty
   }
 
@@ -51,7 +55,11 @@ object DerivativeOutput {
 
   def hashFile(in: InputStream): Map[String, String] = Map("md5" -> DigestUtil.md5Hex(in))
 
-  def hashFile(in: InputStream, hdfsPath: String): Unit = HdfsIO.writeLines(hdfsPath + ChecksumsFileSuffix, Seq(hashFile(in).asJson.spaces4), overwrite = true)
+  def hashFile(in: InputStream, hdfsPath: String): Unit =
+    HdfsIO.writeLines(
+      hdfsPath + ChecksumsFileSuffix,
+      Seq(hashFile(in).asJson.spaces4),
+      overwrite = true)
 
   def hashFileLocal(localPath: String, hdfsPath: String): Unit = {
     val in = new BufferedInputStream(new FileInputStream(localPath))
@@ -62,5 +70,6 @@ object DerivativeOutput {
     }
   }
 
-  def hashFileHdfs(hdfsPath: String): Unit = HdfsIO.access(hdfsPath, decompress = false)(hashFile(_, hdfsPath))
+  def hashFileHdfs(hdfsPath: String): Unit =
+    HdfsIO.access(hdfsPath, decompress = false)(hashFile(_, hdfsPath))
 }

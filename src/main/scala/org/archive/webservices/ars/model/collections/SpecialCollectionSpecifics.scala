@@ -32,6 +32,10 @@ class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
   def size(implicit request: HttpServletRequest): Long =
     HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength
 
+  def seeds(implicit request: HttpServletRequest): Int = -1
+
+  def lastCrawlDate(implicit request: HttpServletRequest): String = ""
+
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
     CollectionLoader.loadWarcFiles(inputPath)
 }
