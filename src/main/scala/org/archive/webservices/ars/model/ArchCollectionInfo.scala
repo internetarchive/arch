@@ -33,7 +33,10 @@ case class ArchCollectionInfo private (
       Seq((ListMap.empty[String, Json] ++ {
         lastJob.toSeq.flatMap {
           case (id, sample, time) =>
-            Seq("lastJobId" -> id.asJson, "lastJobSample" -> sample.asJson, "lastJobEpoch" -> time.asJson)
+            Seq(
+              "lastJobId" -> id.asJson,
+              "lastJobSample" -> sample.asJson,
+              "lastJobEpoch" -> time.asJson)
         }
       }).asJson.spaces4),
       overwrite = true)
@@ -55,15 +58,19 @@ object ArchCollectionInfo {
         parse(HdfsIO.lines(file).mkString).right.toOption.map(_.hcursor) match {
           case Some(cursor) =>
             val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
-              cursor.get[String]("lastJobId").toOption.map { id =>
-                (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
-              }.orElse {
-                cursor.get[String]("lastJobName").toOption.flatMap { name =>
-                  JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
-                    (job.id, name.endsWith(SampleNameSuffix), epoch)
+              cursor
+                .get[String]("lastJobId")
+                .toOption
+                .map { id =>
+                  (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
+                }
+                .orElse {
+                  cursor.get[String]("lastJobName").toOption.flatMap { name =>
+                    JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
+                      (job.id, name.endsWith(SampleNameSuffix), epoch)
+                    }
                   }
                 }
-              }
             }
             ArchCollectionInfo(collectionId, lastJob)
           case None => ArchCollectionInfo(collectionId)

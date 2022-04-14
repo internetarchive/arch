@@ -116,7 +116,9 @@ class ApiController extends BaseController {
               } ++ {
                 ListMap(
                   "size" -> FormatUtil.formatBytes(collection.size).asJson,
-                  "sortSize" -> collection.size.asJson)
+                  "sortSize" -> collection.size.asJson,
+                  "seeds" -> collection.seeds.asJson,
+                  "lastCrawlDate" -> collection.lastCrawlDate.asJson)
               }
             }.asJson.spaces4,
             Map("Content-Type" -> "application/json"))

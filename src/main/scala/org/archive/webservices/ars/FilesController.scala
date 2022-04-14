@@ -9,22 +9,34 @@ import org.scalatra.{ActionResult, Forbidden, NotFound, Ok, ResponseStatus}
 import scala.util.Try
 
 class FilesController extends BaseController {
-  private def sendFile(file: DerivativeOutput)(implicit request: HttpServletRequest): ActionResult = {
+  private def sendFile(file: DerivativeOutput)(
+      implicit request: HttpServletRequest): ActionResult = {
     val size = file.size
-    val rangeStrOpt = request.header("Range").map(_.trim).filter(_.startsWith("bytes=")).map(_.stripPrefix("bytes=").split(',').head.trim).filter(_.nonEmpty)
-    val range = rangeStrOpt.map { rangeStr =>
-      if (rangeStr.startsWith("-")) {
-        val len = Try(rangeStr.stripPrefix("-").toLong).toOption.getOrElse(0L)
-        (size - len, size - 1)
-      } else {
-        val split = rangeStr.split('-')
-        val from = split.headOption.flatMap(str => Try(str.toLong).toOption).getOrElse(0L)
-        val to = split.drop(1).headOption.flatMap(str => Try(str.toLong).toOption).getOrElse(0L)
-        (from.max(0L), to.min(size - 1))
+    val rangeStrOpt = request
+      .header("Range")
+      .map(_.trim)
+      .filter(_.startsWith("bytes="))
+      .map(_.stripPrefix("bytes=").split(',').head.trim)
+      .filter(_.nonEmpty)
+    val range = rangeStrOpt
+      .map { rangeStr =>
+        if (rangeStr.startsWith("-")) {
+          val len = Try(rangeStr.stripPrefix("-").toLong).toOption.getOrElse(0L)
+          (size - len, size - 1)
+        } else {
+          val split = rangeStr.split('-')
+          val from = split.headOption.flatMap(str => Try(str.toLong).toOption).getOrElse(0L)
+          val to = split.drop(1).headOption.flatMap(str => Try(str.toLong).toOption).getOrElse(0L)
+          (from.max(0L), to.min(size - 1))
+        }
       }
-    }.filter{case (from, to) => from >= 0 && to < size && to >= from && (to - from + 1) < size}
-    val (offset, length, status) = range.map{case (from, to) => (from, to - from  + 1, 206)}.getOrElse((0L, size, 200))
-    ActionResult(ResponseStatus(status),
+      .filter {
+        case (from, to) => from >= 0 && to < size && to >= from && (to - from + 1) < size
+      }
+    val (offset, length, status) =
+      range.map { case (from, to) => (from, to - from + 1, 206) }.getOrElse((0L, size, 200))
+    ActionResult(
+      ResponseStatus(status),
       HdfsIO.open(
         file.path,
         offset = offset,
@@ -35,8 +47,9 @@ class FilesController extends BaseController {
         "Content-Type" -> file.mimeType,
         "Accept-Ranges" -> "bytes",
         "Content-Disposition" -> ("attachment; filename=" + file.filename),
-        "Content-Length" -> length.toString) ++ range.map { case (from, to) =>
-        "Content-Range" -> s"bytes $from-$to/$size"
+        "Content-Length" -> length.toString) ++ range.map {
+        case (from, to) =>
+          "Content-Range" -> s"bytes $from-$to/$size"
       })
   }
 
