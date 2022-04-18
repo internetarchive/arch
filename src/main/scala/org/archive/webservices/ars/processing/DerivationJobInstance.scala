@@ -60,6 +60,25 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
       if (prevState == ProcessingState.NotStarted) {
         info = info.setStartTime(now)
       }
+      if (state == ProcessingState.Failed) {
+        info = info.setFinishedTime(now)
+        ArchCollectionInfo
+          .get(conf.collectionId)
+          .setLastJob(job.id, conf.isSample, now)
+          .save()
+        for {
+          u <- user
+        } {
+           MailUtil.sendTemplate(
+            "failed",
+            Map(
+              "jobName" -> job.name,
+              "jobId" -> job.id,
+              "collectionName" -> collection.map(_.name).getOrElse(conf.collectionId),
+              "accountId" -> u.urlId,
+              "userName" -> u.fullName))
+        }
+      }
       if (state == ProcessingState.Finished) {
         info = info.setFinishedTime(now)
         ArchCollectionInfo
