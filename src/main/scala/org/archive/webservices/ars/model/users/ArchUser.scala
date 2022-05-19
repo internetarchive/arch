@@ -2,9 +2,10 @@ package org.archive.webservices.ars.model.users
 
 import java.util.Base64
 
-import io.circe.parser
+import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.model.collections.AitCollectionSpecifics._foreignCollectionsCursor
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
 
@@ -30,15 +31,39 @@ object ArchUser {
 
   val NoUser = DefaultArchUser("", "", "", None, isAdmin = false, isLoggedIn = false)
 
-  private def archUser(name: String, password: Option[String] = None): Option[ArchUser] =
-    Try {
+  private var _archUsersCursor: Option[HCursor] = None
+  private def archUsersCursor: HCursor = _archUsersCursor.getOrElse {
+    _archUsersCursor = Some(Try {
       val source = Source.fromFile("data/arch-users.json", "utf-8")
       try {
         parser.parse(source.mkString).right.get.hcursor
       } finally {
         source.close()
       }
-    }.toOption
+    }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor))
+    _archUsersCursor.get
+  }
+
+  private var _aitUserIds: Option[Set[Int]] = None
+  private def aitUserIds: Set[Int] = _aitUserIds.getOrElse {
+    _aitUserIds = Some(Try {
+      val source = Source.fromFile("data/ait-users.json", "utf-8")
+      try {
+        parser.parse(source.mkString).right.get.hcursor.downField("ids").values.getOrElse(Iterator.empty).flatMap(_.asNumber.flatMap(_.toInt)).toSet
+      } finally {
+        source.close()
+      }
+    }.getOrElse(Set.empty))
+    _aitUserIds.get
+  }
+
+  def invalidateData(): Unit = {
+    _archUsersCursor = None
+    _aitUserIds = None
+  }
+
+  private def archUser(name: String, password: Option[String] = None): Option[ArchUser] =
+    Some(archUsersCursor)
       .map(_.downField(name.stripPrefix(ArchPrefix + "_")))
       .filter(password.isEmpty || _.get[String]("password")
         .contains("sha1:" + DigestUtil.sha1Base32(password.get)))
@@ -98,7 +123,7 @@ object ArchUser {
   def get(useSession: Boolean)(implicit request: HttpServletRequest): Option[ArchUser] = {
     Option(request.getSession.getAttribute(UserSessionAttribute))
       .map(_.asInstanceOf[ArchUser])
-      .orElse(Ait.user(useSession).map(AitArchUser(_)))
+      .orElse(Ait.user(useSession).filter(u => aitUserIds.contains(u.id)).map(AitArchUser(_)))
       .orElse {
         request
           .header("Authorization")

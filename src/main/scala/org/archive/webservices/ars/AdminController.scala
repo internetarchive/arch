@@ -29,6 +29,7 @@ class AdminController extends BaseController with ScalateSupport {
         "admin-edit",
         "user" -> user,
         "usersJson" -> IOUtil.lines("data/arch-users.json").mkString("\n"),
+        "aitUsersJson" -> IOUtil.lines("data/ait-users.json").mkString("\n"),
         "aitCollectionsJson" -> IOUtil.lines("data/ait-collections.json").mkString("\n"),
         "specialCollectionsJson" -> IOUtil
           .lines("data/special-collections.json")
@@ -49,17 +50,20 @@ class AdminController extends BaseController with ScalateSupport {
       if (user.isAdmin) {
         val r = for {
           usersJsonStr <- params.get("users-json")
+          aitUsersJsonStr <- params.get("ait-users-json")
           aitCollectionsJsonStr <- params.get("ait-collections-json")
           specialCollectionsJsonStr <- params.get("special-collections-json")
         } yield {
           parse(usersJsonStr).right.flatMap { usersJ =>
-            parse(aitCollectionsJsonStr).right.flatMap { aitJ =>
-              parse(specialCollectionsJsonStr).right.map((usersJ, aitJ, _))
+            parse(aitUsersJsonStr).right.flatMap { aitUsersJ =>
+              parse(aitCollectionsJsonStr).right.flatMap { aitJ =>
+                parse(specialCollectionsJsonStr).right.map((usersJ, aitUsersJ, aitJ, _))
+              }
             }
           } match {
             case Left(failure) =>
               renderEdit(user, Some(failure.getMessage))
-            case Right((usersJson, aitCollectionsJson, specialCollectionsJson)) =>
+            case Right((usersJson, aitUsersJson, aitCollectionsJson, specialCollectionsJson)) =>
               val usersCursor = usersJson.hcursor
               val usersJsonOut = usersCursor.keys.toIterator.flatten.flatMap { username =>
                 val userMap = usersCursor.downField(username)
@@ -82,10 +86,12 @@ class AdminController extends BaseController with ScalateSupport {
                 }
               }.toMap
               IOUtil.writeLines("data/arch-users.json", Seq(usersJsonOut.asJson.spaces4))
+              IOUtil.writeLines("data/ait-users.json", Seq(aitUsersJson.spaces4))
               IOUtil.writeLines("data/ait-collections.json", Seq(aitCollectionsJson.spaces4))
               IOUtil.writeLines(
                 "data/special-collections.json",
                 Seq(specialCollectionsJson.spaces4))
+              ArchUser.invalidateData()
               AitCollectionSpecifics.invalidateData()
               SpecialCollectionSpecifics.invalidateData()
               renderEdit(user)
