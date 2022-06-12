@@ -26,9 +26,9 @@ Web application will be available at: [http://localhost:12341/ait](http://localh
 
 ## Citing ARCH
 
-How to cite the ARCH in your research:
+How to cite ARCH in your research:
 
-> Holzmann, Helge, Ruest, Nick, Bailey, Jefferson, Dempsey, Alex, Fritz, Samantha, Lee, Peggy, and Milligan, Ian. ABCDEF - The 6 key features behind scalable, multi-tenant web archive processing with ARCH: Archive, Big Data, Concurrent, Distributed, Efficient, Flexible. Proceedings of the 2022 IEEE/ACM Joint Conference on Digital Libraries (JCDL 2022), Cologne, Germany.
+> Helge Holzmann, Nick Ruest, Jefferson Bailey, Alex Dempsey, Samantha Fritz, Peggy Lee, and Ian Milligan. 2022. ABCDEF: the 6 key features behind scalable, multi-tenant web archive processing with ARCH: archive, big data, concurrent, distributed, efficient, flexible. In Proceedings of the 22nd ACM/IEEE Joint Conference on Digital Libraries (JCDL '22). Association for Computing Machinery, New York, NY, USA, Article 13, 1–11. https://doi.org/10.1145/3529372.3530916
 
 Your citations help to further the recognition of using open-source tools for scientific inquiry, assists in growing the web archiving community, and acknowledges the efforts of contributors to this project.
 
