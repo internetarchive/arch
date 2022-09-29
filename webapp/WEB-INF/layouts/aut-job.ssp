@@ -120,6 +120,8 @@
                 });
               </script>
             </div>
+            <br />
+            <a class="right" href="/ait/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true")%>" target="_blank">Download Preview Data</a>
           </div>
         </div>
       <% } %>
