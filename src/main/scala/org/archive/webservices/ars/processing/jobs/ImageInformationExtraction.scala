@@ -23,13 +23,13 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract image information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
+    "Create a CSV with the following columns: crawl date, last modified date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
 
   val targetFile: String = "image-information.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,url,filename,extension,mime_type_web_server,mime_type_tika,width,height,md5,sha1")
+      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,width,height,md5,sha1")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     tika.startsWith("image/")
@@ -44,7 +44,8 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
           http: HttpMessage,
           body: InputStream,
           tikaMime: String,
-          crawlDate: String) => {
+          crawlDate: String,
+          lastModifiedDate: String) => {
         val forker = InputStreamForker(body)
         val Array(imageIn, md5In, sha1In) = forker.fork(3).map(Future(_))
         val Seq((width: Int, height: Int), md5: String, sha1: String) =
@@ -66,9 +67,12 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
         val jUrl = new URL(url)
         val filename = FilenameUtils.getName(jUrl.getPath)
         val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
+        val lastModifiedDate =
+          AutUtil.rfc1123toTime14(http.headerMap.get("last-modified").getOrElse(""))
 
         Row(
           crawlDate,
+          lastModifiedDate,
           url,
           filename,
           extension,

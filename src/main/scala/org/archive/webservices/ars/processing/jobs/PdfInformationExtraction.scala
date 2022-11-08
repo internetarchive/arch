@@ -9,7 +9,7 @@ object PdfInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract PDF information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
+    "Create a CSV with the following columns: crawl date, last modified date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
 
   val targetFile: String = "pdf-information.csv.gz"
 

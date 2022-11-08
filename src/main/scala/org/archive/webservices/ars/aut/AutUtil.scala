@@ -9,6 +9,20 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.util.PublicSuffixUtil
 
 object AutUtil {
+  val months = Seq(
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec").zipWithIndex.map { case (s, d) => (s, ("0" + (d + 1)).takeRight(2)) }
+
   def url(r: WarcRecord): String = r.url.getOrElse("")
 
   def timestamp(r: WarcRecord): String =
@@ -37,6 +51,30 @@ object AutUtil {
     Option(if (url.trim.isEmpty) "" else ExtractDomain(url).replaceAll("^\\s*www\\.", ""))
       .map(_.trim)
       .getOrElse("")
+  }
+
+  def rfc1123toTime14(lastModifiedDate: String): String = {
+    if (lastModifiedDate.isEmpty) {
+      ""
+    } else {
+      val lc = lastModifiedDate.toLowerCase
+      val date = months.find(m => lc.contains(m._1)).map(_._2).flatMap { m =>
+        val d = lc
+          .replace(":", "")
+          .split(' ')
+          .drop(1)
+          .map(d => (d.length, d))
+          .toMap
+        for (y <- d.get(4); n <- d.get(2); t <- d.get(6))
+          yield y + m + n + t
+      }
+      date match {
+        case Some(date) =>
+          date
+        case None =>
+          ""
+      }
+    }
   }
 
   // see io.archivesunleashed.matchbox.ComputeImageSize

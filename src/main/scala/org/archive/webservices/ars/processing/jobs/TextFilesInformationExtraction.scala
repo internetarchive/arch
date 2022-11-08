@@ -34,7 +34,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
   val name = "Extract text files (html, text, css, js, json, xml) information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of the text file, filename, text extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, text file MD5 hash and text file SHA1 hash, and text file content."
+    "Create a CSV with the following columns: crawl date, last modified date, URL of the text file, filename, text extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, text file MD5 hash and text file SHA1 hash, and text file content."
 
   val targetFile: String = "file-information.csv.gz"
 
@@ -48,7 +48,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1,content")
+      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1,content")
 
   override def checkSparkState(outPath: String): Option[Int] = {
     if (TextTypes.forall {
@@ -106,7 +106,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
           http: HttpMessage,
           body: InputStream,
           tikaMime: String,
-          crawlDate: String) => {
+          crawlDate: String,
+          lastModifiedDate: String) => {
         val forker = InputStreamForker(body)
         val Array(md5In, sha1In, contentIn) = forker.fork(3).map(Future(_))
         val Seq(md5, sha1, content) =
@@ -130,7 +131,17 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         val filename = FilenameUtils.getName(jUrl.getPath)
         val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
 
-        Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1, content)
+        Row(
+          crawlDate,
+          lastModifiedDate,
+          url,
+          filename,
+          extension,
+          AutUtil.mime(http),
+          tikaMime,
+          md5,
+          sha1,
+          content)
       })
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)

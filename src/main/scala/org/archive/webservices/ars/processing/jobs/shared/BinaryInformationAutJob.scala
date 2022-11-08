@@ -29,7 +29,8 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
   val MimeTypeCountFile: String = "mime-type-count.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1")
+    out.println(
+      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1")
 
   def checkMime(url: String, server: String, tika: String): Boolean
 
@@ -58,16 +59,18 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   def prepareBinaryRow(
       r: WarcRecord,
-      row: (String, HttpMessage, InputStream, String, String) => Row): Option[Row] = {
+      row: (String, HttpMessage, InputStream, String, String, String) => Row): Option[Row] = {
     Common.tryOrElse[Option[Row]](None) {
       r.http.filter(_.status == 200).flatMap { http =>
         val url = AutUtil.url(r)
         val body = http.body
+        val lastModifiedDate =
+          AutUtil.rfc1123toTime14(http.headerMap.get("last-modified").getOrElse(""))
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
           val crawlDate = AutUtil.timestamp(r)
           if (crawlDate.nonEmpty) Some {
-            row(url, http, body, tikaMime, crawlDate)
+            row(url, http, body, tikaMime, crawlDate, lastModifiedDate)
           } else None
         } else None
       }
@@ -82,7 +85,8 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
           http: HttpMessage,
           body: InputStream,
           tikaMime: String,
-          crawlDate: String) => {
+          crawlDate: String,
+          lastModifiedDate: String) => {
         val forker = InputStreamForker(body)
         val Array(md5In, sha1In) = forker.fork(2).map(Future(_))
         val Seq(md5, sha1) =
@@ -100,7 +104,16 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
         val filename = FilenameUtils.getName(jUrl.getPath)
         val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
 
-        Row(crawlDate, url, filename, extension, AutUtil.mime(http), tikaMime, md5, sha1)
+        Row(
+          crawlDate,
+          lastModifiedDate,
+          url,
+          filename,
+          extension,
+          AutUtil.mime(http),
+          tikaMime,
+          md5,
+          sha1)
       })
 
   override def checkSparkState(outPath: String): Option[Int] =

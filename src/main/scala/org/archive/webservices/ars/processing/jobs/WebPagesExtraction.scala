@@ -18,12 +18,13 @@ object WebPagesExtraction extends BinaryInformationAutJob {
   override val category: ArchJobCategory = ArchJobCategories.Text
 
   val description =
-    "Create a CSV with the following columns: crawl date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
+    "Create a CSV with the following columns: crawl date, last modified date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
 
   val targetFile: String = "web-pages.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,domain,url,mime_type_web_server,mime_type_tika,language,content")
+    out.println(
+      "crawl_date,last_modified_date,domain,url,mime_type_web_server,mime_type_tika,language,content")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     AutUtil.checkPageMime(url, server)
@@ -44,11 +45,13 @@ object WebPagesExtraction extends BinaryInformationAutJob {
             http: HttpMessage,
             body: InputStream,
             tikaMime: String,
-            crawlDate: String) => {
+            crawlDate: String,
+            lastModifiedDate: String) => {
           val bodyString = HttpUtil.bodyString(body, http)
           val content = RemoveHTML(RemoveHTTPHeader(bodyString))
           Row(
             crawlDate,
+            lastModifiedDate,
             AutUtil.extractDomainRemovePrefixWWW(url, publicSuffixes.value),
             url,
             AutUtil.mime(http),

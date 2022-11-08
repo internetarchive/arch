@@ -69,7 +69,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
         for {
           u <- user
         } {
-           MailUtil.sendTemplate(
+          MailUtil.sendTemplate(
             "failed",
             Map(
               "jobName" -> job.name,

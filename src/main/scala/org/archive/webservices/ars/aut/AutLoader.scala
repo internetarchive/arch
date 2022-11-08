@@ -45,6 +45,7 @@ object AutLoader {
     df(
       rows,
       ("crawl_date", StringType),
+      ("last_modified_date", StringType),
       ("domain", StringType),
       ("url", StringType),
       ("mime_type_web_server", StringType),
@@ -88,6 +89,7 @@ object AutLoader {
     df(
       rows,
       ("crawl_date", StringType),
+      ("last_modified_date", StringType),
       ("url", StringType),
       ("filename", StringType),
       ("extension", StringType),
@@ -103,6 +105,7 @@ object AutLoader {
     df(
       rows,
       ("crawl_date", StringType),
+      ("last_modified_date", StringType),
       ("url", StringType),
       ("filename", StringType),
       ("extension", StringType),
@@ -116,6 +119,7 @@ object AutLoader {
     df(
       rows,
       ("crawl_date", StringType),
+      ("last_modified_date", StringType),
       ("url", StringType),
       ("filename", StringType),
       ("extension", StringType),

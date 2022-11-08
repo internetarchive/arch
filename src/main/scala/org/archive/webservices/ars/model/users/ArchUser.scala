@@ -49,7 +49,16 @@ object ArchUser {
     _aitUserIds = Some(Try {
       val source = Source.fromFile("data/ait-users.json", "utf-8")
       try {
-        parser.parse(source.mkString).right.get.hcursor.downField("ids").values.getOrElse(Iterator.empty).flatMap(_.asNumber.flatMap(_.toInt)).toSet
+        parser
+          .parse(source.mkString)
+          .right
+          .get
+          .hcursor
+          .downField("ids")
+          .values
+          .getOrElse(Iterator.empty)
+          .flatMap(_.asNumber.flatMap(_.toInt))
+          .toSet
       } finally {
         source.close()
       }

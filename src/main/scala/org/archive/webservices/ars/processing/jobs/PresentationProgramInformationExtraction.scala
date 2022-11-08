@@ -9,7 +9,7 @@ object PresentationProgramInformationExtraction extends BinaryInformationAutJob 
   val name = "Extract PowerPoint (e.g., .ppt, .odp, .key) information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, URL of a PowerPoint or similar file, filename, PowerPoint or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PowerPoint or similar file MD5 hash and PowerPoint or similar file SHA1 hash."
+    "Create a CSV with the following columns: crawl date, last modified date, URL of a PowerPoint or similar file, filename, PowerPoint or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PowerPoint or similar file MD5 hash and PowerPoint or similar file SHA1 hash."
 
   val targetFile: String = "powerpoint-information.csv.gz"
 

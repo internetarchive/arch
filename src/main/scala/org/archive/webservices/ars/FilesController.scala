@@ -107,8 +107,10 @@ class FilesController extends BaseController {
             case Some(file) =>
               Ok(
                 HdfsIO.lines(file.path, n = 51).mkString("\n"),
-                Map("Content-Type" -> file.mimeType,
-                    "Content-Disposition" -> ("attachment; filename=" + file.filename.dropRight(3))))
+                Map(
+                  "Content-Type" -> file.mimeType,
+                  "Content-Disposition" -> ("attachment; filename=" + file.filename.dropRight(
+                    3))))
             case None =>
               NotFound()
           }
