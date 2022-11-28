@@ -36,6 +36,12 @@ Your citations help to further the recognition of using open-source tools for sc
 
 [MIT](/LICENSE)
 
+## Open-source, not open-contribution
+
+[Similar to SQLite](https://www.sqlite.org/copyright.html), ARCH is open source but closed to contributions.
+
+The level of complexity of this project means that even simple changes can break a lot of other moving parts in a production. However, community involvement, bug reports and feature requests are warmly accepted.
+
 ## Acknowledgments
 
 This work is primarily supported by the [Andrew W. Mellon Foundation](https://mellon.org/). Other financial and in-kind support comes from the [Social Sciences and Humanities Research Council](http://www.sshrc-crsh.gc.ca/), [Compute Canada](https://www.computecanada.ca/), [York University Libraries](https://www.library.yorku.ca/web/), [Start Smart Labs](http://www.startsmartlabs.com/), and the [Faculty of Arts](https://uwaterloo.ca/arts/) at the [University of Waterloo](https://uwaterloo.ca/).
