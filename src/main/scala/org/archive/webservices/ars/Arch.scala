@@ -1,7 +1,12 @@
 package org.archive.webservices.ars
 
+import java.io.File
+
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.processing.SparkJobManager
+import org.archive.webservices.ars.processing.JobStateManager
+import org.archive.webservices.sparkling._
+import org.archive.webservices.sparkling.io.IOUtil
+import org.archive.webservices.sparkling.util.RddUtil
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
@@ -32,6 +37,11 @@ object Arch {
   }
 
   def main(args: Array[String]): Unit = {
+    IOUtil.memoryBuffer = 1.mb.toInt
+    RddUtil.saveRecordTimeoutMillis = -1
+    JobStateManager.init()
     start(BasePath, Port)
   }
+
+  def debugging: Boolean = new File("_debugging").exists
 }

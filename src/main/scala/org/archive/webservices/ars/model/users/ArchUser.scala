@@ -5,7 +5,6 @@ import java.util.Base64
 import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
-import org.archive.webservices.ars.model.collections.AitCollectionSpecifics._foreignCollectionsCursor
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
 
@@ -148,7 +147,10 @@ object ArchUser {
       }
   }
 
-  def get(id: String)(implicit request: HttpServletRequest): Option[ArchUser] = {
+  def get(id: String)(implicit request: HttpServletRequest): Option[ArchUser] =
+    getInternal(id, Some(request))
+
+  def getInternal(id: String, request: Option[HttpServletRequest] = None): Option[ArchUser] = {
     val (prefix, suffix) =
       if (id.contains(":"))
         (StringUtil.prefixBySeparator(id, ":"), StringUtil.stripPrefixBySeparator(id, ":"))
@@ -157,7 +159,11 @@ object ArchUser {
       case ArchPrefix =>
         archUser(suffix)
       case AitPrefix =>
-        Try(suffix.toInt).toOption.flatMap(Ait.user(_)).map(AitArchUser(_))
+        Try(suffix.toInt).toOption
+          .flatMap { aitId =>
+            if (request.isDefined) Ait.user(aitId)(request.get) else Ait.userInternal(aitId)
+          }
+          .map(AitArchUser(_))
       case _ =>
         None
     }

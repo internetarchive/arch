@@ -8,11 +8,15 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.util.FormatUtil
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.io.{HdfsIO, InOutInputStream, InputStreamForker}
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
+import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -23,7 +27,7 @@ object IOHelper {
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)
     tmpPath.mkdirs()
-    val dir = Files.createTempDirectory(tmpPath.toPath, "ars-")
+    val dir = Files.createTempDirectory(tmpPath.toPath, "arch-")
     try {
       action(dir.toString)
     } finally {
@@ -34,6 +38,7 @@ object IOHelper {
   def concatLocal[R](
       srcPath: String,
       filter: String => Boolean = _ => true,
+      decompress: Boolean = true,
       compress: Boolean = false,
       deleteSrcFiles: Boolean = false,
       deleteSrcPath: Boolean = false,
@@ -46,7 +51,8 @@ object IOHelper {
       val compressed = if (compress) new GzipCompressorOutputStream(out) else out
       prepare(compressed)
       try {
-        for (file <- srcFiles) HdfsIO.access(file)(IOUtils.copy(_, compressed))
+        for (file <- srcFiles)
+          HdfsIO.access(file, decompress = decompress)(IOUtils.copy(_, compressed))
       } finally {
         compressed.close()
       }
@@ -55,6 +61,52 @@ object IOHelper {
       if (deleteSrcPath) HdfsIO.delete(srcPath)
       r
     }
+  }
+
+  def concatHdfs[R](
+      srcPath: String,
+      dstPath: String,
+      filter: String => Boolean = _ => true,
+      decompress: Boolean = true,
+      compress: Boolean = false,
+      deleteSrcFiles: Boolean = false,
+      deleteSrcPath: Boolean = false,
+      useWriter: Boolean = false,
+      prepare: OutputStream => Unit = _ => {})(action: InputStream => R): R = {
+    val srcFiles =
+      HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
+    val tmpOutFile = dstPath + "_concatenating"
+
+    val in = new SequenceInputStream(
+      srcFiles.toIterator.map(HdfsIO.open(_, decompress = decompress)).asJavaEnumeration)
+    val outIn = InOutInputStream(in) { out =>
+      val compressed = if (compress) new GzipCompressorOutputStream(out) else out
+      prepare(compressed)
+      compressed
+    }
+
+    val out = HdfsIO.out(tmpOutFile, compress = false, useWriter = false)
+
+    val forker = InputStreamForker(outIn)
+    val Array(writeIn, forkIn) = forker.fork(2).map(Future(_))
+
+    val r =
+      try {
+        Await.result(
+          Future.sequence(Seq(writeIn.map(IOUtils.copy(_, out)), forkIn.map(action))),
+          Duration.Inf)
+      } finally {
+        for (s <- writeIn) Try(s.close())
+        for (s <- forkIn) Try(s.close())
+        Try(outIn.close())
+        Try(out.close())
+      }
+    HdfsIO.rename(tmpOutFile, dstPath)
+
+    if (deleteSrcFiles) for (file <- srcFiles) HdfsIO.delete(file)
+    if (deleteSrcPath) HdfsIO.delete(srcPath)
+
+    r.last.asInstanceOf[R]
   }
 
   def sample[F: ClassTag, R](
@@ -140,11 +192,15 @@ object IOHelper {
         .flatten
       val numRecords = partitions.map(_._2).sum
       val takeMap = partitions.toMap
-      val firstIdx = takeMap.keySet.min
-      val requiredBc = sc.broadcast(
-        takeMap.updated(
-          firstIdx,
-          takeMap(firstIdx) + (if (numRecords < sample) sample - numRecords else 0)))
+      val requiredBc =
+        if (takeMap.isEmpty) sc.broadcast(takeMap)
+        else {
+          val firstIdx = takeMap.keySet.min
+          sc.broadcast(
+            takeMap.updated(
+              firstIdx,
+              takeMap(firstIdx) + (if (numRecords < sample) sample - numRecords else 0)))
+        }
       val r = action(rdd.mapPartitionsWithIndex { (idx, p) =>
         val take = requiredBc.value
         if (take.keySet.contains(idx)) {
@@ -188,7 +244,7 @@ object IOHelper {
     try {
       action
     } finally {
-      out.get.close()
+      Try(out.get.close())
       Try(HdfsIO.delete(path))
     }
   }

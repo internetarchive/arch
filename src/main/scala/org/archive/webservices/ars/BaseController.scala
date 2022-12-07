@@ -25,7 +25,7 @@ class BaseController extends ScalatraServlet {
             .isDefined)) {
         action(user.get)
       } else {
-        if (redirect) login(Arch.BaseUrl + requestPath) else Forbidden()
+        if (redirect) login(request.uri.toString) else Forbidden()
       }
     } else action(ArchUser.NoUser)
   }
@@ -52,7 +52,7 @@ class BaseController extends ScalatraServlet {
               NotFound()
           }
       }
-    } else pass
+    } else pass()
   }
 
   def relativePath(relative: String, dir: String = Arch.BaseDir)(

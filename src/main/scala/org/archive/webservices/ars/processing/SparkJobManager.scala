@@ -1,13 +1,12 @@
 package org.archive.webservices.ars.processing
 
-import java.io.File
-
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
-import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.util.SparkUtil
+import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.util.SparkUtil
 
 import scala.concurrent.Future
 
@@ -25,7 +24,8 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
         executorCores = 4,
         executorMemory = "16g",
         queue = ArchConf.hadoopQueue,
-        additionalConfigs = Map("spark.master" -> ArchConf.sparkMaster),
+        additionalConfigs =
+          Map("spark.master" -> ArchConf.sparkMaster, "spark.scheduler.mode" -> "FAIR"),
         verbose = true)
       context.setLogLevel("INFO")
       _context = Some(context)
@@ -36,7 +36,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
   }
 
   def stopContext(): Unit = synchronized {
-    if (!new File("_debugging").exists) {
+    if (!Arch.debugging) {
       for (context <- _context) {
         context.stop()
         while (!context.isStopped) Thread.`yield`()

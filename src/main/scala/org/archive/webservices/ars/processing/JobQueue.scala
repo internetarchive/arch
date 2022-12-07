@@ -12,6 +12,7 @@ class JobQueue(val name: String) {
     val remainder = Int.MaxValue - _pos
     val thisPos = if (remainder < queue.size) queue.size - remainder else _pos + queue.size
     queue.enqueue(instance)
+    instance.updateState(ProcessingState.Queued)
     thisPos
   }
 

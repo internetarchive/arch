@@ -3,19 +3,18 @@ package org.archive.webservices.ars.processing.jobs.shared
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.storage.StorageLevel
-import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil}
 import org.archive.webservices.ars.aut.AutLoader
-import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
 import org.archive.webservices.ars.util.Common
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.{CollectionUtil, SurtUtil}
 
 import scala.reflect.ClassTag
 
 abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
   val SampleTopNNodes = 50
+  val SampleTopNEdges = 100
 
   val category: ArchJobCategory = ArchJobCategories.Network
 
@@ -40,7 +39,7 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       .reduceByKey(_ + _)
   }
 
-  def createVizSample[O](df: Dataset[Row])(action: RDD[(String, String)] => O): O = {
+  def createVizSample[O](df: Dataset[Row])(action: Seq[(String, String)] => O): O = {
     val hostEdges = edgeCounts(df).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     try {
@@ -53,16 +52,35 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
         .sortBy(-_._2)
         .take(SampleTopNNodes)
         .map(_._1)
-        .toSet
-
-      val nodesBc = hostEdges.context.broadcast(nodes)
-      action(hostEdges.mapPartitions { partition =>
-        val nodes = nodesBc.value
-        partition.map(_._1).filter {
-          case (src, dst) =>
-            nodes.contains(src) && nodes.contains(dst)
+      val nodeRanks = nodes.zipWithIndex.toMap
+      val nodesBc = hostEdges.context.broadcast(nodes.toSet)
+      val edges = hostEdges
+        .mapPartitions { partition =>
+          val nodes = nodesBc.value
+          partition.map(_._1).filter {
+            case (src, dst) =>
+              nodes.contains(src) && nodes.contains(dst)
+          }
         }
-      })
+        .collect
+        .toSeq
+        .groupBy { case (src, dst) => if (nodeRanks(src) < nodeRanks(dst)) src else dst }
+      nodesBc.destroy()
+      var available = Map.empty[String, Seq[(String, String)]]
+      var sampleSize = 0
+      val sample = nodes.toIterator.flatMap { node =>
+        if (sampleSize < SampleTopNEdges) {
+          available =
+            CollectionUtil.combineMaps(available, edges.getOrElse(node, Seq.empty).groupBy {
+              case (src, dst) =>
+                if (src == node) dst else src
+            })(values => Some(values.reduce(_ ++ _)))
+          val next = available.getOrElse(node, Seq.empty)
+          sampleSize += next.size
+          next
+        } else Seq.empty
+      }.toSeq
+      action(sample)
     } finally {
       hostEdges.unpersist(true)
     }
@@ -77,31 +95,17 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       overwrite = true)
 
     createVizSample(data) { derivative =>
-      RddUtil.saveAsTextFile(
-        derivative.map { case (s, d) => s"$s\t$d" },
-        outPath + "/_" + sampleGraphFile)
+      HdfsIO.writeLines(outPath + "/" + sampleGraphFile, derivative.map {
+        case (s, d) => s"$s\t$d"
+      })
     }
   }
 
   override def checkSparkState(outPath: String): Option[Int] =
     super.checkSparkState(outPath).map { state =>
-      if (!HdfsIO.exists(outPath + "/_" + sampleGraphFile + "/" + Sparkling.CompleteFlagFile))
-        ProcessingState.Failed
+      if (!HdfsIO.exists(outPath + "/" + sampleGraphFile)) ProcessingState.Failed
       else state
     }
-
-  override def postProcess(outPath: String): Boolean = super.postProcess(outPath) && {
-    IOHelper.concatLocal(
-      outPath + "/_" + sampleGraphFile,
-      _.endsWith(".tsv.gz"),
-      compress = true,
-      deleteSrcFiles = true,
-      deleteSrcPath = true) { tmpFile =>
-      val outFile = outPath + "/" + sampleGraphFile
-      HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
-      HdfsIO.exists(outFile)
-    }
-  }
 
   override def checkFinishedState(outPath: String): Option[Int] =
     super.checkFinishedState(outPath).map { state =>
@@ -113,8 +117,11 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
     val edges = HdfsIO
-      .lines(conf.outputPath + relativeOutPath + "/" + sampleGraphFile)
-      .map(_.split("\t", 2))
+      .lines(
+        conf.outputPath + relativeOutPath + "/" + sampleGraphFile,
+        n = SampleTopNEdges + SampleTopNNodes)
+      .map(_.split('\t'))
+      .filter(_.length == 2)
       .map {
         case Array(src, dst) =>
           (src, dst)

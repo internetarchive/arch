@@ -1,14 +1,7 @@
 package org.archive.webservices.ars.aut
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{
-  DataType,
-  IntegerType,
-  LongType,
-  StringType,
-  StructField,
-  StructType
-}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 object AutLoader {
@@ -26,6 +19,7 @@ object AutLoader {
       .format("csv")
       .option("escape", "\"")
       .option("encoding", "utf-8")
+      .option("codec", "org.apache.hadoop.io.compress.GzipCodec")
       .save(path)
   }
 

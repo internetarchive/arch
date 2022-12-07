@@ -15,7 +15,12 @@
     <br>
     You're logged in as an admin user, please replace <code>admin</code> in the URL with the ID of the desired account you wish to access, or click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
     <br>
-    <a href="/ait/admin/edit">Manage users and collections</a>
+    <a href="/ait/admin/edit">Manage users and collections</a><br>
+    <br>
+    <h2>Logs</h2>
+    <a href="/ait/admin/logs/jobs?tail=5120" target="_blank">Jobs log</a><br>
+    <a href="/ait/admin/logs/running" target="_blank">Running jobs</a><br>
+    <a href="/ait/admin/logs/failed" target="_blank">Failed jobs</a><br>
 </p>
 </div>
 </div>

@@ -41,20 +41,30 @@ object ArchCollection {
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
-  def get(id: String)(implicit request: HttpServletRequest): Option[ArchCollection] = {
-    val user = ArchUser.get
+  def get(id: String)(implicit request: HttpServletRequest): Option[ArchCollection] =
+    getInternal(id, Some(request))
+
+  def getInternal(
+      id: String,
+      request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
     (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
-        user
+        request.isEmpty || request
+          .flatMap(ArchUser.get(_))
           .exists(u => u.isAdmin || c.user.map(_.id).contains(u.id))
       }
       .orElse {
-        CollectionSpecifics.get(id).flatMap(_.getCollection).map { c =>
-          if (ArchConf.production) {
-            c.user = user
-            GuavaCache.put(cacheKey(c.id), c, None)
-          } else c
-        }
+        CollectionSpecifics
+          .get(id)
+          .flatMap { specifics =>
+            specifics.getCollection(request)
+          }
+          .map { c =>
+            if (ArchConf.production) {
+              if (request.isDefined) c.user = request.flatMap(ArchUser.get(_))
+              GuavaCache.put(cacheKey(c.id), c, None)
+            } else c
+          }
       }
   }
 

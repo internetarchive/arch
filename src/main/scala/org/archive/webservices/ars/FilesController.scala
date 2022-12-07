@@ -4,7 +4,7 @@ import javax.servlet.http.HttpServletRequest
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.sparkling.io.HdfsIO
-import org.scalatra.{ActionResult, Forbidden, NotFound, Ok, ResponseStatus}
+import org.scalatra._
 
 import scala.util.Try
 

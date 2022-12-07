@@ -1,16 +1,25 @@
 package org.archive.webservices.ars
 
+import java.io.{File, FileInputStream}
+
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
-import org.archive.webservices.sparkling.io.IOUtil
-import org.archive.webservices.sparkling.util.DigestUtil
+import org.apache.commons.io.input.BoundedInputStream
 import org.archive.webservices.ars.model.collections.{
   AitCollectionSpecifics,
   SpecialCollectionSpecifics
 }
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.processing.JobStateManager
+import org.archive.webservices.ars.processing.JobStateManager.Charset
+import org.archive.webservices.sparkling._
+import org.archive.webservices.sparkling.io.IOUtil
+import org.archive.webservices.sparkling.util.DigestUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
+
+import scala.io.Source
+import scala.util.Try
 
 class AdminController extends BaseController with ScalateSupport {
   get("/?") {
@@ -98,6 +107,58 @@ class AdminController extends BaseController with ScalateSupport {
           }
         }
         r.getOrElse(MethodNotAllowed())
+      } else Forbidden()
+    }
+  }
+
+  val MaxLogLength: Int = 1.mb.toInt
+  get("/logs/:log_type") {
+    ensureLogin { user =>
+      if (user.isAdmin) {
+        params("log_type") match {
+          case "jobs" =>
+            val tail = params.get("tail").flatMap(str => Try(str.toInt).toOption).getOrElse(-1)
+            val logFile = new File(s"${JobStateManager.LoggingDir}/${JobStateManager.JobLogFile}")
+            if (logFile.exists) {
+              val skip = if (tail < 0) 0L else (logFile.length - tail.min(MaxLogLength)).max(0L)
+              val in = new BoundedInputStream(new FileInputStream(logFile), MaxLogLength)
+              try {
+                IOUtil.skip(in, skip)
+                val source = Source.fromInputStream(in, JobStateManager.Charset)
+                try {
+                  Ok(source.mkString, Map("Content-Type" -> "text/plain"))
+                } finally {
+                  source.close()
+                }
+              } finally {
+                in.close()
+              }
+            } else NotFound()
+          case "running" =>
+            val runningJobsFile =
+              new File(s"${JobStateManager.LoggingDir}/${JobStateManager.RunningJobsFile}")
+            if (runningJobsFile.exists) {
+              val source = Source.fromFile(runningJobsFile, Charset)
+              try {
+                Ok(source.mkString, Map("Content-Type" -> "application/json"))
+              } finally {
+                source.close()
+              }
+            } else NotFound()
+          case "failed" =>
+            val failedJobsFile =
+              new File(s"${JobStateManager.LoggingDir}/${JobStateManager.FailedJobsFile}")
+            if (failedJobsFile.exists) {
+              val source = Source.fromFile(failedJobsFile, Charset)
+              try {
+                Ok(source.mkString, Map("Content-Type" -> "text/plain"))
+              } finally {
+                source.close()
+              }
+            } else NotFound()
+          case _ =>
+            NotFound()
+        }
       } else Forbidden()
     }
   }

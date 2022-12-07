@@ -3,9 +3,9 @@ package org.archive.webservices.ars.io
 import java.time.Instant
 
 import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.io.HdfsIO._
-import org.archive.webservices.ars.model.ArchConf
 
 import scala.util.Try
 

@@ -4,9 +4,9 @@ import java.io.InputStream
 
 import io.archivesunleashed.matchbox.ExtractDomain
 import javax.imageio.ImageIO
+import org.archive.webservices.ars.util.PublicSuffixUtil
 import org.archive.webservices.sparkling.http.HttpMessage
 import org.archive.webservices.sparkling.warc.WarcRecord
-import org.archive.webservices.ars.util.PublicSuffixUtil
 
 object AutUtil {
   val months = Seq(

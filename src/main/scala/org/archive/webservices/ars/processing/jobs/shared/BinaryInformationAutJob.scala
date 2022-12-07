@@ -7,17 +7,17 @@ import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
+import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
+import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
+import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.http.HttpMessage
 import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
 import org.archive.webservices.sparkling.util.{DigestUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
-import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
-import org.archive.webservices.ars.util.Common
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -127,7 +127,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
     IOHelper.concatLocal(
       outPath + "/_" + MimeTypeCountFile,
       _.endsWith(".csv.gz"),
-      compress = true,
+      decompress = false,
       deleteSrcFiles = true,
       deleteSrcPath = true) { tmpFile =>
       val outFile = outPath + "/" + MimeTypeCountFile

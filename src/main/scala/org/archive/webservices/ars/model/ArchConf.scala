@@ -62,5 +62,9 @@ object ArchConf {
    * base64.b64encode("user:pass".encode())
     **/
   lazy val foreignAitAuthHeader: Option[String] =
-    cursor.get[String]("foreignAitAuthHeader").toOption.map("Basic " + _)
+    cursor
+      .get[String]("foreignAitAuthHeader")
+      .toOption
+      .map("Basic " + _)
+      .orElse(Option(System.getenv("AIT_AUTH_HEADER")))
 }

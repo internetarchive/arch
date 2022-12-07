@@ -5,11 +5,11 @@ import java.io.InputStream
 import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.HttpServletRequest
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.sparkling.util.StringUtil
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.sparkling.util.StringUtil
 
 import scala.io.Source
 import scala.util.Try
@@ -28,12 +28,15 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
     }
   }
 
-  def getCollection(implicit request: HttpServletRequest): Option[ArchCollection] = {
+  def getCollection(request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
     Ait
-      .getJson(
+      .getJsonWithAuth(
         "/api/collection?id=" + aitId,
-        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
-        Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
+        sessionId = if (request.isDefined) Ait.sessionId(request.get) else None,
+        basicAuth =
+          if (request.isEmpty || foreignAccess(request.get)) ArchConf.foreignAitAuthHeader
+          else
+            None)(c => Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
       .toOption
       .flatMap(_.headOption)
   }

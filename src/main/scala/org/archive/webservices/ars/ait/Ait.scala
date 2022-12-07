@@ -8,11 +8,11 @@ import io.circe.HCursor
 import io.circe.parser._
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.archive.webservices.sparkling.util.StringUtil
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
-import org.scalatra.{Cookie, CookieOptions}
+import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
+import org.scalatra.{Cookie, CookieOptions}
 
 import scala.collection.JavaConverters._
 import scala.io.Source
@@ -51,19 +51,36 @@ object Ait {
   }
 
   def user(id: Int)(implicit request: HttpServletRequest): Option[AitUser] = {
-    getJson(
-      "/api/user?limit=1&account=" + id,
+    userInternal(
+      id,
+      useSessionAuth = true,
+      sessionId = sessionId,
       basicAuth = ArchUser.get
         .filter(u => u.isAdmin && u.aitUser.isEmpty)
-        .flatMap(_ => ArchConf.foreignAitAuthHeader)) { json =>
-      val user = json.downArray
-      for {
-        userName <- user.get[String]("username").toOption
-      } yield AitUser(
-        id,
-        userName,
-        user.get[String]("full_name").toOption.getOrElse(userName),
-        user.get[String]("email").toOption)
+        .flatMap(_ => ArchConf.foreignAitAuthHeader))
+  }
+
+  def userInternal(
+      id: Int,
+      useSessionAuth: Boolean = false,
+      sessionId: Option[String] = None,
+      basicAuth: Option[String] = None): Option[AitUser] = {
+    val foreignAuthHeader = ArchConf.foreignAitAuthHeader
+    getJsonWithAuth(
+      "/api/user?limit=1&account=" + id,
+      sessionId = if (useSessionAuth || foreignAuthHeader.isEmpty) sessionId else None,
+      basicAuth =
+        if (useSessionAuth || foreignAuthHeader.isEmpty) basicAuth else foreignAuthHeader) {
+      json =>
+        val user = json.downArray
+        for {
+          userName <- user.get[String]("username").toOption
+        } yield
+          AitUser(
+            id,
+            userName,
+            user.get[String]("full_name").toOption.getOrElse(userName),
+            user.get[String]("email").toOption)
     }.toOption
   }
 

@@ -1,13 +1,13 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.util.RddUtil
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, DerivativeOutput}
 import org.archive.webservices.ars.processing._
-
+import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.io._
+import org.archive.webservices.sparkling.util.RddUtil
+
 import scala.concurrent.Future
 
 object FileCountAndSize extends SparkJob {

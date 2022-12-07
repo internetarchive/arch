@@ -3,16 +3,16 @@ package org.archive.webservices.ars.io
 import java.io.InputStream
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.{CleanupIterator, Common, IteratorUtil, RddUtil}
-import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
+import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 object CollectionLoader {
   val WasapiPageSize = 100
-  val TargetPartitions = 1000
+  val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
 
   def loadWarcFiles(id: String, inputPath: String): RDD[(String, InputStream)] = {
@@ -21,7 +21,7 @@ object CollectionLoader {
         specifics.loadWarcFiles(inputPath)
       case None => loadWarcFiles(inputPath)
     }
-  }.coalesce(TargetPartitions)
+  }
 
   def loadWarcsWithPath(
       id: String,
@@ -46,15 +46,18 @@ object CollectionLoader {
       hdfsHostPort: Option[(String, Int)] = None): RDD[(String, InputStream)] = {
     (hdfsHostPort match {
       case Some((host, port)) =>
+        val files = HdfsIO(host, port).files(inputPath + "/*arc.gz", recursive = false).toSeq
         RddUtil
-          .parallelize(HdfsIO(host, port).files(inputPath + "/*.warc.gz").toSeq)
+          .parallelize(files.grouped(WarcFilesPerPartition).toSeq)
           .mapPartitions { paths =>
             val hdfsIO = HdfsIO(host, port)
-            paths.map(p => (p, hdfsIO.open(p, decompress = false)))
+            paths.flatten.map(p => (p, hdfsIO.open(p, decompress = false)))
           }
       case None =>
+        val numFiles = HdfsIO.files(inputPath + "/*arc.gz", recursive = false).size
         RddUtil
-          .loadFilesLocality(inputPath + "/*.warc.gz")
+          .loadFilesLocality(inputPath + "/*arc.gz")
+          .coalesce(numFiles / WarcFilesPerPartition + 1)
           .map(p => (p, HdfsIO.open(p, decompress = false)))
     }).mapPartitions { partition =>
       var prev: Option[InputStream] = None
@@ -76,7 +79,7 @@ object CollectionLoader {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
-      val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&collection=" + aitId + "&page_size="
+      val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       while (apiFileCount < 0) {
         Ait
@@ -91,13 +94,13 @@ object CollectionLoader {
       val hdfsFileCount = hdfsHostPort
         .map { case (host, port) => HdfsIO(host, port) }
         .getOrElse(HdfsIO)
-        .files(inputPath + "/*.warc.gz", recursive = false)
+        .files(inputPath + "/*arc.gz", recursive = false)
         .size
       if (hdfsFileCount == apiFileCount) {
         loadWarcFiles(inputPath, hdfsHostPort)
       } else {
         CollectionCache.cache(cacheId) { cachePath =>
-          val cacheFileCount = HdfsIO.files(cachePath + "/*.warc.gz", recursive = false).size
+          val cacheFileCount = HdfsIO.files(cachePath + "/*arc.gz", recursive = false).size
           if (hdfsFileCount + cacheFileCount == apiFileCount) {
             loadWarcFiles(inputPath, hdfsHostPort)
               .union(loadWarcFiles(cachePath))
@@ -134,7 +137,7 @@ object CollectionLoader {
                 }
                 wasapiOpt.get
               }
-              .repartition(TargetPartitions)
+              .repartition(apiFileCount / WarcFilesPerPartition + 1)
               .mapPartitions { partition =>
                 var prev: Option[InputStream] = None
                 val hdfsIO = hdfsHostPort
@@ -161,13 +164,15 @@ object CollectionLoader {
                                       HdfsIO.out(
                                         cacheFilePath,
                                         compress = false,
-                                        overwrite = true)
+                                        overwrite = true,
+                                        useWriter = false)
                                     try {
                                       IOUtil.copy(in, out)
-                                      Some((inputFilePath, cacheFilePath, false))
                                     } finally {
                                       out.close()
                                     }
+                                    while (!HdfsIO.exists(cacheFilePath)) Thread.`yield`()
+                                    Some((inputFilePath, cacheFilePath, false))
                                 }
                                 .toOption
                             }

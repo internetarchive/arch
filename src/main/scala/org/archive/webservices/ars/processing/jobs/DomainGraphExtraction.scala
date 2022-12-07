@@ -6,11 +6,10 @@ import io.archivesunleashed.matchbox.ExtractLinks
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.storage.StorageLevel
-import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
 import org.archive.webservices.ars.util.{Common, HttpUtil, PublicSuffixUtil}
+import org.archive.webservices.sparkling.warc.WarcRecord
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Extract domain graph"
@@ -52,10 +51,11 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
                       AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
                       AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
                 }
+                .distinct
                 .filter { case (s, t) => s != "" && t != "" }
                 .map {
                   case (source, target) =>
-                    ((AutUtil.timestamp(r), source, target), 1L)
+                    ((AutUtil.timestamp(r).take(8), source, target), 1L)
                 }
             }
             .toIterator

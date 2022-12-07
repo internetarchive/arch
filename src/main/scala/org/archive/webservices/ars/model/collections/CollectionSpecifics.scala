@@ -8,7 +8,7 @@ import org.archive.webservices.ars.model.ArchCollection
 
 abstract class CollectionSpecifics {
   def inputPath: String
-  def getCollection(implicit request: HttpServletRequest): Option[ArchCollection]
+  def getCollection(request: Option[HttpServletRequest] = None): Option[ArchCollection]
   def size(implicit request: HttpServletRequest): Long
   def seeds(implicit request: HttpServletRequest): Int
   def lastCrawlDate(implicit request: HttpServletRequest): String

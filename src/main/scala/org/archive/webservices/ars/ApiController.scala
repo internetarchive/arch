@@ -51,12 +51,13 @@ class ApiController extends BaseController {
           if (rerun) job.reset(conf)
           val history = job.history(conf)
           val queued =
-            if (history.state == ProcessingState.NotStarted) job.enqueue(conf) else None
-          queued match {
-            case Some(instance) =>
+            if (history.state == ProcessingState.NotStarted) job.enqueue(conf, { instance =>
               instance.user = Some(user)
               instance.collection = Some(collection)
-              jobStateResponse(instance)
+            })
+            else None
+          queued match {
+            case Some(instance) => jobStateResponse(instance)
             case None => jobStateResponse(history)
           }
         }

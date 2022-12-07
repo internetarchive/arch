@@ -6,10 +6,10 @@ import io.circe.{HCursor, Json, JsonObject, parser}
 import javax.servlet.http.HttpServletRequest
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.sparkling.io.HdfsIO
 
 import scala.io.Source
 import scala.util.Try
@@ -23,11 +23,18 @@ class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
       .flatMap(_.get[String]("path").toOption)
       .get
 
-  def getCollection(implicit request: HttpServletRequest): Option[ArchCollection] =
-    ArchUser.get
-      .filter(u =>
-        u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId))
-      .flatMap(_ => SpecialCollectionSpecifics.get(specialId))
+  def getCollection(request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
+    request match {
+      case Some(r) =>
+        ArchUser
+          .get(r)
+          .filter(u =>
+            u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId))
+          .flatMap(_ => SpecialCollectionSpecifics.get(specialId))
+      case None =>
+        SpecialCollectionSpecifics.get(specialId)
+    }
+  }
 
   def size(implicit request: HttpServletRequest): Long =
     HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength

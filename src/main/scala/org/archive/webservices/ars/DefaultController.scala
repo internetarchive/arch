@@ -1,7 +1,5 @@
 package org.archive.webservices.ars
 
-import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, ArchJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}

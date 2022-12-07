@@ -1,24 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.processing.jobs.{
-  ArsLgaGeneration,
-  ArsWaneGeneration,
-  ArsWatGeneration,
-  AudioInformationExtraction,
-  DomainFrequencyExtraction,
-  DomainGraphExtraction,
-  FileCountAndSize,
-  ImageGraphExtraction,
-  ImageInformationExtraction,
-  PdfInformationExtraction,
-  PresentationProgramInformationExtraction,
-  SpreadsheetInformationExtraction,
-  TextFilesInformationExtraction,
-  VideoInformationExtraction,
-  WebGraphExtraction,
-  WebPagesExtraction,
-  WordProcessorInformationExtraction
-}
+import org.archive.webservices.ars.processing.jobs._
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -60,8 +42,8 @@ object JobManager {
     val collectionJobs = instances.getOrElseUpdate(instance.conf, mutable.Map.empty)
     if (!collectionJobs.contains(instance.job.id)) {
       collectionJobs.update(instance.job.id, instance)
-      println(
-        "Registered job " + instance.job.id + " (" + instance.hashCode.abs + ") [" + instance.conf + "]")
+      instance.registered = true
+      JobStateManager.logRegister(instance)
       true
     } else false
   }
@@ -72,8 +54,7 @@ object JobManager {
       val removed = collectionJobs.get.remove(instance.job.id)
       if (removed.nonEmpty) {
         if (collectionJobs.get.isEmpty) instances.remove(instance.conf)
-        println(
-          "Unregistered job " + instance.job.id + " (" + instance.hashCode.abs + ") [" + instance.conf + "]")
+        JobStateManager.logUnregister(instance)
         true
       } else false
     } else false

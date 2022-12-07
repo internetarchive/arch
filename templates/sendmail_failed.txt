@@ -1,5 +1,5 @@
 From: arch-no-reply@archive-it.org
-To: "helge@archive.org, archiveit-alerts@archive.org"
+To: helge@archive.org, archiveit-alerts@archive.org, kody@archive.org, karlb@archive.org, tpadilla@archive.org
 Subject: ARCH: $jobName on $collectionName has FAILED!
 MIME-Version: 1.0
 Content-Type: multipart/alternative; boundary=ARCHARCHARCH
@@ -19,7 +19,7 @@ Content-Type: text/html; charset=utf-8
     <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
   </head>
   <body>
-    <p>Hi Helge,</p>
+    <p>!!! JOB FAILED !!!</p>
     <p>$jobName job on $collectionName has FAILED for $userName ($accountId).</p>
   </body>
 </html>

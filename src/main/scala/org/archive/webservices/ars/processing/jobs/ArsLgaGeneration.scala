@@ -1,15 +1,15 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.ars.LGA
-import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.util.{DigestUtil, RddUtil}
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
 import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.ars.LGA
+import org.archive.webservices.sparkling.io._
+import org.archive.webservices.sparkling.util.RddUtil
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -76,7 +76,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       IOHelper.concatLocal(
         conf.outputPath + relativeOutPath + "/_" + MapFile,
         _.endsWith(".gz"),
-        compress = true,
+        decompress = false,
         deleteSrcFiles = true,
         deleteSrcPath = true) { tmpFile =>
         val outFile = conf.outputPath + relativeOutPath + "/" + MapFile
@@ -86,7 +86,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       } && IOHelper.concatLocal(
         conf.outputPath + relativeOutPath + "/_" + GraphFile,
         _.endsWith(".gz"),
-        compress = true,
+        decompress = false,
         deleteSrcFiles = true,
         deleteSrcPath = true) { tmpFile =>
         val outFile = conf.outputPath + relativeOutPath + "/" + GraphFile

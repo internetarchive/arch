@@ -4,14 +4,14 @@ import java.io.{OutputStream, PrintStream}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.DigestUtil
-import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.compression.Gzip
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.warc.WarcRecord
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -52,18 +52,18 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   def printToOutputStream(out: PrintStream): Unit = {}
 
   def postProcess(outPath: String): Boolean = {
-    IOHelper.concatLocal(
+    val outFile = outPath + "/" + targetFile
+    IOHelper.concatHdfs(
       outPath + "/_" + targetFile,
+      outFile,
       _.startsWith("part-"),
-      compress = true,
+      decompress = false,
       deleteSrcFiles = true,
       deleteSrcPath = true,
-      prepare = prepareOutputStream) { tmpFile =>
-      val outFile = outPath + "/" + targetFile
-      DerivativeOutput.hashFileLocal(tmpFile, outFile)
-      HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)
-      HdfsIO.exists(outFile)
+      prepare = Gzip.compressOut(_)(prepareOutputStream)) { in =>
+      DerivativeOutput.hashFile(in, outFile)
     }
+    HdfsIO.exists(outFile)
   }
 
   def checkFinishedState(outPath: String): Option[Int] = {

@@ -4,23 +4,24 @@ import java.io.{InputStream, OutputStream, PrintStream}
 import java.net.URL
 
 import io.archivesunleashed.matchbox.{GetExtensionMIME, RemoveHTTPHeader}
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.storage.StorageLevel
-import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.http.HttpMessage
-import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
-import org.archive.webservices.sparkling.util.{Common, DigestUtil}
-import org.archive.webservices.sparkling.warc.WarcRecord
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.http.HttpMessage
+import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
+import org.archive.webservices.sparkling.util.{Common, DigestUtil}
+import org.archive.webservices.sparkling.warc.WarcRecord
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -151,10 +152,14 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
       IOHelper.concatLocal(
         outPath + "/_" + jobPrefix + "-" + targetFile,
         _.startsWith("part-"),
-        compress = true,
+        decompress = false,
         deleteSrcFiles = true,
         deleteSrcPath = true,
-        prepare = prepareOutputStream) { tmpFile =>
+        prepare = { out =>
+          val gzip = new GzipCompressorOutputStream(out)
+          prepareOutputStream(gzip)
+          gzip.finish()
+        }) { tmpFile =>
         val outFile = outPath + "/" + jobPrefix + "-" + targetFile
         DerivativeOutput.hashFileLocal(tmpFile, outFile)
         HdfsIO.copyFromLocal(tmpFile, outFile, move = true, overwrite = true)

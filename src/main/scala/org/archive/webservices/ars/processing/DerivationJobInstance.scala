@@ -9,15 +9,13 @@ import org.archive.webservices.ars.model.{
   ArchJobInstanceInfo,
   DerivativeOutput
 }
-import org.archive.webservices.ars.util.MailUtil
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
-  var user: Option[ArchUser] = None
-  var collection: Option[ArchCollection] = None
-
+  var registered = false
   var state: Int = ProcessingState.NotStarted
 
-  private var activeStage: Option[DerivationJobInstance] = None
+  var user: Option[ArchUser] = None
+  var collection: Option[ArchCollection] = None
 
   private var _queue: Option[JobQueue] = None
   private var queuePos: Int = -1
@@ -30,6 +28,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def setQueue(queue: JobQueue, pos: Int): Unit = {
     _queue = Some(queue)
     queuePos = pos
+    JobStateManager.updateRunning(this)
   }
 
   def queue: Option[JobQueue] = _queue
@@ -41,7 +40,12 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
       }
       .getOrElse(-1)
 
-  def setStage(instance: DerivationJobInstance): Unit = activeStage = Some(instance)
+  private var activeStage: Option[DerivationJobInstance] = None
+
+  def setStage(instance: DerivationJobInstance): Unit = {
+    activeStage = Some(instance)
+    JobStateManager.updateRunning(this)
+  }
 
   def unsetStage(): Unit = activeStage = None
 
@@ -51,57 +55,44 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def updateState(value: Int): Unit = {
     val prevState = state
-
     state = value
     for (func <- _onStateChanged) func()
-    if (job.partialOf.isEmpty && state > prevState) {
-      val now = Instant.now
-      var info = this.info
-      if (prevState == ProcessingState.NotStarted) {
-        info = info.setStartTime(now)
-      }
-      if (state == ProcessingState.Failed) {
-        info = info.setFinishedTime(now)
-        ArchCollectionInfo
-          .get(conf.collectionId)
-          .setLastJob(job.id, conf.isSample, now)
-          .save()
-        for {
-          u <- user
-        } {
-          MailUtil.sendTemplate(
-            "failed",
-            Map(
-              "jobName" -> job.name,
-              "jobId" -> job.id,
-              "collectionName" -> collection.map(_.name).getOrElse(conf.collectionId),
-              "accountId" -> u.urlId,
-              "userName" -> u.fullName))
+    if (registered) {
+      if (job.partialOf.isEmpty) {
+        val now = Instant.now
+        var info = this.info
+        if (prevState == ProcessingState.NotStarted) {
+          info = info.setStartTime(now)
+        }
+        state match {
+          case ProcessingState.Queued =>
+            JobStateManager.logQueued(this)
+          case ProcessingState.Running =>
+            JobStateManager.logRunning(this)
+          case ProcessingState.Failed =>
+            info = info.setFinishedTime(now)
+            JobStateManager.logFailed(this)
+          case ProcessingState.Finished =>
+            info = info.setFinishedTime(now)
+            ArchCollectionInfo
+              .get(conf.collectionId)
+              .setLastJob(job.id, conf.isSample, now)
+              .save()
+            JobStateManager.logFinished(this)
+        }
+        info.save(conf.outputPath + "/" + job.id)
+      } else {
+        state match {
+          case ProcessingState.Queued =>
+            JobStateManager.logQueued(this, subJob = true)
+          case ProcessingState.Running =>
+            JobStateManager.logRunning(this, subJob = true)
+          case ProcessingState.Failed =>
+            JobStateManager.logFailed(this, subJob = true)
+          case ProcessingState.Finished =>
+            JobStateManager.logFinished(this, subJob = true)
         }
       }
-      if (state == ProcessingState.Finished) {
-        info = info.setFinishedTime(now)
-        ArchCollectionInfo
-          .get(conf.collectionId)
-          .setLastJob(job.id, conf.isSample, now)
-          .save()
-        for {
-          u <- user
-          email <- u.email
-        } {
-          MailUtil.sendTemplate(
-            "finished",
-            Map(
-              "to" -> email,
-              "jobName" -> job.name,
-              "jobId" -> job.id,
-              "collectionId" -> conf.collectionId,
-              "collectionName" -> collection.map(_.name).getOrElse(conf.collectionId),
-              "accountId" -> u.urlId,
-              "userName" -> u.fullName))
-        }
-      }
-      info.save(conf.outputPath + "/" + job.id)
     }
   }
 

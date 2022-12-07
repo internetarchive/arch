@@ -2,7 +2,7 @@ package org.archive.webservices.ars.processing
 
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
-import io.circe.Decoder
+import io.circe.{Decoder, Json}
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 
 case class DerivationJobConf(
@@ -11,7 +11,8 @@ case class DerivationJobConf(
     outputPath: String,
     sample: Int = -1) {
   def isSample: Boolean = sample >= 0
-  def serialize: String = DerivationJobConf.unapply(this).get.asJson.noSpaces
+  def serialize: String = toJson.noSpaces
+  def toJson: Json = DerivationJobConf.unapply(this).get.asJson
 }
 
 object DerivationJobConf {
@@ -25,10 +26,12 @@ object DerivationJobConf {
     }
   }
 
-  def deserialize(conf: String): Option[DerivationJobConf] = {
+  def fromJson(json: Json): Option[DerivationJobConf] = {
     def opt[A](apply: A => DerivationJobConf)(
-        implicit decoder: Decoder[A]): Option[DerivationJobConf] =
-      parse(conf).right.toOption.flatMap(_.as[A].toOption).map(apply)
+        implicit decoder: Decoder[A]): Option[DerivationJobConf] = json.as[A].toOption.map(apply)
     opt((DerivationJobConf.apply _).tupled)
   }
+
+  def deserialize(conf: String): Option[DerivationJobConf] =
+    parse(conf).right.toOption.flatMap(fromJson)
 }

@@ -3,13 +3,13 @@ package org.archive.webservices.ars.model
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.time.Instant
 
-import org.apache.hadoop.fs.Path
-import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.util.FormatUtil
 import _root_.io.circe._
 import _root_.io.circe.syntax._
+import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.util.FormatUtil
+import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 
 import scala.util.Try
 
