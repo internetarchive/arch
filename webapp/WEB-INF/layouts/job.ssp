@@ -46,16 +46,10 @@
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
+              <% if (file.size < 1000000000) { %>
+                <a href="https://colab.research.google.com/github/internetarchive/arch/blob/main/src/main/python/notebooks/<%=file.filename.stripSuffix(".csv.gz")%>.ipynb" target="_blank"><img style="padding-top:15px;" src="ait/img/colab-badge.svg" alt="Open In Colab"/></a>
+              <% } %>
             </div>
-            <script>
-              document.addEventListener('clipboard-copy', function(event) {
-                var notice = event.target.querySelector('.notice');
-                notice.hidden = false;
-                setTimeout(function() {
-                  notice.hidden = true
-                }, 1000)
-              })
-            </script>
           </div>
         </div>
       </div>

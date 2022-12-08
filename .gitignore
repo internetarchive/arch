@@ -2,6 +2,11 @@
 # Created by https://www.toptal.com/developers/gitignore/api/intellij,scala,spark,sbt
 # Edit at https://www.toptal.com/developers/gitignore?templates=intellij,scala,spark,sbt
 
+
+logging/running.log
+logging/jobs.log
+logging/failed.lst
+
 ### Intellij ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
