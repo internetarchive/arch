@@ -3,7 +3,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=intellij,scala,spark,sbt
 
 
-logging/running.log
+logging/running.json
 logging/jobs.log
 logging/failed.lst
 
