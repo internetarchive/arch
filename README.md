@@ -40,7 +40,7 @@ Your citations help to further the recognition of using open-source tools for sc
 
 [Similar to SQLite](https://www.sqlite.org/copyright.html), ARCH is open source but closed to contributions.
 
-The level of complexity of this project means that even simple changes can break a lot of other moving parts in our production environment. However, community involvement, bug reports and feature requests are warmly accepted.
+The level of complexity of this project means that even simple changes can break a lot of other moving parts in our production environment. However, community involvement, bug reports and feature requests are [warmly accepted](https://support.archive-it.org/hc/en-us/articles/11182827989268-Submit-an-ARCH-support-request).
 
 ## Acknowledgments
 
