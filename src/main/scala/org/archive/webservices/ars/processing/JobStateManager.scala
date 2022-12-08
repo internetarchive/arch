@@ -6,6 +6,7 @@ import java.time.Instant
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
+import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.users.ArchUser
@@ -14,7 +15,6 @@ import org.archive.webservices.sparkling.io.IOUtil
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
-import scala.util.Try
 
 object JobStateManager {
   val LoggingDir = "logging"
@@ -99,9 +99,15 @@ object JobStateManager {
     if (new File(runningJobsFile).exists) {
       val source = Source.fromFile(runningJobsFile, Charset)
       try {
-        running =
-          Try(parse(source.mkString).right.asInstanceOf[ListMap[String, Map[String, Json]]])
-            .getOrElse(ListMap.empty)
+        running = ListMap(parse(source.mkString).right.toOption.toSeq.flatMap { json =>
+          val cursor = json.hcursor
+          cursor.keys.toIterator.flatten.map { key =>
+            key -> ListMap({
+              val map = cursor.downField(key)
+              map.keys.toSeq.flatten.flatMap(k => map.downField(k).focus.map(k -> _))
+            }: _*)
+          }
+        }: _*)
       } finally {
         source.close()
       }
@@ -110,8 +116,10 @@ object JobStateManager {
     initialized = true
 
     if (!Arch.debugging) {
+      val resuming = running
+      running = ListMap.empty
       for {
-        (key, values) <- running
+        (key, values) <- resuming
         id <- values.get("id").flatMap(_.asString)
         conf <- values.get("conf").flatMap(DerivationJobConf.fromJson)
       } {
@@ -128,8 +136,6 @@ object JobStateManager {
             })
         }
       }
-      running = ListMap.empty
-      saveRunning()
     }
   }
 
@@ -203,19 +209,21 @@ object JobStateManager {
   }
 
   def logFailed(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
-    if (!subJob) {
-      registerFailed(instance)
-      MailUtil.sendTemplate(
-        "failed",
-        Map(
-          "jobName" -> instance.job.name,
-          "jobId" -> instance.job.id,
-          "collectionName" -> instance.collection
-            .map(_.name)
-            .getOrElse(instance.conf.collectionId),
-          "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-          "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+    if (!ShutdownHookManager.get().isShutdownInProgress) {
+      if (!subJob) {
+        registerFailed(instance)
+        MailUtil.sendTemplate(
+          "failed",
+          Map(
+            "jobName" -> instance.job.name,
+            "jobId" -> instance.job.id,
+            "collectionName" -> instance.collection
+              .map(_.name)
+              .getOrElse(instance.conf.collectionId),
+            "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+            "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+      }
+      println("Failed: " + str(instance))
     }
-    println("Failed: " + str(instance))
   }
 }
