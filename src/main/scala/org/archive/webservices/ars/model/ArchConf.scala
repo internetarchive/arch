@@ -35,6 +35,9 @@ object ArchConf {
 
   lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
 
+  lazy val customCollectionPath: String =
+    cursor.get[String]("customCollectionPath").toOption.getOrElse("data/collections")
+
   lazy val localTempPath: String =
     cursor.get[String]("localTempPath").toOption.getOrElse("data/tmp")
 
@@ -67,4 +70,14 @@ object ArchConf {
       .toOption
       .map("Basic " + _)
       .orElse(Option(System.getenv("AIT_AUTH_HEADER")))
+
+  /**
+   * LOW s3accessKey:s3secretKey
+   */
+  lazy val iaAuthHeader: Option[String] =
+    cursor
+      .get[String]("iaS3AuthHeader")
+      .toOption
+      .map("LOW " + _)
+      .orElse(Option(System.getenv("IA_AUTH_HEADER")))
 }

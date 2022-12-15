@@ -1,19 +1,25 @@
 package org.archive.webservices.ars.io
 
-import java.io.InputStream
+import java.io.{BufferedInputStream, InputStream, SequenceInputStream}
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.sparkling._
+import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
+
+import scala.collection.JavaConverters._
 
 object CollectionLoader {
   val WasapiPageSize = 100
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
+  val CdxSkipDistance: Long = 10.mb
 
   def loadWarcFiles(id: String, inputPath: String): RDD[(String, InputStream)] = {
     CollectionSpecifics.get(id) match {
@@ -195,6 +201,119 @@ object CollectionLoader {
       }
     } else {
       loadWarcFiles(inputPath, hdfsHostPort)
+    }
+  }
+
+  private def loadWarcFilesViaCdx(cdxPath: String)(
+      action: Iterator[((String, Long), Iterator[(CdxRecord, String, Long, Long)])] => Iterator[
+        InputStream]): RDD[(String, InputStream)] = {
+    val inputPath = s"$cdxPath/*.cdx.gz"
+    val numFiles = HdfsIO.files(inputPath, recursive = false).size
+    RddUtil
+      .loadTextFiles(inputPath)
+      .mapPartitions { partition =>
+        partition.map {
+          case (file, lines) =>
+            val pointers = lines.flatMap(CdxRecord.fromString).map { cdx =>
+              val length = cdx.compressedSize
+              val (path, offset) = cdx.locationFromAdditionalFields
+              (cdx, path, offset, length)
+            }
+            var prevGroup: Option[(String, Long, (String, Long))] = None
+            val groups = IteratorUtil.groupSortedBy(pointers) {
+              case (_, path, offset, _) =>
+                val group = prevGroup
+                  .filter {
+                    case (p, o, _) => p == path && offset > o && offset <= o + CdxSkipDistance
+                  }
+                  .map(_._3)
+                  .getOrElse {
+                    (path, offset)
+                  }
+                prevGroup = Some((path, offset, group))
+                group
+            }
+            val in = action(groups)
+            (
+              file.split('/').last,
+              new BufferedInputStream(new SequenceInputStream(in.asJavaEnumeration))
+                .asInstanceOf[InputStream])
+        }
+      }
+      .coalesce(numFiles / WarcFilesPerPartition + 1)
+  }
+
+  def loadWarcFilesViaCdxFromPetabox(
+      cdxPath: String,
+      warcPath: String): RDD[(String, InputStream)] = {
+    val pboxAuth = ArchConf.iaAuthHeader
+    loadWarcFilesViaCdx(cdxPath) { partition =>
+      partition.flatMap {
+        case ((itemFile, initialOffset), positions) =>
+          val url = "https://archive.org/serve/" + itemFile
+          val in = HttpClient.rangeRequest(
+            url,
+            headers = pboxAuth.map("Authorization" -> _).toMap,
+            offset = initialOffset,
+            close = false)(identity)
+          IOUtil.splitStream(in, positions.map {
+            case (_, _, offset, length) => (offset - initialOffset, length)
+          })
+      }
+    }
+  }
+
+  def loadWarcFilesViaCdxFromHdfs(
+      cdxPath: String,
+      warcPath: String,
+      aitHdfs: Boolean = false): RDD[(String, InputStream)] = {
+    val aitHdfsHostPort = ArchConf.aitCollectionHdfsHostPort
+    loadWarcFilesViaCdx(cdxPath) { partition =>
+      val hdfsIO =
+        if (aitHdfs)
+          aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
+        else HdfsIO
+      partition.flatMap {
+        case ((file, initialOffset), positions) =>
+          val in = hdfsIO.open(s"$warcPath/$file", offset = initialOffset)
+          IOUtil.splitStream(in, positions.map {
+            case (_, _, offset, length) => (offset - initialOffset, length)
+          })
+      }
+    }
+  }
+
+  def loadWarcFilesViaCdxFromAit(
+      cdxPath: String,
+      warcPath: String,
+      cacheId: String): RDD[(String, InputStream)] = {
+    val aitHdfsHostPort = ArchConf.aitCollectionHdfsHostPort
+    val aitAuth = ArchConf.foreignAitAuthHeader
+    loadWarcFilesViaCdx(cdxPath) { partition =>
+      val aitHdfsIO =
+        aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
+      partition.flatMap {
+        case ((file, initialOffset), positions) =>
+          val aitPath = s"$warcPath/$file"
+          val in =
+            if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset)
+            else
+              CollectionCache.cache(cacheId) { cachePath =>
+                val p = s"$cachePath/$file"
+                if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset)
+                else {
+                  val url = "https://warcs.archive-it.org/webdatafile/" + file
+                  HttpClient.rangeRequest(
+                    url,
+                    headers = aitAuth.map("Authorization" -> _).toMap,
+                    offset = initialOffset,
+                    close = false)(identity)
+                }
+              }
+          IOUtil.splitStream(in, positions.map {
+            case (_, _, offset, length) => (offset - initialOffset, length)
+          })
+      }
     }
   }
 }

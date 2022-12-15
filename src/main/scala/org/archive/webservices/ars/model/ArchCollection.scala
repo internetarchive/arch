@@ -1,16 +1,24 @@
 package org.archive.webservices.ars.model
 
 import javax.servlet.http.HttpServletRequest
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.{
   AitCollectionSpecifics,
   CollectionSpecifics,
+  CustomCollectionSpecifics,
   SpecialCollectionSpecifics
 }
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.guavaCache.GuavaCache
 
-case class ArchCollection(id: String, name: String, public: Boolean) {
+case class ArchCollection(
+    id: String,
+    name: String,
+    public: Boolean,
+    userSpecificId: Option[String] = None) {
   private var user: Option[ArchUser] = None
+
+  def userUrlId: String = userSpecificId.getOrElse(id)
 
   def info: ArchCollectionInfo = ArchCollectionInfo.get(id)
 
@@ -41,27 +49,19 @@ object ArchCollection {
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
-  def get(id: String)(implicit request: HttpServletRequest): Option[ArchCollection] =
-    getInternal(id, Some(request))
-
-  def getInternal(
-      id: String,
-      request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
+  def get(id: String)(
+      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
-        request.isEmpty || request
-          .flatMap(ArchUser.get(_))
-          .exists(u => u.isAdmin || c.user.map(_.id).contains(u.id))
+        context.isInternal || context.user.isAdmin || c.user.map(_.id).contains(context.user.id)
       }
       .orElse {
         CollectionSpecifics
-          .get(id)
-          .flatMap { specifics =>
-            specifics.getCollection(request)
-          }
+          .get(id, context.viewUser)
+          .flatMap(_.collection)
           .map { c =>
             if (ArchConf.production) {
-              if (request.isDefined) c.user = request.flatMap(ArchUser.get(_))
+              for (u <- context.userOpt) c.user = Some(u)
               GuavaCache.put(cacheKey(c.id), c, None)
             } else c
           }
@@ -69,9 +69,10 @@ object ArchCollection {
   }
 
   def userCollections(user: ArchUser)(
-      implicit request: HttpServletRequest): Seq[ArchCollection] = {
+      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
-      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user))
+      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
+      .userCollections(user))
       .map { c =>
         if (ArchConf.production) {
           c.user = Some(user)

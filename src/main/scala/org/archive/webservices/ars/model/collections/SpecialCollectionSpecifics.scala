@@ -3,11 +3,11 @@ package org.archive.webservices.ars.model.collections
 import java.io.InputStream
 
 import io.circe.{HCursor, Json, JsonObject, parser}
-import javax.servlet.http.HttpServletRequest
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -23,25 +23,20 @@ class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
       .flatMap(_.get[String]("path").toOption)
       .get
 
-  def getCollection(request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
-    request match {
-      case Some(r) =>
-        ArchUser
-          .get(r)
-          .filter(u =>
-            u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId))
-          .flatMap(_ => SpecialCollectionSpecifics.get(specialId))
-      case None =>
-        SpecialCollectionSpecifics.get(specialId)
-    }
+  def collection(
+      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+    if (context.isInternal || context.userOpt.exists { u =>
+          u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
+        }) SpecialCollectionSpecifics.get(specialId)
+    else None
   }
 
-  def size(implicit request: HttpServletRequest): Long =
+  def size(implicit context: RequestContext = RequestContext.None): Long =
     HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength
 
-  def seeds(implicit request: HttpServletRequest): Int = -1
+  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
 
-  def lastCrawlDate(implicit request: HttpServletRequest): String = ""
+  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
     CollectionLoader.loadWarcFiles(inputPath)

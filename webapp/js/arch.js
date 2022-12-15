@@ -22,7 +22,7 @@ var arch = (function () {
         setTimeout(timeoutHandler, 5000);
     });
 
-    function loadCollectionInfo(containerSelector, collectionId, userId) {
+    function loadCollectionInfo(containerSelector, collectionId, userId, userCollectionId) {
         var $container = $(containerSelector);
         var $lastJobNameCell = $container.find(".collection-lastjob-name");
         var $lastJobTimeCell = $container.find(".collection-lastjob-time");
@@ -33,7 +33,7 @@ var arch = (function () {
         var url = "/ait/api/collection/" + collectionId;
         activeRequests[url] = $.getJSON(url, function (json) {
             if (json.lastJobName) {
-                var lastJobUrl = "/ait/" + userId + "/research_services/" + collectionId + "/analysis/" + json.lastJobId + (json.lastJobSample ? "?sample=true" : "");
+                var lastJobUrl = "/ait/" + userId + "/research_services/" + userCollectionId + "/analysis/" + json.lastJobId + (json.lastJobSample ? "?sample=true" : "");
                 var $lastJobLink = $("<a>").attr("href", lastJobUrl).text(json.lastJobName);
                 $lastJobNameCell.empty().append($lastJobLink);
             } else {

@@ -1,4 +1,3 @@
-<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val usersJson: String %>
 <%@ val aitUsersJson: String %>
 <%@ val aitCollectionsJson: String %>

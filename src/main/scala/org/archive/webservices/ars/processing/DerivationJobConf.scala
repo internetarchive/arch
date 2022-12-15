@@ -18,10 +18,14 @@ case class DerivationJobConf(
 object DerivationJobConf {
   val SampleSize = 100
 
+  def collectionOutPath(collectionId: String): String = {
+    ArchConf.jobOutPath + "/" + collectionId.replace(":", "-")
+  }
+
   def collection(collectionId: String, sample: Boolean = false): Option[DerivationJobConf] = {
     ArchCollection.inputPath(collectionId).map { inputPath =>
       val outDir = if (sample) "samples" else "out"
-      val outputPath = ArchConf.jobOutPath + s"/$collectionId/" + outDir
+      val outputPath = collectionOutPath(collectionId) + "/" + outDir
       DerivationJobConf(collectionId, inputPath, outputPath, if (sample) SampleSize else -1)
     }
   }

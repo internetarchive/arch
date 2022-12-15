@@ -6,5 +6,5 @@ case class DefaultArchUser(
     fullName: String,
     email: Option[String],
     isAdmin: Boolean,
-    isLoggedIn: Boolean = true)
+    isUser: Boolean = true)
     extends ArchUser

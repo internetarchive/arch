@@ -16,10 +16,10 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
           <hr />
         </div>

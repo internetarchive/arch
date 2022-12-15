@@ -131,8 +131,8 @@ object JobStateManager {
                 .get("user")
                 .flatMap(_.asString)
                 .filter(_.nonEmpty)
-                .flatMap(ArchUser.getInternal(_))
-              instance.collection = ArchCollection.getInternal(conf.collectionId)
+                .flatMap(ArchUser.get(_))
+              instance.collection = ArchCollection.get(conf.collectionId)
             })
         }
       }

@@ -5,7 +5,8 @@ import java.time.Instant
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
-import org.archive.webservices.ars.processing.JobManager
+import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
+import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
 
@@ -48,8 +49,9 @@ object ArchCollectionInfo {
   val CachePrefix = "collection-info#"
   val SampleNameSuffix = " (Sample)"
 
-  def infoFile(collectionId: String): String =
-    ArchConf.jobOutPath + s"/$collectionId/info.json"
+  def infoFile(collectionId: String): String = {
+    DerivationJobConf.collectionOutPath(collectionId) + "/info.json"
+  }
 
   def get(collectionId: String): ArchCollectionInfo = {
     val file = infoFile(collectionId)

@@ -3,10 +3,10 @@ package org.archive.webservices.ars.model.collections
 import java.io.InputStream
 
 import io.circe.{HCursor, Json, JsonObject, parser}
-import javax.servlet.http.HttpServletRequest
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.sparkling.util.StringUtil
@@ -17,31 +17,28 @@ import scala.util.Try
 class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
   val aitId: Int = id.stripPrefix(AitCollectionSpecifics.Prefix).toInt
 
+  private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
+    context.isInternal || (context.isAdmin && context.user.aitUser.isEmpty) || context.userOpt
+      .exists { u =>
+        AitCollectionSpecifics.foreignCollectionIds(u).contains(aitId)
+      }
+  }
+
   def inputPath: String =
     ArchConf.aitCollectionPath + s"/$aitId/" + ArchConf.aitCollectionWarcDir
 
-  private def foreignAccess(implicit request: HttpServletRequest): Boolean = {
-    ArchUser.get.exists { u =>
-      AitCollectionSpecifics
-        .foreignCollectionIds(u)
-        .contains(aitId) || (u.isAdmin && u.aitUser.isEmpty)
-    }
-  }
-
-  def getCollection(request: Option[HttpServletRequest] = None): Option[ArchCollection] = {
+  def collection(
+      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     Ait
-      .getJsonWithAuth(
+      .getJson(
         "/api/collection?id=" + aitId,
-        sessionId = if (request.isDefined) Ait.sessionId(request.get) else None,
-        basicAuth =
-          if (request.isEmpty || foreignAccess(request.get)) ArchConf.foreignAitAuthHeader
-          else
-            None)(c => Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
+        Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
       .toOption
       .flatMap(_.headOption)
   }
 
-  def seeds(implicit request: HttpServletRequest): Int = {
+  def seeds(implicit context: RequestContext = RequestContext.None): Int = {
     Ait
       .getJson(
         "/api/seed?__count=id&active=true&deleted=false&limit=-1&collection=" + aitId,
@@ -50,7 +47,7 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
       .getOrElse(-1)
   }
 
-  def lastCrawlDate(implicit request: HttpServletRequest): String = {
+  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = {
     Ait
       .getJson(
         "/api/crawl_job_run?__group=collection&__max=processing_end_date&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
@@ -61,7 +58,7 @@ class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
       .getOrElse("")
   }
 
-  def size(implicit request: HttpServletRequest): Long = {
+  def size(implicit context: RequestContext = RequestContext.None): Long = {
     Ait
       .getJson(
         "/api/crawl_job?__group=collection&__sum=warc_content_bytes&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
@@ -119,9 +116,8 @@ object AitCollectionSpecifics {
   }
 
   def userCollections(user: ArchUser)(
-      implicit request: HttpServletRequest): Seq[ArchCollection] = {
-    val foreignAccess =
-      ArchUser.get.exists(u => u.isAdmin && u.aitUser.isEmpty)
+      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+    val foreignAccess = context.isInternal || (context.isAdmin && context.user.aitUser.isEmpty)
     user.aitUser.map(_.id).toSeq.flatMap { userId =>
       Ait
         .getJson(
@@ -133,7 +129,7 @@ object AitCollectionSpecifics {
   }
 
   def foreignUserCollections(user: ArchUser)(
-      implicit request: HttpServletRequest): Seq[ArchCollection] = {
+      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     foreignCollectionIds(user)
       .flatMap { aitId =>
         Ait

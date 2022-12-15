@@ -41,10 +41,11 @@ class ApiController extends BaseController {
       jobId: String,
       sample: Boolean,
       rerun: Boolean = false): ActionResult = {
-    ensureLogin(redirect = false, useSession = true) { user =>
+    ensureLogin(redirect = false, useSession = true) { context =>
       {
+        val collectionOpt = ArchCollection.get(collectionId)
         for {
-          collection <- ArchCollection.get(collectionId)
+          collection <- collectionOpt
           job <- JobManager.get(jobId)
           conf <- DerivationJobConf.collection(collectionId, sample)
         } yield {
@@ -52,8 +53,8 @@ class ApiController extends BaseController {
           val history = job.history(conf)
           val queued =
             if (history.state == ProcessingState.NotStarted) job.enqueue(conf, { instance =>
-              instance.user = Some(user)
-              instance.collection = Some(collection)
+              instance.user = context.userOpt
+              instance.collection = collectionOpt
             })
             else None
           queued match {
