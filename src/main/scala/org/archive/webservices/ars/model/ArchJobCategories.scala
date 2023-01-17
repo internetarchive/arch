@@ -6,4 +6,5 @@ object ArchJobCategories {
   val Collection = ArchJobCategory("Collection")
   val Network = ArchJobCategory("Network")
   val Text = ArchJobCategory("Text")
+  val System = ArchJobCategory("System")
 }

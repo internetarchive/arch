@@ -20,7 +20,7 @@ class WasapiController extends BaseController {
     params.get("collection") match {
       case Some(collectionId) =>
         ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-          user =>
+          _ =>
             val jobId = params("jobid")
             DerivationJobConf
               .collection(collectionId, params.get("sample").contains("true"))

@@ -26,7 +26,7 @@ class AdminController extends BaseController with ScalateSupport {
     ensureLogin { implicit context =>
       if (context.isAdmin)
         Ok(
-          ssp("admin", "user" -> context.user, "baseUrl" -> relativePath("")),
+          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath("")),
           Map("Content-Type" -> "text/html"))
       else Forbidden()
     }
@@ -49,7 +49,7 @@ class AdminController extends BaseController with ScalateSupport {
 
   get("/edit") {
     ensureLogin { context =>
-      if (context.isAdmin) renderEdit(context.user)
+      if (context.isAdmin) renderEdit(context.loggedIn)
       else Forbidden()
     }
   }
@@ -71,7 +71,7 @@ class AdminController extends BaseController with ScalateSupport {
             }
           } match {
             case Left(failure) =>
-              renderEdit(context.user, Some(failure.getMessage))
+              renderEdit(context.loggedIn, Some(failure.getMessage))
             case Right((usersJson, aitUsersJson, aitCollectionsJson, specialCollectionsJson)) =>
               val usersCursor = usersJson.hcursor
               val usersJsonOut = usersCursor.keys.toIterator.flatten.flatMap { username =>
@@ -103,7 +103,7 @@ class AdminController extends BaseController with ScalateSupport {
               ArchUser.invalidateData()
               AitCollectionSpecifics.invalidateData()
               SpecialCollectionSpecifics.invalidateData()
-              renderEdit(context.user)
+              renderEdit(context.loggedIn)
           }
         }
         r.getOrElse(MethodNotAllowed())

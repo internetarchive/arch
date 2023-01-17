@@ -2,13 +2,13 @@ package org.archive.webservices.ars.io
 
 import java.io._
 import java.nio.file.Files
-
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io.{HdfsIO, InOutInputStream, InputStreamForker}
@@ -23,6 +23,10 @@ import scala.util.Try
 object IOHelper {
   val SamplingScaleUpFactor = 4 // see RDD#take (conf.getInt("spark.rdd.limit.scaleUpFactor", 4))
   val SamplingMaxReadPerPartitionFactor = 2
+
+  def escapePath(path: String): String = {
+    path.replace(CustomCollectionSpecifics.UserIdSeparator, CustomCollectionSpecifics.PathUserEscape)
+  }
 
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)

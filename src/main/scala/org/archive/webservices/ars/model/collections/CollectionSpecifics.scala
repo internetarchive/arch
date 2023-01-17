@@ -8,6 +8,7 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 
 abstract class CollectionSpecifics {
+  def id: String
   def inputPath: String
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
   def size(implicit context: RequestContext = RequestContext.None): Long

@@ -17,9 +17,15 @@ class BaseController extends ScalatraServlet {
       requiresLogin: Boolean = true,
       redirect: Boolean = true,
       useSession: Boolean = false,
-      validateCollection: Option[String] = None)(
+      validateCollection: Option[String] = None,
+      userId: Option[String] = None)(
       action: RequestContext => ActionResult): ActionResult = {
-    implicit val context = RequestContext(ArchUser.get(useSession))
+    val context = ArchUser.get(useSession) match {
+      case Some(loggedIn) =>
+        val user = userId.flatMap(ArchUser.get).filter(u => loggedIn.isAdmin || loggedIn.id == u.id).getOrElse(loggedIn)
+        RequestContext(loggedIn, user)
+      case None => RequestContext(ArchUser.None)
+    }
     if (requiresLogin) {
       if (context.isUser && (validateCollection.isEmpty || ArchCollection
             .get(validateCollection.get)
@@ -42,12 +48,12 @@ class BaseController extends ScalatraServlet {
       val path = requestPath.stripPrefix("/" + userId)
       ensureLogin(redirect = redirectOnForbidden, validateCollection = validateCollection) {
         context =>
-          val viewUser = if (context.isAdmin) ArchUser.get(userId) else context.userOpt
+          val viewUser = if (context.isAdmin) ArchUser.get(userId) else context.loggedInOpt
           viewUser match {
             case Some(u) =>
               if (userId == u.id || u.aitUser.exists(aitUser => userIdInt.contains(aitUser.id))) {
                 if (u.urlId != userId) Found(relativePath(u, path, ""))
-                else action(RequestContext(context.user, u))
+                else action(RequestContext(context.loggedIn, u))
               } else login(Arch.BaseUrl + "/" + userId + path)
             case None =>
               NotFound()
@@ -61,5 +67,5 @@ class BaseController extends ScalatraServlet {
   }
 
   def relativePath(relative: String)(implicit context: RequestContext): String =
-    relativePath(context.viewUserOpt.getOrElse(context.user), relative, Arch.BaseDir)
+    relativePath(context.userOpt.getOrElse(context.loggedIn), relative, Arch.BaseDir)
 }

@@ -14,7 +14,7 @@ import org.archive.webservices.sparkling.io.HdfsIO
 import scala.io.Source
 import scala.util.Try
 
-class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
+class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val specialId: String = id.stripPrefix(SpecialCollectionSpecifics.Prefix)
 
   def inputPath: String =
@@ -25,7 +25,7 @@ class SpecialCollectionSpecifics(id: String) extends CollectionSpecifics {
 
   def collection(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
-    if (context.isInternal || context.userOpt.exists { u =>
+    if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
         }) SpecialCollectionSpecifics.get(specialId)
     else None

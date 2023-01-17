@@ -53,7 +53,7 @@ object Ait {
 
   def user(id: Int)(implicit context: RequestContext = RequestContext.None): Option[AitUser] = {
     val foreignAuthHeader = ArchConf.foreignAitAuthHeader.filter(_ =>
-      context.isInternal || (context.isAdmin && context.user.aitUser.isEmpty))
+      context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty))
     getJsonWithAuth(
       "/api/user?limit=1&account=" + id,
       sessionId = sessionId,

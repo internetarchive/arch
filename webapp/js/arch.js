@@ -1,26 +1,27 @@
 var arch = (function () {
-    var activeRequests = {};
     var jobUpdateHandlers = [];
+    var activeRequests = {};
+    var timeoutSet = false;
 
-    var runningJobs = 0;
-    var finishedJobs = 0;
+    function timeoutHandler() {
+        for (let handler of jobUpdateHandlers) handler();
+        timeoutSet = false;
+        requestInterval();
+    }
 
-    // onPageTransition.push(function () {
-    //     jobUpdateHandlers = [];
-    //     for (const request of Object.values(activeRequests)) request.abort();
-    //     activeRequests = {};
-    // });
-
-    $(function () {
-        function timeoutHandler() {
-            var handlers = jobUpdateHandlers;
-            jobUpdateHandlers = [];
-            for (let handler of handlers) handler();
+    function requestInterval() {
+        if (!timeoutSet && Object.keys(activeRequests).length === 0) {
+            timeoutSet = true;
             setTimeout(timeoutHandler, 5000);
         }
+    }
 
-        setTimeout(timeoutHandler, 5000);
-    });
+    function finishRequest(url) {
+        if (url) delete activeRequests[url];
+        requestInterval();
+    }
+
+    $(requestInterval);
 
     function loadCollectionInfo(containerSelector, collectionId, userId, userCollectionId) {
         var $container = $(containerSelector);
@@ -45,83 +46,104 @@ var arch = (function () {
             $seedsCell.text(json.seeds);
             var lastCrawlDate = new Date(json.lastCrawlDate);
             $lastCrawlDateCell.text(lastCrawlDate.toLocaleDateString('en-us', {year:"numeric", month:"short", day:"numeric"}));
+
+            finishRequest(url);
         });
     }
 
-    function initJob(collectionId, jobId, sample) {
-        var prevState;
+    function refreshJobTables(collectionId, userId, userCollectionId, processTable, completedTable) {
+        var $processTable = $(processTable).children("tbody");
+        var $completedTable = $(completedTable).children("tbody");
 
-        var $card = $("#card-" + jobId).find(sample ? ".job-card-sample" : ".job-card-full");
-        var $runningTr = $("#running-tr-" + jobId + "-" + (sample ? "sample" : "full"));
-        var $finishedTr = $("#finished-tr-" + jobId + "-" + (sample ? "sample" : "full"));
+        var $td1Template = $("<td>").css("font-style", "italic");
+        var $td2Template = $("<td>");
+        var $rowTemplate = $("<tr>").append([$td1Template, $td2Template]);
 
-        var $buttons = $card.find(".job-button");
-        var $runButton = $card.find(".job-runbutton");
-        var $stateButton = $card.find(".job-statebutton");
-        var $resultsButton = $card.find(".job-resultsbutton");
+        jobUpdateHandlers.push(function () {
+            let url = "/ait/api/jobstates/" + collectionId + "?all=true";
+            activeRequests[url] = $.getJSON(url, function (data) {
+                let runningJobs = 0;
+                let finishedJobs = 0;
 
-        var isRunning = false;
-        var isFinished = false;
-
-        function updateState(json) {
-            if (json.activeState !== prevState) {
-                prevState = json.activeState;
-                if (isRunning) runningJobs--;
-                if (isFinished) finishedJobs--;
-                isRunning = false;
-                isFinished = false;
-                if (json.started && !json.failed) {
-                    if (json.finished) {
-                        isFinished = true;
-                        finishedJobs++;
-                        $runningTr.hide();
-                        $finishedTr.show();
-                        $finishedTr.children(".finished-td-finished").text(json.finishedTime);
-                    } else {
-                        isRunning = true;
-                        runningJobs++;
-                        $runningTr.show();
-                        $finishedTr.hide();
+                $processTable.empty();
+                $completedTable.empty();
+                for (let job of data) {
+                    if (job.started && !job.failed) {
+                        let isSample = job.sample && job.sample >= 0
+                        $td1Template.empty();
+                        if (job.finished) {
+                            finishedJobs += 1;
+                            $rowTemplate.attr("class", "finished-tr");
+                            $td2Template.attr("class", "finished-td-finished").text(job.finishedTime);
+                            let url = "/ait/" + userId + "/research_services/" + userCollectionId + "/analysis/" + job.id
+                            if (isSample) {
+                                $td1Template.append($("<a>").attr("href", url + "?sample=true").text(job.name + " (Example)"));
+                            } else {
+                                $td1Template.append($("<a>").attr("href", url).text(job.name));
+                            }
+                            $completedTable.append($rowTemplate.clone());
+                        } else {
+                            runningJobs += 1;
+                            $rowTemplate.attr("class", "running-tr");
+                            $td2Template.attr("class", "running-td-state").text(job.queue ? job.queue + " #" + (job.queuePos + 1) : job.activeState);
+                            if (isSample) {
+                                $td1Template.text(job.name + " (Example)");
+                            } else {
+                                $td1Template.text(job.name);
+                            }
+                            $processTable.append($rowTemplate.clone());
+                        }
                     }
-                } else {
-                    $runningTr.hide();
-                    $finishedTr.hide();
                 }
+
+                $("#summary-empty").toggle(runningJobs === 0);
+                $("#summary-running").toggle(runningJobs > 0);
+                $("#summary-finished").toggle(finishedJobs > 0);
+
+                finishRequest(url);
+            });
+        });
+    }
+
+    function refreshJobCards(collectionId) {
+        var cardsInitialized = {};
+
+        function updateState(job) {
+            let isSample = job.sample && job.sample >= 0
+            var $card = $("#card-" + job.id).find(isSample ? ".job-card-sample" : ".job-card-full");
+            var cardId = job.id + (isSample ? "-sample" : "");
+            if (!cardsInitialized[cardId]) {
+                cardsInitialized[cardId] = true;
+                $card.find(".job-runbutton").click(function () {
+                    let url = "/ait/api/runjob/" + job.id + "/" + collectionId + (isSample ? "?sample=true" : "");
+                    activeRequests[url] = $.getJSON(url, function (json) {
+                        updateState(json);
+                        finishRequest(url);
+                    });
+                });
             }
-
-            $("#summary-empty").toggle(runningJobs === 0);
-            $("#summary-running").toggle(runningJobs > 0);
-            $("#summary-finished").toggle(finishedJobs > 0);
-
-            if (json.started && !json.finished && !json.failed) {
-                $runningTr.children(".running-td-active-stage").text(json.activeStage);
-                $runningTr.children(".running-td-state").text(json.queue ? json.queue + " #" + (json.queuePos + 1) : json.activeState);
-            }
-
-            $stateButton.text(json.state);
-            $buttons.css("display", "none");
-            if (!json.started) {
-                $runButton.css("display", "block");
-            } else if (json.finished) {
-                $resultsButton.css("display", "block");
+            $card.find(".job-button").css("display", "none");
+            if (!job.started) {
+                $card.find(".job-runbutton").css("display", "block");
+            } else if (job.finished) {
+                $card.find(".job-resultsbutton").css("display", "block");
             } else {
+                var $stateButton = $card.find(".job-statebutton");
+                $stateButton.text(job.state);
                 $stateButton.css("display", "block");
             }
-
-            jobUpdateHandlers.push(update);
         }
 
-        $runButton.click(function () {
-            var url = "/ait/api/runjob/" + jobId + "/" + collectionId + (sample ? "?sample=true" : "");
-            activeRequests[url] = $.getJSON(url, updateState);
+        jobUpdateHandlers.push(function () {
+            let url = "/ait/api/jobstates/" + collectionId + "?all=true";
+            activeRequests[url] = $.getJSON(url, function (data) {
+                for (let job of data) {
+                    updateState(job);
+                }
+
+                finishRequest(url);
+            });
         });
-
-        function update() {
-            var url = "/ait/api/jobstate/" + jobId + "/" + collectionId + (sample ? "?sample=true" : "");
-            activeRequests[url] = $.getJSON(url, updateState);
-        }
-
-        update();
     }
 
     function switchTab(id) {
@@ -141,7 +163,8 @@ var arch = (function () {
 
     return {
         loadCollectionInfo: loadCollectionInfo,
-        initJob: initJob,
+        refreshJobTables: refreshJobTables,
+        refreshJobCards: refreshJobCards,
         registerTab: registerTab,
         switchTab: switchTab
     };

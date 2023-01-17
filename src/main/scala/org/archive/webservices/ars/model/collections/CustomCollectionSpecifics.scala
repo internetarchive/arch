@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.model.collections
 
 import java.io.InputStream
-
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
@@ -14,7 +13,7 @@ import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
 
 import scala.util.Try
 
-class CustomCollectionSpecifics(id: String) extends CollectionSpecifics {
+class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
 
   def inputPath: String =
@@ -24,7 +23,7 @@ class CustomCollectionSpecifics(id: String) extends CollectionSpecifics {
 
   def collection(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
-    if (context.isInternal || context.userOpt.exists { u =>
+    if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
         }) CustomCollectionSpecifics.get(customId)
     else None
@@ -48,6 +47,7 @@ class CustomCollectionSpecifics(id: String) extends CollectionSpecifics {
       .collectionInfo(customId)
       .flatMap(_.get[String]("location").toOption) match {
       case Some(location) =>
+        val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
         val locationId = StringUtil.prefixBySeparator(
           location.toLowerCase,
           CustomCollectionSpecifics.LocationIdSeparator)
@@ -56,13 +56,13 @@ class CustomCollectionSpecifics(id: String) extends CollectionSpecifics {
             val warcPath = StringUtil.stripPrefixBySeparator(
               location,
               CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionLoader.loadWarcFilesViaCdxFromPetabox(inputPath, warcPath)
+            CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath, warcPath)
           case "hdfs" | "ait-hdfs" =>
             val warcPath = StringUtil.stripPrefixBySeparator(
               location,
               CustomCollectionSpecifics.LocationIdSeparator)
             CollectionLoader.loadWarcFilesViaCdxFromHdfs(
-              inputPath,
+              cdxPath,
               warcPath,
               aitHdfs = locationId == "ait-hdfs")
           case "arch" | _ =>
@@ -73,12 +73,11 @@ class CustomCollectionSpecifics(id: String) extends CollectionSpecifics {
               .get(parentCollectionId)
               .map { parent =>
                 if (parentCollectionId.startsWith(AitCollectionSpecifics.Prefix)) {
-                  val aitId = parent.asInstanceOf[AitCollectionSpecifics].aitId
                   CollectionLoader.loadWarcFilesViaCdxFromAit(
-                    inputPath,
+                    cdxPath,
                     parent.inputPath,
                     parentCollectionId)
-                } else CollectionLoader.loadWarcFilesViaCdxFromHdfs(inputPath, parent.inputPath)
+                } else CollectionLoader.loadWarcFilesViaCdxFromHdfs(cdxPath, parent.inputPath)
               }
               .getOrElse {
                 throw new MethodNotSupportedException("Unknown location " + location)
@@ -96,10 +95,14 @@ object CustomCollectionSpecifics {
   val UserIdSeparator = ":"
   val PathUserEscape = "-"
   val LocationIdSeparator = ":"
+  val CdxDir = "index.cdx.gz"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
-    val str = HdfsIO.lines(path + s"/$InfoFile").mkString
-    Try { parser.parse(str).right.get.hcursor }.toOption
+    val infoPath = path + s"/$InfoFile"
+    if (HdfsIO.exists(infoPath)) {
+      val str = HdfsIO.lines(infoPath).mkString
+      Try(parser.parse(str).right.get.hcursor).toOption
+    } else None
   }
 
   def splitIdUserCollection(id: String): Option[(String, String)] = {
@@ -112,7 +115,7 @@ object CustomCollectionSpecifics {
   }
 
   def userPath(userId: String): String =
-    ArchConf.customCollectionPath + "/" + userId.replace(":", PathUserEscape)
+    ArchConf.customCollectionPath + "/" + userId.replace(UserIdSeparator, PathUserEscape)
 
   def path(user: ArchUser): String = userPath(user.id)
 
@@ -129,6 +132,7 @@ object CustomCollectionSpecifics {
   def userCollectionIds(user: ArchUser): Seq[String] = {
     HdfsIO
       .files(path(user) + "/*", recursive = false)
+      .filter(p => HdfsIO.exists(p + s"/$InfoFile"))
       .flatMap(_.stripSuffix("/").split('/').lastOption)
       .toSeq
       .map { id =>

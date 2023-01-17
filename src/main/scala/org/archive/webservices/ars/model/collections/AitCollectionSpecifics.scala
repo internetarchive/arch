@@ -14,11 +14,11 @@ import org.archive.webservices.sparkling.util.StringUtil
 import scala.io.Source
 import scala.util.Try
 
-class AitCollectionSpecifics(id: String) extends CollectionSpecifics {
+class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val aitId: Int = id.stripPrefix(AitCollectionSpecifics.Prefix).toInt
 
   private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
-    context.isInternal || (context.isAdmin && context.user.aitUser.isEmpty) || context.userOpt
+    context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty) || context.loggedInOpt
       .exists { u =>
         AitCollectionSpecifics.foreignCollectionIds(u).contains(aitId)
       }
@@ -117,7 +117,7 @@ object AitCollectionSpecifics {
 
   def userCollections(user: ArchUser)(
       implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
-    val foreignAccess = context.isInternal || (context.isAdmin && context.user.aitUser.isEmpty)
+    val foreignAccess = context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty)
     user.aitUser.map(_.id).toSeq.flatMap { userId =>
       Ait
         .getJson(

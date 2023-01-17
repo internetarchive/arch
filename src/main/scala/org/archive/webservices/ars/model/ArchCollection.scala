@@ -45,23 +45,21 @@ case class ArchCollection(
 }
 
 object ArchCollection {
-  def inputPath(id: String): Option[String] = CollectionSpecifics.get(id).map(_.inputPath)
-
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
   def get(id: String)(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
-        context.isInternal || context.user.isAdmin || c.user.map(_.id).contains(context.user.id)
+        context.isInternal || context.loggedIn.isAdmin || c.user.map(_.id).contains(context.loggedIn.id)
       }
       .orElse {
         CollectionSpecifics
-          .get(id, context.viewUser)
+          .get(id, context.user)
           .flatMap(_.collection)
           .map { c =>
             if (ArchConf.production) {
-              for (u <- context.userOpt) c.user = Some(u)
+              for (u <- context.loggedInOpt) c.user = Some(u)
               GuavaCache.put(cacheKey(c.id), c, None)
             } else c
           }
