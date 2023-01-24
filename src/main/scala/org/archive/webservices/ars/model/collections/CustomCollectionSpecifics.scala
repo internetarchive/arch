@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.model.collections
 
-import java.io.InputStream
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
@@ -9,8 +8,9 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
+import org.archive.webservices.sparkling.util.StringUtil
 
+import java.io.InputStream
 import scala.util.Try
 
 class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {

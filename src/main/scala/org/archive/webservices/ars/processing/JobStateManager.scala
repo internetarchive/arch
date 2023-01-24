@@ -1,8 +1,5 @@
 package org.archive.webservices.ars.processing
 
-import java.io.{File, FileOutputStream, PrintStream}
-import java.time.Instant
-
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
@@ -13,6 +10,8 @@ import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.MailUtil
 import org.archive.webservices.sparkling.io.IOUtil
 
+import java.io.{File, FileOutputStream, PrintStream}
+import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.io.Source
 
@@ -81,12 +80,36 @@ object JobStateManager {
     if (failed.size != prevLength) saveFailed()
   }
 
+  def rerunFailed(): Unit = {
+    val jobs = failed.values.flatMap { str =>
+      val indexOfMeta = str.lastIndexOf(MetaSeparator)
+      val split = (if (indexOfMeta < 0) str else str.take(indexOfMeta)).split(" ", 3)
+      DerivationJobConf.deserialize(split(2).trim).map { conf =>
+        val jobId = split(0).trim
+        val meta =
+          if (indexOfMeta < 0) Json.Null
+          else parse(str.drop(indexOfMeta + MetaSeparator.length).trim).getOrElse(Json.Null)
+        (jobId, conf, meta.hcursor)
+      }
+    }.toList
+    for {
+      (id, conf, meta) <- jobs
+      job <- JobManager.get(id)
+    } {
+      job.reset(conf)
+      job.enqueue(conf, { instance =>
+        instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
+        instance.collection = ArchCollection.get(conf.collectionId)
+      })
+    }
+  }
+
   def init(): Unit = if (!initialized) synchronized {
     val failedJobsFile = s"$LoggingDir/$FailedJobsFile"
     if (new File(failedJobsFile).exists) {
       failed = ListMap(
         IOUtil
-          .lines(s"$LoggingDir/$FailedJobsFile")
+          .lines(failedJobsFile)
           .map(_.trim)
           .filter(_.nonEmpty)
           .map { line =>
@@ -119,7 +142,7 @@ object JobStateManager {
       val resuming = running
       running = ListMap.empty
       for {
-        (key, values) <- resuming
+        (_, values) <- resuming
         id <- values.get("id").flatMap(_.asString)
         conf <- values.get("conf").flatMap(DerivationJobConf.fromJson)
       } {

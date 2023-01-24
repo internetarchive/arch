@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.{InputStream, PrintStream}
-
 import io.archivesunleashed.matchbox.{DetectLanguage, RemoveHTML, RemoveHTTPHeader}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
@@ -11,6 +9,8 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 import org.archive.webservices.ars.util.{HttpUtil, PublicSuffixUtil}
 import org.archive.webservices.sparkling.http.HttpMessage
 import org.archive.webservices.sparkling.warc.WarcRecord
+
+import java.io.{InputStream, PrintStream}
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Extract plain text of webpages"

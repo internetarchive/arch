@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.processing.jobs.system
 
-import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
@@ -24,26 +23,37 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       val paramsBc = sc.broadcast(conf.params)
-      val cdx = CollectionLoader.loadWarcFiles(conf.collectionId, conf.inputPath).flatMap { case (path, in) =>
-        CdxUtil.fromWarcGzStream(path, in)
-      }.mapPartitions { partition =>
-        val params = paramsBc.value
-        partition.filter { cdx =>
-          {
-            params.get[String]("surtPrefix").forall(cdx.surtUrl.startsWith)
-          } && {
-            params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
-          } && {
-            params.get[String]("timestampTo").forall(t => cdx.timestamp <= t || cdx.timestamp.startsWith(t))
-          } && {
-            params.get[Int]("status").forall(cdx.status == _)
-          } && {
-            params.get[String]("mime").forall(cdx.mime == _)
+      val cdx = CollectionLoader
+        .loadWarcFiles(conf.collectionId, conf.inputPath)
+        .flatMap {
+          case (path, in) =>
+            CdxUtil.fromWarcGzStream(path, in)
+        }
+        .mapPartitions { partition =>
+          val params = paramsBc.value
+          partition.filter { cdx =>
+            {
+              params.get[String]("surtPrefix").forall(cdx.surtUrl.startsWith)
+            } && {
+              params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
+            } && {
+              params
+                .get[String]("timestampTo")
+                .forall(t => cdx.timestamp <= t || cdx.timestamp.startsWith(t))
+            } && {
+              params.get[Int]("status").forall(cdx.status == _)
+            } && {
+              params.get[String]("mime").forall(cdx.mime == _)
+            }
           }
         }
-      }
       val cdxPath = conf.outputPath + "/" + CustomCollectionSpecifics.CdxDir
-      RddUtil.saveAsTextFile(cdx.map(_.toCdxString), cdxPath, skipIfExists = true, checkPerFile = true, skipEmpty = true)
+      RddUtil.saveAsTextFile(
+        cdx.map(_.toCdxString),
+        cdxPath,
+        skipIfExists = true,
+        checkPerFile = true,
+        skipEmpty = true)
       if (HdfsIO.exists(cdxPath + "/" + Sparkling.CompleteFlagFile)) {
         val size = CdxLoader.load(cdxPath + "/*.cdx.gz").map(_.compressedSize).fold(0L)(_ + _)
         val info = conf.params.set("size" -> size)

@@ -1,8 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.{InputStream, PrintStream}
-import java.net.URL
-
 import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
@@ -15,6 +12,8 @@ import org.archive.webservices.sparkling.io.InputStreamForker
 import org.archive.webservices.sparkling.util.{Common, DigestUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
 
+import java.io.{InputStream, PrintStream}
+import java.net.URL
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Try

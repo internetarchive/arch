@@ -1,15 +1,11 @@
 package org.archive.webservices.ars.model
 
-import javax.servlet.http.HttpServletRequest
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{
-  AitCollectionSpecifics,
-  CollectionSpecifics,
-  CustomCollectionSpecifics,
-  SpecialCollectionSpecifics
-}
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics, CustomCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.guavaCache.GuavaCache
+
+import javax.servlet.http.HttpServletRequest
 
 case class ArchCollection(
     id: String,
@@ -51,7 +47,9 @@ object ArchCollection {
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
-        context.isInternal || context.loggedIn.isAdmin || c.user.map(_.id).contains(context.loggedIn.id)
+        context.isInternal || context.loggedIn.isAdmin || c.user
+          .map(_.id)
+          .contains(context.loggedIn.id)
       }
       .orElse {
         CollectionSpecifics

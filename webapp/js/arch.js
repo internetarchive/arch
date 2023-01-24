@@ -96,6 +96,7 @@ var arch = (function () {
                     }
                 }
 
+                $("#summary-loading").hide();
                 $("#summary-empty").toggle(runningJobs === 0);
                 $("#summary-running").toggle(runningJobs > 0);
                 $("#summary-finished").toggle(finishedJobs > 0);

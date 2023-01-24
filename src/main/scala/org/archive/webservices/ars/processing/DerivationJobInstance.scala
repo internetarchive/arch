@@ -1,14 +1,9 @@
 package org.archive.webservices.ars.processing
 
-import java.time.Instant
-
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{
-  ArchCollection,
-  ArchCollectionInfo,
-  ArchJobInstanceInfo,
-  DerivativeOutput
-}
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
+
+import java.time.Instant
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var registered = false

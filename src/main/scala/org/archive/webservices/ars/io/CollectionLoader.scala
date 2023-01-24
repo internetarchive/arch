@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.io
 
-import java.io.{BufferedInputStream, InputStream, SequenceInputStream}
-
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
@@ -13,6 +11,7 @@ import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
+import java.io.{BufferedInputStream, InputStream, SequenceInputStream}
 import scala.collection.JavaConverters._
 
 object CollectionLoader {

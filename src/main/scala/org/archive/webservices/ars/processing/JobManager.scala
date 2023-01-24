@@ -41,7 +41,8 @@ object JobManager {
 
   def get(id: String): Option[DerivationJob] = jobs.get(id)
 
-  def getByCollection(id: String): Set[DerivationJobInstance] = collectionInstances.get(id).map(_.toSet).getOrElse(Set.empty)
+  def getByCollection(id: String): Set[DerivationJobInstance] =
+    collectionInstances.get(id).map(_.toSet).getOrElse(Set.empty)
 
   def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
     val conf = instance.conf
@@ -49,7 +50,8 @@ object JobManager {
     if (!confJobs.contains(instance.job.id)) {
       confJobs.update(instance.job.id, instance)
       if (instance.job.partialOf.isEmpty) {
-        val collectionJobs = collectionInstances.getOrElseUpdate(conf.collectionId, mutable.Set.empty)
+        val collectionJobs =
+          collectionInstances.getOrElseUpdate(conf.collectionId, mutable.Set.empty)
         collectionJobs.add(instance)
       }
       instance.registered = true

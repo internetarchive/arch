@@ -1,11 +1,11 @@
 package org.archive.webservices.ars.model.collections
 
-import java.io.InputStream
-
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
+
+import java.io.InputStream
 
 abstract class CollectionSpecifics {
   def id: String

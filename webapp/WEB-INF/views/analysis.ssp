@@ -22,9 +22,9 @@
           <div class="left subnav-link ng-scope research_services">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>
-          </div>
+<!--          <div class="left subnav-link ng-scope research_services">-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>-->
+<!--          </div>-->
           <hr />
         </div>
       </div>
@@ -71,6 +71,10 @@
     <script>
       arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>");
     </script>
+
+    <div id="summary-loading" style="text-align: center;">
+      <span class="spinner small"></span>
+    </div>
 
     <div id="summary-empty">
       There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">generate a new dataset</a>.

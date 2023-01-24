@@ -1,12 +1,13 @@
 package org.archive.webservices.ars.model.app
 
-import javax.servlet.http.HttpServletRequest
 import org.archive.webservices.ars.model.users.ArchUser
 
+import javax.servlet.http.HttpServletRequest
+
 class RequestContext private (
-  val request: Option[HttpServletRequest],
-  val loggedIn: ArchUser,
-  val user: ArchUser) {
+    val request: Option[HttpServletRequest],
+    val loggedIn: ArchUser,
+    val user: ArchUser) {
   def isRequest: Boolean = request.nonEmpty
   def isInternal: Boolean = !isRequest
   def isUser: Boolean = loggedIn.isUser
@@ -21,9 +22,9 @@ object RequestContext {
   val None: RequestContext = new RequestContext(scala.None, ArchUser.None, ArchUser.None)
 
   def apply(
-     request: Option[HttpServletRequest],
-     loggedIn: ArchUser,
-     user: ArchUser): RequestContext = {
+      request: Option[HttpServletRequest],
+      loggedIn: ArchUser,
+      user: ArchUser): RequestContext = {
     new RequestContext(request, loggedIn, user)
   }
   def apply(loggedIn: ArchUser, user: ArchUser)(
@@ -35,5 +36,9 @@ object RequestContext {
   }
   def apply(user: Option[ArchUser])(implicit request: HttpServletRequest): RequestContext = {
     RequestContext(user.getOrElse(ArchUser.None))
+  }
+
+  def apply(request: HttpServletRequest): RequestContext = {
+    new RequestContext(Some(request), ArchUser.None, ArchUser.None)
   }
 }

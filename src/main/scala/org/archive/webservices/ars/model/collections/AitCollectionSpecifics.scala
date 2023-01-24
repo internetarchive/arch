@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.model.collections
 
-import java.io.InputStream
-
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
@@ -11,6 +9,7 @@ import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.sparkling.util.StringUtil
 
+import java.io.InputStream
 import scala.io.Source
 import scala.util.Try
 

@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.io
 
-import java.io._
-import java.nio.file.Files
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
@@ -14,6 +12,8 @@ import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io.{HdfsIO, InOutInputStream, InputStreamForker}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
+import java.io._
+import java.nio.file.Files
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -25,7 +25,9 @@ object IOHelper {
   val SamplingMaxReadPerPartitionFactor = 2
 
   def escapePath(path: String): String = {
-    path.replace(CustomCollectionSpecifics.UserIdSeparator, CustomCollectionSpecifics.PathUserEscape)
+    path.replace(
+      CustomCollectionSpecifics.UserIdSeparator,
+      CustomCollectionSpecifics.PathUserEscape)
   }
 
   def tempDir[R](action: String => R): R = {

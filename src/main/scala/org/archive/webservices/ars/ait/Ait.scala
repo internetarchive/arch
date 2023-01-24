@@ -1,13 +1,7 @@
 package org.archive.webservices.ars.ait
 
-import java.io.{InputStream, PrintWriter}
-import java.net.{HttpURLConnection, URL, URLEncoder}
-import java.util.Base64
-
 import io.circe.HCursor
 import io.circe.parser._
-import javax.net.ssl.HttpsURLConnection
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
@@ -15,6 +9,11 @@ import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}
 
+import java.io.{InputStream, PrintWriter}
+import java.net.{HttpURLConnection, URL, URLEncoder}
+import java.util.Base64
+import javax.net.ssl.HttpsURLConnection
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.Try
@@ -30,6 +29,7 @@ object Ait {
     (if (useSession)
        Option(request.getSession.getAttribute(UserSessionAttribute)).map(_.asInstanceOf[AitUser])
      else None).orElse {
+      implicit val context = RequestContext(request)
       getJson("/api/auth/list") { json =>
         for {
           userName <- json.get[String]("username").toOption
@@ -56,7 +56,7 @@ object Ait {
       context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty))
     getJsonWithAuth(
       "/api/user?limit=1&account=" + id,
-      sessionId = sessionId,
+      sessionId = context.forRequest(sessionId(_)),
       basicAuth = foreignAuthHeader) { json =>
       val user = json.downArray
       for {
@@ -130,37 +130,36 @@ object Ait {
     }
   }
 
-  def sessionId(implicit context: RequestContext = RequestContext.None): Option[String] = {
-    context.forRequest { implicit request =>
-      Option(request.getAttribute(AitSessionRequestAttribute)).map(_.toString).orElse {
-        Try {
-          request.cookies
-            .get(AitSessionCookie)
-            .filter(_ != null)
-            .map(_.trim)
-            .filter(_.nonEmpty)
-            .orElse {
-              request
-                .header("Authorization")
-                .filter(_ != null)
-                .map(_.trim)
-                .filter(_.toLowerCase.startsWith("basic "))
-                .map(StringUtil.stripPrefixBySeparator(_, " "))
-                .flatMap { base64 =>
-                  val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
-                  val Array(user, password) =
-                    userPassword.stripPrefix(ArchUser.AitPrefix + ":").split(":", 2)
-                  login(user, password).right.toOption
-                }
-            }
-        }.getOrElse(None)
-      }
+  def sessionId(implicit request: HttpServletRequest): Option[String] = {
+    Option(request.getAttribute(AitSessionRequestAttribute)).map(_.toString).orElse {
+      Try {
+        request.cookies
+          .get(AitSessionCookie)
+          .filter(_ != null)
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .orElse {
+            request
+              .header("Authorization")
+              .filter(_ != null)
+              .map(_.trim)
+              .filter(_.toLowerCase.startsWith("basic "))
+              .map(StringUtil.stripPrefixBySeparator(_, " "))
+              .flatMap { base64 =>
+                val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
+                val Array(user, password) =
+                  userPassword.stripPrefix(ArchUser.AitPrefix + ":").split(":", 2)
+                login(user, password).right.toOption
+              }
+          }
+      }.getOrElse(None)
     }
   }
 
   def get[R](path: String, contentType: String = "text/html", basicAuth: Option[String] = None)(
-      action: InputStream => Option[R])(implicit request: HttpServletRequest): Either[Int, R] = {
-    getWithAuth(path, contentType, sessionId, basicAuth)(action)
+      action: InputStream => Option[R])(
+      implicit context: RequestContext = RequestContext.None): Either[Int, R] = {
+    getWithAuth(path, contentType, context.forRequest(sessionId(_)), basicAuth)(action)
   }
 
   def getWithAuth[R](
@@ -205,7 +204,7 @@ object Ait {
       contentType: String = "text/html",
       basicAuth: Option[String] = None)(action: String => Option[R])(
       implicit context: RequestContext = RequestContext.None): Either[Int, R] =
-    getStringWithAuth(path, contentType, sessionId, basicAuth)(action)
+    getStringWithAuth(path, contentType, context.forRequest(sessionId(_)), basicAuth)(action)
 
   def getStringWithAuth[R](
       path: String,
@@ -223,18 +222,19 @@ object Ait {
 
   def getJson[R](path: String, basicAuth: Option[String] = None)(action: HCursor => Option[R])(
       implicit context: RequestContext = RequestContext.None): Either[Int, R] = {
-    getJsonWithAuth(path, sessionId, basicAuth)(action)
+    getJsonWithAuth(path, context.forRequest(sessionId(_)), basicAuth)(action)
   }
 
   def getJsonWithAuth[R](
       path: String,
       sessionId: Option[String] = None,
-      basicAuth: Option[String] = None)(action: HCursor => Option[R]): Either[Int, R] =
+      basicAuth: Option[String] = None)(action: HCursor => Option[R]): Either[Int, R] = {
     getStringWithAuth(path, "application/json", sessionId, basicAuth) { str =>
       parse(str).right.toOption.flatMap { json =>
         action(json.hcursor)
       }
     }
+  }
 
   def logout()(implicit request: HttpServletRequest): Unit =
     get("/logout") { _ =>

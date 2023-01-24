@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.InputStream
-
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
@@ -16,6 +14,7 @@ import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{IteratorUtil, RddUtil, StringUtil}
 
+import java.io.InputStream
 import scala.concurrent.Future
 import scala.util.Try
 

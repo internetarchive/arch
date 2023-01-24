@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.{Dataset, Row}
@@ -12,6 +10,8 @@ import org.archive.webservices.ars.processing.jobs.shared.AutJob
 import org.archive.webservices.ars.util.{Common, PublicSuffixUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.warc.WarcRecord
+
+import java.io.PrintStream
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"

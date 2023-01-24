@@ -34,6 +34,32 @@
 
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
+    <p>
+      User-defined queries enable you to create sub-collections by applying filters to the records of the current collection.<br>
+      The <i>name</i> of the new sub-collection should be descriptive of the contained records.
+    </p>
+    <p>
+      We currently support the following filters:
+    </p>
+    <dl>
+      <dt style="clear: left; float: left; width: 150px;"><b>surtPrefix:</b></dt>
+      <dd>Only keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i> becomes <i>org,archive</i>)</dd>
+      <dt style="clear: left; float: left; width: 150px;"><b>timestampFrom:</b></dt>
+      <dd>Only keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest).</dd>
+      <dt style="clear: left; float: left; width: 150px;"><b>timestampTo:</b></dt>
+      <dd>Only keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest).</dd>
+      <dt style="clear: left; float: left; width: 150px;"><b>status:</b></dt>
+      <dd>Only keep records with the specified <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes" target="_blank">HTTP status code</a> (e.g., <i>200</i> for successful responses).</dd>
+      <dt style="clear: left; float: left; width: 150px;"><b>mime:</b></dt>
+      <dd>Only keep records with the specified <a href="https://en.wikipedia.org/wiki/Media_type" target="_blank">MIME type</a> (e.g., <i>text/html</i> for webpages).</dd>
+    </dl>
+    <p>
+      If you don't want to apply one of the filters, just remove it from the JSON (including the trailing comma).
+    </p>
+    <p>
+      By running the query, a parameterized job will be launched to derive a custom collection based on the specified criteria.<br>
+      As soon as the user-defined query has finished, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>.
+    </p>
     <h2>Query</h2>
     <div class="alert alert-secondary alert-dismissible fade show" role="alert" style="display: none;" id="query-error">
       <br />
@@ -42,7 +68,7 @@
         <span aria-hidden="true">&times;</span>
       </button>
     </div>
-    <div id="query-editor" style="width: 100%; height: 400px; margin: auto;"></div>
+    <div id="query-editor" style="position: relative; z-index: 1; width: 100%; height: 400px; margin: auto;"></div>
     <br><br>
     <button id="query-button" class="green-bg">Run Query</button>
   </div>

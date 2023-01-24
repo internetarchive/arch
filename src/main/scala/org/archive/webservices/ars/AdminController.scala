@@ -1,14 +1,9 @@
 package org.archive.webservices.ars
 
-import java.io.{File, FileInputStream}
-
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
-import org.archive.webservices.ars.model.collections.{
-  AitCollectionSpecifics,
-  SpecialCollectionSpecifics
-}
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.ars.processing.JobStateManager.Charset
@@ -18,6 +13,7 @@ import org.archive.webservices.sparkling.util.DigestUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
+import java.io.{File, FileInputStream}
 import scala.io.Source
 import scala.util.Try
 
@@ -152,7 +148,9 @@ class AdminController extends BaseController with ScalateSupport {
               new File(s"${JobStateManager.LoggingDir}/${JobStateManager.FailedJobsFile}")
             val log = if (failedJobsFile.exists) {
               val source = Source.fromFile(failedJobsFile, Charset)
-              try {} finally {
+              try {
+                source.mkString
+              } finally {
                 source.close()
               }
             } else ""

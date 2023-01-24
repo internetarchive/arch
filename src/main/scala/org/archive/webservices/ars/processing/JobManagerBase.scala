@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.processing
 
-import java.time.Instant
-
 import org.archive.webservices.sparkling.Sparkling.executionContext
+
+import java.time.Instant
 
 class JobManagerBase(name: String, maxJobsRunning: Int = 5, timeoutSeconds: Int = -1) {
   private val mainQueue = new JobQueue("Queue")

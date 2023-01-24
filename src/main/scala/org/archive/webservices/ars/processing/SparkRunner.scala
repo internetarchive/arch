@@ -1,11 +1,10 @@
 package org.archive.webservices.ars.processing
 
-import java.io.File
-
 import org.apache.tools.ant.taskdefs.Java
 import org.apache.tools.ant.{DefaultLogger, Project}
 import org.archive.webservices.sparkling.Sparkling.executionContext
 
+import java.io.File
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 

@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.model.collections
 
-import java.io.InputStream
-
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
@@ -11,6 +9,7 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.sparkling.io.HdfsIO
 
+import java.io.InputStream
 import scala.io.Source
 import scala.util.Try
 

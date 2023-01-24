@@ -1,9 +1,9 @@
 package org.archive.webservices.ars.util
 
-import javax.servlet.http.HttpServletRequest
 import org.scalatra.ActionResult
 import org.scalatra.guavaCache.GuavaCache
 
+import javax.servlet.http.HttpServletRequest
 import scala.concurrent.duration._
 
 object CacheUtil {

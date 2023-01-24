@@ -5,11 +5,10 @@ import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.processing.{DerivationJob, DerivationJobConf, DerivationJobInstance, DerivationJobParameters, JobManager, ProcessingState}
+import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.util.FormatUtil
-import org.scalatra.{ActionResult, BadRequest, NotFound, Ok}
+import org.scalatra._
 
-import javax.servlet.http.HttpServletRequest
 import scala.collection.immutable.ListMap
 
 class ApiController extends BaseController {
@@ -65,7 +64,8 @@ class ApiController extends BaseController {
       jobId: String,
       sample: Boolean,
       rerun: Boolean = false,
-      params: DerivationJobParameters = DerivationJobParameters.Empty)(implicit context: RequestContext): ActionResult = {
+      params: DerivationJobParameters = DerivationJobParameters.Empty)(
+      implicit context: RequestContext): ActionResult = {
     for {
       collection <- ArchCollection.get(collectionId)
       job <- JobManager.get(jobId)
@@ -77,21 +77,23 @@ class ApiController extends BaseController {
 
   get("/runjob/:jobid/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
-      runJob(params("collectionid"), params("jobid"),
+      runJob(
+        params("collectionid"),
+        params("jobid"),
         sample = params.get("sample").contains("true"),
         rerun = params.get("rerun").contains("true"))
     }
   }
 
   post("/runjob/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true, userId = params.get("user")) { implicit context =>
-      DerivationJobParameters.fromJson(request.body) match {
-        case Some(p) =>
-          val collectionId = params("collectionid")
-          val rerun = params.get("rerun").contains("true")
-          params("jobid") match {
-            case jobId if jobId == UserDefinedQuery.id =>
-              {
+    ensureLogin(redirect = false, useSession = true, userId = params.get("user")) {
+      implicit context =>
+        DerivationJobParameters.fromJson(request.body) match {
+          case Some(p) =>
+            val collectionId = params("collectionid")
+            val rerun = params.get("rerun").contains("true")
+            params("jobid") match {
+              case jobId if jobId == UserDefinedQuery.id => {
                 for {
                   collection <- ArchCollection.get(collectionId)
                   conf <- DerivationJobConf.userDefinedQuery(collectionId, p)
@@ -99,13 +101,13 @@ class ApiController extends BaseController {
                   runJob(UserDefinedQuery, collection, conf, rerun = rerun)
                 }
               }.getOrElse(NotFound())
-            case jobId =>
-              val sample = params.get("sample").contains("true")
-              runJob(collectionId, jobId, sample = sample, rerun = rerun, params = p)
-          }
-        case None =>
-          BadRequest("Invalid POST body, not a valid JSON job parameters object.")
-      }
+              case jobId =>
+                val sample = params.get("sample").contains("true")
+                runJob(collectionId, jobId, sample = sample, rerun = rerun, params = p)
+            }
+          case None =>
+            BadRequest("Invalid POST body, not a valid JSON job parameters object.")
+        }
     }
   }
 
@@ -116,6 +118,15 @@ class ApiController extends BaseController {
         params("jobid"),
         params.get("sample").contains("true"),
         rerun = true)
+    }
+  }
+
+  get("/rerun-failed") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      if (context.isAdmin) {
+        JobStateManager.rerunFailed()
+        Found(Arch.BaseUrl + "/admin/logs/running")
+      } else Forbidden()
     }
   }
 
@@ -149,7 +160,9 @@ class ApiController extends BaseController {
             JobManager.userJobs.filter(!jobs.contains(_)).map(_.history(conf))
           }
         } else active
-        val states = instances.toSeq.sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize)).map(jobStateJson)
+        val states = instances.toSeq
+          .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
+          .map(jobStateJson)
         Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
     }
   }

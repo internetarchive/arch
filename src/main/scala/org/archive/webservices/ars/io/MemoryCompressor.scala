@@ -1,12 +1,9 @@
 package org.archive.webservices.ars.io
 
-import java.io.{ByteArrayOutputStream, EOFException, InputStream}
-
-import org.apache.commons.compress.compressors.bzip2.{
-  BZip2CompressorInputStream,
-  BZip2CompressorOutputStream
-}
+import org.apache.commons.compress.compressors.bzip2.{BZip2CompressorInputStream, BZip2CompressorOutputStream}
 import org.archive.webservices.sparkling.io.ByteArray
+
+import java.io.{ByteArrayOutputStream, EOFException, InputStream}
 
 object MemoryCompressor {
   val BufferSize = 1024
