@@ -44,10 +44,12 @@
     <dl>
       <dt style="clear: left; float: left; width: 150px;"><b>surtPrefix:</b></dt>
       <dd>Only keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i> becomes <i>org,archive</i>)</dd>
+      <dt style="clear: left; float: left; width: 150px;"><b>surtPrefixesOR:</b></dt>
+      <dd>Only keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). If this is used, the <i>surtPrefix</i> filter can be removed.</dd>
       <dt style="clear: left; float: left; width: 150px;"><b>timestampFrom:</b></dt>
-      <dd>Only keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest).</dd>
+      <dd>Only keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest), also just a prefix is valid (e.g., yyyyMM).</dd>
       <dt style="clear: left; float: left; width: 150px;"><b>timestampTo:</b></dt>
-      <dd>Only keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest).</dd>
+      <dd>Only keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest), also just a prefix is valid (e.g., yyyyMM).</dd>
       <dt style="clear: left; float: left; width: 150px;"><b>status:</b></dt>
       <dd>Only keep records with the specified <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes" target="_blank">HTTP status code</a> (e.g., <i>200</i> for successful responses).</dd>
       <dt style="clear: left; float: left; width: 150px;"><b>mime:</b></dt>
@@ -89,7 +91,11 @@
         queryEditor.setText("\
 {\n\
     \"name\": \"<%=collection.name%> <%=java.time.Instant.now%>\",\n\
-    \"surtPrefix\": \"com,\",\n\
+    \"surtPrefix\": \"com,site1\",\n\
+    \"surtPrefixesOR\": [\n\
+        \"com,site2\",\n\
+        \"com,site3\"\n\
+    ],\n\
     \"timestampFrom\": \"19960101\",\n\
     \"timestampTo\": \"202206\",\n\
     \"status\": 200,\n\

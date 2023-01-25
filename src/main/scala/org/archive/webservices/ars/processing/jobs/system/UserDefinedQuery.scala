@@ -33,7 +33,10 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
           val params = paramsBc.value
           partition.filter { cdx =>
             {
-              params.get[String]("surtPrefix").forall(cdx.surtUrl.startsWith)
+              val prefixes = params.values.get("surtPrefixesOR").flatMap(_.hcursor.values).toSeq.flatten.flatMap(_.asString) ++ {
+                params.get[String]("surtPrefix").toSeq
+              }
+              prefixes.isEmpty || prefixes.exists(cdx.surtUrl.startsWith)
             } && {
               params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
             } && {

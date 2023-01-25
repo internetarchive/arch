@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
+import org.apache.spark.storage.StorageLevel
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
@@ -30,16 +31,16 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
         IOHelper
-          .sample(
-            CollectionLoader
+          .sample({
+            val warcs = CollectionLoader
               .loadWarcs(conf.collectionId, conf.inputPath)
               .filter(_.http.exists(http =>
-                http.mime.contains("text/html") && http.status == 200)),
-            conf.sample) { rdd =>
+                http.mime.contains("text/html") && http.status == 200))
+            LGA.parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse("")).filter(_._2.hasNext)
+          }, conf.sample) { parsed =>
             val outPath = conf.outputPath + relativeOutPath
-            val processed = LGA.warcToGraph(
-              rdd,
-              http => Try(HttpUtil.bodyString(http.body, http)).getOrElse("")) { mapRdd =>
+            val cached = parsed.persist(StorageLevel.DISK_ONLY)
+            val processed = LGA.parsedToGraph(parsed) { mapRdd =>
               val path = outPath + "/_" + MapFile
               val strings = mapRdd.map(_.toJsonString)
               RddUtil.saveAsTextFile(strings, path)
@@ -49,7 +50,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
               val strings = graphRdd.map(_.toJsonString)
               RddUtil.saveAsTextFile(strings, path)
             }
-            processed > 0
+            cached.unpersist(true)
+            processed >= 0
           }
       }
     }
