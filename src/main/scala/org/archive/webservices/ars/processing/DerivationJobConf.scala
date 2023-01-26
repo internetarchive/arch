@@ -38,7 +38,7 @@ object DerivationJobConf {
       val outDir = if (sample) "samples" else "out"
       val outputPath = collectionOutPath(collection.id) + "/" + outDir
       DerivationJobConf(
-        collectionId,
+        collection.id,
         collection.inputPath,
         outputPath,
         if (sample) SampleSize else -1)

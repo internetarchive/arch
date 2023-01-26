@@ -215,7 +215,7 @@ object JobStateManager {
         email <- u.email
       } {
         MailUtil.sendTemplate(
-          "finished",
+          instance.job.failedNotificationTemplate,
           Map(
             "to" -> email,
             "jobName" -> instance.job.name,
@@ -236,7 +236,7 @@ object JobStateManager {
       if (!subJob) {
         registerFailed(instance)
         MailUtil.sendTemplate(
-          "failed",
+          instance.job.failedNotificationTemplate,
           Map(
             "jobName" -> instance.job.name,
             "jobId" -> instance.job.id,

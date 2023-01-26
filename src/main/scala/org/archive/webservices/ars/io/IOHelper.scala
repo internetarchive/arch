@@ -9,7 +9,7 @@ import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.io.{HdfsIO, InOutInputStream, InputStreamForker}
+import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, InOutInputStream, InputStreamForker}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._
@@ -83,8 +83,8 @@ object IOHelper {
       HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
     val tmpOutFile = dstPath + "_concatenating"
 
-    val in = new SequenceInputStream(
-      srcFiles.toIterator.map(HdfsIO.open(_, decompress = decompress)).asJavaEnumeration)
+    val in = new ChainedInputStream(
+      srcFiles.toIterator.map(HdfsIO.open(_, decompress = decompress)))
     val outIn = InOutInputStream(in) { out =>
       val compressed = if (compress) new GzipCompressorOutputStream(out) else out
       prepare(compressed)

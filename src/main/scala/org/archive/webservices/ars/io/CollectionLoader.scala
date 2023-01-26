@@ -7,12 +7,11 @@ import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.http.HttpClient
-import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
-import java.io.{BufferedInputStream, InputStream, SequenceInputStream}
-import scala.collection.JavaConverters._
+import java.io.{BufferedInputStream, InputStream}
 
 object CollectionLoader {
   val WasapiPageSize = 100
@@ -235,7 +234,7 @@ object CollectionLoader {
             val in = action(groups)
             (
               file.split('/').last,
-              new BufferedInputStream(new SequenceInputStream(in.asJavaEnumeration))
+              new BufferedInputStream(new ChainedInputStream(in))
                 .asInstanceOf[InputStream])
         }
       }
@@ -288,16 +287,14 @@ object CollectionLoader {
       cacheId: String): RDD[(String, InputStream)] = {
     val aitHdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     val aitAuth = ArchConf.foreignAitAuthHeader
-    loadWarcFilesViaCdx(cdxPath) { partition =>
-      val aitHdfsIO =
-        aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
-      partition.flatMap {
-        case ((file, initialOffset), positions) =>
-          val aitPath = s"$warcPath/$file"
-          val in =
-            if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset)
-            else
-              CollectionCache.cache(cacheId) { cachePath =>
+    CollectionCache.cache(cacheId) { cachePath =>
+      loadWarcFilesViaCdx(cdxPath) { partition =>
+        val aitHdfsIO = aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
+        partition.flatMap { case ((file, initialOffset), positions) =>
+            val aitPath = s"$warcPath/$file"
+            val in =
+              if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset)
+              else {
                 val p = s"$cachePath/$file"
                 if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset)
                 else {
@@ -309,9 +306,10 @@ object CollectionLoader {
                     close = false)(identity)
                 }
               }
-          IOUtil.splitStream(in, positions.map {
-            case (_, _, offset, length) => (offset - initialOffset, length)
-          })
+            IOUtil.splitStream(in, positions.map {
+              case (_, _, offset, length) => (offset - initialOffset, length)
+            })
+        }
       }
     }
   }

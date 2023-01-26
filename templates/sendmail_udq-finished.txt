@@ -1,0 +1,33 @@
+From: arch-no-reply@archive-it.org
+To: $to
+Subject: ARCH: User-defined query on $collectionName has completed!
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=ARCHARCHARCH
+
+--ARCHARCHARCH
+Content-Type: text/plain; charset=utf-8
+Hi $userName,
+===============================================
+
+Your Archives Research Compute Hub user-defined query on $collectionName has finished.
+Your new collection is now listed at: https://webdata.archive-it.org/ait/$accountId/research_services
+
+Thank you for using the Archives Research Compute Hub, and have a great day!
+
+ARCH Team
+--ARCHARCHARCH
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+  <head>
+    <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  </head>
+  <body>
+    <p>Hi $userName,</p>
+    <p>Your Archives Research Compute Hub user-defined query on $collectionName has finished.</p>
+    <p>Your new collection is now listed at: https://webdata.archive-it.org/ait/$accountId/research_services</p>
+    <p>Thank you for using the Archives Research Compute Hub, and have a great day!</p>
+    <p>ARCH Team</p>
+  </body>
+</html>
+--ARCHARCHARCH--

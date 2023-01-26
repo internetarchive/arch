@@ -15,22 +15,22 @@ object CollectionCache {
   private var lastUse = Map.empty[String, Long]
 
   def cache[R](collectionId: String)(action: String => R): R = {
+    val c = cacheDir(collectionId)
     synchronized {
-      inUse += collectionId
+      inUse += c
       clearCache()
     }
-    val path = cachePath(collectionId)
+    val path = ArchConf.collectionCachePath + "/" + c
     fs.mkdirs(new Path(path))
     val r = action(path)
     synchronized {
-      inUse -= collectionId
-      lastUse = lastUse.updated(collectionId, Instant.now.toEpochMilli)
+      inUse -= c
+      lastUse = lastUse.updated(c, Instant.now.toEpochMilli)
     }
     r
   }
 
-  def cachePath(collectionId: String): String =
-    ArchConf.collectionCachePath + "/" + collectionId
+  def cacheDir(collectionId: String): String = IOHelper.escapePath(collectionId)
 
   def clearCache(): Unit = synchronized {
     var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)
@@ -39,8 +39,8 @@ object CollectionCache {
       for (dir <- fs.listStatus(new Path(ArchConf.collectionCachePath))
            if dir.isDirectory) {
         val path = dir.getPath
-        val collectionId = path.getName
-        if (!inUse.contains(collectionId) && !lastUse.contains(collectionId)) {
+        val c = path.getName
+        if (!inUse.contains(c) && !lastUse.contains(c)) {
           val pathLength = fs.getContentSummary(path).getLength
           if (fs.delete(path, true)) length -= pathLength
         }
@@ -53,7 +53,7 @@ object CollectionCache {
           .map(_._1)
           .toIterator
       while (length > CacheClearThresholdBytes && toDelete.hasNext) {
-        val path = new Path(cachePath(toDelete.next))
+        val path = new Path(ArchConf.collectionCachePath + "/" + toDelete.next)
         val pathLength = fs.getContentSummary(path).getLength
         if (fs.delete(path, true)) length -= pathLength
       }

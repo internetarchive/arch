@@ -40,4 +40,8 @@ trait DerivationJob {
   def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = Iterator.empty
 
   def reset(conf: DerivationJobConf): Unit = {}
+
+  def failedNotificationTemplate = "failed"
+
+  def finishedNotificationTemplate = "finished"
 }

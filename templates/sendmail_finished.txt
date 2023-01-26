@@ -9,9 +9,9 @@ Content-Type: text/plain; charset=utf-8
 Hi $userName,
 ===============================================
 
-Your Archive-It Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobId
+Your Archives Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobId
 
-Thank you for using the Archive-It Research Compute Hub, and have a great day!
+Thank you for using the Archives Research Compute Hub, and have a great day!
 
 ARCH Team
 --ARCHARCHARCH
@@ -23,8 +23,8 @@ Content-Type: text/html; charset=utf-8
   </head>
   <body>
     <p>Hi $userName,</p>
-    <p>Your Archive-It Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobId</p>
-    <p>Thank you for using the Archive-It Research Compute Hub, and have a great day!</p>
+    <p>Your Archives Research Compute Hub $jobName job on $collectionName has finished, and is available at: https://webdata.archive-it.org/ait/$accountId/research_services/$collectionId/analysis/$jobId</p>
+    <p>Thank you for using the Archives Research Compute Hub, and have a great day!</p>
     <p>ARCH Team</p>
   </body>
 </html>

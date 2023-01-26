@@ -82,4 +82,6 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
   override val templateName: Option[String] = None
 
   override def reset(conf: DerivationJobConf): Unit = HdfsIO.delete(conf.outputPath)
+
+  override val finishedNotificationTemplate: String = "udq-finished"
 }
