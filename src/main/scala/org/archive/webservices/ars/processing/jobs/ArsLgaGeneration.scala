@@ -31,13 +31,17 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
         IOHelper
-          .sample({
-            val warcs = CollectionLoader
-              .loadWarcs(conf.collectionId, conf.inputPath)
-              .filter(_.http.exists(http =>
-                http.mime.contains("text/html") && http.status == 200))
-            LGA.parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse("")).filter(_._2.hasNext)
-          }, conf.sample) { parsed =>
+          .sample(
+            {
+              val warcs = CollectionLoader
+                .loadWarcs(conf.collectionId, conf.inputPath)
+                .filter(_.http.exists(http =>
+                  http.mime.contains("text/html") && http.status == 200))
+              LGA
+                .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
+                .filter(_._2.hasNext)
+            },
+            conf.sample) { parsed =>
             val outPath = conf.outputPath + relativeOutPath
             val cached = parsed.persist(StorageLevel.DISK_ONLY)
             val processed = LGA.parsedToGraph(parsed) { mapRdd =>

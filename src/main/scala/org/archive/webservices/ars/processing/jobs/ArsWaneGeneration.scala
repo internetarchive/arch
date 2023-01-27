@@ -59,7 +59,9 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
                           ._2
                           .take(MaxInputTextLength)).toOption
                     } yield WANE.get(url, timestamp, digest, bodyText)
-                }.filter(e => e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty).map(_.toJsonString))
+                }.filter(e =>
+                    e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
+                  .map(_.toJsonString))
                 (outFile, json)
             },
           conf.sample) { rdd =>

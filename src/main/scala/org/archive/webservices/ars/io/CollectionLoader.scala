@@ -289,8 +289,10 @@ object CollectionLoader {
     val aitAuth = ArchConf.foreignAitAuthHeader
     CollectionCache.cache(cacheId) { cachePath =>
       loadWarcFilesViaCdx(cdxPath) { partition =>
-        val aitHdfsIO = aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
-        partition.flatMap { case ((file, initialOffset), positions) =>
+        val aitHdfsIO =
+          aitHdfsHostPort.map { case (host, port) => HdfsIO(host, port) }.getOrElse(HdfsIO)
+        partition.flatMap {
+          case ((file, initialOffset), positions) =>
             val aitPath = s"$warcPath/$file"
             val in =
               if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset)

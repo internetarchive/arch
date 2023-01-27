@@ -14,7 +14,6 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._
 import java.nio.file.Files
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
