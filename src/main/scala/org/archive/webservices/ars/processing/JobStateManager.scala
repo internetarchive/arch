@@ -215,7 +215,7 @@ object JobStateManager {
         email <- u.email
       } {
         MailUtil.sendTemplate(
-          instance.job.failedNotificationTemplate,
+          instance.job.finishedNotificationTemplate,
           Map(
             "to" -> email,
             "jobName" -> instance.job.name,
