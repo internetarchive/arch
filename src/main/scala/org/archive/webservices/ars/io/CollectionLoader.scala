@@ -12,6 +12,7 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, Rd
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
+import scala.util.Try
 
 object CollectionLoader {
   val WasapiPageSize = 100
@@ -32,12 +33,17 @@ object CollectionLoader {
       inputPath: String): RDD[(String, CleanupIterator[WarcRecord])] = {
     loadWarcFiles(id, inputPath).map {
       case (p, in) =>
+        val warcs = WarcLoader
+          .load(in)
+          .filter(r => r.isResponse || r.isRevisit)
         (
           p,
           IteratorUtil.cleanup(
-            WarcLoader
-              .load(in)
-              .filter(r => r.isResponse || r.isRevisit),
+            IteratorUtil.whileDefined {
+              Try {
+                if (warcs.hasNext) Try(warcs.next).toOption else None
+              }.toOption.flatten
+            },
             in.close))
     }
   }
@@ -234,7 +240,7 @@ object CollectionLoader {
             val in = action(groups)
             (
               file.split('/').last,
-              new BufferedInputStream(new ChainedInputStream(in))
+              new BufferedInputStream(new ChainedInputStream(in, nextOnError = true))
                 .asInstanceOf[InputStream])
         }
       }
