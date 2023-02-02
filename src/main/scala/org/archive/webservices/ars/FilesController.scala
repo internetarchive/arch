@@ -1,11 +1,11 @@
 package org.archive.webservices.ars
 
-import javax.servlet.http.HttpServletRequest
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
+import javax.servlet.http.HttpServletRequest
 import scala.util.Try
 
 class FilesController extends BaseController {

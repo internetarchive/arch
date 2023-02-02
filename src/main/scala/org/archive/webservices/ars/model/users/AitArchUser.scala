@@ -9,7 +9,7 @@ class AitArchUser private (wrapped: AitUser) extends ArchUser {
   override def fullName: String = wrapped.fullName
   override def email: Option[String] = wrapped.email
   override def isAdmin: Boolean = wrapped.isSystemUser
-  override def isLoggedIn: Boolean = wrapped.isLoggedIn
+  override def isUser: Boolean = wrapped.isLoggedIn
   override val aitUser: Option[AitUser] = Some(wrapped)
 }
 

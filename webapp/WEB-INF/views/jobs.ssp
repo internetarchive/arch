@@ -16,11 +16,14 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
+<!--          <div class="left subnav-link ng-scope research_services">-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>-->
+<!--          </div>-->
           <hr />
         </div>
       </div>
@@ -110,12 +113,6 @@
     /* Dismissible info box. */
     $('.alert').alert()
 
-    /* Start jobs. */
-    <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
-      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
-    <% } %>
-
     /* Expandable job categories. */
     $jobCategories = $(".job-category");
 
@@ -150,5 +147,7 @@
       }));
     }
     });
+
+    arch.refreshJobCards("<%=unescape(collection.id)%>");
   });
 </script>

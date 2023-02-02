@@ -38,10 +38,10 @@
         </tr>
       </thead>
       <tbody class="ng-scope">
-        <% for (collection <- collections) { %>
-          <tr id="collection-row-<%=unescape(collection.id)%>">
+        <% for ((collection, idx) <- collections.zipWithIndex) { %>
+          <tr id="collection-row-<%=unescape(idx)%>">
             <td class="ng-binding">
-              <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">
+              <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">
                 <%=collection.name%>
               </a>
             </td>
@@ -59,7 +59,7 @@
             </td>
           </tr>
           <script>
-            arch.loadCollectionInfo("#collection-row-<%=unescape(collection.id)%>", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>");
+            arch.loadCollectionInfo("#collection-row-<%=unescape(idx)%>", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>");
           </script>
         <% } %>
       </tbody>

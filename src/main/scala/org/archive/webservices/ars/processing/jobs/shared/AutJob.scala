@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs.shared
 
-import java.io.{OutputStream, PrintStream}
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.AutLoader
@@ -13,6 +11,7 @@ import org.archive.webservices.sparkling.compression.Gzip
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.warc.WarcRecord
 
+import java.io.{OutputStream, PrintStream}
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.Try

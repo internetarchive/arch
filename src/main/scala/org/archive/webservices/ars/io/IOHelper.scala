@@ -1,20 +1,19 @@
 package org.archive.webservices.ars.io
 
-import java.io._
-import java.nio.file.Files
-
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.io.{HdfsIO, InOutInputStream, InputStreamForker}
+import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, InOutInputStream, InputStreamForker}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
-import scala.collection.JavaConverters._
+import java.io._
+import java.nio.file.Files
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
@@ -23,6 +22,12 @@ import scala.util.Try
 object IOHelper {
   val SamplingScaleUpFactor = 4 // see RDD#take (conf.getInt("spark.rdd.limit.scaleUpFactor", 4))
   val SamplingMaxReadPerPartitionFactor = 2
+
+  def escapePath(path: String): String = {
+    path.replace(
+      CustomCollectionSpecifics.UserIdSeparator,
+      CustomCollectionSpecifics.PathUserEscape)
+  }
 
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)
@@ -77,8 +82,8 @@ object IOHelper {
       HdfsIO.files(srcPath).filter(_.split('/').lastOption.exists(filter)).toSeq.sorted
     val tmpOutFile = dstPath + "_concatenating"
 
-    val in = new SequenceInputStream(
-      srcFiles.toIterator.map(HdfsIO.open(_, decompress = decompress)).asJavaEnumeration)
+    val in = new ChainedInputStream(
+      srcFiles.toIterator.map(HdfsIO.open(_, decompress = decompress)))
     val outIn = InOutInputStream(in) { out =>
       val compressed = if (compress) new GzipCompressorOutputStream(out) else out
       prepare(compressed)

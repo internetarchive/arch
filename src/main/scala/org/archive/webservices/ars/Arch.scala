@@ -1,7 +1,5 @@
 package org.archive.webservices.ars
 
-import java.io.File
-
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.sparkling._
@@ -10,6 +8,8 @@ import org.archive.webservices.sparkling.util.RddUtil
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
+
+import java.io.File
 
 object Arch {
   val Port: Int = ArchConf.port

@@ -1,9 +1,8 @@
 package org.archive.webservices.ars.processing
 
-import java.time.Instant
-
-import org.archive.webservices.ars.processing.SparkJobManager.run
 import org.archive.webservices.sparkling.Sparkling.executionContext
+
+import java.time.Instant
 
 class JobManagerBase(name: String, maxJobsRunning: Int = 5, timeoutSeconds: Int = -1) {
   private val mainQueue = new JobQueue("Queue")
@@ -54,11 +53,11 @@ class JobManagerBase(name: String, maxJobsRunning: Int = 5, timeoutSeconds: Int 
           instance.unsetQueue()
           instance.updateState(ProcessingState.Running)
           running.enqueue((instance, Instant.now.getEpochSecond))
-          run(instance.job, instance.conf).onComplete { opt =>
-            JobManager.unregister(instance)
+          instance.job.run(instance.conf).onComplete { opt =>
             val success = opt.toOption.getOrElse(false)
             instance.updateState(
               if (success) ProcessingState.Finished else ProcessingState.Failed)
+            JobManager.unregister(instance)
             running.dequeueFirst(_._1 == instance)
             if (running.isEmpty) onAllJobsFinished()
             else checkTimeout(queue)

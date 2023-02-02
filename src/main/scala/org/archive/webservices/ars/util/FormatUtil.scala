@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.util
 
-import java.time.Instant
-
 import org.archive.webservices.sparkling.util.StringUtil
+
+import java.time.Instant
 
 object FormatUtil {
   def formatBytes(bytes: Long): String = {

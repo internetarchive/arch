@@ -3,6 +3,7 @@
   "aitCollectionWarcDir": "arcs",
   "collectionCachePath": "/tmp/arch-cache",
   "jobOutPath": "data/out",
+  "customCollectionPath": "data/collections",
   "localTempPath": "data/tmp",
   "sparkMaster": "local[*]",
   "baseUrl": "http://127.0.0.1:12341",

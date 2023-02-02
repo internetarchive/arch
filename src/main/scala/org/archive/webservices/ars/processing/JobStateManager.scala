@@ -1,20 +1,19 @@
 package org.archive.webservices.ars.processing
 
-import java.io.{File, FileOutputStream, PrintStream}
-import java.time.Instant
-
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
+import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.MailUtil
 import org.archive.webservices.sparkling.io.IOUtil
 
+import java.io.{File, FileOutputStream, PrintStream}
+import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.io.Source
-import scala.util.Try
 
 object JobStateManager {
   val LoggingDir = "logging"
@@ -81,12 +80,36 @@ object JobStateManager {
     if (failed.size != prevLength) saveFailed()
   }
 
+  def rerunFailed(): Unit = {
+    val jobs = failed.values.flatMap { str =>
+      val indexOfMeta = str.lastIndexOf(MetaSeparator)
+      val split = (if (indexOfMeta < 0) str else str.take(indexOfMeta)).split(" ", 3)
+      DerivationJobConf.deserialize(split(2).trim).map { conf =>
+        val jobId = split(0).trim
+        val meta =
+          if (indexOfMeta < 0) Json.Null
+          else parse(str.drop(indexOfMeta + MetaSeparator.length).trim).getOrElse(Json.Null)
+        (jobId, conf, meta.hcursor)
+      }
+    }.toList
+    for {
+      (id, conf, meta) <- jobs
+      job <- JobManager.get(id)
+    } {
+      job.reset(conf)
+      job.enqueue(conf, { instance =>
+        instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
+        instance.collection = ArchCollection.get(conf.collectionId)
+      })
+    }
+  }
+
   def init(): Unit = if (!initialized) synchronized {
     val failedJobsFile = s"$LoggingDir/$FailedJobsFile"
     if (new File(failedJobsFile).exists) {
       failed = ListMap(
         IOUtil
-          .lines(s"$LoggingDir/$FailedJobsFile")
+          .lines(failedJobsFile)
           .map(_.trim)
           .filter(_.nonEmpty)
           .map { line =>
@@ -99,9 +122,15 @@ object JobStateManager {
     if (new File(runningJobsFile).exists) {
       val source = Source.fromFile(runningJobsFile, Charset)
       try {
-        running =
-          Try(parse(source.mkString).right.asInstanceOf[ListMap[String, Map[String, Json]]])
-            .getOrElse(ListMap.empty)
+        running = ListMap(parse(source.mkString).right.toOption.toSeq.flatMap { json =>
+          val cursor = json.hcursor
+          cursor.keys.toIterator.flatten.map { key =>
+            key -> ListMap({
+              val map = cursor.downField(key)
+              map.keys.toSeq.flatten.flatMap(k => map.downField(k).focus.map(k -> _))
+            }: _*)
+          }
+        }: _*)
       } finally {
         source.close()
       }
@@ -110,8 +139,10 @@ object JobStateManager {
     initialized = true
 
     if (!Arch.debugging) {
+      val resuming = running
+      running = ListMap.empty
       for {
-        (key, values) <- running
+        (_, values) <- resuming
         id <- values.get("id").flatMap(_.asString)
         conf <- values.get("conf").flatMap(DerivationJobConf.fromJson)
       } {
@@ -123,13 +154,11 @@ object JobStateManager {
                 .get("user")
                 .flatMap(_.asString)
                 .filter(_.nonEmpty)
-                .flatMap(ArchUser.getInternal(_))
-              instance.collection = ArchCollection.getInternal(conf.collectionId)
+                .flatMap(ArchUser.get(_))
+              instance.collection = ArchCollection.get(conf.collectionId)
             })
         }
       }
-      running = ListMap.empty
-      saveRunning()
     }
   }
 
@@ -186,7 +215,7 @@ object JobStateManager {
         email <- u.email
       } {
         MailUtil.sendTemplate(
-          "finished",
+          instance.job.finishedNotificationTemplate,
           Map(
             "to" -> email,
             "jobName" -> instance.job.name,
@@ -203,19 +232,21 @@ object JobStateManager {
   }
 
   def logFailed(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
-    if (!subJob) {
-      registerFailed(instance)
-      MailUtil.sendTemplate(
-        "failed",
-        Map(
-          "jobName" -> instance.job.name,
-          "jobId" -> instance.job.id,
-          "collectionName" -> instance.collection
-            .map(_.name)
-            .getOrElse(instance.conf.collectionId),
-          "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-          "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+    if (!ShutdownHookManager.get().isShutdownInProgress) {
+      if (!subJob) {
+        registerFailed(instance)
+        MailUtil.sendTemplate(
+          instance.job.failedNotificationTemplate,
+          Map(
+            "jobName" -> instance.job.name,
+            "jobId" -> instance.job.id,
+            "collectionName" -> instance.collection
+              .map(_.name)
+              .getOrElse(instance.conf.collectionId),
+            "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+            "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+      }
+      println("Failed: " + str(instance))
     }
-    println("Failed: " + str(instance))
   }
 }

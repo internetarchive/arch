@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.util
 
 import java.io.{File, PrintStream}
-
 import scala.io.Source
 import scala.util.Try
 

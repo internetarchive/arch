@@ -1,8 +1,5 @@
 package org.archive.webservices.ars.model
 
-import java.io.{BufferedInputStream, FileInputStream, InputStream}
-import java.time.Instant
-
 import _root_.io.circe._
 import _root_.io.circe.syntax._
 import org.apache.hadoop.fs.Path
@@ -11,6 +8,8 @@ import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 
+import java.io.{BufferedInputStream, FileInputStream, InputStream}
+import java.time.Instant
 import scala.util.Try
 
 case class DerivativeOutput(filename: String, dir: String, fileType: String, mimeType: String) {

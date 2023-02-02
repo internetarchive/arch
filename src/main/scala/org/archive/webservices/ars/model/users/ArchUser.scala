@@ -1,13 +1,13 @@
 package org.archive.webservices.ars.model.users
 
-import java.util.Base64
-
 import io.circe.{HCursor, Json, JsonObject, parser}
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
 
+import java.util.Base64
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import scala.io.Source
 import scala.util.Try
 
@@ -17,9 +17,10 @@ trait ArchUser {
   def fullName: String
   def email: Option[String]
   def isAdmin: Boolean
-  def isLoggedIn: Boolean
+  def isUser: Boolean
   def aitUser: Option[AitUser] = None
   lazy val urlId: String = aitUser.map(_.id.toString).getOrElse(id)
+  def option: Option[ArchUser] = if (isUser) Some(this) else None
 }
 
 object ArchUser {
@@ -28,9 +29,9 @@ object ArchUser {
 
   val UserSessionAttribute = "arch-user"
 
-  val NoUser = DefaultArchUser("", "", "", None, isAdmin = false, isLoggedIn = false)
+  val None = DefaultArchUser("", "", "", scala.None, isAdmin = false, isUser = false)
 
-  private var _archUsersCursor: Option[HCursor] = None
+  private var _archUsersCursor: Option[HCursor] = scala.None
   private def archUsersCursor: HCursor = _archUsersCursor.getOrElse {
     _archUsersCursor = Some(Try {
       val source = Source.fromFile("data/arch-users.json", "utf-8")
@@ -43,7 +44,7 @@ object ArchUser {
     _archUsersCursor.get
   }
 
-  private var _aitUserIds: Option[Set[Int]] = None
+  private var _aitUserIds: Option[Set[Int]] = scala.None
   private def aitUserIds: Set[Int] = _aitUserIds.getOrElse {
     _aitUserIds = Some(Try {
       val source = Source.fromFile("data/ait-users.json", "utf-8")
@@ -66,11 +67,11 @@ object ArchUser {
   }
 
   def invalidateData(): Unit = {
-    _archUsersCursor = None
-    _aitUserIds = None
+    _archUsersCursor = scala.None
+    _aitUserIds = scala.None
   }
 
-  private def archUser(name: String, password: Option[String] = None): Option[ArchUser] =
+  private def archUser(name: String, password: Option[String] = scala.None): Option[ArchUser] =
     Some(archUsersCursor)
       .map(_.downField(name.stripPrefix(ArchPrefix + "_")))
       .filter(password.isEmpty || _.get[String]("password")
@@ -106,8 +107,8 @@ object ArchUser {
         archUser(name, Some(password)) match {
           case Some(user) =>
             request.getSession.setAttribute(UserSessionAttribute, user)
-            None
-          case None =>
+            scala.None
+          case scala.None =>
             Some("Wrong username or password!")
         }
       case AitPrefix =>
@@ -122,7 +123,7 @@ object ArchUser {
       case Some(u) =>
         if (u.aitUser.isDefined) Ait.logout()
         else request.getSession.removeAttribute(UserSessionAttribute)
-      case None => // do nothing
+      case scala.None => // do nothing
     }
   }
 
@@ -147,10 +148,8 @@ object ArchUser {
       }
   }
 
-  def get(id: String)(implicit request: HttpServletRequest): Option[ArchUser] =
-    getInternal(id, Some(request))
-
-  def getInternal(id: String, request: Option[HttpServletRequest] = None): Option[ArchUser] = {
+  def get(id: String)(
+      implicit context: RequestContext = RequestContext.None): Option[ArchUser] = {
     val (prefix, suffix) =
       if (id.contains(":"))
         (StringUtil.prefixBySeparator(id, ":"), StringUtil.stripPrefixBySeparator(id, ":"))
@@ -159,13 +158,9 @@ object ArchUser {
       case ArchPrefix =>
         archUser(suffix)
       case AitPrefix =>
-        Try(suffix.toInt).toOption
-          .flatMap { aitId =>
-            if (request.isDefined) Ait.user(aitId)(request.get) else Ait.userInternal(aitId)
-          }
-          .map(AitArchUser(_))
+        Try(suffix.toInt).toOption.flatMap(Ait.user(_)).map(AitArchUser(_))
       case _ =>
-        None
+        scala.None
     }
   }
 }

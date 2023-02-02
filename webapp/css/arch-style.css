@@ -211,10 +211,6 @@ div#graph-modal {
     min-height: 200px;
 }
 
-tr.running-tr, tr.finished-tr {
-    display: none;
-}
-
 #summary-running, #summary-finished, #summary-empty {
     display: none;
 }

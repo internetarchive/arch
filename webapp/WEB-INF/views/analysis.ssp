@@ -1,6 +1,7 @@
+<% import org.archive.webservices.ars.model.collections.AitCollectionSpecifics %>
+
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
-<%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
 
 #set (title)
   <%=collection.name%> Analysis
@@ -16,11 +17,14 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
+<!--          <div class="left subnav-link ng-scope research_services">-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>-->
+<!--          </div>-->
           <hr />
         </div>
       </div>
@@ -34,7 +38,7 @@
     <div class="card">
       <div class="card-body">
         <div class="job-card-flex">
-          <% if (collection.id.startsWith("ARCHIVEIT")) { %>
+          <% if (collection.id.startsWith(AitCollectionSpecifics.Prefix)) { %>
             <div class="job-card-sample">
               <h4><span class="collection-seeds"></span> seeds</h4>
               <p><i class="fa fa-files-o fa-4x" aria-hidden="true"></i></p>
@@ -58,18 +62,22 @@
             <% } %>
           </div>
         </div>
-        <% if (collection.id.startsWith("ARCHIVEIT")) { %>
+        <% if (collection.id.startsWith(AitCollectionSpecifics.Prefix)) { %>
           <br />
           <p class="text-center">Public Collection Link: <a href="https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%>" target="_blank">https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%></a></p>
         <% } %>
       </div>
     </div>
     <script>
-      arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>");
+      arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>");
     </script>
 
+    <div id="summary-loading" style="text-align: center;">
+      <span class="spinner small"></span>
+    </div>
+
     <div id="summary-empty">
-      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">generate a new dataset</a>.
+      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">generate a new dataset</a>.
     </div>
 
     <div id="summary-running">
@@ -85,24 +93,10 @@
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody>
-              <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
-                <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-full">
-                  <td style="font-style: italic;">
-                    <%=instance.job.name%>
-                  </td>
-                  <td class="running-td-state">-</td>
-                </tr>
-                <tr class="running-tr" id="running-tr-<%=unescape(instance.job.id)%>-sample">
-                  <td style="font-style: italic;">
-                    <%=instance.job.name%> (Example)
-                  </td>
-                  <td class="running-td-state">-</td>
-                </tr>
-              <% } %>
+            <tbody></tbody>
           </table>
           <div class="new-job-link">
-            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/jobs">Generate a new dataset</a>
+            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate a new dataset</a>
           </div>
         </div>
       </div>
@@ -120,26 +114,7 @@
                 <th>Finished</th>
               </tr>
             </thead>
-            <tbody>
-              <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name.toLowerCase)) { %>
-              <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-full">
-                <td>
-                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>">
-                  <%=instance.job.name%>
-                  </a>
-                </td>
-                <td class="finished-td-finished">-</td>
-              </tr>
-              <tr class="finished-tr" id="finished-tr-<%=unescape(instance.job.id)%>-sample">
-                <td>
-                  <a href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>?sample=true">
-                  <%=instance.job.name%> (Example)
-                  </a>
-                </td>
-                <td class="finished-td-finished">-</td>
-              </tr>
-              <% } %>
-            </tbody>
+            <tbody></tbody>
           </table>
         </div>
       </div>
@@ -150,9 +125,7 @@
 <script>
 
   $(function() {
-    <% for ((instance, sampleInstance) <- jobs.values.toSeq.flatten.sortBy(_._1.job.name)) { %>
-      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>");
-      arch.initJob("<%=unescape(collection.id)%>", "<%=unescape(instance.job.id)%>", true);
-    <% } %>
+    arch.refreshJobTables("<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>", "#jobs-in-process", "#jobs-completed");
   });
+
 </script>

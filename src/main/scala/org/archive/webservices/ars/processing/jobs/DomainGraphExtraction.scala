@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
 import io.archivesunleashed.matchbox.ExtractLinks
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.desc
@@ -10,6 +8,8 @@ import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
 import org.archive.webservices.ars.util.{Common, HttpUtil, PublicSuffixUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
+
+import java.io.PrintStream
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Extract domain graph"

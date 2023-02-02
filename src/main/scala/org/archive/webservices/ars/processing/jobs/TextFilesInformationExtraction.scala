@@ -1,8 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.{InputStream, OutputStream, PrintStream}
-import java.net.URL
-
 import io.archivesunleashed.matchbox.{GetExtensionMIME, RemoveHTTPHeader}
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.FilenameUtils
@@ -23,6 +20,8 @@ import org.archive.webservices.sparkling.io.{HdfsIO, InputStreamForker}
 import org.archive.webservices.sparkling.util.{Common, DigestUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
 
+import java.io.{InputStream, OutputStream, PrintStream}
+import java.net.URL
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Try

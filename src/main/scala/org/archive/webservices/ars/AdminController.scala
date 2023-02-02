@@ -1,14 +1,9 @@
 package org.archive.webservices.ars
 
-import java.io.{File, FileInputStream}
-
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
-import org.archive.webservices.ars.model.collections.{
-  AitCollectionSpecifics,
-  SpecialCollectionSpecifics
-}
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.ars.processing.JobStateManager.Charset
@@ -18,15 +13,16 @@ import org.archive.webservices.sparkling.util.DigestUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
+import java.io.{File, FileInputStream}
 import scala.io.Source
 import scala.util.Try
 
 class AdminController extends BaseController with ScalateSupport {
   get("/?") {
-    ensureLogin { implicit user =>
-      if (user.isAdmin)
+    ensureLogin { implicit context =>
+      if (context.isAdmin)
         Ok(
-          ssp("admin", "user" -> user, "baseUrl" -> relativePath("")),
+          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath("")),
           Map("Content-Type" -> "text/html"))
       else Forbidden()
     }
@@ -48,15 +44,15 @@ class AdminController extends BaseController with ScalateSupport {
   }
 
   get("/edit") {
-    ensureLogin { user =>
-      if (user.isAdmin) renderEdit(user)
+    ensureLogin { context =>
+      if (context.isAdmin) renderEdit(context.loggedIn)
       else Forbidden()
     }
   }
 
   post("/edit") {
-    ensureLogin { user =>
-      if (user.isAdmin) {
+    ensureLogin { context =>
+      if (context.isAdmin) {
         val r = for {
           usersJsonStr <- params.get("users-json")
           aitUsersJsonStr <- params.get("ait-users-json")
@@ -71,7 +67,7 @@ class AdminController extends BaseController with ScalateSupport {
             }
           } match {
             case Left(failure) =>
-              renderEdit(user, Some(failure.getMessage))
+              renderEdit(context.loggedIn, Some(failure.getMessage))
             case Right((usersJson, aitUsersJson, aitCollectionsJson, specialCollectionsJson)) =>
               val usersCursor = usersJson.hcursor
               val usersJsonOut = usersCursor.keys.toIterator.flatten.flatMap { username =>
@@ -103,7 +99,7 @@ class AdminController extends BaseController with ScalateSupport {
               ArchUser.invalidateData()
               AitCollectionSpecifics.invalidateData()
               SpecialCollectionSpecifics.invalidateData()
-              renderEdit(user)
+              renderEdit(context.loggedIn)
           }
         }
         r.getOrElse(MethodNotAllowed())
@@ -113,49 +109,52 @@ class AdminController extends BaseController with ScalateSupport {
 
   val MaxLogLength: Int = 1.mb.toInt
   get("/logs/:log_type") {
-    ensureLogin { user =>
-      if (user.isAdmin) {
+    ensureLogin { context =>
+      if (context.isAdmin) {
         params("log_type") match {
           case "jobs" =>
             val tail = params.get("tail").flatMap(str => Try(str.toInt).toOption).getOrElse(-1)
             val logFile = new File(s"${JobStateManager.LoggingDir}/${JobStateManager.JobLogFile}")
-            if (logFile.exists) {
+            val log = if (logFile.exists) {
               val skip = if (tail < 0) 0L else (logFile.length - tail.min(MaxLogLength)).max(0L)
               val in = new BoundedInputStream(new FileInputStream(logFile), MaxLogLength)
               try {
                 IOUtil.skip(in, skip)
                 val source = Source.fromInputStream(in, JobStateManager.Charset)
                 try {
-                  Ok(source.mkString, Map("Content-Type" -> "text/plain"))
+                  source.mkString
                 } finally {
                   source.close()
                 }
               } finally {
                 in.close()
               }
-            } else NotFound()
+            } else ""
+            Ok(log, Map("Content-Type" -> "text/plain"))
           case "running" =>
             val runningJobsFile =
               new File(s"${JobStateManager.LoggingDir}/${JobStateManager.RunningJobsFile}")
-            if (runningJobsFile.exists) {
+            val log = if (runningJobsFile.exists) {
               val source = Source.fromFile(runningJobsFile, Charset)
               try {
-                Ok(source.mkString, Map("Content-Type" -> "application/json"))
+                source.mkString
               } finally {
                 source.close()
               }
-            } else NotFound()
+            } else ""
+            Ok(log, Map("Content-Type" -> "application/json"))
           case "failed" =>
             val failedJobsFile =
               new File(s"${JobStateManager.LoggingDir}/${JobStateManager.FailedJobsFile}")
-            if (failedJobsFile.exists) {
+            val log = if (failedJobsFile.exists) {
               val source = Source.fromFile(failedJobsFile, Charset)
               try {
-                Ok(source.mkString, Map("Content-Type" -> "text/plain"))
+                source.mkString
               } finally {
                 source.close()
               }
-            } else NotFound()
+            } else ""
+            Ok(log, Map("Content-Type" -> "text/plain"))
           case _ =>
             NotFound()
         }

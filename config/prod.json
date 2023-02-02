@@ -4,6 +4,7 @@
   "aitCollectionWarcDir": "arcs",
   "collectionCachePath": "/tmp/arch-cache",
   "jobOutPath": "/user/helge/arch",
+  "customCollectionPath": "/user/helge/arch-custom-collections",
   "localTempPath": "/tmp",
   "sparkMaster": "yarn",
   "baseUrl": "https://webdata.archive-it.org",

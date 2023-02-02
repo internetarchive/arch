@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import java.io.PrintStream
-
 import io.archivesunleashed.matchbox.ExtractImageLinks
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
@@ -9,6 +7,8 @@ import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
 import org.archive.webservices.ars.util.{Common, HttpUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
+
+import java.io.PrintStream
 
 object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Extract image graph"
