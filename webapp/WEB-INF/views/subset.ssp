@@ -34,98 +34,82 @@
 
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
+    <h1>Sub-Collection Query</h1>
     <p>
-      User-defined queries enable you to create sub-collections by applying filters to the records of the current collection.<br>
-      The <i>name</i> of the new sub-collection should be descriptive of the contained records.
+      The form below will be used to create a sub-set of <strong><%=collection.name%></strong> by applying a number of optional filters to it. By running the query, a parameterized job will be launched to derive a custom collection based on the specified criteria. Once the user-defined query has finished running, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>, and you will be able to generate new datasets based off of this sub-set of <strong><%=collection.name%></strong>. An email will be sent once the user-defined query has finished running.
     </p>
     <p>
-      We currently support the following filters:
+      If you don't want to apply one of the filters, you can leave the field blank.
     </p>
-    <dl>
-      <dt style="clear: left; float: left; width: 150px;"><b>surtPrefix:</b></dt>
-      <dd>Only keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i> becomes <i>org,archive</i>)</dd>
-      <dt style="clear: left; float: left; width: 150px;"><b>surtPrefixesOR:</b></dt>
-      <dd>Only keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). If this is used, the <i>surtPrefix</i> filter can be removed.</dd>
-      <dt style="clear: left; float: left; width: 150px;"><b>timestampFrom:</b></dt>
-      <dd>Only keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest), also just a prefix is valid (e.g., yyyyMM).</dd>
-      <dt style="clear: left; float: left; width: 150px;"><b>timestampTo:</b></dt>
-      <dd>Only keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest), also just a prefix is valid (e.g., yyyyMM).</dd>
-      <dt style="clear: left; float: left; width: 150px;"><b>status:</b></dt>
-      <dd>Only keep records with the specified <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes" target="_blank">HTTP status code</a> (e.g., <i>200</i> for successful responses).</dd>
-      <dt style="clear: left; float: left; width: 150px;"><b>mime:</b></dt>
-      <dd>Only keep records with the specified <a href="https://en.wikipedia.org/wiki/Media_type" target="_blank">MIME type</a> (e.g., <i>text/html</i> for webpages).</dd>
-    </dl>
-    <p>
-      If you don't want to apply one of the filters, just remove it from the JSON (including the trailing comma).
-    </p>
-    <p>
-      By running the query, a parameterized job will be launched to derive a custom collection based on the specified criteria.<br>
-      As soon as the user-defined query has finished, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>.
-    </p>
-    <h2>Query</h2>
-    <div class="alert alert-secondary alert-dismissible fade show" role="alert" style="display: none;" id="query-error">
-      <br />
-      <p></p>
-      <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="background-color: transparent;">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
-    <div id="query-editor" style="position: relative; z-index: 1; width: 100%; height: 400px; margin: auto;"></div>
-    <br><br>
-    <button id="query-button" class="green-bg">Run Query</button>
-  </div>
-</div>
 
-<script type="text/javascript">
-    $(function () {
-        var options = {
-            "mode": "code",
-            "indentation": 4,
-            "search": false,
-            "mainMenuBar": false,
-            "navigationBar": false,
-            "statusBar": false
-        };
+    <form>
+      <div class="sub-collection-form">
+        <label for="name" class="sub-collection-form-label required">Sub-collection name</label>
+        <input type="text" name="name" id="name" aria-labelledby="name nameDesc" placeholder="<%=collection.name%> <%=java.time.Instant.now%>" required />
+        <p id="nameDesc">A <i>name</i> for the new sub-collection. It should be descriptive of the contained records.</p>
+      </div>
 
-        var queryEditor = new JSONEditor(document.getElementById("query-editor"), options);
-        queryEditor.setText("\
-{\n\
-    \"name\": \"<%=collection.name%> <%=java.time.Instant.now%>\",\n\
-    \"surtPrefix\": \"com,site1\",\n\
-    \"surtPrefixesOR\": [\n\
-        \"com,site2\",\n\
-        \"com,site3\"\n\
-    ],\n\
-    \"timestampFrom\": \"19960101\",\n\
-    \"timestampTo\": \"202206\",\n\
-    \"status\": 200,\n\
-    \"mime\": \"text/html\"\n\
-}\
-");
+      <div class="sub-collection-form">
+        <label for="surtPrefix" class="sub-collection-form-label">SURT Prefix</label>
+        <input type="text" name="surtPrefix" id="surtPrefix" aria-labelledby="surtPrefix surtPrefixDesc" placeholder="org,archive" />
+        <p id="surtPrefixDesc">Keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i> becomes <i>org, archive</i>).</p>
+      </div>
 
-        var $queryButton = $("#query-button");
-        var $queryError = $("#query-error");
-        var submitted = false;
-        $queryButton.click(function() {
-            $queryError.hide();
-            if (!submitted) {
-                submitted = true;
-                $queryButton.hide();
-                var json = queryEditor.getText();
-                $.ajax({
-                  url: "/ait/api/runjob/UserDefinedQuery/<%=unescape(collection.id)%>?user=<%=unescape(user.urlId)%>",
-                  type: "POST",
-                  contentType: "application/json",
-                  data: json
-                }).done(function () {
-                    document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis";
-                }).fail(function (jqXHR, textStatus) {
-                    $queryError.children("p").text(jqXHR.responseText);
-                    $queryError.show();
-                    submitted = false;
-                    $queryButton.show();
-                });
-            }
-        });
-    });
-</script>
+      <div class="sub-collection-form">
+        <label for="surtPrefixesOR" class="sub-collection-form-label">Multiple SURT Prefixes</label>
+        <input type="text" name="surtPrefixesOR" id="surtPrefixesOR" aria-labelledby="surtPrefixesOR surtPrefixesORDesc" placeholder="org,archive|org,archivesunleashed" />
+        <p id="surtPrefixesORDesc">Keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). Each SURT should be separated by a <code>|</code> character.</p>
+      </div>
+
+      <div class="sub-collection-form">
+        <label for="timestampFrom" class="sub-collection-form-label">Crawl date (start)</label>
+        <input type="text" name="timestampFrom" id="timestampFrom" aria-labelledby="timestampFrom timestampFromDesc" placeholder="19960115"/>
+        <p id="timestampFromDesc">Keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest), also just a prefix is valid (e.g., yyyyMM).</p>
+      </div>
+
+      <div class="sub-collection-form">
+        <label for="timestampTo" class="sub-collection-form-label">Crawl date (end)</label>
+        <input type="text" name="timestampTo" id="timestampTo" aria-labelledby="timestampTo timestampToDesc" placeholder="19991231235959" />
+        <p id="timestampToDesc">Keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest), also just a prefix is valid (e.g., yyyyMM).</p>
+      </div>
+
+      <div class="sub-collection-form">
+        <label for="status" class="sub-collection-form-label">HTTP Status</label>
+        <input type="text" name="status" id="status" aria-labelledby="status statusDesc" placeholder="200" />
+        <p id="statusDesc">Keep records with the specified <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes" target="_blank">HTTP status code</a> (e.g., <i>200</i> for successful responses).</p>
+      </div>
+
+      <div class="sub-collection-form">
+        <label for="mime" class="sub-collection-form-label">MIME Type</label>
+          <input type="text" name="mime" id="mime" aria-labelledby="mime mimeDesc" placeholder="text/html" />
+          <p id="mimeDesc">Keep records with the specified <a href="https://en.wikipedia.org/wiki/Media_type" target="_blank">MIME type</a> (e.g., <i>text/html</i> for webpages).</p>
+      </div>
+
+      <button type="submit">Run Query</button>
+    </form>
+    <script type="text/javascript">
+      function handleSubmit(event) {
+        event.preventDefault();
+
+        const data = new FormData(event.target);
+        const surts = '"' + data.get('surtPrefixesOR').split('|').join('","') + '"'
+        const value = '{' +
+            '"name": "' + data.get('name') + '"' +
+            (data.get('surtPrefix') !== '' ? ', "surtPrefix": "' + data.get('surtPrefix') + '"' : '') +
+            (data.get('surtPrefixesOR') !== '' ? ', "surtPrefixesOR": [' + surts + ']' : '') +
+            (data.get('timestampFrom') !== '' ? ', "timestampFrom": "' + data.get('timestampFrom') + '"' : '') +
+            (data.get('timestampTo') !== '' ? ', "timestampTo": "' + data.get('timestampTo') + '"' : '') +
+            (data.get('status') !== '' ? ', "status": "' + data.get('status') + '"' : '') +
+            (data.get('mime') !== '' ? ', "mime": "' + data.get('mime') + '"' : '') +
+          '}'
+        $.ajax({
+          url: "/ait/api/runjob/UserDefinedQuery/<%=unescape(collection.id)%>?user=<%=unescape(user.urlId)%>",
+          type: "POST",
+          contentType: "application/json",
+          data: value
+        }).done(function () {
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis";
+        })}
+        const form = document.querySelector('form');
+        form.addEventListener('submit', handleSubmit);
+    </script>
