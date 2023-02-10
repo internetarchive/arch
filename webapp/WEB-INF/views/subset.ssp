@@ -36,7 +36,7 @@
   <div class="large-12 columns">
     <h1>Sub-Collection Query</h1>
     <p>
-      The form below will be used to create a sub-set of <strong><%=collection.name%></strong> by applying a number of optional filters to it. By running the query, a parameterized job will be launched to derive a custom collection based on the specified criteria. Once the user-defined query has finished running, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>, and you will be able to generate new datasets based off of this sub-set of <strong><%=collection.name%></strong>. An email will be sent once the user-defined query has finished running.
+      This form will create a sub-set of <strong><%=collection.name%></strong> by applying a number of optional filters to it. When you run this query, a parameterized job will be launched to derive a custom collection based on the specified criteria. Once the user-defined query has finished running, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>. You can then generate new datasets based off of this sub-set of <strong><%=collection.name%></strong>. An email will be sent to you once the user-defined query has finished running.
     </p>
     <p>
       If you don't want to apply one of the filters, you can leave the field blank.
@@ -45,7 +45,7 @@
     <form>
       <div class="sub-collection-form">
         <label for="name" class="sub-collection-form-label required">Sub-collection name</label>
-        <input type="text" name="name" id="name" aria-labelledby="name nameDesc" placeholder="<%=collection.name%> <%=java.time.Instant.now%>" required />
+        <input type="text" name="name" id="name" aria-labelledby="name nameDesc" placeholder="<%=collection.name%> - HTML pages from archive.org" required />
         <p id="nameDesc">A <i>name</i> for the new sub-collection. It should be descriptive of the contained records.</p>
       </div>
 
@@ -58,7 +58,7 @@
       <div class="sub-collection-form">
         <label for="surtPrefixesOR" class="sub-collection-form-label">Multiple SURT Prefixes</label>
         <input type="text" name="surtPrefixesOR" id="surtPrefixesOR" aria-labelledby="surtPrefixesOR surtPrefixesORDesc" placeholder="org,archive|org,archivesunleashed" />
-        <p id="surtPrefixesORDesc">Keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). Each SURT should be separated by a <code>|</code> character.</p>
+        <p id="surtPrefixesORDesc">Keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). Each SURT should be separated by a <code>|</code> character. If you are using this field, you can leave the "SURT Prefix" blank.</p>
       </div>
 
       <div class="sub-collection-form">
