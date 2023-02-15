@@ -19,10 +19,26 @@ Web application for distributed compute analysis of Archive-It web archive colle
 ### Docker
 
 1. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
-2. `docker build --no-cache -t arch .`
-3. `docker run -it --rm -p 12341:12341 -p 54040:54040 -v /home/nruest/Projects/au/sample-data/arch:/data -v /home/nruest/Projects/au/arch:/app arch`
+2. Setup a `data` directory somewhere with the following sub-directories: `cache`, `collections`, `in`, `logging`, `out`, `tmp`
+3. Build the container: `docker build --no-cache -t arch .`
+4. Run the container (example): `docker run -it --rm -p 54040:54040 -p 12341:12341 -v "/home/nruest/Projects/au/sample-data/ars-cloud:/data" -v "/home/nruest/Projects/au/arch:/app" -v "/home/nruest/Projects/au/sample-data/ars-cloud/logging:/logging" arch`
 
 Web application will be available at: [http://localhost:12341/ait](http://localhost:12341/ait), and Apache Spark interface will be available at [http://localhost:54040](http://localhost:54040).
+
+For the `data/input` directory, an example directory structure looks like this:
+
+```
+├── in
+│   ├── 13529
+│   │   └── arcs
+│   ├── 13709
+│   │   └── arcs
+│   ├── 14462
+│   │   └── arcs
+│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299797-20200624234136833-00000-h3.warc.gz
+│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299798-20200624234136479-00000-h3.warc.gz
+│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299799-20200624234136645-00000-h3.warc.gz
+```
 
 ## Citing ARCH
 
