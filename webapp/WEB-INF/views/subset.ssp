@@ -50,15 +50,9 @@
       </div>
 
       <div class="sub-collection-form">
-        <label for="surtPrefix" class="sub-collection-form-label">SURT Prefix</label>
-        <input type="text" name="surtPrefix" id="surtPrefix" aria-labelledby="surtPrefix surtPrefixDesc" placeholder="org,archive" />
-        <p id="surtPrefixDesc">Keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i> becomes <i>org, archive</i>).</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="surtPrefixesOR" class="sub-collection-form-label">Multiple SURT Prefixes</label>
+        <label for="surtPrefixesOR" class="sub-collection-form-label">SURT Prefix(es)</label>
         <input type="text" name="surtPrefixesOR" id="surtPrefixesOR" aria-labelledby="surtPrefixesOR surtPrefixesORDesc" placeholder="org,archive|org,archivesunleashed" />
-        <p id="surtPrefixesORDesc">Keep records of URLs that start with at least one of the specified prefixes in SURT form (see above). Each SURT should be separated by a <code>|</code> character. If you are using this field, you can leave the "SURT Prefix" blank.</p>
+        <p id="surtPrefixesORDesc">Keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i>   becomes <i>org, archive</i>). If multiple SURTs are entered, each SURT should be separated by a <code>|</code> character.</p>
       </div>
 
       <div class="sub-collection-form">
