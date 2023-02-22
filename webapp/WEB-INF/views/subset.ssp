@@ -87,20 +87,18 @@
 
         const data = new FormData(event.target);
         const surts = '"' + data.get('surtPrefixesOR').split('|').join('","') + '"'
-        const value = '{' +
-            '"name": "' + data.get('name') + '"' +
-            (data.get('surtPrefix') !== '' ? ', "surtPrefix": "' + data.get('surtPrefix') + '"' : '') +
-            (data.get('surtPrefixesOR') !== '' ? ', "surtPrefixesOR": [' + surts + ']' : '') +
-            (data.get('timestampFrom') !== '' ? ', "timestampFrom": "' + data.get('timestampFrom') + '"' : '') +
-            (data.get('timestampTo') !== '' ? ', "timestampTo": "' + data.get('timestampTo') + '"' : '') +
-            (data.get('status') !== '' ? ', "status": "' + data.get('status') + '"' : '') +
-            (data.get('mime') !== '' ? ', "mime": "' + data.get('mime') + '"' : '') +
-          '}'
+        const value = {"name": data.get('name'),
+                       "surtPrefix": data.get('surtPrefix'),
+                       "surtPrefixesOR": surts,
+                       "timestampFrom": data.get('timestampFrom'),
+                       "timestampTo": data.get('timestampTo'),
+                       "status": data.get('status'),
+                       "mime": data.get('mime')};
         $.ajax({
           url: "/ait/api/runjob/UserDefinedQuery/<%=unescape(collection.id)%>?user=<%=unescape(user.urlId)%>",
           type: "POST",
           contentType: "application/json",
-          data: value
+          data: JSON.stringify(value)
         }).done(function () {
           document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis";
         })}
