@@ -87,16 +87,22 @@
 
         const data = new FormData(event.target);
         const value = {"name": data.get('name'),
-                       "surtPrefixesOR": data.get('surtPrefixesOR').split('|'),
-                       "timestampFrom": data.get('timestampFrom'),
-                       "timestampTo": data.get('timestampTo'),
-                       "status": data.get('status'),
-                       "mime": data.get('mime')};
+                     "surtPrefixesOR": data.get('surtPrefixesOR').split('|'),
+                     "timestampFrom": data.get('timestampFrom'),
+                     "timestampTo": data.get('timestampTo'),
+                     "status": data.get('status'),
+                     "mime": data.get('mime')};
+        const json = JSON.parse(JSON.stringify(value), (key, value) => {
+          if (value == null || value == '' || value == [] || value == {})
+            return undefined;
+          return value;
+        });
+
         $.ajax({
           url: "/ait/api/runjob/UserDefinedQuery/<%=unescape(collection.id)%>?user=<%=unescape(user.urlId)%>",
           type: "POST",
           contentType: "application/json",
-          data: JSON.stringify(value)
+          data: JSON.stringify(json)
         }).done(function () {
           document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services";
         })}
