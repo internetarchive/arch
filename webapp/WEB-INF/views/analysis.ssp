@@ -22,9 +22,9 @@
           <div class="left subnav-link ng-scope research_services">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
-<!--          <div class="left subnav-link ng-scope research_services">-->
-<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>-->
-<!--          </div>-->
+          <div class="left subnav-link ng-scope research_services">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/sub-collection-builder">Sub-Collection Builder</a></span>
+          </div>
           <hr />
         </div>
       </div>

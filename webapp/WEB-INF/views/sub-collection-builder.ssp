@@ -23,7 +23,7 @@
             <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/subset">Sub-Collection Query</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/sub-collection-builder">Sub-Collection Builder</a></span>
           </div>
           <hr />
         </div>
@@ -86,10 +86,8 @@
         event.preventDefault();
 
         const data = new FormData(event.target);
-        const surts = '"' + data.get('surtPrefixesOR').split('|').join('","') + '"'
         const value = {"name": data.get('name'),
-                       "surtPrefix": data.get('surtPrefix'),
-                       "surtPrefixesOR": surts,
+                       "surtPrefixesOR": data.get('surtPrefixesOR').split('|'),
                        "timestampFrom": data.get('timestampFrom'),
                        "timestampTo": data.get('timestampTo'),
                        "status": data.get('status'),
@@ -100,7 +98,7 @@
           contentType: "application/json",
           data: JSON.stringify(value)
         }).done(function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis";
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services";
         })}
         const form = document.querySelector('form');
         form.addEventListener('submit', handleSubmit);

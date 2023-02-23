@@ -51,7 +51,7 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  get("/:userid/research_services/:collection_id/subset") {
+  get("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
       val collectionId = params("collection_id")
       ArchCollection
@@ -59,10 +59,10 @@ class DefaultController extends BaseController with ScalateSupport {
         .map { collection =>
           Ok(
             ssp(
-              "subset",
+              "sub-collection-builder",
               "breadcrumbs" -> Seq(
                 (relativePath("/" + collectionId + "/analysis"), collection.name),
-                (relativePath("/" + collectionId + "/subset"), "Sub-Collection Query")),
+                (relativePath("/" + collectionId + "/sub-collection-builder"), "Sub-Collection Builder")),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -71,7 +71,7 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  post("/:userid/research_services/:collection_id/subset") {
+  post("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
       val collectionId = params("collection_id")
       ArchCollection
