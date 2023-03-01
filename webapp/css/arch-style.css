@@ -230,3 +230,22 @@ div.new-job-link {
     margin: auto;
     width: 50%;
 }
+
+.sub-collection-form {
+    padding-bottom: 15px;
+}
+
+.sub-collection-form-label {
+    font-size: 1rem;
+    color: black;
+    cursor: pointer;
+    display: block;
+    font-weight: bold;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+.required:after {
+    content:" *";
+    color: red;
+}
