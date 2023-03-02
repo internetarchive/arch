@@ -6,6 +6,7 @@ import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.MailUtil
 import org.archive.webservices.sparkling.io.IOUtil
@@ -16,7 +17,7 @@ import scala.collection.immutable.ListMap
 import scala.io.Source
 
 object JobStateManager {
-  val LoggingDir = "logging"
+  val LoggingDir = ArchConf.jobLoggingPath
   val JobLogFile = "jobs.log"
   val RunningJobsFile = "running.json"
   val FailedJobsFile = "failed.lst"

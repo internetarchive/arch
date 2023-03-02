@@ -18,47 +18,137 @@ object ArchConf {
     }
   }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor)
 
+  /** Getter for String-type config values that prioritizes environment overrides **/
+  private def getConfStrValue(
+    envKey: String,
+    configKey: String,
+    default: String
+  ): String = {
+    Option(System.getenv(envKey))
+      .getOrElse(cursor.get[String](configKey).toOption.getOrElse(default))
+  }
+
+  /** Getter for Integer-type config values that prioritizes environment overrides **/
+  private def getConfIntValue(
+    envKey: String,
+    configKey: String,
+    default: Int
+  ): Int  = {
+    Option(System.getenv(envKey))
+      .map(x => Try(x.toInt).getOrElse(default))
+      .getOrElse(cursor.get[Int](configKey).toOption.getOrElse(default))
+  }
+
+  /** Getter for Bool-type config values that prioritizes environment overrides **/
+  private def getConfBoolValue(
+    envKey: String,
+    configKey: String,
+    default: Boolean
+  ): Boolean  = {
+    Option(System.getenv(envKey))
+      .map(x => Try(x.toBoolean).getOrElse(default))
+      .getOrElse(cursor.get[Boolean](configKey).toOption.getOrElse(default))
+  }
+
+  lazy val iaBaseUrl: String = getConfStrValue(
+    "ARCH_IA_BASE_URL", "iaBaseUrl",
+    "https://archive.org"
+  )
+
+  lazy val aitCollectionHdfsHost: Option[String] = Option(
+    getConfStrValue(
+      "ARCH_AIT_COLLECTION_HDFS_HOST", "aitCollectionHdfsHost",
+      ""
+    )
+  ).filter(_.nonEmpty)
+
+  lazy val aitCollectionHdfsPort: Int = getConfIntValue(
+    "ARCH_AIT_COLLECTION_HDFS_PORT", "aitCollectionHdfsPort",
+    6000
+  )
+
   lazy val aitCollectionHdfsHostPort: Option[(String, Int)] =
-    cursor
-      .get[String]("aitCollectionHdfsHost")
-      .toOption
-      .map((_, cursor.get[Int]("aitCollectionHdfsPort").toOption.getOrElse(6000)))
+    aitCollectionHdfsHost.map((_, aitCollectionHdfsPort))
 
-  lazy val aitCollectionPath: String =
-    cursor.get[String]("aitCollectionPath").toOption.getOrElse("data/in")
+  lazy val aitCollectionPath: String = getConfStrValue(
+    "ARCH_AIT_COLLECTION_PATH", "aitCollectionPath",
+    "data/in"
+  )
 
-  lazy val aitCollectionWarcDir: String =
-    cursor.get[String]("aitCollectionWarcDir").toOption.getOrElse("arcs")
+  lazy val aitCollectionWarcDir: String = getConfStrValue(
+    "ARCH_AIT_COLLECTION_WARC_DIR", "aitCollectionWarcDir",
+    "arcs"
+  )
 
-  lazy val collectionCachePath: String =
-    cursor.get[String]("collectionCachePath").toOption.getOrElse("/data/cache")
+  lazy val aitBaseUrl: String = getConfStrValue(
+    "ARCH_AIT_BASE_URL", "aitBaseUrl",
+    "https://partner.archive-it.org"
+  )
 
-  lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
+  lazy val aitLoginPath: String = getConfStrValue(
+    "ARCH_AIT_LOGIN_PATH", "aitLoginPath",
+    "/login"
+  )
 
-  lazy val customCollectionPath: String =
-    cursor.get[String]("customCollectionPath").toOption.getOrElse("data/collections")
+  lazy val aitWarcsBaseUrl: String = getConfStrValue(
+    "ARCH_AIT_WARCS_BASE_URL", "aitWarcsBaseUrl",
+    "https://warcs.archive-it.org"
+  )
 
-  lazy val localTempPath: String =
-    cursor.get[String]("localTempPath").toOption.getOrElse("data/tmp")
+  lazy val collectionCachePath: String = getConfStrValue(
+    "ARCH_COLLECTION_CACHE_PATH", "collectionCachePath",
+    "/data/cache"
+  )
 
-  lazy val sparkMaster: String = cursor.get[String]("sparkMaster").toOption.getOrElse("local[*]")
+  lazy val jobOutPath: String = getConfStrValue(
+    "ARCH_JOB_OUTPUT_PATH", "jobOutPath",
+    "data/out"
+  )
 
-  lazy val baseUrl: String =
-    cursor.get[String]("baseUrl").toOption.getOrElse("http://127.0.0.1:" + Arch.Port)
+  lazy val jobLoggingPath: String = getConfStrValue(
+    "ARCH_JOB_LOGGING_PATH", "jobLoggingPath",
+    "/var/log/arch"
+  )
 
-  lazy val loginUrl: String = cursor
-    .get[String]("loginUrl")
-    .toOption
-    .getOrElse("http://127.0.0.1:" + Arch.Port + "/ait/login?next=")
+  lazy val customCollectionPath: String = getConfStrValue(
+    "ARCH_CUSTOM_COLLECTIONS_PATH", "customCollectionPath",
+    "data/collections"
+  )
 
-  lazy val hadoopQueue: String =
-    cursor.get[String]("hadoopQueue").toOption.getOrElse("default")
+  lazy val localTempPath: String = getConfStrValue(
+    "ARCH_LOCAL_TEMP_PATH", "localTempPath",
+    "data/tmp"
+  )
 
-  lazy val production: Boolean =
-    cursor.get[Boolean]("production").toOption.getOrElse(false)
+  lazy val sparkMaster: String = getConfStrValue(
+    "ARCH_SPARK_MASTER", "sparkMaster",
+    "local[*]"
+  )
 
-  lazy val port: Int =
-    cursor.get[Int]("port").toOption.getOrElse(12341)
+  lazy val baseUrl: String = getConfStrValue(
+    "ARCH_BASE_URL", "baseUrl",
+    "http://127.0.0.1:" + Arch.Port
+  )
+
+  lazy val loginUrl: String = getConfStrValue(
+    "ARCH_LOGIN_URL", "loginUrl",
+    "http://127.0.0.1:" + Arch.Port + "/ait/login?next="
+  )
+
+  lazy val hadoopQueue: String = getConfStrValue(
+    "ARCH_HADOOP_QUEUE", "hadoopQueue",
+    "default"
+  )
+
+  lazy val production: Boolean = getConfBoolValue(
+    "ARCH_PRODUCTION", "production",
+    false
+  )
+
+  lazy val port: Int = getConfIntValue(
+    "ARCH_PORT", "port",
+    12341
+  )
 
   /** python:
    * import requests, base64
@@ -69,7 +159,7 @@ object ArchConf {
       .get[String]("foreignAitAuthHeader")
       .toOption
       .map("Basic " + _)
-      .orElse(Option(System.getenv("AIT_AUTH_HEADER")))
+      .orElse(Option(System.getenv("ARCH_AIT_AUTH_HEADER")))
 
   /**
    * LOW s3accessKey:s3secretKey
@@ -79,5 +169,5 @@ object ArchConf {
       .get[String]("iaS3AuthHeader")
       .toOption
       .map("LOW " + _)
-      .orElse(Option(System.getenv("IA_AUTH_HEADER")))
+      .orElse(Option(System.getenv("ARCH_IA_AUTH_HEADER")))
 }

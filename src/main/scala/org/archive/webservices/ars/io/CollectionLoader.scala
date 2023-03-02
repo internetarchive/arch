@@ -89,7 +89,7 @@ object CollectionLoader {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
-      val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
+      val wasapiUrl = ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       while (apiFileCount < 0) {
         Ait
@@ -135,7 +135,7 @@ object CollectionLoader {
                               .downField("locations")
                               .values
                               .flatMap(_.flatMap(_.asString).find(
-                                _.startsWith("https://warcs.archive-it.org")))
+                                _.startsWith(ArchConf.aitWarcsBaseUrl)))
                           } yield (filename, location)
                         })
                     } match {
@@ -254,7 +254,7 @@ object CollectionLoader {
     loadWarcFilesViaCdx(cdxPath) { partition =>
       partition.flatMap {
         case ((itemFile, initialOffset), positions) =>
-          val url = "https://archive.org/serve/" + itemFile
+          val url = ArchConf.iaBaseUrl + "/serve/" + itemFile
           val in = HttpClient.rangeRequest(
             url,
             headers = pboxAuth.map("Authorization" -> _).toMap,
@@ -306,7 +306,7 @@ object CollectionLoader {
                 val p = s"$cachePath/$file"
                 if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset)
                 else {
-                  val url = "https://warcs.archive-it.org/webdatafile/" + file
+                  val url = ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file
                   HttpClient.rangeRequest(
                     url,
                     headers = aitAuth.map("Authorization" -> _).toMap,
