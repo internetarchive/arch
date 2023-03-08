@@ -20,7 +20,6 @@ class FilesController extends BaseController {
   private val NotebooksTemplatesDir = "templates/notebooks"
   private val GistIdPrefix = "ARCH_Colab_Notebook"
   private val NotebookDatasetAssignStr = "dataset = '"
-  private val GistGithubUsername = "arch"
 
   private def sendFile(file: DerivativeOutput)(
       implicit request: HttpServletRequest): ActionResult = {
