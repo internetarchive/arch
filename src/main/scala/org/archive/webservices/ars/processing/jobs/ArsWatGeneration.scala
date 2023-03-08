@@ -66,7 +66,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
           RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
             for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
-          processed > 0
+          processed >= 0
         }
     }
   }

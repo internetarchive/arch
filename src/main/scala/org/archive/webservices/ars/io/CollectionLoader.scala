@@ -279,7 +279,7 @@ object CollectionLoader {
         else HdfsIO
       partition.flatMap {
         case ((file, initialOffset), positions) =>
-          val in = hdfsIO.open(s"$warcPath/$file", offset = initialOffset)
+          val in = hdfsIO.open(s"$warcPath/$file", offset = initialOffset, decompress = false)
           IOUtil.splitStream(in, positions.map {
             case (_, _, offset, length) => (offset - initialOffset, length)
           })
@@ -301,10 +301,10 @@ object CollectionLoader {
           case ((file, initialOffset), positions) =>
             val aitPath = s"$warcPath/$file"
             val in =
-              if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset)
+              if (aitHdfsIO.exists(aitPath)) aitHdfsIO.open(aitPath, offset = initialOffset, decompress = false)
               else {
                 val p = s"$cachePath/$file"
-                if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset)
+                if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset, decompress = false)
                 else {
                   val url = "https://warcs.archive-it.org/webdatafile/" + file
                   HttpClient.rangeRequest(

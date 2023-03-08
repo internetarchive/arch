@@ -22,23 +22,29 @@ object CacheUtil {
       }
     } else value
 
-  def cacheRequest(request: HttpServletRequest, enabled: Boolean = true)(
+  def cacheRequest(request: HttpServletRequest, enabled: Boolean = true, subjects: Set[Any] = Set.empty)(
       value: => ActionResult): ActionResult =
     if (enabled) {
+      val key = "request#" + request.getRequestURI + "?" + request.getQueryString
       Iterator
         .continually {
-          val key = "request#" + request.getRequestURI + "?" + request.getQueryString
           GuavaCache.get[Option[ActionResult]](key) match {
             case Some(cached) =>
               if (cached.isEmpty) Thread.sleep(1000)
               cached
             case None =>
               GuavaCache.put(key, None, None)
-              val result = value
-              if (result.status.code == 200)
-                GuavaCache.put(key, Some(result), Some(RequestCacheDuration))
-              else GuavaCache.remove(key)
-              Some(result)
+              try {
+                val result = value
+                if (result.status.code == 200)
+                  GuavaCache.put(key, Some(result), Some(RequestCacheDuration))
+                else GuavaCache.remove(key)
+                Some(result)
+              } catch {
+                case e: Exception =>
+                  GuavaCache.remove(key)
+                  throw e
+              }
           }
         }
         .flatten

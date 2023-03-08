@@ -51,6 +51,26 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
+  get("/:userid/research_services/:collection_id/subset") {
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = params("collection_id")
+      ArchCollection
+        .get(collectionId)
+        .map { collection =>
+          Ok(
+            ssp(
+              "subset",
+              "breadcrumbs" -> Seq(
+                (relativePath("/" + collectionId + "/analysis"), collection.name),
+                (relativePath("/" + collectionId + "/subset"), "Sub-Collection Query")),
+              "user" -> context.user,
+              "collection" -> collection),
+            Map("Content-Type" -> "text/html"))
+        }
+        .getOrElse(NotFound())
+    }
+  }
+
   get("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
       val collectionId = params("collection_id")
@@ -119,33 +139,31 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/:collection_id/analysis/:job_id") {
-    CacheUtil.cacheRequest(request, enabled = ArchConf.production) {
-      ensureUserBasePath("userid") { implicit context =>
-        val collectionId = params("collection_id")
-        val jobId = params("job_id")
-        (for {
-          collection <- ArchCollection.get(collectionId)
-          conf <- DerivationJobConf.collection(
-            collectionId,
-            sample = params.get("sample").contains("true"))
-          instance <- JobManager.getInstance(jobId, conf)
-        } yield {
-          instance.job.templateName match {
-            case Some(templateName) =>
-              val attributes = Seq(
-                "breadcrumbs" -> Seq(
-                  (relativePath("/" + collectionId + "/analysis"), collection.name),
-                  (relativePath("/" + collectionId + "/analysis/" + jobId), instance.job.name)),
-                "user" -> context.user,
-                "collection" -> collection,
-                "job" -> instance,
-                "files" -> instance.outFiles) ++ instance.templateVariables
-              Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
-            case None =>
-              NotFound()
-          }
-        }).getOrElse(NotFound())
-      }
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = params("collection_id")
+      val jobId = params("job_id")
+      (for {
+        collection <- ArchCollection.get(collectionId)
+        conf <- DerivationJobConf.collection(
+          collectionId,
+          sample = params.get("sample").contains("true"))
+        instance <- JobManager.getInstance(jobId, conf)
+      } yield {
+        instance.job.templateName match {
+          case Some(templateName) =>
+            val attributes = Seq(
+              "breadcrumbs" -> Seq(
+                (relativePath("/" + collectionId + "/analysis"), collection.name),
+                (relativePath("/" + collectionId + "/analysis/" + jobId), instance.job.name)),
+              "user" -> context.user,
+              "collection" -> collection,
+              "job" -> instance,
+              "files" -> instance.outFiles) ++ instance.templateVariables
+            Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+          case None =>
+            NotFound()
+        }
+      }).getOrElse(NotFound())
     }
   }
 

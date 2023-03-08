@@ -29,8 +29,7 @@ object JobStateManager {
 
   private def access[R](action: => R): R = synchronized {
     init()
-    val r = action
-    r
+    action
   }
 
   private def saveRunning(): Unit = access {
@@ -235,16 +234,18 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
-        MailUtil.sendTemplate(
-          instance.job.failedNotificationTemplate,
-          Map(
-            "jobName" -> instance.job.name,
-            "jobId" -> instance.job.id,
-            "collectionName" -> instance.collection
-              .map(_.name)
-              .getOrElse(instance.conf.collectionId),
-            "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-            "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+        if (!Arch.debugging) {
+          MailUtil.sendTemplate(
+            instance.job.failedNotificationTemplate,
+            Map(
+              "jobName" -> instance.job.name,
+              "jobId" -> instance.job.id,
+              "collectionName" -> instance.collection
+                .map(_.name)
+                .getOrElse(instance.conf.collectionId),
+              "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+              "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+        }
       }
       println("Failed: " + str(instance))
     }
