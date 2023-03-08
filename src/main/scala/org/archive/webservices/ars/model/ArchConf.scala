@@ -80,4 +80,10 @@ object ArchConf {
       .toOption
       .map("LOW " + _)
       .orElse(Option(System.getenv("IA_AUTH_HEADER")))
+
+  lazy val githubBearer: Option[String] =
+    cursor
+      .get[String]("githubBearer")
+      .toOption
+      .orElse(Option(System.getenv("GITHUB_BEARER")))
 }
