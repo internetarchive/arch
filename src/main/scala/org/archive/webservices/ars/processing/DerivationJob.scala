@@ -44,4 +44,6 @@ trait DerivationJob {
   def failedNotificationTemplate = "failed"
 
   def finishedNotificationTemplate = "finished"
+
+  def validateParams(params: DerivationJobParameters): Option[String] = None
 }

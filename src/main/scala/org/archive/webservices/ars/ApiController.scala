@@ -94,11 +94,13 @@ class ApiController extends BaseController {
             val rerun = params.get("rerun").contains("true")
             params("jobid") match {
               case jobId if jobId == UserDefinedQuery.id => {
-                for {
-                  collection <- ArchCollection.get(collectionId)
-                  conf <- DerivationJobConf.userDefinedQuery(collectionId, p)
-                } yield {
-                  runJob(UserDefinedQuery, collection, conf, rerun = rerun)
+                UserDefinedQuery.validateParams(p).map(e => BadRequest(e)).orElse {
+                  for {
+                    collection <- ArchCollection.get(collectionId)
+                    conf <- DerivationJobConf.userDefinedQuery(collectionId, p)
+                  } yield {
+                    runJob(UserDefinedQuery, collection, conf, rerun = rerun)
+                  }
                 }
               }.getOrElse(NotFound())
               case jobId =>
