@@ -16,6 +16,8 @@ abstract class CollectionSpecifics {
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)]
   def jobOutPath: String = id
+
+  def globalJobOutPath: String = id
   def cacheId: String = id
 }
 

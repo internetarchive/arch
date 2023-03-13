@@ -74,6 +74,8 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   override def jobOutPath: String = userId + "/" + AitCollectionSpecifics.Prefix + collectionId
 
+  override def globalJobOutPath: String = AitCollectionSpecifics.Prefix + collectionId
+
   override def cacheId: String = AitCollectionSpecifics.Prefix + collectionId
 }
 

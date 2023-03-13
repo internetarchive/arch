@@ -35,8 +35,11 @@ object DerivationJobConf {
       implicit context: RequestContext = RequestContext.None): Option[DerivationJobConf] = {
     CollectionSpecifics.get(collectionId, context.user).map { collection =>
       val outDir = if (sample) "samples" else "out"
-      val outputPath = (if (global) ArchConf.globalJobOutPath else ArchConf.jobOutPath) + "/" + IOHelper
-        .escapePath(collection.jobOutPath) + "/" + outDir
+      val outputPath = if (global) {
+        ArchConf.globalJobOutPath + "/" + IOHelper.escapePath(collection.globalJobOutPath) + "/" + outDir
+      } else {
+        ArchConf.jobOutPath + "/" + IOHelper.escapePath(collection.jobOutPath) + "/" + outDir
+      }
       DerivationJobConf(
         collection.id,
         collection.inputPath,

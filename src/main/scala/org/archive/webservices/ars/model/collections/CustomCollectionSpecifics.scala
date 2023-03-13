@@ -90,6 +90,8 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
   }
 
   override def jobOutPath: String = userId + "/" + CustomCollectionSpecifics.Prefix + collectionId
+
+  override def globalJobOutPath: String = id
 }
 
 object CustomCollectionSpecifics {

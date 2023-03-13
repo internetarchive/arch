@@ -42,6 +42,8 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   override def jobOutPath: String = userId + "/" + SpecialCollectionSpecifics.Prefix + specialId
 
+  override def globalJobOutPath: String = SpecialCollectionSpecifics.Prefix + specialId
+
   override def cacheId: String = SpecialCollectionSpecifics.Prefix + specialId
 }
 
