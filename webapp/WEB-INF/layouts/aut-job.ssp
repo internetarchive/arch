@@ -75,7 +75,7 @@
                 <p class="card-text center">Download</p>
               </a>
               <% if (file.size < 1000000000) { %>
-                <a href="https://colab.research.google.com/github/internetarchive/arch/blob/main/src/main/python/notebooks/<%=file.filename.stripSuffix(".csv.gz")%>.ipynb" target="_blank"><img style="padding-top:15px;" src="ait/img/colab-badge.svg" alt="Open In Colab"/></a>
+                <a href="/ait/files/colab/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank"><img style="padding-top:15px;" src="ait/img/colab-badge.svg" alt="Open In Colab"/></a>
               <% } %>
             </div>
           </div>
