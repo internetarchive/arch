@@ -5,8 +5,8 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, InOutInputStream, InputStreamForker}
@@ -25,8 +25,8 @@ object IOHelper {
 
   def escapePath(path: String): String = {
     path.replace(
-      CustomCollectionSpecifics.UserIdSeparator,
-      CustomCollectionSpecifics.PathUserEscape)
+      ArchCollection.UserIdSeparator,
+      ArchCollection.PathUserEscape)
   }
 
   def tempDir[R](action: String => R): R = {

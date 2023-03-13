@@ -15,16 +15,19 @@ abstract class CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)]
+  def jobOutPath: String = id
+  def cacheId: String = id
 }
 
 object CollectionSpecifics {
   def get(id: String, collectionUser: ArchUser = ArchUser.None): Option[CollectionSpecifics] = {
-    if (id.startsWith(AitCollectionSpecifics.Prefix)) {
-      Some(new AitCollectionSpecifics(id))
-    } else if (id.startsWith(SpecialCollectionSpecifics.Prefix)) {
-      Some(new SpecialCollectionSpecifics(id))
-    } else if (id.startsWith(CustomCollectionSpecifics.Prefix)) {
-      Some(new CustomCollectionSpecifics(CustomCollectionSpecifics.id(id, collectionUser)))
-    } else None
+    ArchCollection.prefix(id).map { prefix =>
+      val collectionId = ArchCollection.id(id, prefix, collectionUser)
+      prefix match {
+        case AitCollectionSpecifics.Prefix => new AitCollectionSpecifics(collectionId)
+        case SpecialCollectionSpecifics.Prefix => new SpecialCollectionSpecifics(collectionId)
+        case CustomCollectionSpecifics.Prefix => new CustomCollectionSpecifics(collectionId)
+      }
+    }
   }
 }

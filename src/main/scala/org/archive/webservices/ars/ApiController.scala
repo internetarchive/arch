@@ -2,7 +2,7 @@ package org.archive.webservices.ars
 
 import _root_.io.circe._
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
@@ -170,11 +170,12 @@ class ApiController extends BaseController {
   }
 
   get("/collection/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { _ =>
-      ArchCollection.get(params("collectionid")) match {
-        case Some(collection) =>
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      (for {
+        collection <- ArchCollection.get(params("collectionid"))
+        info <- ArchCollectionInfo.get(collection.id)
+      } yield {
           collection.ensureStats()
-          val info = collection.info
           Ok(
             {
               ListMap(
@@ -199,9 +200,7 @@ class ApiController extends BaseController {
               }
             }.asJson.spaces4,
             Map("Content-Type" -> "application/json"))
-        case None =>
-          NotFound()
-      }
+      }).getOrElse(NotFound())
     }
   }
 }

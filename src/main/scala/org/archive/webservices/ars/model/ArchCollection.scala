@@ -16,10 +16,8 @@ case class ArchCollection(
 
   def userUrlId: String = userSpecificId.getOrElse(id)
 
-  def info: ArchCollectionInfo = ArchCollectionInfo.get(id)
-
   private var statsLoaded = false
-  def ensureStats()(implicit request: HttpServletRequest): Unit = {
+  def ensureStats()(implicit context: RequestContext): Unit = {
     if (!statsLoaded) {
       statsLoaded = true
       for (c <- CollectionSpecifics.get(id)) {
@@ -41,6 +39,9 @@ case class ArchCollection(
 }
 
 object ArchCollection {
+  val UserIdSeparator = ":"
+  val PathUserEscape = "-"
+
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
   def get(id: String)(
@@ -76,5 +77,53 @@ object ArchCollection {
         } else c
       }
       .sortBy(_.name.toLowerCase)
+  }
+
+  def splitIdUserCollection(idWithoutPrefix: String): Option[(String, String)] = {
+    val split = idWithoutPrefix.split(UserIdSeparator)
+    if (split.length > 2) Some {
+      val collection = split.last
+      val user = split.dropRight(1).mkString(UserIdSeparator)
+      (user, collection)
+    } else None
+  }
+
+  def id(id: String, prefix: String, user: ArchUser): String = {
+    val (p, c) = if (id.startsWith(prefix)) (prefix, id.stripPrefix(prefix)) else ("", id)
+    p + (splitIdUserCollection(c) match {
+      case Some(_) => c
+      case None => user.id + ArchCollection.UserIdSeparator + c
+    })
+  }
+
+  def id(id: String, user: ArchUser): String = {
+    prefix(id).map { p =>
+      val c = id.stripPrefix(p)
+      p + (splitIdUserCollection(c) match {
+        case Some(_) => c
+        case None => user.id + ArchCollection.UserIdSeparator + c
+      })
+    }.getOrElse(id)
+  }
+
+  def id(id: String)(
+    implicit context: RequestContext = RequestContext.None): String = {
+    prefix(id).map { p =>
+      val c = id.stripPrefix(p)
+      p + (splitIdUserCollection(c) match {
+        case Some(_) => c
+        case None => context.userOpt.map(_.id + ArchCollection.UserIdSeparator + c).getOrElse(c)
+      })
+    }.getOrElse(id)
+  }
+
+  def prefix(id: String): Option[String] = {
+    if (id.startsWith(AitCollectionSpecifics.Prefix)) {
+      Some(AitCollectionSpecifics.Prefix)
+    } else if (id.startsWith(SpecialCollectionSpecifics.Prefix)) {
+      Some(SpecialCollectionSpecifics.Prefix)
+    } else if (id.startsWith(CustomCollectionSpecifics.Prefix)) {
+      Some(CustomCollectionSpecifics.Prefix)
+    } else None
   }
 }

@@ -15,6 +15,7 @@ import scala.util.Try
 
 class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
+  val Some((userId, collectionId)) = ArchCollection.splitIdUserCollection(customId)
 
   def inputPath: String =
     CustomCollectionSpecifics
@@ -76,7 +77,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
                   CollectionLoader.loadWarcFilesViaCdxFromAit(
                     cdxPath,
                     parent.inputPath,
-                    parentCollectionId)
+                    parent.cacheId)
                 } else CollectionLoader.loadWarcFilesViaCdxFromHdfs(cdxPath, parent.inputPath)
               }
               .getOrElse {
@@ -87,13 +88,13 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
         throw new MethodNotSupportedException("Unknown location for collection " + id)
     }
   }
+
+  override def jobOutPath: String = userId + "/" + CustomCollectionSpecifics.Prefix + collectionId
 }
 
 object CustomCollectionSpecifics {
   val Prefix = "CUSTOM-"
   val InfoFile = "info.json"
-  val UserIdSeparator = ":"
-  val PathUserEscape = "-"
   val LocationIdSeparator = ":"
   val CdxDir = "index.cdx.gz"
 
@@ -105,22 +106,13 @@ object CustomCollectionSpecifics {
     } else None
   }
 
-  def splitIdUserCollection(id: String): Option[(String, String)] = {
-    val split = id.split(UserIdSeparator)
-    if (split.length > 2) Some {
-      val collection = split.last
-      val user = split.dropRight(1).mkString(UserIdSeparator)
-      (user, collection)
-    } else None
-  }
-
   def userPath(userId: String): String =
-    ArchConf.customCollectionPath + "/" + userId.replace(UserIdSeparator, PathUserEscape)
+    ArchConf.customCollectionPath + "/" + userId.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
 
   def path(user: ArchUser): String = userPath(user.id)
 
   def path(id: String): Option[String] = {
-    splitIdUserCollection(id)
+    ArchCollection.splitIdUserCollection(id)
       .map {
         case (user, collection) =>
           val p = userPath(user)
@@ -136,28 +128,20 @@ object CustomCollectionSpecifics {
       .flatMap(_.stripSuffix("/").split('/').lastOption)
       .toSeq
       .map { id =>
-        user.id + UserIdSeparator + id
+        user.id + ArchCollection.UserIdSeparator + id
       }
   }
 
-  def id(id: String, user: ArchUser = ArchUser.None): String = {
-    val (prefix, c) = if (id.startsWith(Prefix)) (Prefix, id.stripPrefix(Prefix)) else ("", id)
-    prefix + (splitIdUserCollection(c) match {
-      case Some(_) => c
-      case None => user.id + UserIdSeparator + c
-    })
-  }
-
-  def get(id: String, user: ArchUser = ArchUser.None): Option[ArchCollection] = {
+  def get(id: String): Option[ArchCollection] = {
     collectionInfo(id).map { info =>
       ArchCollection(
         Prefix + id,
         info.get[String]("name").toOption.getOrElse(Prefix + id),
         public = false,
-        splitIdUserCollection(id).map(Prefix + _._2))
+        ArchCollection.splitIdUserCollection(id).map(Prefix + _._2))
     }
   }
 
   def userCollections(user: ArchUser): Seq[ArchCollection] =
-    userCollectionIds(user).flatMap(get(_))
+    userCollectionIds(user).flatMap(get)
 }

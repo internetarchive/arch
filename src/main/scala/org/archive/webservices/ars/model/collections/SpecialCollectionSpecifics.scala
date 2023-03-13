@@ -14,7 +14,7 @@ import scala.io.Source
 import scala.util.Try
 
 class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
-  val specialId: String = id.stripPrefix(SpecialCollectionSpecifics.Prefix)
+  val Some((userId, specialId)) = ArchCollection.splitIdUserCollection(id.stripPrefix(SpecialCollectionSpecifics.Prefix))
 
   def inputPath: String =
     SpecialCollectionSpecifics
@@ -26,7 +26,7 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
-        }) SpecialCollectionSpecifics.get(specialId)
+        }) SpecialCollectionSpecifics.get(specialId, userId)
     else None
   }
 
@@ -39,6 +39,10 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
     CollectionLoader.loadWarcFiles(inputPath)
+
+  override def jobOutPath: String = userId + "/" + SpecialCollectionSpecifics.Prefix + specialId
+
+  override def cacheId: String = SpecialCollectionSpecifics.Prefix + specialId
 }
 
 object SpecialCollectionSpecifics {
@@ -77,7 +81,7 @@ object SpecialCollectionSpecifics {
       .flatMap(_.asString)
   }
 
-  def get(id: String): Option[ArchCollection] = {
+  def get(id: String, userId: String): Option[ArchCollection] = {
     collectionInfo(id)
       .filter(_.get[String]("path").toOption.map(_.trim).exists(_.nonEmpty))
       .map { c =>
@@ -87,6 +91,6 @@ object SpecialCollectionSpecifics {
 
   def userCollections(user: ArchUser): Seq[ArchCollection] = {
     userCollectionIds(user)
-      .flatMap(get)
+      .flatMap(get(_, user.id))
   }
 }

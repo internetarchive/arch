@@ -45,5 +45,7 @@ trait DerivationJob {
 
   def finishedNotificationTemplate = "finished"
 
+  def logCollectionInfo: Boolean = true
+
   def validateParams(params: DerivationJobParameters): Option[String] = None
 }

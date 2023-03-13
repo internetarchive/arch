@@ -69,10 +69,13 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             JobStateManager.logFailed(this)
           case ProcessingState.Finished =>
             info = info.setFinishedTime(now)
-            ArchCollectionInfo
-              .get(conf.collectionId)
-              .setLastJob(job.id, conf.isSample, now)
-              .save()
+            if (job.logCollectionInfo) {
+              for (info <- ArchCollectionInfo.get(conf.collectionId)) {
+                info
+                  .setLastJob(job.id, conf.isSample, now)
+                  .save()
+              }
+            }
             JobStateManager.logFinished(this)
         }
         info.save(conf.outputPath + "/" + job.id)
