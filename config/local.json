@@ -8,5 +8,6 @@
   "sparkMaster": "local[*]",
   "baseUrl": "http://127.0.0.1:12341",
   "loginUrl": "http://127.0.0.1:12341/ait/login?next=",
-  "port": 12341
+  "port": 12341,
+  "githubBearer": "example_bearer_token"
 }
