@@ -85,6 +85,16 @@ object JobManager {
       }
     }
 
+  def getInstanceOrGlobal(jobId: String, conf: DerivationJobConf, globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
+    val instance = JobManager.getInstance(jobId, conf)
+    if (instance.isEmpty || instance.exists(_.state == ProcessingState.NotStarted)) {
+      val global = globalConf.flatMap { conf =>
+        JobManager.getInstance(jobId, conf)
+      }
+      if (instance.exists(_.state > ProcessingState.NotStarted)) global else instance
+    } else instance
+  }
+
   def getRegistered(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
     instances.get(conf).flatMap(_.get(jobId))
 

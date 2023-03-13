@@ -5,6 +5,7 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
+import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra._
@@ -74,7 +75,7 @@ class FilesController extends BaseController {
         val jobId = params("job_id")
         (for {
           conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstance(jobId, conf)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -91,7 +92,7 @@ class FilesController extends BaseController {
             val jobId = params("job_id")
             (for {
               conf <- DerivationJobConf.collection(collectionId, sample = sample)
-              instance <- JobManager.getInstance(jobId, conf)
+              instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
             } yield {
               instance.outFiles.find(_.filename == filename) match {
                 case Some(file) =>
@@ -113,7 +114,7 @@ class FilesController extends BaseController {
         val jobId = params("job_id")
         (for {
           conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstance(jobId, conf)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -121,8 +122,7 @@ class FilesController extends BaseController {
                 HdfsIO.lines(file.path, n = 51).mkString("\n"),
                 Map(
                   "Content-Type" -> file.mimeType,
-                  "Content-Disposition" -> ("attachment; filename=" + file.filename.dropRight(
-                    3))))
+                  "Content-Disposition" -> ("attachment; filename=" + file.filename.stripSuffix(Sparkling.GzipExt))))
             case None =>
               NotFound()
           }
@@ -195,7 +195,7 @@ class FilesController extends BaseController {
         val jobId = params("job_id")
         (for {
           conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstance(jobId, conf)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>

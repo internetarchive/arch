@@ -1,9 +1,8 @@
 package org.archive.webservices.ars
 
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf, ArchJobCategories}
+import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
-import org.archive.webservices.ars.util.CacheUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
@@ -108,8 +107,6 @@ class DefaultController extends BaseController with ScalateSupport {
       val collectionId = ArchCollection.id(params("collection_id"))
       (for {
         collection <- ArchCollection.get(collectionId)
-        conf <- DerivationJobConf.collection(collection.id)
-        sampleConf <- DerivationJobConf.collection(collection.id, sample = true)
       } yield {
         val jobs =
           JobManager.jobs.values.toSeq
@@ -117,12 +114,7 @@ class DefaultController extends BaseController with ScalateSupport {
             .groupBy(_.category)
             .map {
               case (category, jobs) =>
-                category -> jobs.sortBy(_.name.toLowerCase).flatMap { job =>
-                  for {
-                    instance <- JobManager.getInstance(job.id, conf)
-                    sampleInstance <- JobManager.getInstance(job.id, sampleConf)
-                  } yield (instance, sampleInstance)
-                }
+                category -> jobs.sortBy(_.name.toLowerCase)
             }
         Ok(
           ssp(
@@ -142,12 +134,11 @@ class DefaultController extends BaseController with ScalateSupport {
     ensureUserBasePath("userid") { implicit context =>
       val collectionId = ArchCollection.id(params("collection_id"))
       val jobId = params("job_id")
+      val sample = params.get("sample").contains("true")
       (for {
         collection <- ArchCollection.get(collectionId)
-        conf <- DerivationJobConf.collection(
-          collectionId,
-          sample = params.get("sample").contains("true"))
-        instance <- JobManager.getInstance(jobId, conf)
+        conf <- DerivationJobConf.collection(collectionId, sample = sample)
+        instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>

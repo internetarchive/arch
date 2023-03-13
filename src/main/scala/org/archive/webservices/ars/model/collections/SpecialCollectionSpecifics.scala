@@ -26,7 +26,7 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
-        }) SpecialCollectionSpecifics.get(specialId, userId)
+        }) SpecialCollectionSpecifics.get(specialId)
     else None
   }
 
@@ -81,7 +81,7 @@ object SpecialCollectionSpecifics {
       .flatMap(_.asString)
   }
 
-  def get(id: String, userId: String): Option[ArchCollection] = {
+  def get(id: String): Option[ArchCollection] = {
     collectionInfo(id)
       .filter(_.get[String]("path").toOption.map(_.trim).exists(_.nonEmpty))
       .map { c =>
@@ -89,8 +89,5 @@ object SpecialCollectionSpecifics {
       }
   }
 
-  def userCollections(user: ArchUser): Seq[ArchCollection] = {
-    userCollectionIds(user)
-      .flatMap(get(_, user.id))
-  }
+  def userCollections(user: ArchUser): Seq[ArchCollection] = userCollectionIds(user).flatMap(get)
 }

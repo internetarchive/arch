@@ -2,11 +2,12 @@ package org.archive.webservices.ars
 
 import _root_.io.circe._
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.FormatUtil
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
 import scala.collection.immutable.ListMap
@@ -137,9 +138,15 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
       _ =>
         val jobId = params("jobid")
+        val sample = params.get("sample").contains("true")
         DerivationJobConf
-          .collection(collectionId, params.get("sample").contains("true"))
-          .flatMap(JobManager.getInstance(jobId, _)) match {
+          .collection(collectionId, sample = sample)
+          .flatMap(
+            JobManager.getInstanceOrGlobal(
+              jobId,
+              _,
+              DerivationJobConf
+                .collection(collectionId, sample = sample, global = true))) match {
           case Some(instance) =>
             jobStateResponse(instance)
           case None =>
@@ -154,12 +161,30 @@ class ApiController extends BaseController {
       _ =>
         val active = JobManager.getByCollection(collectionId)
         val instances = if (params.get("all").contains("true")) {
-          active ++ DerivationJobConf.collection(collectionId).toSeq.flatMap { conf =>
-            val jobs = active.filter(_.conf == conf).map(_.job)
-            JobManager.userJobs.filter(!jobs.contains(_)).map(_.history(conf))
-          } ++ DerivationJobConf.collection(collectionId, sample = true).toSeq.flatMap { conf =>
-            val jobs = active.filter(_.conf == conf).map(_.job)
-            JobManager.userJobs.filter(!jobs.contains(_)).map(_.history(conf))
+          active ++ {
+            val conf = DerivationJobConf.collection(collectionId)
+            val jobsIds = conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
+            val globalConf = DerivationJobConf.collection(collectionId, global = true)
+            val globalJobIds = globalConf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet -- jobsIds
+            conf.toSeq.flatMap { c =>
+              val jobs = active.filter(_.conf == c).map(_.job)
+              JobManager.userJobs.filter(!jobs.contains(_)).flatMap { job =>
+                if (jobsIds.contains(job.id)) Some(job.history(c))
+                else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history)
+              }
+            }
+          } ++ {
+            val conf = DerivationJobConf.collection(collectionId, sample = true)
+            val jobsIds = conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
+            val globalConf = DerivationJobConf.collection(collectionId, sample = true, global = true)
+            val globalJobIds = globalConf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet -- jobsIds
+            conf.toSeq.flatMap { c =>
+              val jobs = active.filter(_.conf == c).map(_.job)
+              JobManager.userJobs.filter(!jobs.contains(_)).flatMap { job =>
+                if (jobsIds.contains(job.id)) Some(job.history(c))
+                else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history)
+              }
+            }
           }
         } else active
         val states = instances.toSeq
@@ -175,31 +200,31 @@ class ApiController extends BaseController {
         collection <- ArchCollection.get(params("collectionid"))
         info <- ArchCollectionInfo.get(collection.id)
       } yield {
-          collection.ensureStats()
-          Ok(
-            {
+        collection.ensureStats()
+        Ok(
+          {
+            ListMap(
+              "id" -> collection.id.asJson,
+              "name" -> collection.name.asJson,
+              "public" -> collection.public.asJson) ++ {
+              info.lastJobId.map("lastJobId" -> _.asJson).toMap
+            } ++ {
+              info.lastJobSample.map("lastJobSample" -> _.asJson).toMap
+            } ++ {
+              info.lastJobName.map("lastJobName" -> _.asJson).toMap
+            } ++ {
+              info.lastJobTime
+                .map("lastJobTime" -> FormatUtil.instantTimeString(_).asJson)
+                .toMap
+            } ++ {
               ListMap(
-                "id" -> collection.id.asJson,
-                "name" -> collection.name.asJson,
-                "public" -> collection.public.asJson) ++ {
-                info.lastJobId.map("lastJobId" -> _.asJson).toMap
-              } ++ {
-                info.lastJobSample.map("lastJobSample" -> _.asJson).toMap
-              } ++ {
-                info.lastJobName.map("lastJobName" -> _.asJson).toMap
-              } ++ {
-                info.lastJobTime
-                  .map("lastJobTime" -> FormatUtil.instantTimeString(_).asJson)
-                  .toMap
-              } ++ {
-                ListMap(
-                  "size" -> FormatUtil.formatBytes(collection.size).asJson,
-                  "sortSize" -> collection.size.asJson,
-                  "seeds" -> collection.seeds.asJson,
-                  "lastCrawlDate" -> collection.lastCrawlDate.asJson)
-              }
-            }.asJson.spaces4,
-            Map("Content-Type" -> "application/json"))
+                "size" -> FormatUtil.formatBytes(collection.size).asJson,
+                "sortSize" -> collection.size.asJson,
+                "seeds" -> collection.seeds.asJson,
+                "lastCrawlDate" -> collection.lastCrawlDate.asJson)
+            }
+          }.asJson.spaces4,
+          Map("Content-Type" -> "application/json"))
       }).getOrElse(NotFound())
     }
   }

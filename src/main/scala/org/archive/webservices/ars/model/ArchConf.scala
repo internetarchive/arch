@@ -33,7 +33,9 @@ object ArchConf {
   lazy val collectionCachePath: String =
     cursor.get[String]("collectionCachePath").toOption.getOrElse("/data/cache")
 
-  lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/out")
+  lazy val jobOutPath: String = cursor.get[String]("jobOutPath").toOption.getOrElse("data/user-out")
+
+  lazy val globalJobOutPath: String = cursor.get[String]("globalJobOutPath").toOption.getOrElse("data/out")
 
   lazy val customCollectionPath: String =
     cursor.get[String]("customCollectionPath").toOption.getOrElse("data/collections")

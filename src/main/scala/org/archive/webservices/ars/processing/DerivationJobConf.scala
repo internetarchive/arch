@@ -7,7 +7,10 @@ import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics}
+import org.archive.webservices.ars.model.collections.{
+  CollectionSpecifics,
+  CustomCollectionSpecifics
+}
 
 import java.time.Instant
 
@@ -28,11 +31,12 @@ case class DerivationJobConf(
 object DerivationJobConf {
   val SampleSize = 100
 
-  def collection(collectionId: String, sample: Boolean = false)(
+  def collection(collectionId: String, sample: Boolean = false, global: Boolean = false)(
       implicit context: RequestContext = RequestContext.None): Option[DerivationJobConf] = {
     CollectionSpecifics.get(collectionId, context.user).map { collection =>
       val outDir = if (sample) "samples" else "out"
-      val outputPath = ArchConf.jobOutPath + "/" + IOHelper.escapePath(collection.jobOutPath) + "/" + outDir
+      val outputPath = (if (global) ArchConf.globalJobOutPath else ArchConf.jobOutPath) + "/" + IOHelper
+        .escapePath(collection.jobOutPath) + "/" + outDir
       DerivationJobConf(
         collection.id,
         collection.inputPath,
