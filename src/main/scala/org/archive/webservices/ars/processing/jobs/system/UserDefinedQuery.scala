@@ -22,13 +22,11 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,
-      fields: Seq[String],
-      check: T => Boolean): Boolean = fields.forall(checkFieldOperators(params, _, check))
+      fields: Seq[String])(check: T => Boolean): Boolean = fields.forall(checkFieldOperators(params, _)(check))
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,
-      field: String,
-      check: T => Boolean): Boolean = {
+      field: String)(check: T => Boolean): Boolean = {
     val or = params.values
       .get(field + "OR")
       .map(_.hcursor)
@@ -115,8 +113,7 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
             {
               checkFieldOperators[String](
                 params,
-                Seq("surtPrefix", "surtPrefixes"),
-                cdx.surtUrl.startsWith)
+                Seq("surtPrefix", "surtPrefixes"))(cdx.surtUrl.startsWith)
             } && {
               params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
             } && {
@@ -124,19 +121,17 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
                 .get[String]("timestampTo")
                 .forall(t => cdx.timestamp <= t || cdx.timestamp.startsWith(t))
             } && {
-              checkFieldOperators[Int](params, "status", cdx.status == _)
+              checkFieldOperators[Int](params, "status")(cdx.status == _)
             } && {
               checkFieldOperators[Int](
                 params,
-                Seq("statusPrefix", "statusPrefixes"),
-                s => cdx.status.toString.startsWith(s.toString))
+                Seq("statusPrefix", "statusPrefixes"))(s => cdx.status.toString.startsWith(s.toString))
             } && {
-              checkFieldOperators[String](params, Seq("mime", "mimes"), cdx.mime == _)
+              checkFieldOperators[String](params, Seq("mime", "mimes"))(cdx.mime == _)
             } && {
               checkFieldOperators[String](
                 params,
-                Seq("mimePrefix", "mimePrefixes"),
-                cdx.mime.startsWith)
+                Seq("mimePrefix", "mimePrefixes"))(cdx.mime.startsWith)
             }
           }
         }
@@ -174,4 +169,6 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
   override def reset(conf: DerivationJobConf): Unit = HdfsIO.delete(conf.outputPath)
 
   override val finishedNotificationTemplate: String = "udq-finished"
+
+  override val logCollectionInfo: Boolean = false
 }
