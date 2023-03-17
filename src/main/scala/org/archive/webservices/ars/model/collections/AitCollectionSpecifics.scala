@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
@@ -14,7 +14,7 @@ import scala.io.Source
 import scala.util.Try
 
 class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
-  val Some((userId, collectionId)) = ArchCollection.splitIdUserCollection(id.stripPrefix(AitCollectionSpecifics.Prefix))
+  val (userId, collectionId) = ArchCollection.splitIdUserCollection(id.stripPrefix(AitCollectionSpecifics.Prefix))
   val aitId: Int = collectionId.toInt
 
   private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
@@ -70,13 +70,9 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   }
 
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
-    CollectionLoader.loadAitWarcFiles(aitId, inputPath, cacheId)
+    CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)
 
-  override def jobOutPath: String = userId + "/" + AitCollectionSpecifics.Prefix + collectionId
-
-  override def globalJobOutPath: String = AitCollectionSpecifics.Prefix + collectionId
-
-  override def cacheId: String = AitCollectionSpecifics.Prefix + collectionId
+  override def sourceId: String = AitCollectionSpecifics.Prefix + collectionId
 }
 
 object AitCollectionSpecifics {
@@ -106,17 +102,18 @@ object AitCollectionSpecifics {
       .flatMap(_.asNumber.flatMap(_.toInt))
   }
 
-  def parseCollections(json: Iterator[Json], userId: String): Seq[ArchCollection] = {
+  def parseCollections(json: Iterator[Json], userId: Option[String]): Seq[ArchCollection] = {
     json
       .map(_.hcursor)
       .flatMap { c =>
         c.get[Int]("id").right.toOption.map { aitId =>
           val collectionId = StringUtil.padNum(aitId, 5)
           ArchCollection(
-            Prefix + userId + ArchCollection.UserIdSeparator + collectionId,
+            ArchCollection.prependUserId(collectionId, userId, Prefix),
             c.get[String]("name").right.getOrElse(Prefix + collectionId),
             c.get[Boolean]("publicly_visible").right.getOrElse(false),
-            Some(Prefix + collectionId))
+            userId.map((_, Prefix + collectionId)),
+            Prefix + collectionId)
         }
       }
       .toSeq
@@ -130,7 +127,7 @@ object AitCollectionSpecifics {
         .getJson(
           "/api/collection?limit=100&account=" + userId,
           basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
-          Some(parseCollections(c.values.toIterator.flatten, user.id)))
+          Some(parseCollections(c.values.toIterator.flatten, Some(user.id))))
         .getOrElse(Seq.empty)
     }
   }
@@ -141,7 +138,7 @@ object AitCollectionSpecifics {
       .flatMap { aitId =>
         Ait
           .getJson("/api/collection?id=" + aitId, basicAuth = ArchConf.foreignAitAuthHeader)(c =>
-            parseCollections(c.values.toIterator.flatten, user.id).headOption)
+            parseCollections(c.values.toIterator.flatten, Some(user.id)).headOption)
           .toOption
       }
   }

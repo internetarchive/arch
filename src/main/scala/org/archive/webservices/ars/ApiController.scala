@@ -70,7 +70,7 @@ class ApiController extends BaseController {
     for {
       collection <- ArchCollection.get(collectionId)
       job <- JobManager.get(jobId)
-      conf <- DerivationJobConf.collection(collectionId, sample)
+      conf <- DerivationJobConf.collection(collection, sample)
     } yield {
       runJob(job, collection, if (params.isEmpty) conf else conf.copy(params = params), rerun)
     }
@@ -134,37 +134,33 @@ class ApiController extends BaseController {
   }
 
   get("/jobstate/:jobid/:collectionid") {
-    val collectionId = params("collectionid")
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-      _ =>
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      ArchCollection.get(params("collectionid")).flatMap { collection =>
         val jobId = params("jobid")
         val sample = params.get("sample").contains("true")
         DerivationJobConf
-          .collection(collectionId, sample = sample)
+          .collection(collection, sample = sample)
           .flatMap(
             JobManager.getInstanceOrGlobal(
               jobId,
               _,
               DerivationJobConf
-                .collection(collectionId, sample = sample, global = true))) match {
-          case Some(instance) =>
-            jobStateResponse(instance)
-          case None =>
-            NotFound()
+                .collection(collection, sample = sample, global = true))).map { instance =>
+          jobStateResponse(instance)
         }
+      }.getOrElse(NotFound())
     }
   }
 
   get("/jobstates/:collectionid") {
-    val collectionId = params("collectionid")
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-      _ =>
-        val active = JobManager.getByCollection(collectionId)
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      ArchCollection.get(params("collectionid")).map { collection =>
+        val active = JobManager.getByCollection(collection.id)
         val instances = if (params.get("all").contains("true")) {
           active ++ {
-            val conf = DerivationJobConf.collection(collectionId)
+            val conf = DerivationJobConf.collection(collection)
             val jobsIds = conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
-            val globalConf = DerivationJobConf.collection(collectionId, global = true)
+            val globalConf = DerivationJobConf.collection(collection, global = true)
             val globalJobIds = globalConf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet -- jobsIds
             conf.toSeq.flatMap { c =>
               val jobs = active.filter(_.conf == c).map(_.job)
@@ -174,9 +170,9 @@ class ApiController extends BaseController {
               }
             }
           } ++ {
-            val conf = DerivationJobConf.collection(collectionId, sample = true)
+            val conf = DerivationJobConf.collection(collection, sample = true)
             val jobsIds = conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
-            val globalConf = DerivationJobConf.collection(collectionId, sample = true, global = true)
+            val globalConf = DerivationJobConf.collection(collection, sample = true, global = true)
             val globalJobIds = globalConf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet -- jobsIds
             conf.toSeq.flatMap { c =>
               val jobs = active.filter(_.conf == c).map(_.job)
@@ -191,14 +187,16 @@ class ApiController extends BaseController {
           .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
           .map(jobStateJson)
         Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
+      }.getOrElse(NotFound())
     }
   }
 
   get("/collection/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val collectionId = params("collectionid")
       (for {
-        collection <- ArchCollection.get(params("collectionid"))
-        info <- ArchCollectionInfo.get(collection.id)
+        collection <- ArchCollection.get(collectionId)
+        info <- ArchCollectionInfo.get(collectionId)
       } yield {
         collection.ensureStats()
         Ok(

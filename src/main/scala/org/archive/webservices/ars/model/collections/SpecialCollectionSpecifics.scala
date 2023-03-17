@@ -3,8 +3,8 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionLoader
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -14,7 +14,7 @@ import scala.io.Source
 import scala.util.Try
 
 class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
-  val Some((userId, specialId)) = ArchCollection.splitIdUserCollection(id.stripPrefix(SpecialCollectionSpecifics.Prefix))
+  val (userId, specialId) = ArchCollection.splitIdUserCollection(id.stripPrefix(SpecialCollectionSpecifics.Prefix))
 
   def inputPath: String =
     SpecialCollectionSpecifics
@@ -26,7 +26,7 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
-        }) SpecialCollectionSpecifics.get(specialId)
+        }) SpecialCollectionSpecifics.collection(specialId, userId)
     else None
   }
 
@@ -40,11 +40,7 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
     CollectionLoader.loadWarcFiles(inputPath)
 
-  override def jobOutPath: String = userId + "/" + SpecialCollectionSpecifics.Prefix + specialId
-
-  override def globalJobOutPath: String = SpecialCollectionSpecifics.Prefix + specialId
-
-  override def cacheId: String = SpecialCollectionSpecifics.Prefix + specialId
+  override def sourceId: String = SpecialCollectionSpecifics.Prefix + specialId
 }
 
 object SpecialCollectionSpecifics {
@@ -68,7 +64,7 @@ object SpecialCollectionSpecifics {
   private def collectionInfo(id: String): Option[HCursor] = {
     collectionsCursor
       .downField("collections")
-      .downField(id)
+      .downField(id.stripPrefix(Prefix))
       .focus
       .map(_.hcursor)
   }
@@ -83,13 +79,20 @@ object SpecialCollectionSpecifics {
       .flatMap(_.asString)
   }
 
-  def get(id: String): Option[ArchCollection] = {
-    collectionInfo(id)
+  def collection(id: String, user: ArchUser): Option[ArchCollection] = collection(id, Some(user.id))
+
+  def collection(id: String, user: Option[String] = None): Option[ArchCollection] = {
+    val idWithoutPrefix = id.stripPrefix(Prefix)
+    collectionInfo(idWithoutPrefix)
       .filter(_.get[String]("path").toOption.map(_.trim).exists(_.nonEmpty))
       .map { c =>
-        ArchCollection(Prefix + id, c.get[String]("name").toOption.getOrElse(id), public = false)
+        ArchCollection(
+          ArchCollection.prependUserId(id, user, Prefix),
+          c.get[String]("name").toOption.getOrElse(idWithoutPrefix), public = false,
+          user.map((_, Prefix + idWithoutPrefix)),
+          Prefix + idWithoutPrefix)
       }
   }
 
-  def userCollections(user: ArchUser): Seq[ArchCollection] = userCollectionIds(user).flatMap(get)
+  def userCollections(user: ArchUser): Seq[ArchCollection] = userCollectionIds(user).flatMap(collection(_, user))
 }

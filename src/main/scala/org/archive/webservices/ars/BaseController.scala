@@ -30,7 +30,7 @@ class BaseController extends ScalatraServlet {
     }
     if (requiresLogin) {
       if (context.isUser && (validateCollection.isEmpty || ArchCollection
-            .get(validateCollection.get)
+            .get(validateCollection.get)(context)
             .isDefined)) {
         action(context)
       } else {

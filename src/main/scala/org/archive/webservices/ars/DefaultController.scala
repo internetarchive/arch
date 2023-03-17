@@ -33,7 +33,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/analysis") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -52,7 +52,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/subset") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -72,7 +72,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -92,7 +92,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   post("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = ArchCollection.id(params("collection_id"))
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -104,7 +104,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/jobs") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = ArchCollection.id(params("collection_id"))
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       (for {
         collection <- ArchCollection.get(collectionId)
       } yield {
@@ -132,13 +132,13 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/analysis/:job_id") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = ArchCollection.id(params("collection_id"))
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       val jobId = params("job_id")
       val sample = params.get("sample").contains("true")
       (for {
         collection <- ArchCollection.get(collectionId)
-        conf <- DerivationJobConf.collection(collectionId, sample = sample)
-        instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
+        conf <- DerivationJobConf.collection(collection, sample = sample)
+        instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>

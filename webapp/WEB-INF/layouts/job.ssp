@@ -85,7 +85,7 @@
       if (reRunCofirm) {
         $reRunCard.hide();
         $.getJSON(url, function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis";
+          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis";
         });
       }
     });

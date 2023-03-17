@@ -1,7 +1,8 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 
@@ -15,21 +16,15 @@ abstract class CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles(inputPath: String): RDD[(String, InputStream)]
-  def jobOutPath: String = id
-
-  def globalJobOutPath: String = id
-  def cacheId: String = id
+  def sourceId: String = id
 }
 
 object CollectionSpecifics {
-  def get(id: String, collectionUser: ArchUser = ArchUser.None): Option[CollectionSpecifics] = {
-    ArchCollection.prefix(id).map { prefix =>
-      val collectionId = ArchCollection.id(id, prefix, collectionUser)
-      prefix match {
-        case AitCollectionSpecifics.Prefix => new AitCollectionSpecifics(collectionId)
-        case SpecialCollectionSpecifics.Prefix => new SpecialCollectionSpecifics(collectionId)
-        case CustomCollectionSpecifics.Prefix => new CustomCollectionSpecifics(collectionId)
-      }
+  def get(id: String): Option[CollectionSpecifics] = {
+    ArchCollection.prefix(id).map {
+      case AitCollectionSpecifics.Prefix => new AitCollectionSpecifics(id)
+      case SpecialCollectionSpecifics.Prefix => new SpecialCollectionSpecifics(id)
+      case CustomCollectionSpecifics.Prefix => new CustomCollectionSpecifics(id)
     }
   }
 }

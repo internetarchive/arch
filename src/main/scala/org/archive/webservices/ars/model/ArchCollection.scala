@@ -11,19 +11,23 @@ case class ArchCollection(
     id: String,
     name: String,
     public: Boolean,
-    userSpecificId: Option[String] = None) {
+    userSpecificId: Option[(String, String)] = None,
+    sourceId: String) {
   private var user: Option[ArchUser] = None
 
-  def userUrlId: String = userSpecificId.getOrElse(id)
+  def userUrlId(implicit context: RequestContext): String = userUrlId(context.user.id)
+  def userUrlId(userId: String): String = userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
+
+  lazy val specifics: Option[CollectionSpecifics] = CollectionSpecifics.get(id)
 
   private var statsLoaded = false
   def ensureStats()(implicit context: RequestContext): Unit = {
     if (!statsLoaded) {
       statsLoaded = true
-      for (c <- CollectionSpecifics.get(id)) {
-        _size = c.size
-        _seeds = c.seeds
-        _lastCrawlDate = c.lastCrawlDate
+      for (s <- specifics) {
+        _size = s.size
+        _seeds = s.seeds
+        _lastCrawlDate = s.lastCrawlDate
       }
     }
   }
@@ -54,7 +58,7 @@ object ArchCollection {
       }
       .orElse {
         CollectionSpecifics
-          .get(id, context.user)
+          .get(id)
           .flatMap(_.collection)
           .map { c =>
             if (ArchConf.production) {
@@ -79,40 +83,67 @@ object ArchCollection {
       .sortBy(_.name.toLowerCase)
   }
 
-  def splitIdUserCollection(idWithoutPrefix: String): Option[(String, String)] = {
+  def splitIdUserCollection(idWithoutPrefix: String): (Option[String], String) = {
     val split = idWithoutPrefix.split(UserIdSeparator)
-    if (split.length > 2) Some {
+    if (split.length > 2) {
       val collection = split.last
       val user = split.dropRight(1).mkString(UserIdSeparator)
-      (user, collection)
-    } else None
+      (Some(user), collection)
+    } else (None, idWithoutPrefix)
   }
 
-  def id(id: String, prefix: String, user: ArchUser): String = {
+  def splitIdUserCollectionOpt(idWithoutPrefix: String): Option[(String, String)] = {
+    val (userOpt, collection) = splitIdUserCollection(idWithoutPrefix)
+    userOpt.map((_, collection))
+  }
+
+  def splitIdUserCollectionOpt(id: String, prefix: String): Option[(String, String)] = {
+    val (userOpt, collection) = splitIdUserCollection(id.stripPrefix(prefix))
+    userOpt.map((_, prefix + collection))
+  }
+
+  def prependUserId(idWithoutPrefix: String, userId: String): String = {
+    userId + ArchCollection.UserIdSeparator + idWithoutPrefix
+  }
+
+  def prependUserId(idWithoutPrefix: String, userId: String, prefix: String): String = {
+    prefix + prependUserId(idWithoutPrefix, userId)
+  }
+  //context.userOpt.map(_.id + ArchCollection.UserIdSeparator + c).getOrElse(c)
+
+  def prependUserId(idWithoutPrefix: String, userId: Option[String]): String = {
+    userId.map(prependUserId(idWithoutPrefix, _)).getOrElse(idWithoutPrefix)
+  }
+
+  def prependUserId(id: String, userId: Option[String], prefix: String): String = {
+    prefix + prependUserId(id.stripPrefix(prefix), userId)
+  }
+
+  def userCollectionId(id: String, prefix: String, user: ArchUser): String = {
     val (p, c) = if (id.startsWith(prefix)) (prefix, id.stripPrefix(prefix)) else ("", id)
-    p + (splitIdUserCollection(c) match {
+    p + (splitIdUserCollectionOpt(c) match {
       case Some(_) => c
-      case None => user.id + ArchCollection.UserIdSeparator + c
+      case None => prependUserId(c, Some(user.id))
     })
   }
 
-  def id(id: String, user: ArchUser): String = {
+  def userCollectionId(id: String, user: ArchUser): String = {
     prefix(id).map { p =>
       val c = id.stripPrefix(p)
-      p + (splitIdUserCollection(c) match {
+      p + (splitIdUserCollectionOpt(c) match {
         case Some(_) => c
-        case None => user.id + ArchCollection.UserIdSeparator + c
+        case None => prependUserId(c, Some(user.id))
       })
     }.getOrElse(id)
   }
 
-  def id(id: String)(
+  def userCollectionId(id: String)(
     implicit context: RequestContext = RequestContext.None): String = {
     prefix(id).map { p =>
       val c = id.stripPrefix(p)
-      p + (splitIdUserCollection(c) match {
+      p + (splitIdUserCollectionOpt(c) match {
         case Some(_) => c
-        case None => context.userOpt.map(_.id + ArchCollection.UserIdSeparator + c).getOrElse(c)
+        case None => prependUserId(c, context.userOpt.map(_.id))
       })
     }.getOrElse(id)
   }

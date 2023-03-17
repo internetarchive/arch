@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
@@ -15,7 +15,7 @@ import scala.util.Try
 
 class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
-  val Some((userId, collectionId)) = ArchCollection.splitIdUserCollection(customId)
+  val Some((userId, collectionId)) = ArchCollection.splitIdUserCollectionOpt(customId)
 
   def inputPath: String =
     CustomCollectionSpecifics
@@ -26,7 +26,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
           u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
-        }) CustomCollectionSpecifics.get(customId)
+        }) CustomCollectionSpecifics.collection(customId)
     else None
   }
 
@@ -77,7 +77,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
                   CollectionLoader.loadWarcFilesViaCdxFromAit(
                     cdxPath,
                     parent.inputPath,
-                    parent.cacheId)
+                    parent.sourceId)
                 } else CollectionLoader.loadWarcFilesViaCdxFromHdfs(cdxPath, parent.inputPath)
               }
               .getOrElse {
@@ -88,10 +88,6 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
         throw new MethodNotSupportedException("Unknown location for collection " + id)
     }
   }
-
-  override def jobOutPath: String = userId + "/" + CustomCollectionSpecifics.Prefix + collectionId
-
-  override def globalJobOutPath: String = id
 }
 
 object CustomCollectionSpecifics {
@@ -114,7 +110,7 @@ object CustomCollectionSpecifics {
   def path(user: ArchUser): String = userPath(user.id)
 
   def path(id: String): Option[String] = {
-    ArchCollection.splitIdUserCollection(id)
+    ArchCollection.splitIdUserCollectionOpt(id.stripPrefix(Prefix))
       .map {
         case (user, collection) =>
           val p = userPath(user)
@@ -134,16 +130,18 @@ object CustomCollectionSpecifics {
       }
   }
 
-  def get(id: String): Option[ArchCollection] = {
-    collectionInfo(id).map { info =>
+  def collection(id: String): Option[ArchCollection] = {
+    val idWithoutPrefix = id.stripPrefix(Prefix)
+    collectionInfo(idWithoutPrefix).map { info =>
       ArchCollection(
-        Prefix + id,
-        info.get[String]("name").toOption.getOrElse(Prefix + id),
+        Prefix + idWithoutPrefix,
+        info.get[String]("name").toOption.getOrElse(Prefix + idWithoutPrefix),
         public = false,
-        ArchCollection.splitIdUserCollection(id).map(Prefix + _._2))
+        ArchCollection.splitIdUserCollectionOpt(id, Prefix),
+        Prefix + idWithoutPrefix)
     }
   }
 
   def userCollections(user: ArchUser): Seq[ArchCollection] =
-    userCollectionIds(user).flatMap(get)
+    userCollectionIds(user).flatMap(collection)
 }

@@ -51,11 +51,10 @@ object ArchCollectionInfo {
 
   def get(collectionId: String): Option[ArchCollectionInfo] = {
     GuavaCache.get(CachePrefix + collectionId).orElse {
-      CollectionSpecifics.get(collectionId).map(_.jobOutPath).map { path =>
-        val file = ArchConf.jobOutPath + "/" + IOHelper.escapePath(path) + "/info.json"
-        val globalFile = ArchConf.jobOutPath + "/" + IOHelper.escapePath(path) + "/info.json"
-        val inFile = if (HdfsIO.exists(file)) file else globalFile
-        val info = if (HdfsIO.exists(inFile)) {
+      ArchCollection.get(collectionId).map { c =>
+        val file = DerivationJobConf.jobOutpath(c) + "/info.json"
+        val globalFile = DerivationJobConf.jobOutpath(c, global = true) + "/info.json"
+        val info = Seq(file, globalFile).find(HdfsIO.exists).map { inFile =>
           parse(HdfsIO.lines(inFile).mkString).right.toOption.map(_.hcursor) match {
             case Some(cursor) =>
               val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
@@ -76,7 +75,7 @@ object ArchCollectionInfo {
               ArchCollectionInfo(collectionId, file, lastJob)
             case None => ArchCollectionInfo(collectionId, file)
           }
-        } else ArchCollectionInfo(collectionId, file)
+        }.getOrElse(ArchCollectionInfo(collectionId, file))
         GuavaCache.put(CachePrefix + collectionId, info, None)
       }
     }

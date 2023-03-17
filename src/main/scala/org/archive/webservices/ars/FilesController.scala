@@ -3,7 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe._
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.{ArchConf, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -74,8 +74,9 @@ class FilesController extends BaseController {
       case Some(accessToken) =>
         val jobId = params("job_id")
         (for {
-          conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
+          collection <- ArchCollection.get(collectionId)
+          conf <- DerivationJobConf.collection(collection, sample = sample)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -87,12 +88,12 @@ class FilesController extends BaseController {
           }
         }).getOrElse(NotFound())
       case None =>
-        ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-          implicit user =>
+        ensureLogin(redirect = false, useSession = true) { implicit user =>
             val jobId = params("job_id")
             (for {
-              conf <- DerivationJobConf.collection(collectionId, sample = sample)
-              instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
+              collection <- ArchCollection.get(collectionId)
+              conf <- DerivationJobConf.collection(collection, sample = sample)
+              instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
             } yield {
               instance.outFiles.find(_.filename == filename) match {
                 case Some(file) =>
@@ -109,12 +110,12 @@ class FilesController extends BaseController {
     val collectionId = params("collection_id")
     val sample = params.get("sample").contains("true")
     val filename = params("file_name")
-    ensureLogin(redirect = false, useSession = true, validateCollection = Some(collectionId)) {
-      implicit user =>
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
         val jobId = params("job_id")
         (for {
-          conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
+          collection <- ArchCollection.get(collectionId)
+          conf <- DerivationJobConf.collection(collection, sample = sample)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -194,8 +195,9 @@ class FilesController extends BaseController {
       case Some(accessToken) =>
         val jobId = params("job_id")
         (for {
-          conf <- DerivationJobConf.collection(collectionId, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collectionId, sample = sample, global = true))
+          collection <- ArchCollection.get(collectionId)
+          conf <- DerivationJobConf.collection(collection, sample = sample)
+          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
