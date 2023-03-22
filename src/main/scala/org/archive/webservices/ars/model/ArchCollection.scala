@@ -109,7 +109,6 @@ object ArchCollection {
   def prependUserId(idWithoutPrefix: String, userId: String, prefix: String): String = {
     prefix + prependUserId(idWithoutPrefix, userId)
   }
-  //context.userOpt.map(_.id + ArchCollection.UserIdSeparator + c).getOrElse(c)
 
   def prependUserId(idWithoutPrefix: String, userId: Option[String]): String = {
     userId.map(prependUserId(idWithoutPrefix, _)).getOrElse(idWithoutPrefix)
@@ -138,7 +137,7 @@ object ArchCollection {
   }
 
   def userCollectionId(id: String)(
-    implicit context: RequestContext = RequestContext.None): String = {
+    implicit context: RequestContext): String = {
     prefix(id).map { p =>
       val c = id.stripPrefix(p)
       p + (splitIdUserCollectionOpt(c) match {

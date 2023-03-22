@@ -98,7 +98,7 @@ class ApiController extends BaseController {
                 UserDefinedQuery.validateParams(p).map(e => BadRequest(e)).orElse {
                   for {
                     collection <- ArchCollection.get(collectionId)
-                    conf <- DerivationJobConf.userDefinedQuery(collectionId, p)
+                    conf <- DerivationJobConf.userDefinedQuery(collection, p)
                   } yield {
                     runJob(UserDefinedQuery, collection, conf, rerun = rerun)
                   }

@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
@@ -69,8 +69,12 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .getOrElse(-1L)
   }
 
-  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
-    CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
+    CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
+
+  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+    CollectionLoader.randomAccessAit(context, sourceId, inputPath + "/" + pointer.filename, initialOffset, positions)
+  }
 
   override def sourceId: String = AitCollectionSpecifics.Prefix + collectionId
 }

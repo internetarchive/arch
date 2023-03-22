@@ -19,7 +19,6 @@ object JobManager {
     AudioInformationExtraction,
     DomainFrequencyExtraction,
     DomainGraphExtraction,
-    FileCountAndSize,
     ImageGraphExtraction,
     ImageInformationExtraction,
     PdfInformationExtraction,

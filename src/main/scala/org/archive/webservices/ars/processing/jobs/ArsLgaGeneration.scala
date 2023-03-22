@@ -30,32 +30,34 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { _ =>
-        IOHelper
-          .sample(
-            {
-              val warcs = CollectionLoader
-                .loadWarcs(conf.collectionId, conf.inputPath)
-                .filter(_.http.exists(http =>
+        CollectionLoader
+          .loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
+            IOHelper
+              .sample(
+                {
+                  val warcs = rdd
+                  .filter(_.http.exists(http =>
                   http.mime.contains("text/html") && http.status == 200))
-              LGA
-                .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
-                .filter(_._2.hasNext)
-            },
-            conf.sample) { parsed =>
-            val outPath = conf.outputPath + relativeOutPath
-            val cached = parsed.persist(StorageLevel.DISK_ONLY)
-            val processed = LGA.parsedToGraph(parsed) { mapRdd =>
-              val path = outPath + "/_" + MapFile
-              val strings = mapRdd.map(_.toJsonString)
-              RddUtil.saveAsTextFile(strings, path)
-              RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
-            } { graphRdd =>
-              val path = outPath + "/_" + GraphFile
-              val strings = graphRdd.map(_.toJsonString)
-              RddUtil.saveAsTextFile(strings, path)
-            }
-            cached.unpersist(true)
-            processed >= 0
+                  LGA
+                    .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
+                    .filter(_._2.hasNext)
+                },
+                conf.sample) { parsed =>
+                val outPath = conf.outputPath + relativeOutPath
+                val cached = parsed.persist(StorageLevel.DISK_ONLY)
+                val processed = LGA.parsedToGraph(parsed) { mapRdd =>
+                  val path = outPath + "/_" + MapFile
+                  val strings = mapRdd.map(_.toJsonString)
+                  RddUtil.saveAsTextFile(strings, path)
+                  RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
+                } { graphRdd =>
+                  val path = outPath + "/_" + GraphFile
+                  val strings = graphRdd.map(_.toJsonString)
+                  RddUtil.saveAsTextFile(strings, path)
+                }
+                cached.unpersist(true)
+                processed >= 0
+              }
           }
       }
     }

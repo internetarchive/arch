@@ -14,8 +14,8 @@ object CollectionCache {
   private var inUse = Set.empty[String]
   private var lastUse = Map.empty[String, Long]
 
-  def cache[R](collectionId: String)(action: String => R): R = {
-    val c = cacheDir(collectionId)
+  def cache[R](sourceId: String)(action: String => R): R = {
+    val c = cacheDir(sourceId)
     synchronized {
       inUse += c
       clearCache()
@@ -30,7 +30,7 @@ object CollectionCache {
     r
   }
 
-  def cacheDir(collectionId: String): String = IOHelper.escapePath(collectionId)
+  def cacheDir(sourceId: String): String = IOHelper.escapePath(sourceId)
 
   def clearCache(): Unit = synchronized {
     var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)
@@ -45,7 +45,6 @@ object CollectionCache {
           if (fs.delete(path, true)) length -= pathLength
         }
       }
-
       val toDelete =
         lastUse.toSeq
           .filter { case (c, _) => !inUse.contains(c) }

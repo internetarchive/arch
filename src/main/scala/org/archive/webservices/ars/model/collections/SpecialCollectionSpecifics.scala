@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer, IOHelper}
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
@@ -37,8 +37,12 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
-  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
-    CollectionLoader.loadWarcFiles(inputPath)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
+    CollectionLoader.loadWarcFiles(inputPath)(action)
+
+  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+    CollectionLoader.randomAccessHdfs(context, inputPath + "/" + pointer.filename, initialOffset, positions)
+  }
 
   override def sourceId: String = SpecialCollectionSpecifics.Prefix + specialId
 }

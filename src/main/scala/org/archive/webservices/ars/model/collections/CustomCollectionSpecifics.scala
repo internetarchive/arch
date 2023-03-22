@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
@@ -43,7 +43,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
-  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] = {
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = action {
     CustomCollectionSpecifics
       .collectionInfo(customId)
       .flatMap(_.get[String]("location").toOption) match {
@@ -54,10 +54,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
           CustomCollectionSpecifics.LocationIdSeparator)
         locationId match {
           case "petabox" =>
-            val warcPath = StringUtil.stripPrefixBySeparator(
-              location,
-              CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath, warcPath)
+            CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
           case "hdfs" | "ait-hdfs" =>
             val warcPath = StringUtil.stripPrefixBySeparator(
               location,
@@ -70,23 +67,15 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
             val parentCollectionId = StringUtil.stripPrefixBySeparator(
               location,
               CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionSpecifics
-              .get(parentCollectionId)
-              .map { parent =>
-                if (parentCollectionId.startsWith(AitCollectionSpecifics.Prefix)) {
-                  CollectionLoader.loadWarcFilesViaCdxFromAit(
-                    cdxPath,
-                    parent.inputPath,
-                    parent.sourceId)
-                } else CollectionLoader.loadWarcFilesViaCdxFromHdfs(cdxPath, parent.inputPath)
-              }
-              .getOrElse {
-                throw new MethodNotSupportedException("Unknown location " + location)
-              }
+            CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
       case None =>
         throw new MethodNotSupportedException("Unknown location for collection " + id)
     }
+  }
+
+  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+    CollectionLoader.randomAccessHdfs(context, inputPath + "/" + pointer.filename, initialOffset, positions)
   }
 }
 
