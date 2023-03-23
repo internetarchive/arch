@@ -20,7 +20,6 @@ import scala.util.{Random, Try}
 class FilesController extends BaseController {
   private val NotebooksTemplatesDir = "templates/notebooks"
   private val GistIdPrefix = "ARCH_Colab_Notebook"
-  private val NotebookDatasetAssignStr = "dataset = '"
 
   private def sendFile(file: DerivativeOutput)(
       implicit request: HttpServletRequest): ActionResult = {
@@ -164,7 +163,9 @@ class FilesController extends BaseController {
           ait.connect()
           if (ait.getResponseCode / 100 == 2) {
             val source = Source.fromInputStream(ait.getInputStream, "utf-8")
-            val content = try source.mkString finally source.close()
+            val content =
+              try source.mkString
+              finally source.close()
             parse(content).toOption.map(_.hcursor)
           } else None
         }
@@ -202,23 +203,20 @@ class FilesController extends BaseController {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
               if (file.accessToken == accessToken) {
-                val notebookName = StringUtil.prefixBySeparator(filename, ".") + ".ipynb"
-                val notebookTemplate = new File(NotebooksTemplatesDir + "/" + notebookName)
+                val notebookFile = StringUtil.prefixBySeparator(filename, ".") + ".ipynb"
+                val notebookFilename = StringUtil.prefixBySeparator(filename, ".") + "-" + collectionId + ".ipynb"
+                val notebookTemplate = new File(NotebooksTemplatesDir + "/" + notebookFile)
                 if (notebookTemplate.exists) {
                   val source = Source.fromFile(notebookTemplate)
-                  val contentTemplate = try source.mkString finally source.close()
-                  val datasetAssignIdx = contentTemplate.indexOf(NotebookDatasetAssignStr)
-                  val content =
-                    if (datasetAssignIdx < 0) contentTemplate
-                    else {
-                      val datasetAssignStart = datasetAssignIdx + NotebookDatasetAssignStr.length
-                      val datasetAssignEnd = contentTemplate.indexOf("'", datasetAssignStart)
-                      val datasetAssignVal =
-                        contentTemplate.substring(datasetAssignStart, datasetAssignEnd)
-                      contentTemplate.replace(
-                        datasetAssignVal,
-                        s"https://webdata.archive-it.org/ait/files/download/$collectionId/$jobId/$filename?access=" + file.accessToken)
-                    }
+                  val contentTemplate =
+                    try source.mkString
+                    finally source.close()
+                  val waybackUrl = "http://wayback.archive-it.org/" + collectionId.replace(
+                    "ARCHIVEIT-",
+                    "")
+                  val fileUrl = s"https://webdata.archive-it.org/ait/files/download/$collectionId/$jobId/$filename?access=" + file.accessToken
+                  val notebookFileUrl = contentTemplate.replace("ARCHDATASETURL", fileUrl)
+                  val content = notebookFileUrl.replace("ARCHCOLLECTIONIDURL", waybackUrl)
                   val nowStr = java.time.Instant.now.toString
                   val dateStr = StringUtil.prefixBySeparator(nowStr, "T")
                   cleanGists(GistIdPrefix + " " + dateStr)
@@ -231,14 +229,14 @@ class FilesController extends BaseController {
                   val postBody = Map(
                     "description" -> gistId.asJson,
                     "public" -> false.asJson,
-                    "files" -> Map(notebookName -> Map("content" -> content)).asJson).asJson
+                    "files" -> Map(notebookFilename -> Map("content" -> content)).asJson).asJson
                     .noSpaces
                   (for {
                     cursor <- gistApiRequest(Some(postBody))
                     id <- cursor.get[String]("id").toOption
                     owner <- cursor.downField("owner").get[String]("login").toOption
                   } yield {
-                    val colabUrl = "http://colab.research.google.com/gist/" + owner + "/" + id + "/" + notebookName
+                    val colabUrl = "http://colab.research.google.com/gist/" + owner + "/" + id + "/" + notebookFilename
                     Found(colabUrl)
                   }).getOrElse(InternalServerError())
                 } else NotFound("No notebook for this file found!")
