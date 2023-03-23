@@ -94,7 +94,7 @@ object CollectionLoader {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
-      val wasapiUrl = "https://warcs.archive-it.org/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
+      val wasapiUrl = ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       while (apiFileCount < 0) {
         Ait
@@ -143,7 +143,7 @@ object CollectionLoader {
                               .downField("locations")
                               .values
                               .flatMap(_.flatMap(_.asString).find(
-                                _.startsWith("https://warcs.archive-it.org")))
+                                _.startsWith(ArchConf.aitWarcsBaseUrl)))
                           } yield (filename, location)
                         })
                     } match {
@@ -274,7 +274,7 @@ object CollectionLoader {
   }
 
   def randomAccessPetabox(context: CollectionAccessContext, itemFilePath: String, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
-    val url = "https://archive.org/serve/" + itemFilePath
+    val url = ArchConf.iaBaseUrl + "/serve/" + itemFilePath
     val in = HttpClient.rangeRequest(
       url,
       headers = context.iaAuthHeader.map("Authorization" -> _).toMap,
@@ -328,7 +328,7 @@ object CollectionLoader {
         val p = context.cachePath(sourceId, file)
         if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset, decompress = false)
         else {
-          val url = "https://warcs.archive-it.org/webdatafile/" + file
+          val url = ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file
           HttpClient.rangeRequest(
             url,
             headers = context.aitAuth.map("Authorization" -> _).toMap,

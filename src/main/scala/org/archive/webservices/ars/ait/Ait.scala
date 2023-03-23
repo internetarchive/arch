@@ -83,7 +83,7 @@ object Ait {
 
   def login(username: String, password: String)(
       implicit request: HttpServletRequest): Either[String, String] = {
-    val ait = new URL("https://partner.archive-it.org/login").openConnection
+    val ait = new URL(ArchConf.aitBaseUrl + ArchConf.aitLoginPath).openConnection
       .asInstanceOf[HttpsURLConnection]
     try {
       ait.setRequestMethod("POST")
@@ -169,8 +169,8 @@ object Ait {
       basicAuth: Option[String] = None,
       close: Boolean = true)(action: InputStream => Option[R]): Either[Int, R] = {
     val ait = new URL(
-      if (path.startsWith("https:")) path
-      else "https://partner.archive-it.org" + path).openConnection
+      if (path.matches("^https?://.+$")) path
+      else ArchConf.aitBaseUrl + path).openConnection
       .asInstanceOf[HttpURLConnection]
     ait.setInstanceFollowRedirects(true)
     try {
