@@ -31,6 +31,10 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
+  get("/:userid/research_services/:collection_id/?*") {
+    Found(requestPath.stripSuffix("/") + "/analysis")
+  }
+
   get("/:userid/research_services/:collection_id/analysis") {
     ensureUserBasePath("userid") { implicit context =>
       val collectionId = ArchCollection.userCollectionId(params("collection_id"))

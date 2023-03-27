@@ -33,6 +33,7 @@ object CollectionSpecifics {
       case AitCollectionSpecifics.Prefix => new AitCollectionSpecifics(id)
       case SpecialCollectionSpecifics.Prefix => new SpecialCollectionSpecifics(id)
       case CustomCollectionSpecifics.Prefix => new CustomCollectionSpecifics(id)
+      case UnionCollectionSpecifics.Prefix => new UnionCollectionSpecifics(id)
     }
   }
 }
