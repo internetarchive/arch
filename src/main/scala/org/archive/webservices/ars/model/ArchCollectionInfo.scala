@@ -3,8 +3,6 @@ package org.archive.webservices.ars.model
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
-import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
@@ -54,28 +52,31 @@ object ArchCollectionInfo {
       ArchCollection.get(collectionId).map { c =>
         val file = DerivationJobConf.jobOutPath(c) + "/info.json"
         val globalFile = DerivationJobConf.jobOutPath(c, global = true) + "/info.json"
-        val info = Seq(file, globalFile).find(HdfsIO.exists).map { inFile =>
-          parse(HdfsIO.lines(inFile).mkString).right.toOption.map(_.hcursor) match {
-            case Some(cursor) =>
-              val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
-                cursor
-                  .get[String]("lastJobId")
-                  .toOption
-                  .map { id =>
-                    (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
-                  }
-                  .orElse {
-                    cursor.get[String]("lastJobName").toOption.flatMap { name =>
-                      JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
-                        (job.id, name.endsWith(SampleNameSuffix), epoch)
+        val info = Seq(file, globalFile)
+          .find(HdfsIO.exists)
+          .map { inFile =>
+            parse(HdfsIO.lines(inFile).mkString).right.toOption.map(_.hcursor) match {
+              case Some(cursor) =>
+                val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
+                  cursor
+                    .get[String]("lastJobId")
+                    .toOption
+                    .map { id =>
+                      (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
+                    }
+                    .orElse {
+                      cursor.get[String]("lastJobName").toOption.flatMap { name =>
+                        JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
+                          (job.id, name.endsWith(SampleNameSuffix), epoch)
+                        }
                       }
                     }
-                  }
-              }
-              ArchCollectionInfo(collectionId, file, lastJob)
-            case None => ArchCollectionInfo(collectionId, file)
+                }
+                ArchCollectionInfo(collectionId, file, lastJob)
+              case None => ArchCollectionInfo(collectionId, file)
+            }
           }
-        }.getOrElse(ArchCollectionInfo(collectionId, file))
+          .getOrElse(ArchCollectionInfo(collectionId, file))
         GuavaCache.put(CachePrefix + collectionId, info, None)
       }
     }

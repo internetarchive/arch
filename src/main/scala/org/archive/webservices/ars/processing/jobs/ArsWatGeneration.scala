@@ -48,22 +48,18 @@ object ArsWatGeneration extends SparkJob with ArsJob {
             },
             conf.sample) { rdd =>
             val outPath = conf.outputPath + relativeOutPath + resultDir
-            val processed = RddUtil.saveGroupedAsNamedFiles(
-              rdd.map {
-                case (f, in) =>
-                  val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
-                  (outFile, IteratorUtil.whileDefined {
-                    Try(if (in.hasNext) Some {
-                      new CatchingInputStream(in.next)
-                    } else None).getOrElse {
-                      in.clear(false)
-                      None
-                    }
-                  })
-              },
-              outPath,
-              compress = true,
-              skipIfExists = true)
+            val processed = RddUtil.saveGroupedAsNamedFiles(rdd.map {
+              case (f, in) =>
+                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
+                (outFile, IteratorUtil.whileDefined {
+                  Try(if (in.hasNext) Some {
+                    new CatchingInputStream(in.next)
+                  } else None).getOrElse {
+                    in.clear(false)
+                    None
+                  }
+                })
+            }, outPath, compress = true, skipIfExists = true)
             RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
               for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }

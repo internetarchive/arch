@@ -32,13 +32,14 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
       CollectionLoader.loadWarcsWithSource(conf.collectionId, conf.inputPath) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](
-            rdd.map {
-              case (pointer, records) =>
-                (
-                  new Path(pointer.filename).getName,
-                  records.chain(_.filter(_.http.exists(http =>
-                    http.mime.contains("text/html") && http.status == 200))))
-            }
+            rdd
+              .map {
+                case (pointer, records) =>
+                  (
+                    new Path(pointer.filename).getName,
+                    records.chain(_.filter(_.http.exists(http =>
+                      http.mime.contains("text/html") && http.status == 200))))
+              }
               .map {
                 case (f, r) =>
                   val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
@@ -49,7 +50,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
                         timestamp <- warc.timestamp
                         digest <- warc.payloadDigest
                         http <- warc.http if http.status == 200
-                        html <- Try(HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
+                        html <- Try(
+                          HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
                           .getOrElse(None)
                         bodyText <- Try(
                           HtmlProcessor
@@ -59,7 +61,7 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
                             .take(MaxInputTextLength)).toOption
                       } yield WANE.get(url, timestamp, digest, bodyText)
                   }.filter(e =>
-                    e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
+                      e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
                     .map(_.toJsonString))
                   (outFile, json)
               },

@@ -3,8 +3,8 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer, IOHelper}
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -14,7 +14,8 @@ import scala.io.Source
 import scala.util.Try
 
 class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
-  val (userId, specialId) = ArchCollection.splitIdUserCollection(id.stripPrefix(SpecialCollectionSpecifics.Prefix))
+  val (userId, specialId) =
+    ArchCollection.splitIdUserCollection(id.stripPrefix(SpecialCollectionSpecifics.Prefix))
 
   def inputPath: String =
     SpecialCollectionSpecifics
@@ -40,8 +41,17 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
     CollectionLoader.loadWarcFiles(inputPath)(action)
 
-  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
-    CollectionLoader.randomAccessHdfs(context, inputPath + "/" + pointer.filename, initialOffset, positions)
+  def randomAccess(
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: CollectionSourcePointer,
+      initialOffset: Long,
+      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+    CollectionLoader.randomAccessHdfs(
+      context,
+      inputPath + "/" + pointer.filename,
+      initialOffset,
+      positions)
   }
 
   override def sourceId: String = SpecialCollectionSpecifics.Prefix + specialId
@@ -83,7 +93,8 @@ object SpecialCollectionSpecifics {
       .flatMap(_.asString)
   }
 
-  def collection(id: String, user: ArchUser): Option[ArchCollection] = collection(id, Some(user.id))
+  def collection(id: String, user: ArchUser): Option[ArchCollection] =
+    collection(id, Some(user.id))
 
   def collection(id: String, user: Option[String] = None): Option[ArchCollection] = {
     val idWithoutPrefix = id.stripPrefix(Prefix)
@@ -92,11 +103,13 @@ object SpecialCollectionSpecifics {
       .map { c =>
         ArchCollection(
           ArchCollection.prependUserId(id, user, Prefix),
-          c.get[String]("name").toOption.getOrElse(idWithoutPrefix), public = false,
+          c.get[String]("name").toOption.getOrElse(idWithoutPrefix),
+          public = false,
           user.map((_, Prefix + idWithoutPrefix)),
           Prefix + idWithoutPrefix)
       }
   }
 
-  def userCollections(user: ArchUser): Seq[ArchCollection] = userCollectionIds(user).flatMap(collection(_, user))
+  def userCollections(user: ArchUser): Seq[ArchCollection] =
+    userCollectionIds(user).flatMap(collection(_, user))
 }

@@ -77,10 +77,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
       SparkJobManager.context.map { _ =>
         CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
           IOHelper
-            .sample(
-              prepareRecords(rdd),
-              conf.sample,
-              samplingConditions) { rdd =>
+            .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
               val outPath = conf.outputPath + relativeOutPath
               runSpark(rdd, outPath)
               checkSparkState(outPath).contains(ProcessingState.Finished)

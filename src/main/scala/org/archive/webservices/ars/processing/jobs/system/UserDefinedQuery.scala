@@ -6,7 +6,7 @@ import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, De
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxUtil}
+import org.archive.webservices.sparkling.cdx.CdxLoader
 import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil, Time14Util}
@@ -16,15 +16,14 @@ import scala.concurrent.Future
 object UserDefinedQuery extends SparkJob with DerivationJob {
   implicit val logContext: LogContext = LogContext(this)
 
-  val CollectionLocationSeparator = ":"
-
   val name = "User-Defined Query"
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to run a user-defined query (internal system job)"
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,
-      fields: Seq[String])(check: T => Boolean): Boolean = fields.forall(checkFieldOperators(params, _)(check))
+      fields: Seq[String])(check: T => Boolean): Boolean =
+    fields.forall(checkFieldOperators(params, _)(check))
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,
@@ -102,20 +101,15 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      CollectionLoader
-        .loadWarcFiles(conf.collectionId, conf.inputPath) { rdd =>
-          val paramsBc = sc.broadcast(conf.params)
-          val cdx = rdd
-            .flatMap {
-              case (source, in) =>
-                CdxUtil.fromWarcGzStream(source.sourceId + CollectionLocationSeparator + source.filename, in)
-            }
-            .mapPartitions { partition =>
-              val params = paramsBc.value
-              partition.filter { cdx => {
-                checkFieldOperators[String](
-                  params,
-                  Seq("surtPrefix", "surtPrefixes"))(cdx.surtUrl.startsWith)
+      CollectionLoader.loadCdx(conf.collectionId, conf.inputPath) { rdd =>
+        val paramsBc = sc.broadcast(conf.params)
+        val filtered = rdd
+          .mapPartitions { partition =>
+            val params = paramsBc.value
+            partition.filter { cdx =>
+              {
+                checkFieldOperators[String](params, Seq("surtPrefix", "surtPrefixes"))(
+                  cdx.surtUrl.startsWith)
               } && {
                 params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
               } && {
@@ -125,33 +119,31 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
               } && {
                 checkFieldOperators[Int](params, "status")(cdx.status == _)
               } && {
-                checkFieldOperators[Int](
-                  params,
-                  Seq("statusPrefix", "statusPrefixes"))(s => cdx.status.toString.startsWith(s.toString))
+                checkFieldOperators[Int](params, Seq("statusPrefix", "statusPrefixes"))(s =>
+                  cdx.status.toString.startsWith(s.toString))
               } && {
                 checkFieldOperators[String](params, Seq("mime", "mimes"))(cdx.mime == _)
               } && {
-                checkFieldOperators[String](
-                  params,
-                  Seq("mimePrefix", "mimePrefixes"))(cdx.mime.startsWith)
-              }
+                checkFieldOperators[String](params, Seq("mimePrefix", "mimePrefixes"))(
+                  cdx.mime.startsWith)
               }
             }
-          val cdxPath = conf.outputPath + "/" + CustomCollectionSpecifics.CdxDir
-          RddUtil.saveAsTextFile(
-            cdx.map(_.toCdxString),
-            cdxPath,
-            skipIfExists = true,
-            checkPerFile = true,
-            skipEmpty = true)
-          if (HdfsIO.exists(cdxPath + "/" + Sparkling.CompleteFlagFile)) {
-            val size = CdxLoader.load(cdxPath + "/*.cdx.gz").map(_.compressedSize).fold(0L)(_ + _)
-            val info = conf.params.set("size" -> size)
-            val infoPath = conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile
-            HdfsIO.writeLines(infoPath, Seq(info.toJson.spaces4))
-            HdfsIO.exists(infoPath)
-          } else false
-        }
+          }
+        val cdxPath = conf.outputPath + "/" + CustomCollectionSpecifics.CdxDir
+        RddUtil.saveAsTextFile(
+          filtered.map(_.toCdxString),
+          cdxPath,
+          skipIfExists = true,
+          checkPerFile = true,
+          skipEmpty = true)
+        if (HdfsIO.exists(cdxPath + "/" + Sparkling.CompleteFlagFile)) {
+          val size = CdxLoader.load(cdxPath + "/*.cdx.gz").map(_.compressedSize).fold(0L)(_ + _)
+          val info = conf.params.set("size" -> size)
+          val infoPath = conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile
+          HdfsIO.writeLines(infoPath, Seq(info.toJson.spaces4))
+          HdfsIO.exists(infoPath)
+        } else false
+      }
     }
   }
 

@@ -1,11 +1,10 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer, IOHelper}
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.processing.DerivationJobParameters
+import org.archive.webservices.sparkling.cdx.CdxRecord
 
 import java.io.InputStream
 
@@ -17,7 +16,14 @@ abstract class CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
-  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream]
+  def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R =
+    CollectionLoader.loadCdxFromWarcFiles(inputPath, sourceId)(action)
+  def randomAccess(
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: CollectionSourcePointer,
+      initialOffset: Long,
+      positions: Iterator[(Long, Long)]): Iterator[InputStream]
   def sourceId: String = id
 }
 

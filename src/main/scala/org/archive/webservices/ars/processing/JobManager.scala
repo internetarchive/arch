@@ -84,7 +84,10 @@ object JobManager {
       }
     }
 
-  def getInstanceOrGlobal(jobId: String, conf: DerivationJobConf, globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
+  def getInstanceOrGlobal(
+      jobId: String,
+      conf: DerivationJobConf,
+      globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
     val instance = JobManager.getInstance(jobId, conf)
     if (instance.isEmpty || instance.exists(_.state == ProcessingState.NotStarted)) {
       val global = globalConf.filter(_.outputPath != conf.outputPath).flatMap { conf =>

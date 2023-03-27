@@ -81,7 +81,9 @@ class DefaultController extends BaseController with ScalateSupport {
               "sub-collection-builder",
               "breadcrumbs" -> Seq(
                 (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
-                (relativePath("/" + collection.userUrlId + "/sub-collection-builder"), "Sub-Collection Builder")),
+                (
+                  relativePath("/" + collection.userUrlId + "/sub-collection-builder"),
+                  "Sub-Collection Builder")),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -138,14 +140,19 @@ class DefaultController extends BaseController with ScalateSupport {
       (for {
         collection <- ArchCollection.get(collectionId)
         conf <- DerivationJobConf.collection(collection, sample = sample)
-        instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
+        instance <- JobManager.getInstanceOrGlobal(
+          jobId,
+          conf,
+          DerivationJobConf.collection(collection, sample = sample, global = true))
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>
             val attributes = Seq(
               "breadcrumbs" -> Seq(
                 (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
-                (relativePath("/" + collection.userUrlId + "/analysis/" + jobId), instance.job.name)),
+                (
+                  relativePath("/" + collection.userUrlId + "/analysis/" + jobId),
+                  instance.job.name)),
               "user" -> context.user,
               "collection" -> collection,
               "job" -> instance,

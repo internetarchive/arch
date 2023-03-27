@@ -75,7 +75,10 @@ class FilesController extends BaseController {
         (for {
           collection <- ArchCollection.get(collectionId)
           conf <- DerivationJobConf.collection(collection, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
+          instance <- JobManager.getInstanceOrGlobal(
+            jobId,
+            conf,
+            DerivationJobConf.collection(collection, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -88,19 +91,22 @@ class FilesController extends BaseController {
         }).getOrElse(NotFound())
       case None =>
         ensureLogin(redirect = false, useSession = true) { implicit user =>
-            val jobId = params("job_id")
-            (for {
-              collection <- ArchCollection.get(collectionId)
-              conf <- DerivationJobConf.collection(collection, sample = sample)
-              instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
-            } yield {
-              instance.outFiles.find(_.filename == filename) match {
-                case Some(file) =>
-                  sendFile(file)
-                case None =>
-                  NotFound()
-              }
-            }).getOrElse(NotFound())
+          val jobId = params("job_id")
+          (for {
+            collection <- ArchCollection.get(collectionId)
+            conf <- DerivationJobConf.collection(collection, sample = sample)
+            instance <- JobManager.getInstanceOrGlobal(
+              jobId,
+              conf,
+              DerivationJobConf.collection(collection, sample = sample, global = true))
+          } yield {
+            instance.outFiles.find(_.filename == filename) match {
+              case Some(file) =>
+                sendFile(file)
+              case None =>
+                NotFound()
+            }
+          }).getOrElse(NotFound())
         }
     }
   }
@@ -110,23 +116,27 @@ class FilesController extends BaseController {
     val sample = params.get("sample").contains("true")
     val filename = params("file_name")
     ensureLogin(redirect = false, useSession = true) { implicit context =>
-        val jobId = params("job_id")
-        (for {
-          collection <- ArchCollection.get(collectionId)
-          conf <- DerivationJobConf.collection(collection, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
-        } yield {
-          instance.outFiles.find(_.filename == filename) match {
-            case Some(file) =>
-              Ok(
-                HdfsIO.lines(file.path, n = 51).mkString("\n"),
-                Map(
-                  "Content-Type" -> file.mimeType,
-                  "Content-Disposition" -> ("attachment; filename=" + file.filename.stripSuffix(Sparkling.GzipExt))))
-            case None =>
-              NotFound()
-          }
-        }).getOrElse(NotFound())
+      val jobId = params("job_id")
+      (for {
+        collection <- ArchCollection.get(collectionId)
+        conf <- DerivationJobConf.collection(collection, sample = sample)
+        instance <- JobManager.getInstanceOrGlobal(
+          jobId,
+          conf,
+          DerivationJobConf.collection(collection, sample = sample, global = true))
+      } yield {
+        instance.outFiles.find(_.filename == filename) match {
+          case Some(file) =>
+            Ok(
+              HdfsIO.lines(file.path, n = 51).mkString("\n"),
+              Map(
+                "Content-Type" -> file.mimeType,
+                "Content-Disposition" -> ("attachment; filename=" + file.filename.stripSuffix(
+                  Sparkling.GzipExt))))
+          case None =>
+            NotFound()
+        }
+      }).getOrElse(NotFound())
     }
   }
 
@@ -198,7 +208,10 @@ class FilesController extends BaseController {
         (for {
           collection <- ArchCollection.get(collectionId)
           conf <- DerivationJobConf.collection(collection, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(jobId, conf, DerivationJobConf.collection(collection, sample = sample, global = true))
+          instance <- JobManager.getInstanceOrGlobal(
+            jobId,
+            conf,
+            DerivationJobConf.collection(collection, sample = sample, global = true))
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>

@@ -29,20 +29,34 @@ object DerivationJobConf {
   val SampleSize = 100
 
   def jobOutPath(collection: ArchCollection, global: Boolean = false): String = {
-    collection.userSpecificId.filter(_ => !global).map { case (userId, sourceId) =>
-      ArchConf.jobOutPath + "/" + IOHelper.escapePath(userId + "/" + sourceId)
-    }.getOrElse(ArchConf.globalJobOutPath + "/" + IOHelper.escapePath(collection.sourceId))
+    collection.userSpecificId
+      .filter(_ => !global)
+      .map {
+        case (userId, sourceId) =>
+          ArchConf.jobOutPath + "/" + IOHelper.escapePath(userId + "/" + sourceId)
+      }
+      .getOrElse(ArchConf.globalJobOutPath + "/" + IOHelper.escapePath(collection.sourceId))
   }
 
-  def jobInPath(specifics: CollectionSpecifics, params: DerivationJobParameters = DerivationJobParameters.Empty): String = {
+  def jobInPath(
+      specifics: CollectionSpecifics,
+      params: DerivationJobParameters = DerivationJobParameters.Empty): String = {
     if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
-      params.get[Array[String]]("input").toSet.flatten.filter { collectionId =>
-        ArchCollection.get(collectionId).isDefined
-      }.mkString(",")
+      params
+        .get[Array[String]]("input")
+        .toSet
+        .flatten
+        .filter { collectionId =>
+          ArchCollection.get(collectionId).isDefined
+        }
+        .mkString(",")
     } else specifics.inputPath
   }
 
-  def collection(collection: ArchCollection, sample: Boolean = false, global: Boolean = false): Option[DerivationJobConf] = {
+  def collection(
+      collection: ArchCollection,
+      sample: Boolean = false,
+      global: Boolean = false): Option[DerivationJobConf] = {
     collection.specifics.map { specifics =>
       val outDir = if (sample) "/samples" else "/out"
       DerivationJobConf(

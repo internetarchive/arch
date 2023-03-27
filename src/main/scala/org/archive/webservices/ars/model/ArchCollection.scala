@@ -5,8 +5,6 @@ import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, Co
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.guavaCache.GuavaCache
 
-import javax.servlet.http.HttpServletRequest
-
 case class ArchCollection(
     id: String,
     name: String,
@@ -16,7 +14,8 @@ case class ArchCollection(
   private var user: Option[ArchUser] = None
 
   def userUrlId(implicit context: RequestContext): String = userUrlId(context.user.id)
-  def userUrlId(userId: String): String = userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
+  def userUrlId(userId: String): String =
+    userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
 
   lazy val specifics: Option[CollectionSpecifics] = CollectionSpecifics.get(id)
 
@@ -127,24 +126,27 @@ object ArchCollection {
   }
 
   def userCollectionId(id: String, user: ArchUser): String = {
-    prefix(id).map { p =>
-      val c = id.stripPrefix(p)
-      p + (splitIdUserCollectionOpt(c) match {
-        case Some(_) => c
-        case None => prependUserId(c, Some(user.id))
-      })
-    }.getOrElse(id)
+    prefix(id)
+      .map { p =>
+        val c = id.stripPrefix(p)
+        p + (splitIdUserCollectionOpt(c) match {
+          case Some(_) => c
+          case None => prependUserId(c, Some(user.id))
+        })
+      }
+      .getOrElse(id)
   }
 
-  def userCollectionId(id: String)(
-    implicit context: RequestContext): String = {
-    prefix(id).map { p =>
-      val c = id.stripPrefix(p)
-      p + (splitIdUserCollectionOpt(c) match {
-        case Some(_) => c
-        case None => prependUserId(c, context.userOpt.map(_.id))
-      })
-    }.getOrElse(id)
+  def userCollectionId(id: String)(implicit context: RequestContext): String = {
+    prefix(id)
+      .map { p =>
+        val c = id.stripPrefix(p)
+        p + (splitIdUserCollectionOpt(c) match {
+          case Some(_) => c
+          case None => prependUserId(c, context.userOpt.map(_.id))
+        })
+      }
+      .getOrElse(id)
   }
 
   def prefix(id: String): Option[String] = {

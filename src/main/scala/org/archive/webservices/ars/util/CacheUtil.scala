@@ -22,8 +22,10 @@ object CacheUtil {
       }
     } else value
 
-  def cacheRequest(request: HttpServletRequest, enabled: Boolean = true, subjects: Set[Any] = Set.empty)(
-      value: => ActionResult): ActionResult =
+  def cacheRequest(
+      request: HttpServletRequest,
+      enabled: Boolean = true,
+      subjects: Set[Any] = Set.empty)(value: => ActionResult): ActionResult =
     if (enabled) {
       val key = "request#" + request.getRequestURI + "?" + request.getQueryString
       Iterator

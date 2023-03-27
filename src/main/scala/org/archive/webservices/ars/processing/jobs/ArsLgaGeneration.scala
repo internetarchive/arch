@@ -36,8 +36,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
               .sample(
                 {
                   val warcs = rdd
-                  .filter(_.http.exists(http =>
-                  http.mime.contains("text/html") && http.status == 200))
+                    .filter(_.http.exists(http =>
+                      http.mime.contains("text/html") && http.status == 200))
                   LGA
                     .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
                     .filter(_._2.hasNext)

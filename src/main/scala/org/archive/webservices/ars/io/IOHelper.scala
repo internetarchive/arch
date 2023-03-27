@@ -6,7 +6,6 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, InOutInputStream, InputStreamForker}
@@ -24,9 +23,7 @@ object IOHelper {
   val SamplingMaxReadPerPartitionFactor = 2
 
   def escapePath(path: String): String = {
-    path.replace(
-      ArchCollection.UserIdSeparator,
-      ArchCollection.PathUserEscape)
+    path.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
   }
 
   def tempDir[R](action: String => R): R = {

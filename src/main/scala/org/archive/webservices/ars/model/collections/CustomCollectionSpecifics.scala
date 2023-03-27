@@ -3,10 +3,11 @@ package org.archive.webservices.ars.model.collections
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer, IOHelper}
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
 
@@ -49,24 +50,19 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .flatMap(_.get[String]("location").toOption) match {
       case Some(location) =>
         val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
-        val locationId = StringUtil.prefixBySeparator(
-          location.toLowerCase,
-          CustomCollectionSpecifics.LocationIdSeparator)
+        val locationId = StringUtil
+          .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
         locationId match {
           case "petabox" =>
             CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
           case "hdfs" | "ait-hdfs" =>
-            val warcPath = StringUtil.stripPrefixBySeparator(
-              location,
-              CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionLoader.loadWarcFilesViaCdxFromHdfs(
-              cdxPath,
-              warcPath,
-              aitHdfs = locationId == "ait-hdfs")
+            val warcPath = StringUtil
+              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+            CollectionLoader
+              .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
           case "arch" | _ =>
-            val parentCollectionId = StringUtil.stripPrefixBySeparator(
-              location,
-              CustomCollectionSpecifics.LocationIdSeparator)
+            val parentCollectionId = StringUtil
+              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
             CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
       case None =>
@@ -74,8 +70,22 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
     }
   }
 
-  def randomAccess(context: CollectionAccessContext, inputPath: String, pointer: CollectionSourcePointer, initialOffset: Long, positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
-    CollectionLoader.randomAccessHdfs(context, inputPath + "/" + pointer.filename, initialOffset, positions)
+  override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
+    val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+    action(CdxLoader.load(s"$cdxPath/*.cdx.gz"))
+  }
+
+  def randomAccess(
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: CollectionSourcePointer,
+      initialOffset: Long,
+      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+    CollectionLoader.randomAccessHdfs(
+      context,
+      inputPath + "/" + pointer.filename,
+      initialOffset,
+      positions)
   }
 }
 
@@ -94,12 +104,15 @@ object CustomCollectionSpecifics {
   }
 
   def userPath(userId: String): String =
-    ArchConf.customCollectionPath + "/" + userId.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+    ArchConf.customCollectionPath + "/" + userId.replace(
+      ArchCollection.UserIdSeparator,
+      ArchCollection.PathUserEscape)
 
   def path(user: ArchUser): String = userPath(user.id)
 
   def path(id: String): Option[String] = {
-    ArchCollection.splitIdUserCollectionOpt(id.stripPrefix(Prefix))
+    ArchCollection
+      .splitIdUserCollectionOpt(id.stripPrefix(Prefix))
       .map {
         case (user, collection) =>
           val p = userPath(user)
