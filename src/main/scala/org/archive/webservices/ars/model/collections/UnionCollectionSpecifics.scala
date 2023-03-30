@@ -20,7 +20,12 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def collection(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     Some(
-      ArchCollection(id, collectionId, public = false, userId.map((_, UnionCollectionSpecifics.Prefix + collectionId)), sourceId))
+      ArchCollection(
+        id,
+        collectionId,
+        public = false,
+        userId.map((_, UnionCollectionSpecifics.Prefix + collectionId)),
+        sourceId))
   }
 
   def size(implicit context: RequestContext = RequestContext.None): Long = -1
@@ -29,7 +34,9 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
-  private def loadUnion[A : ClassTag, R](inputPath: String, load: CollectionSpecifics => (RDD[A] => R) => R)(action: RDD[A] => R): R = {
+  private def loadUnion[A: ClassTag, R](
+      inputPath: String,
+      load: CollectionSpecifics => (RDD[A] => R) => R)(action: RDD[A] => R): R = {
     def union(rdd: RDD[A], remaining: Seq[CollectionSpecifics]): R = {
       if (remaining.nonEmpty) {
         load(remaining.head) { nextRdd =>
@@ -63,7 +70,8 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .getOrElseUpdate(pointer.sourceId, CollectionSpecifics.get(pointer.sourceId))
       .map { specifics =>
         specifics.randomAccess(context, specifics.inputPath, pointer, offset, positions)
-      }.getOrElse(IOUtil.EmptyStream)
+      }
+      .getOrElse(IOUtil.EmptyStream)
   }
 }
 

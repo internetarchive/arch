@@ -178,12 +178,14 @@ class DefaultController extends BaseController with ScalateSupport {
           Ok(
             ssp(
               "union-subset",
-              "breadcrumbs" -> Seq(
-                (relativePath("/subset"),
-                  "Sub-Collection Query")),
+              "breadcrumbs" -> Seq((relativePath("/subset"), "Sub-Collection Query")),
               "user" -> context.user,
               "collection" -> collection,
-              "collections" -> ArchCollection.userCollections(context.user).map(_.sourceId).distinct.sorted),
+              "collections" -> ArchCollection
+                .userCollections(context.user)
+                .map(_.sourceId)
+                .distinct
+                .sorted),
             Map("Content-Type" -> "text/html"))
         }
         .getOrElse(NotFound())

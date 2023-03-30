@@ -8,7 +8,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.io.{ChainedInputStream, CleanupInputStream, HdfsIO, IOUtil, InOutInputStream, InputStreamForker}
+import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._

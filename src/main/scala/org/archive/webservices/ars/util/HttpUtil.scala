@@ -5,7 +5,6 @@ import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.http.HttpMessage
 import org.archive.webservices.sparkling.io.CatchingInputStream
-import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
 

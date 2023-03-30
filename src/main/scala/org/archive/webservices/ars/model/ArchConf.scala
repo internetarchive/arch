@@ -4,7 +4,8 @@ trait ArchConf {
   def iaBaseUrl: String
   def aitCollectionHdfsHost: Option[String]
   def aitCollectionHdfsPort: Int
-  def aitCollectionHdfsHostPort: Option[(String, Int)] = aitCollectionHdfsHost.map((_, aitCollectionHdfsPort))
+  def aitCollectionHdfsHostPort: Option[(String, Int)] =
+    aitCollectionHdfsHost.map((_, aitCollectionHdfsPort))
   def aitCollectionPath: String
   def aitCollectionWarcDir: String
   def aitBaseUrl: String

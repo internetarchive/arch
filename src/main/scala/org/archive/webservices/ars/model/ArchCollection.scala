@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.model
 
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics, CustomCollectionSpecifics, SpecialCollectionSpecifics, UnionCollectionSpecifics}
+import org.archive.webservices.ars.model.collections._
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.guavaCache.GuavaCache
 

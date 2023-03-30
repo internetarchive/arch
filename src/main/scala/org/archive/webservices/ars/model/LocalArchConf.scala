@@ -23,16 +23,17 @@ class LocalArchConf extends ArchConf with Serializable {
   }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor)
 
   private def confValueMap[A: _root_.io.circe.Decoder](
-    envKey: String,
-    configKey: String,
-    parseEnv: Option[String] => Option[A])(mapConf: A => A): Option[A] =
+      envKey: String,
+      configKey: String,
+      parseEnv: Option[String] => Option[A])(mapConf: A => A): Option[A] =
     parseEnv(Option(System.getenv(envKey)).filter(_.nonEmpty))
       .orElse(cursor.get[A](configKey).toOption.map(mapConf))
 
   private def confValue[A: _root_.io.circe.Decoder](
-    envKey: String,
-    configKey: String,
-    parseEnv: Option[String] => Option[A]): Option[A] = confValueMap(envKey, configKey, parseEnv)(identity)
+      envKey: String,
+      configKey: String,
+      parseEnv: Option[String] => Option[A]): Option[A] =
+    confValueMap(envKey, configKey, parseEnv)(identity)
 
   /** Getter for String-type config values that prioritizes environment overrides * */
   private def confStrValue(envKey: String, configKey: String): Option[String] =

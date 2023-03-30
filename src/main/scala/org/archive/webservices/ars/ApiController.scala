@@ -163,31 +163,16 @@ class ApiController extends BaseController {
         .map { collection =>
           val active = JobManager.getByCollection(collection.id)
           val instances = if (params.get("all").contains("true")) {
-            active ++ {
-              val conf = DerivationJobConf.collection(collection)
+            active ++ Seq(false, true).flatMap { sample =>
+              val conf = DerivationJobConf.collection(collection, sample = sample)
               val jobsIds =
-                conf.map(_.outputPath).toSeq.flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last)).toSet
-              val globalConf = DerivationJobConf.collection(collection, global = true)
-              val globalJobIds = globalConf
-                .map(_.outputPath)
-                .toSeq
-                .flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last))
-                .toSet -- jobsIds
-              conf.toSeq.flatMap { c =>
-                val jobs = active.filter(_.conf == c).map(_.job)
-                JobManager.userJobs.filter(!jobs.contains(_)).map { job =>
-                  if (jobsIds.contains(job.id)) job.history(c)
-                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history).getOrElse {
-                    DerivationJobInstance(job, c)
-                  }
-                }
-              }
-            } ++ {
-              val conf = DerivationJobConf.collection(collection, sample = true)
-              val jobsIds =
-                conf.map(_.outputPath).toSeq.flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last)).toSet
+                conf
+                  .map(_.outputPath)
+                  .toSeq
+                  .flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last))
+                  .toSet
               val globalConf =
-                DerivationJobConf.collection(collection, sample = true, global = true)
+                DerivationJobConf.collection(collection, sample = sample, global = true)
               val globalJobIds = globalConf
                 .map(_.outputPath)
                 .toSeq
@@ -197,9 +182,13 @@ class ApiController extends BaseController {
                 val jobs = active.filter(_.conf == c).map(_.job)
                 JobManager.userJobs.filter(!jobs.contains(_)).map { job =>
                   if (jobsIds.contains(job.id)) job.history(c)
-                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history).getOrElse {
-                    DerivationJobInstance(job, c)
-                  }
+                  else
+                    globalConf
+                      .filter(_ => globalJobIds.contains(job.id))
+                      .map(job.history)
+                      .getOrElse {
+                        DerivationJobInstance(job, c)
+                      }
                 }
               }
             }

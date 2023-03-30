@@ -16,8 +16,9 @@ abstract class CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
-  def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) { rdd =>
-    action(CollectionLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
+  def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) {
+    rdd =>
+      action(CollectionLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
   }
   def randomAccess(
       context: CollectionAccessContext,

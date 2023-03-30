@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import io.archivesunleashed.matchbox.{GetExtensionMIME, RemoveHTTPHeader}
+import io.archivesunleashed.matchbox.GetExtensionMIME
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
@@ -117,8 +117,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
                 Seq(
                   md5In.map(DigestUtil.md5Hex),
                   sha1In.map(DigestUtil.sha1Hex),
-                  contentIn.map(in =>
-                    Common.cleanup(HttpUtil.bodyString(in, http))(in.close)))),
+                  contentIn.map(in => Common.cleanup(HttpUtil.bodyString(in, http))(in.close)))),
               Duration.Inf)
           } finally {
             for (s <- md5In) Try(s.close())

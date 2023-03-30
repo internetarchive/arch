@@ -61,8 +61,11 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
             CollectionLoader
               .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
           case "arch" | _ =>
-            val parentCollectionId = if (locationId == "arch") StringUtil
-              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator) else location
+            val parentCollectionId =
+              if (locationId == "arch")
+                StringUtil
+                  .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+              else location
             CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
       case None =>
