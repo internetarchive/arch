@@ -32,7 +32,7 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/:collection_id/?*") {
-    Found(requestPath.stripSuffix("/") + "/analysis")
+    Found(request.getRequestURI.stripSuffix("/") + "/analysis")
   }
 
   get("/:userid/research_services/:collection_id/analysis") {
@@ -166,6 +166,27 @@ class DefaultController extends BaseController with ScalateSupport {
             NotFound()
         }
       }).getOrElse(NotFound())
+    }
+  }
+
+  get("/:userid/research_services/subset/?") {
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = ArchCollection.userCollectionId("UNION-UDQ")
+      ArchCollection
+        .get(collectionId)
+        .map { collection =>
+          Ok(
+            ssp(
+              "union-subset",
+              "breadcrumbs" -> Seq(
+                (relativePath("/subset"),
+                  "Sub-Collection Query")),
+              "user" -> context.user,
+              "collection" -> collection,
+              "collections" -> ArchCollection.userCollections(context.user).map(_.sourceId).distinct.sorted),
+            Map("Content-Type" -> "text/html"))
+        }
+        .getOrElse(NotFound())
     }
   }
 

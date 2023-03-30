@@ -5,9 +5,11 @@ import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSource
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.RddUtil
 
 import java.io.InputStream
+import scala.reflect.ClassTag
 
 class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val (userId, collectionId) =
@@ -18,7 +20,7 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def collection(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     Some(
-      ArchCollection(id, collectionId, public = false, userId.map((_, collectionId)), sourceId))
+      ArchCollection(id, collectionId, public = false, userId.map((_, UnionCollectionSpecifics.Prefix + collectionId)), sourceId))
   }
 
   def size(implicit context: RequestContext = RequestContext.None): Long = -1
@@ -27,25 +29,26 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
-  private def loadUnion[A, R](inputPath: String, load: (CollectionSpecifics, String) => (RDD[A] => R) => R)(action: RDD[A] => R): R = {
+  private def loadUnion[A : ClassTag, R](inputPath: String, load: CollectionSpecifics => (RDD[A] => R) => R)(action: RDD[A] => R): R = {
     def union(rdd: RDD[A], remaining: Seq[CollectionSpecifics]): R = {
       if (remaining.nonEmpty) {
-        val specifics = remaining.head
-        load(specifics, specifics.inputPath) { nextRdd =>
+        load(remaining.head) { nextRdd =>
           union(rdd.union(nextRdd), remaining.tail)
         }
-      } else action(rdd)
+      } else {
+        action(rdd)
+      }
     }
-    val sourceIds = inputPath.split(",").map(_.trim).filter(_.nonEmpty).distinct
+    val sourceIds = inputPath.split(',').map(_.trim).filter(_.nonEmpty).distinct
     union(RddUtil.emptyRDD[A], sourceIds.flatMap(CollectionSpecifics.get))
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = {
-    loadUnion[(String, InputStream), R](inputPath, (specifics, p) => specifics.loadWarcFiles(p))(action)
+    loadUnion[(String, InputStream), R](inputPath, s => s.loadWarcFiles(s.inputPath))(action)
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
-    loadUnion[CdxRecord, R](inputPath, (specifics, p) => specifics.loadCdx(p))(action)
+    loadUnion[CdxRecord, R](inputPath, s => s.loadCdx(s.inputPath))(action)
   }
 
   private val collectionSpecifics =
@@ -54,17 +57,14 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     collectionSpecifics
       .getOrElseUpdate(pointer.sourceId, CollectionSpecifics.get(pointer.sourceId))
-      .toIterator
-      .flatMap { specifics =>
-        specifics.randomAccess(context, specifics.inputPath, pointer, initialOffset, positions)
-      }
+      .map { specifics =>
+        specifics.randomAccess(context, specifics.inputPath, pointer, offset, positions)
+      }.getOrElse(IOUtil.EmptyStream)
   }
-
-  override def sourceId: String = UnionCollectionSpecifics.Prefix + collectionId
 }
 
 object UnionCollectionSpecifics {

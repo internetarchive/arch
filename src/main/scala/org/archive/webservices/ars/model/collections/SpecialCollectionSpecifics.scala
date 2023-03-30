@@ -45,12 +45,12 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     CollectionLoader.randomAccessHdfs(
       context,
       inputPath + "/" + pointer.filename,
-      initialOffset,
+      offset,
       positions)
   }
 

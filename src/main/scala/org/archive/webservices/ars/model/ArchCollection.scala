@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.model
 
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics, CustomCollectionSpecifics, SpecialCollectionSpecifics}
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, CollectionSpecifics, CustomCollectionSpecifics, SpecialCollectionSpecifics, UnionCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.scalatra.guavaCache.GuavaCache
 
@@ -156,6 +156,8 @@ object ArchCollection {
       Some(SpecialCollectionSpecifics.Prefix)
     } else if (id.startsWith(CustomCollectionSpecifics.Prefix)) {
       Some(CustomCollectionSpecifics.Prefix)
+    } else if (id.startsWith(UnionCollectionSpecifics.Prefix)) {
+      Some(UnionCollectionSpecifics.Prefix)
     } else None
   }
 }

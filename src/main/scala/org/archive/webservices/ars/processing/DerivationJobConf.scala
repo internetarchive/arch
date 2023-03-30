@@ -40,7 +40,7 @@ object DerivationJobConf {
 
   def jobInPath(
       specifics: CollectionSpecifics,
-      params: DerivationJobParameters = DerivationJobParameters.Empty): String = {
+      params: DerivationJobParameters = DerivationJobParameters.Empty)(implicit context: RequestContext): String = {
     if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
       params
         .get[Array[String]]("input")
@@ -71,15 +71,16 @@ object DerivationJobConf {
       implicit context: RequestContext): Option[DerivationJobConf] = {
     context.userOpt.flatMap { user =>
       collection.specifics.map { specifics =>
+        val collectionUserId = collection.userSpecificId.filter(_._1 == user.id).map(_._2).getOrElse(collection.sourceId)
         val outPath = new Path(
           CustomCollectionSpecifics.path(user),
-          IOHelper.escapePath(collection.id) + "_" + Instant.now.toEpochMilli).toString
+          IOHelper.escapePath(collectionUserId + "_" + Instant.now.toEpochMilli)).toString
         DerivationJobConf(
           collection.id,
           jobInPath(specifics, params),
           outPath,
           -1,
-          params = params.set("location", collection.id))
+          params = params.set("location", collection.sourceId))
       }
     }
   }

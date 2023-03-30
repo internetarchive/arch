@@ -166,36 +166,40 @@ class ApiController extends BaseController {
             active ++ {
               val conf = DerivationJobConf.collection(collection)
               val jobsIds =
-                conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
+                conf.map(_.outputPath).toSeq.flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last)).toSet
               val globalConf = DerivationJobConf.collection(collection, global = true)
               val globalJobIds = globalConf
                 .map(_.outputPath)
                 .toSeq
-                .flatMap(HdfsIO.files(_, recursive = false))
+                .flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last))
                 .toSet -- jobsIds
               conf.toSeq.flatMap { c =>
                 val jobs = active.filter(_.conf == c).map(_.job)
-                JobManager.userJobs.filter(!jobs.contains(_)).flatMap { job =>
-                  if (jobsIds.contains(job.id)) Some(job.history(c))
-                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history)
+                JobManager.userJobs.filter(!jobs.contains(_)).map { job =>
+                  if (jobsIds.contains(job.id)) job.history(c)
+                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history).getOrElse {
+                    DerivationJobInstance(job, c)
+                  }
                 }
               }
             } ++ {
               val conf = DerivationJobConf.collection(collection, sample = true)
               val jobsIds =
-                conf.map(_.outputPath).toSeq.flatMap(HdfsIO.files(_, recursive = false)).toSet
+                conf.map(_.outputPath).toSeq.flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last)).toSet
               val globalConf =
                 DerivationJobConf.collection(collection, sample = true, global = true)
               val globalJobIds = globalConf
                 .map(_.outputPath)
                 .toSeq
-                .flatMap(HdfsIO.files(_, recursive = false))
+                .flatMap(p => HdfsIO.files(p + "/*", recursive = false).map(_.split('/').last))
                 .toSet -- jobsIds
               conf.toSeq.flatMap { c =>
                 val jobs = active.filter(_.conf == c).map(_.job)
-                JobManager.userJobs.filter(!jobs.contains(_)).flatMap { job =>
-                  if (jobsIds.contains(job.id)) Some(job.history(c))
-                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history)
+                JobManager.userJobs.filter(!jobs.contains(_)).map { job =>
+                  if (jobsIds.contains(job.id)) job.history(c)
+                  else globalConf.filter(_ => globalJobIds.contains(job.id)).map(job.history).getOrElse {
+                    DerivationJobInstance(job, c)
+                  }
                 }
               }
             }

@@ -77,13 +77,13 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     CollectionLoader.randomAccessAit(
       context,
       sourceId,
       inputPath + "/" + pointer.filename,
-      initialOffset,
+      offset,
       positions)
   }
 

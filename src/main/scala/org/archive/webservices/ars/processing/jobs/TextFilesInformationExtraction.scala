@@ -118,7 +118,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
                   md5In.map(DigestUtil.md5Hex),
                   sha1In.map(DigestUtil.sha1Hex),
                   contentIn.map(in =>
-                    Common.cleanup(RemoveHTTPHeader(HttpUtil.bodyString(in, http)))(in.close)))),
+                    Common.cleanup(HttpUtil.bodyString(in, http))(in.close)))),
               Duration.Inf)
           } finally {
             for (s <- md5In) Try(s.close())

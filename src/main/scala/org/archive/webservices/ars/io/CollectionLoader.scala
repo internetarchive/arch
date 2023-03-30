@@ -7,7 +7,7 @@ import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
-import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.io.{ChainedInputStream, CleanupInputStream, HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil, StringUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
@@ -24,27 +24,35 @@ object CollectionLoader {
   def loadCdx[R](collectionId: String, inputPath: String)(action: RDD[CdxRecord] => R): R = {
     CollectionSpecifics.get(collectionId) match {
       case Some(specifics) => specifics.loadCdx(inputPath)(action)
-      case None => loadCdxFromWarcFiles(collectionId, inputPath)(action)
+      case None => loadCdxFromWarcFiles(inputPath, collectionId)(action)
     }
   }
 
-  def loadCdxFromWarcFiles[R](sourceId: String, inputPath: String)(
+  def loadCdxFromWarcFiles[R](inputPath: String, sourceId: String)(
       action: RDD[CdxRecord] => R): R = {
     loadWarcFiles(inputPath)(rdd =>
-      action(rdd.flatMap {
-        case (file, in) =>
-          CdxUtil.fromWarcGzStream(sourceId + CdxCollectionLocationSeparator + file, in)
-      }))
+      action(loadCdxFromWarcGzStreams(rdd, sourceId)))
+  }
+
+  def loadCdxFromWarcGzStreams(rdd: RDD[(String, InputStream)], sourceId: String): RDD[CdxRecord] = {
+    rdd.flatMap {
+      case (file, in) =>
+        CdxUtil.fromWarcGzStream(file, in).map { r =>
+          val Seq(offsetStr, filename) = r.additionalFields
+          r.copy(additionalFields = Seq(offsetStr, sourceId + CdxCollectionLocationSeparator + filename))
+        }
+    }
   }
 
   def loadWarcFiles[R](collectionId: String, inputPath: String)(
       action: RDD[(CollectionSourcePointer, InputStream)] => R): R = {
     CollectionSpecifics.get(collectionId) match {
       case Some(specifics) =>
+        val sourceId = specifics.sourceId
         specifics.loadWarcFiles(inputPath)(rdd =>
           action(rdd.map {
             case (file, in) =>
-              (CollectionSourcePointer(specifics.sourceId, file), in)
+              (CollectionSourcePointer(sourceId, file), in)
           }))
       case None =>
         loadWarcFiles(inputPath)(rdd =>
@@ -236,62 +244,55 @@ object CollectionLoader {
   }
 
   private def loadWarcFilesViaCdx(cdxPath: String)(
-      action: Iterator[((CollectionSourcePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
-        InputStream]): RDD[(String, InputStream)] = {
+      in: Iterator[((CollectionSourcePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[InputStream]): RDD[(String, InputStream)] = {
     val inputPath = s"$cdxPath/*.cdx.gz"
     val numFiles = HdfsIO.files(inputPath, recursive = false).size
     RddUtil
       .loadTextFiles(inputPath)
-      .mapPartitions { partition =>
-        partition.map {
-          case (file, lines) =>
-            val pointers = lines.flatMap(CdxRecord.fromString).map { cdx =>
-              val length = cdx.compressedSize
-              val (path, offset) = cdx.locationFromAdditionalFields
-              (cdx, path, offset, length)
-            }
-            var prevGroup: Option[(String, Long, (String, Long))] = None
-            val groups = IteratorUtil
-              .groupSortedBy(pointers) {
-                case (_, path, offset, _) =>
-                  val group = prevGroup
-                    .filter {
-                      case (p, o, _) => p == path && offset > o && offset <= o + CdxSkipDistance
-                    }
-                    .map(_._3)
-                    .getOrElse {
-                      (path, offset)
-                    }
-                  prevGroup = Some((path, offset, group))
-                  group
-              }
-              .map {
-                case ((file, initialOffset), group) =>
-                  (
-                    (
-                      CollectionSourcePointer(
-                        StringUtil.prefixBySeparator(file, CdxCollectionLocationSeparator),
-                        StringUtil.stripPrefixBySeparator(file, CdxCollectionLocationSeparator)),
-                      initialOffset),
-                    group.map { case (r, _, o, l) => (r, o, l) })
-              }
-            val in = action(groups)
-            (
-              file.split('/').last,
-              new BufferedInputStream(new ChainedInputStream(in, nextOnError = true))
-                .asInstanceOf[InputStream])
+      .mapPartitions(_.map { case (file, lines) =>
+        val pointers = lines.flatMap(CdxRecord.fromString).map { cdx =>
+          val length = cdx.compressedSize
+          val (path, offset) = cdx.locationFromAdditionalFields
+          (cdx, path, offset, length)
         }
-      }
+        var prevGroup: Option[(String, Long, (String, Long))] = None
+        val groups = IteratorUtil
+          .groupSortedBy(pointers) {
+            case (_, path, offset, _) =>
+              val group = prevGroup
+                .filter {
+                  case (p, o, _) => p == path && offset > o && offset <= o + CdxSkipDistance
+                }
+                .map(_._3)
+                .getOrElse {
+                  (path, offset)
+                }
+              prevGroup = Some((path, offset, group))
+              group
+          }
+          .map {
+            case ((file, initialOffset), group) =>
+              (
+                (
+                  CollectionSourcePointer(
+                    StringUtil.prefixBySeparator(file, CdxCollectionLocationSeparator),
+                    StringUtil.stripPrefixBySeparator(file, CdxCollectionLocationSeparator)),
+                  initialOffset),
+                group.map { case (r, _, o, l) => (r, o, l) })
+          }
+        (file.split('/').last, new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream])
+      })
       .coalesce(numFiles / WarcFilesPerPartition + 1)
   }
 
   def loadWarcFilesViaCdxFromCollections(
       cdxPath: String,
       collectionId: String): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromArchConf
+    val accessContext = CollectionAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
+      accessContext.init()
       CollectionSpecifics.get(collectionId).toIterator.flatMap { specifics =>
-        partition.flatMap {
+        partition.map {
           case ((pointer, initialOffset), positions) =>
             specifics.randomAccess(
               accessContext,
@@ -300,7 +301,7 @@ object CollectionLoader {
               initialOffset,
               positions.map {
                 case (_, offset, length) =>
-                  (offset, length)
+                  (offset - initialOffset, length)
               })
         }
       }
@@ -310,27 +311,26 @@ object CollectionLoader {
   def randomAccessPetabox(
       context: CollectionAccessContext,
       itemFilePath: String,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     val url = ArchConf.iaBaseUrl + "/serve/" + itemFilePath
-    val in = HttpClient.rangeRequest(
+    HttpClient.rangeRequest(
       url,
-      headers = context.iaAuthHeader.map("Authorization" -> _).toMap,
-      offset = initialOffset,
-      close = false)(identity)
-    IOUtil.splitStream(in, positions.map {
-      case (offset, length) => (offset - initialOffset, length)
-    })
+      headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
+      offset = offset) { in =>
+      IOHelper.splitMergeInputStreams(in, positions)
+    }
   }
 
   def loadWarcFilesViaCdxFromPetabox(cdxPath: String): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromArchConf
+    val accessContext = CollectionAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
-      partition.flatMap {
+      accessContext.init()
+      partition.map {
         case ((pointer, initialOffset), positions) =>
           randomAccessPetabox(accessContext, pointer.filename, initialOffset, positions.map {
             case (_, offset, length) =>
-              (offset, length)
+              (offset - initialOffset, length)
           })
       }
     }
@@ -339,21 +339,20 @@ object CollectionLoader {
   def randomAccessHdfs(
       context: CollectionAccessContext,
       filePath: String,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
-    val in = context.hdfsIO.open(filePath, offset = initialOffset, decompress = false)
-    IOUtil.splitStream(in, positions.map {
-      case (offset, length) => (offset - initialOffset, length)
-    })
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
+    val in = context.hdfsIO.open(filePath, offset = offset, decompress = false, strategy = HdfsIO.LoadingStrategy.Remote)
+    IOHelper.splitMergeInputStreams(in, positions)
   }
 
   def loadWarcFilesViaCdxFromHdfs(
       cdxPath: String,
       warcPath: String,
       aitHdfs: Boolean = false): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromArchConf(alwaysAitHdfsIO = aitHdfs)
+    val accessContext = CollectionAccessContext.fromLocalArchConf(alwaysAitHdfsIO = aitHdfs)
     loadWarcFilesViaCdx(cdxPath) { partition =>
-      partition.flatMap {
+      accessContext.init()
+      partition.map {
         case ((pointer, initialOffset), positions) =>
           randomAccessHdfs(
             accessContext,
@@ -361,7 +360,7 @@ object CollectionLoader {
             initialOffset,
             positions.map {
               case (_, offset, length) =>
-                (offset, length)
+                (offset - initialOffset, length)
             })
       }
     }
@@ -371,26 +370,25 @@ object CollectionLoader {
       context: CollectionAccessContext,
       sourceId: String,
       filePath: String,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
-    val in =
-      if (context.aitHdfsIO.exists(filePath))
-        context.aitHdfsIO.open(filePath, offset = initialOffset, decompress = false)
-      else {
-        val file = filePath.split('/').last
-        val p = context.cachePath(sourceId, file)
-        if (HdfsIO.exists(p)) HdfsIO.open(p, offset = initialOffset, decompress = false)
-        else {
-          val url = ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file
-          HttpClient.rangeRequest(
-            url,
-            headers = context.aitAuth.map("Authorization" -> _).toMap,
-            offset = initialOffset,
-            close = false)(identity)
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
+    if (context.aitHdfsIO.exists(filePath)) {
+      val  in = context.aitHdfsIO.open(filePath, offset = offset, decompress = false, strategy = HdfsIO.LoadingStrategy.Remote)
+      IOHelper.splitMergeInputStreams(in, positions)
+    } else {
+      val file = filePath.split('/').last
+      val cachePath = CollectionCache.cachePath(sourceId, file)
+      if (HdfsIO.exists(cachePath)) {
+        val in = HdfsIO.open(cachePath, offset = offset, decompress = false, strategy = HdfsIO.LoadingStrategy.Remote)
+        IOHelper.splitMergeInputStreams(in, positions)
+      } else {
+        HttpClient.rangeRequest(
+          ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file,
+          headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
+          offset = offset) { in =>
+          IOHelper.splitMergeInputStreams(in, positions)
         }
       }
-    IOUtil.splitStream(in, positions.map {
-      case (offset, length) => (offset - initialOffset, length)
-    })
+    }
   }
 }

@@ -15,22 +15,28 @@ object CollectionCache {
   private var lastUse = Map.empty[String, Long]
 
   def cache[R](sourceId: String)(action: String => R): R = {
-    val c = cacheDir(sourceId)
+    val dir = cacheDir(sourceId)
     synchronized {
-      inUse += c
+      inUse += dir
       clearCache()
     }
-    val path = ArchConf.collectionCachePath + "/" + c
+    val path = ArchConf.collectionCachePath + "/" + dir
     fs.mkdirs(new Path(path))
     val r = action(path)
     synchronized {
-      inUse -= c
-      lastUse = lastUse.updated(c, Instant.now.toEpochMilli)
+      inUse -= dir
+      lastUse = lastUse.updated(dir, Instant.now.toEpochMilli)
     }
     r
   }
 
   def cacheDir(sourceId: String): String = IOHelper.escapePath(sourceId)
+
+  def cacheDirPath(cacheDir: String): String = ArchConf.collectionCachePath + "/" + cacheDir
+
+  def cachePath(sourceId: String): String = cacheDirPath(cacheDir(sourceId))
+
+  def cachePath(sourceId: String, filename: String): String = cachePath(sourceId) + "/" + filename
 
   def clearCache(): Unit = synchronized {
     var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)

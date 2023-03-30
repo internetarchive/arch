@@ -16,14 +16,15 @@ abstract class CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
-  def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R =
-    CollectionLoader.loadCdxFromWarcFiles(inputPath, sourceId)(action)
+  def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) { rdd =>
+    action(CollectionLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
+  }
   def randomAccess(
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream]
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream
   def sourceId: String = id
 }
 

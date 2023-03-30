@@ -48,7 +48,7 @@ object WebPagesExtraction extends BinaryInformationAutJob {
             crawlDate: String,
             lastModifiedDate: String) => {
           val bodyString = HttpUtil.bodyString(body, http)
-          val content = RemoveHTML(RemoveHTTPHeader(bodyString))
+          val content = RemoveHTML(bodyString)
           Row(
             crawlDate,
             lastModifiedDate,

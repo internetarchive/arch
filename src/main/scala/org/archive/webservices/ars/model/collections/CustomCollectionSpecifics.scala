@@ -61,8 +61,8 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
             CollectionLoader
               .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
           case "arch" | _ =>
-            val parentCollectionId = StringUtil
-              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+            val parentCollectionId = if (locationId == "arch") StringUtil
+              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator) else location
             CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
       case None =>
@@ -79,12 +79,12 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
-      initialOffset: Long,
-      positions: Iterator[(Long, Long)]): Iterator[InputStream] = {
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     CollectionLoader.randomAccessHdfs(
       context,
       inputPath + "/" + pointer.filename,
-      initialOffset,
+      offset,
       positions)
   }
 }

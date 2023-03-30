@@ -5,6 +5,7 @@
   "jobOutPath": "/data/user-out",
   "globalJobOutPath": "/data/out",
   "customCollectionPath": "data/collections",
+  "jobLoggingPath": "logging",
   "localTempPath": "data/tmp",
   "sparkMaster": "local[*]",
   "baseUrl": "http://127.0.0.1:12341",

@@ -6,6 +6,7 @@
   "jobOutPath": "/user/arch/user-out",
   "globalJobOutPath": "/user/arch/out",
   "customCollectionPath": "/user/arch/arch-custom-collections",
+  "jobLoggingPath": "logging",
   "localTempPath": "/tmp",
   "sparkMaster": "yarn",
   "baseUrl": "https://webdata.archive-it.org",
