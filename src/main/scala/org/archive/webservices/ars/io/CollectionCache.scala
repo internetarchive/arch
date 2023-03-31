@@ -3,7 +3,7 @@ package org.archive.webservices.ars.io
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.io.HdfsIO._
+import org.archive.webservices.sparkling.io._
 
 import java.time.Instant
 import scala.util.Try
@@ -20,8 +20,8 @@ object CollectionCache {
       inUse += dir
       clearCache()
     }
-    val path = ArchConf.collectionCachePath + "/" + dir
-    fs.mkdirs(new Path(path))
+    val path = cacheDirPath(dir)
+    HdfsIO.fs.mkdirs(new Path(path))
     val r = action(path)
     synchronized {
       inUse -= dir
@@ -39,6 +39,7 @@ object CollectionCache {
   def cachePath(sourceId: String, filename: String): String = cachePath(sourceId) + "/" + filename
 
   def clearCache(): Unit = synchronized {
+    val fs = HdfsIO.fs
     var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)
       .getOrElse(0L)
     if (length > CacheClearThresholdBytes) {
@@ -58,9 +59,11 @@ object CollectionCache {
           .map(_._1)
           .toIterator
       while (length > CacheClearThresholdBytes && toDelete.hasNext) {
-        val path = new Path(ArchConf.collectionCachePath + "/" + toDelete.next)
-        val pathLength = fs.getContentSummary(path).getLength
-        if (fs.delete(path, true)) length -= pathLength
+        val path = new Path(ArchConf.collectionCachePath, toDelete.next)
+        if (fs.exists(path)) {
+          val pathLength = fs.getContentSummary(path).getLength
+          if (fs.delete(path, true)) length -= pathLength
+        }
       }
     }
   }
