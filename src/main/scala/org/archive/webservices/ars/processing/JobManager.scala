@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.processing.jobs._
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -12,7 +13,7 @@ object JobManager {
   private val collectionInstances =
     mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
-  val userJobs: Seq[DerivationJob] = Seq(
+  val userJobs: Set[DerivationJob] = Set(
     ArsLgaGeneration,
     ArsWaneGeneration,
     ArsWatGeneration,
@@ -30,11 +31,15 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val jobs: ListMap[String, DerivationJob] = ListMap(userJobs.sortBy(_.id).map { job =>
+  val systemJobs: Set[DerivationJob] = Set(
+    UserDefinedQuery
+  )
+
+  val jobs: ListMap[String, DerivationJob] = ListMap((userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
     job.id -> job
   }: _*)
 
-  val nameLookup: Map[String, DerivationJob] = userJobs.map { job =>
+  val nameLookup: Map[String, DerivationJob] = jobs.values.map { job =>
     job.name -> job
   }.toMap
 
