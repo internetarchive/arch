@@ -3,7 +3,7 @@ package org.archive.webservices.ars.io
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.io.HdfsIO._
+import org.archive.webservices.sparkling.io._
 
 import java.time.Instant
 import scala.util.Try
@@ -14,25 +14,32 @@ object CollectionCache {
   private var inUse = Set.empty[String]
   private var lastUse = Map.empty[String, Long]
 
-  def cache[R](collectionId: String)(action: String => R): R = {
-    val c = cacheDir(collectionId)
+  def cache[R](sourceId: String)(action: String => R): R = {
+    val dir = cacheDir(sourceId)
     synchronized {
-      inUse += c
+      inUse += dir
       clearCache()
     }
-    val path = ArchConf.collectionCachePath + "/" + c
-    fs.mkdirs(new Path(path))
+    val path = cacheDirPath(dir)
+    HdfsIO.fs.mkdirs(new Path(path))
     val r = action(path)
     synchronized {
-      inUse -= c
-      lastUse = lastUse.updated(c, Instant.now.toEpochMilli)
+      inUse -= dir
+      lastUse = lastUse.updated(dir, Instant.now.toEpochMilli)
     }
     r
   }
 
-  def cacheDir(collectionId: String): String = IOHelper.escapePath(collectionId)
+  def cacheDir(sourceId: String): String = IOHelper.escapePath(sourceId)
+
+  def cacheDirPath(cacheDir: String): String = ArchConf.collectionCachePath + "/" + cacheDir
+
+  def cachePath(sourceId: String): String = cacheDirPath(cacheDir(sourceId))
+
+  def cachePath(sourceId: String, filename: String): String = cachePath(sourceId) + "/" + filename
 
   def clearCache(): Unit = synchronized {
+    val fs = HdfsIO.fs
     var length = Try(fs.getContentSummary(new Path(ArchConf.collectionCachePath)).getLength)
       .getOrElse(0L)
     if (length > CacheClearThresholdBytes) {
@@ -45,7 +52,6 @@ object CollectionCache {
           if (fs.delete(path, true)) length -= pathLength
         }
       }
-
       val toDelete =
         lastUse.toSeq
           .filter { case (c, _) => !inUse.contains(c) }
@@ -53,9 +59,11 @@ object CollectionCache {
           .map(_._1)
           .toIterator
       while (length > CacheClearThresholdBytes && toDelete.hasNext) {
-        val path = new Path(ArchConf.collectionCachePath + "/" + toDelete.next)
-        val pathLength = fs.getContentSummary(path).getLength
-        if (fs.delete(path, true)) length -= pathLength
+        val path = new Path(ArchConf.collectionCachePath, toDelete.next)
+        if (fs.exists(path)) {
+          val pathLength = fs.getContentSummary(path).getLength
+          if (fs.delete(path, true)) length -= pathLength
+        }
       }
     }
   }

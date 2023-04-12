@@ -1,9 +1,8 @@
 package org.archive.webservices.ars
 
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf, ArchJobCategories}
+import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategories}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
-import org.archive.webservices.ars.util.CacheUtil
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 
@@ -32,9 +31,13 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
+  get("/:userid/research_services/:collection_id/?*") {
+    Found(request.getRequestURI.stripSuffix("/") + "/analysis")
+  }
+
   get("/:userid/research_services/:collection_id/analysis") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -42,7 +45,27 @@ class DefaultController extends BaseController with ScalateSupport {
             ssp(
               "analysis",
               "breadcrumbs" -> Seq(
-                (relativePath("/" + collectionId + "/analysis"), collection.name)),
+                (relativePath("/" + collection.userUrlId + "/analysis"), collection.name)),
+              "user" -> context.user,
+              "collection" -> collection),
+            Map("Content-Type" -> "text/html"))
+        }
+        .getOrElse(NotFound())
+    }
+  }
+
+  get("/:userid/research_services/:collection_id/subset") {
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
+      ArchCollection
+        .get(collectionId)
+        .map { collection =>
+          Ok(
+            ssp(
+              "subset",
+              "breadcrumbs" -> Seq(
+                (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
+                (relativePath("/" + collection.userUrlId + "/subset"), "Sub-Collection Query")),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -53,7 +76,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
@@ -61,8 +84,10 @@ class DefaultController extends BaseController with ScalateSupport {
             ssp(
               "sub-collection-builder",
               "breadcrumbs" -> Seq(
-                (relativePath("/" + collectionId + "/analysis"), collection.name),
-                (relativePath("/" + collectionId + "/sub-collection-builder"), "Sub-Collection Builder")),
+                (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
+                (
+                  relativePath("/" + collection.userUrlId + "/sub-collection-builder"),
+                  "Sub-Collection Builder")),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -73,11 +98,11 @@ class DefaultController extends BaseController with ScalateSupport {
 
   post("/:userid/research_services/:collection_id/sub-collection-builder") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       ArchCollection
         .get(collectionId)
         .map { collection =>
-          SeeOther(relativePath("/" + collectionId + "/analysis"))
+          SeeOther(relativePath("/" + collection.userUrlId + "/analysis"))
         }
         .getOrElse(NotFound())
     }
@@ -85,11 +110,9 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/:userid/research_services/:collection_id/jobs") {
     ensureUserBasePath("userid") { implicit context =>
-      val collectionId = params("collection_id")
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
       (for {
         collection <- ArchCollection.get(collectionId)
-        conf <- DerivationJobConf.collection(collection.id)
-        sampleConf <- DerivationJobConf.collection(collection.id, sample = true)
       } yield {
         val jobs =
           JobManager.jobs.values.toSeq
@@ -97,19 +120,14 @@ class DefaultController extends BaseController with ScalateSupport {
             .groupBy(_.category)
             .map {
               case (category, jobs) =>
-                category -> jobs.sortBy(_.name.toLowerCase).flatMap { job =>
-                  for {
-                    instance <- JobManager.getInstance(job.id, conf)
-                    sampleInstance <- JobManager.getInstance(job.id, sampleConf)
-                  } yield (instance, sampleInstance)
-                }
+                category -> jobs.sortBy(_.name.toLowerCase)
             }
         Ok(
           ssp(
             "jobs",
             "breadcrumbs" -> Seq(
-              (relativePath("/" + collectionId + "/analysis"), collection.name),
-              (relativePath("/" + collectionId + "/jobs"), "Generate Datasets")),
+              (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
+              (relativePath("/" + collection.userUrlId + "/jobs"), "Generate Datasets")),
             "jobs" -> jobs,
             "user" -> context.user,
             "collection" -> collection),
@@ -119,33 +137,58 @@ class DefaultController extends BaseController with ScalateSupport {
   }
 
   get("/:userid/research_services/:collection_id/analysis/:job_id") {
-    CacheUtil.cacheRequest(request, enabled = ArchConf.production) {
-      ensureUserBasePath("userid") { implicit context =>
-        val collectionId = params("collection_id")
-        val jobId = params("job_id")
-        (for {
-          collection <- ArchCollection.get(collectionId)
-          conf <- DerivationJobConf.collection(
-            collectionId,
-            sample = params.get("sample").contains("true"))
-          instance <- JobManager.getInstance(jobId, conf)
-        } yield {
-          instance.job.templateName match {
-            case Some(templateName) =>
-              val attributes = Seq(
-                "breadcrumbs" -> Seq(
-                  (relativePath("/" + collectionId + "/analysis"), collection.name),
-                  (relativePath("/" + collectionId + "/analysis/" + jobId), instance.job.name)),
-                "user" -> context.user,
-                "collection" -> collection,
-                "job" -> instance,
-                "files" -> instance.outFiles) ++ instance.templateVariables
-              Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
-            case None =>
-              NotFound()
-          }
-        }).getOrElse(NotFound())
-      }
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
+      val jobId = params("job_id")
+      val sample = params.get("sample").contains("true")
+      (for {
+        collection <- ArchCollection.get(collectionId)
+        conf <- DerivationJobConf.collection(collection, sample = sample)
+        instance <- JobManager.getInstanceOrGlobal(
+          jobId,
+          conf,
+          DerivationJobConf.collection(collection, sample = sample, global = true))
+      } yield {
+        instance.job.templateName match {
+          case Some(templateName) =>
+            val attributes = Seq(
+              "breadcrumbs" -> Seq(
+                (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
+                (
+                  relativePath("/" + collection.userUrlId + "/analysis/" + jobId),
+                  instance.job.name)),
+              "user" -> context.user,
+              "collection" -> collection,
+              "job" -> instance,
+              "files" -> instance.outFiles) ++ instance.templateVariables
+            Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
+          case None =>
+            NotFound()
+        }
+      }).getOrElse(NotFound())
+    }
+  }
+
+  get("/:userid/research_services/subset/?") {
+    ensureUserBasePath("userid") { implicit context =>
+      val collectionId = ArchCollection.userCollectionId("UNION-UDQ")
+      ArchCollection
+        .get(collectionId)
+        .map { collection =>
+          Ok(
+            ssp(
+              "union-subset",
+              "breadcrumbs" -> Seq((relativePath("/subset"), "Sub-Collection Query")),
+              "user" -> context.user,
+              "collection" -> collection,
+              "collections" -> ArchCollection
+                .userCollections(context.user)
+                .map(_.sourceId)
+                .distinct
+                .sorted),
+            Map("Content-Type" -> "text/html"))
+        }
+        .getOrElse(NotFound())
     }
   }
 

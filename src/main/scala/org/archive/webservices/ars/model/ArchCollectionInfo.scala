@@ -12,6 +12,7 @@ import scala.collection.immutable.ListMap
 
 case class ArchCollectionInfo private (
     collectionId: String,
+    file: String,
     lastJob: Option[(String, Boolean, Long)] = None) {
   def lastJobId: Option[String] = lastJob.map(_._1)
   def lastJobSample: Option[Boolean] = lastJob.map(_._2)
@@ -21,12 +22,11 @@ case class ArchCollectionInfo private (
   }
 
   def setLastJob(id: String, sample: Boolean, time: Instant): ArchCollectionInfo = {
-    copy(collectionId, Some(id, sample, time.getEpochSecond))
+    copy(collectionId, file, Some(id, sample, time.getEpochSecond))
   }
 
   def save(): Unit = {
-    val file = ArchCollectionInfo.infoFile(collectionId)
-    GuavaCache.put(ArchCollectionInfo.CachePrefix + file, this, None)
+    GuavaCache.put(ArchCollectionInfo.CachePrefix + collectionId, this, None)
     HdfsIO.writeLines(
       file,
       Seq((ListMap.empty[String, Json] ++ {
@@ -47,36 +47,38 @@ object ArchCollectionInfo {
   val CachePrefix = "collection-info#"
   val SampleNameSuffix = " (Sample)"
 
-  def infoFile(collectionId: String): String = {
-    DerivationJobConf.collectionOutPath(collectionId) + "/info.json"
-  }
-
-  def get(collectionId: String): ArchCollectionInfo = {
-    val file = infoFile(collectionId)
-    GuavaCache.get(CachePrefix + file).getOrElse {
-      val info = if (HdfsIO.exists(file)) {
-        parse(HdfsIO.lines(file).mkString).right.toOption.map(_.hcursor) match {
-          case Some(cursor) =>
-            val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
-              cursor
-                .get[String]("lastJobId")
-                .toOption
-                .map { id =>
-                  (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
-                }
-                .orElse {
-                  cursor.get[String]("lastJobName").toOption.flatMap { name =>
-                    JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
-                      (job.id, name.endsWith(SampleNameSuffix), epoch)
+  def get(collectionId: String): Option[ArchCollectionInfo] = {
+    GuavaCache.get(CachePrefix + collectionId).orElse {
+      ArchCollection.get(collectionId).map { c =>
+        val file = DerivationJobConf.jobOutPath(c) + "/info.json"
+        val globalFile = DerivationJobConf.jobOutPath(c, global = true) + "/info.json"
+        val info = Seq(file, globalFile)
+          .find(HdfsIO.exists)
+          .map { inFile =>
+            parse(HdfsIO.lines(inFile).mkString).right.toOption.map(_.hcursor) match {
+              case Some(cursor) =>
+                val lastJob = cursor.get[Long]("lastJobEpoch").toOption.flatMap { epoch =>
+                  cursor
+                    .get[String]("lastJobId")
+                    .toOption
+                    .map { id =>
+                      (id, cursor.get[Boolean]("lastJobSample").getOrElse(false), epoch)
                     }
-                  }
+                    .orElse {
+                      cursor.get[String]("lastJobName").toOption.flatMap { name =>
+                        JobManager.nameLookup.get(name.stripSuffix(SampleNameSuffix)).map { job =>
+                          (job.id, name.endsWith(SampleNameSuffix), epoch)
+                        }
+                      }
+                    }
                 }
+                ArchCollectionInfo(collectionId, file, lastJob)
+              case None => ArchCollectionInfo(collectionId, file)
             }
-            ArchCollectionInfo(collectionId, lastJob)
-          case None => ArchCollectionInfo(collectionId)
-        }
-      } else ArchCollectionInfo(collectionId)
-      GuavaCache.put(CachePrefix + file, info, None)
+          }
+          .getOrElse(ArchCollectionInfo(collectionId, file))
+        GuavaCache.put(CachePrefix + collectionId, info, None)
+      }
     }
   }
 }

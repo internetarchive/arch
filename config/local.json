@@ -2,11 +2,14 @@
   "aitCollectionPath": "data/in",
   "aitCollectionWarcDir": "arcs",
   "collectionCachePath": "/tmp/arch-cache",
-  "jobOutPath": "data/out",
+  "jobOutPath": "/data/user-out",
+  "globalJobOutPath": "/data/out",
   "customCollectionPath": "data/collections",
+  "jobLoggingPath": "logging",
   "localTempPath": "data/tmp",
   "sparkMaster": "local[*]",
   "baseUrl": "http://127.0.0.1:12341",
   "loginUrl": "http://127.0.0.1:12341/ait/login?next=",
-  "port": 12341
+  "port": 12341,
+  "githubBearer": "example_bearer_token"
 }

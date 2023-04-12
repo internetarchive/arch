@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import io.archivesunleashed.matchbox.{DetectLanguage, RemoveHTML, RemoveHTTPHeader}
+import io.archivesunleashed.matchbox.{DetectLanguage, RemoveHTML}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
@@ -48,7 +48,7 @@ object WebPagesExtraction extends BinaryInformationAutJob {
             crawlDate: String,
             lastModifiedDate: String) => {
           val bodyString = HttpUtil.bodyString(body, http)
-          val content = RemoveHTML(RemoveHTTPHeader(bodyString))
+          val content = RemoveHTML(bodyString)
           Row(
             crawlDate,
             lastModifiedDate,

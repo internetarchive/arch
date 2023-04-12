@@ -17,14 +17,14 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
           </div>
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/sub-collection-builder">Sub-Collection Builder</a></span>
-          </div>
+<!--          <div class="left subnav-link ng-scope research_services">-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span>-->
+<!--          </div>-->
           <hr />
         </div>
       </div>
@@ -64,12 +64,12 @@
         </div>
         <% if (collection.id.startsWith(AitCollectionSpecifics.Prefix)) { %>
           <br />
-          <p class="text-center">Public Collection Link: <a href="https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%>" target="_blank">https://archive-it.org/collections/<%=unescape(collection.id.replace("ARCHIVEIT-", ""))%></a></p>
+          <p class="text-center">Public Collection Link: <a href="https://archive-it.org/collections/<%=unescape(collection.sourceId.stripPrefix(AitCollectionSpecifics.Prefix))%>" target="_blank">https://archive-it.org/collections/<%=unescape(collection.sourceId.stripPrefix(AitCollectionSpecifics.Prefix))%></a></p>
         <% } %>
       </div>
     </div>
     <script>
-      arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>");
+      arch.loadCollectionInfo(".card-body", "<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId(user.id))%>");
     </script>
 
     <div id="summary-loading" style="text-align: center;">
@@ -77,7 +77,7 @@
     </div>
 
     <div id="summary-empty">
-      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">generate a new dataset</a>.
+      There are currently no active jobs, <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">generate a new dataset</a>.
     </div>
 
     <div id="summary-running">
@@ -96,7 +96,7 @@
             <tbody></tbody>
           </table>
           <div class="new-job-link">
-            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate a new dataset</a>
+            <a class="new-job-link" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate a new dataset</a>
           </div>
         </div>
       </div>
@@ -125,7 +125,7 @@
 <script>
 
   $(function() {
-    arch.refreshJobTables("<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId)%>", "#jobs-in-process", "#jobs-completed");
+    arch.refreshJobTables("<%=unescape(collection.id)%>", "<%=unescape(user.urlId)%>", "<%=unescape(collection.userUrlId(user.id))%>", "#jobs-in-process", "#jobs-completed");
   });
 
 </script>

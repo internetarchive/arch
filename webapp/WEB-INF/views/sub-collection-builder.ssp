@@ -17,13 +17,16 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
+          </div>
+          <div class="left subnav-link ng-scope research_services">
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/subset">Sub-Collection Query</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/sub-collection-builder">Sub-Collection Builder</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span>
           </div>
           <hr />
         </div>

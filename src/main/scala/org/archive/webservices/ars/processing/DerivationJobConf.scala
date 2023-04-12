@@ -5,9 +5,9 @@ import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.IOHelper
-import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics}
+import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics, UnionCollectionSpecifics}
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 
 import java.time.Instant
 
@@ -28,37 +28,63 @@ case class DerivationJobConf(
 object DerivationJobConf {
   val SampleSize = 100
 
-  def collectionOutPath(collectionId: String): String = {
-    ArchConf.jobOutPath + "/" + IOHelper.escapePath(collectionId)
+  def jobOutPath(collection: ArchCollection, global: Boolean = false): String = {
+    collection.userSpecificId
+      .filter(_ => !global)
+      .map {
+        case (userId, sourceId) =>
+          ArchConf.jobOutPath + "/" + IOHelper.escapePath(userId + "/" + sourceId)
+      }
+      .getOrElse(ArchConf.globalJobOutPath + "/" + IOHelper.escapePath(collection.sourceId))
   }
 
-  def collection(collectionId: String, sample: Boolean = false)(
-      implicit context: RequestContext = RequestContext.None): Option[DerivationJobConf] = {
-    CollectionSpecifics.get(collectionId, context.user).map { collection =>
-      val outDir = if (sample) "samples" else "out"
-      val outputPath = collectionOutPath(collection.id) + "/" + outDir
+  def jobInPath(
+      specifics: CollectionSpecifics,
+      params: DerivationJobParameters = DerivationJobParameters.Empty)(
+      implicit context: RequestContext): String = {
+    if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
+      params
+        .get[Array[String]]("input")
+        .toSet
+        .flatten
+        .filter { collectionId =>
+          ArchCollection.get(collectionId).isDefined
+        }
+        .mkString(",")
+    } else specifics.inputPath
+  }
+
+  def collection(
+      collection: ArchCollection,
+      sample: Boolean = false,
+      global: Boolean = false): Option[DerivationJobConf] = {
+    collection.specifics.map { specifics =>
+      val outDir = if (sample) "/samples" else "/out"
       DerivationJobConf(
         collection.id,
-        collection.inputPath,
-        outputPath,
+        specifics.inputPath,
+        jobOutPath(collection, global) + outDir,
         if (sample) SampleSize else -1)
     }
   }
 
-  def userDefinedQuery(collectionId: String, params: DerivationJobParameters)(
-      implicit context: RequestContext = RequestContext.None): Option[DerivationJobConf] = {
+  def userDefinedQuery(collection: ArchCollection, params: DerivationJobParameters)(
+      implicit context: RequestContext): Option[DerivationJobConf] = {
     context.userOpt.flatMap { user =>
-      CollectionSpecifics.get(collectionId, context.user).map { collection =>
-        val userPath = CustomCollectionSpecifics.path(user)
+      collection.specifics.map { specifics =>
+        val collectionUserId = collection.userSpecificId
+          .filter(_._1 == user.id)
+          .map(_._2)
+          .getOrElse(collection.sourceId)
         val outPath = new Path(
-          userPath,
-          IOHelper.escapePath(collection.id) + "_" + Instant.now.toEpochMilli).toString
+          CustomCollectionSpecifics.path(user),
+          IOHelper.escapePath(collectionUserId + "_" + Instant.now.toEpochMilli)).toString
         DerivationJobConf(
-          collectionId,
-          collection.inputPath,
+          collection.id,
+          jobInPath(specifics, params),
           outPath,
           -1,
-          params = params.set("location", collectionId))
+          params = params.set("location", collection.sourceId))
       }
     }
   }

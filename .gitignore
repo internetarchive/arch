@@ -6,6 +6,7 @@
 logging/running.json
 logging/jobs.log
 logging/failed.lst
+.ipynb_checkpoints/
 
 ### Intellij ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider

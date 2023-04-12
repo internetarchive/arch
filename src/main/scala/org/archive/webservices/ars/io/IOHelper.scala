@@ -5,11 +5,10 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, InOutInputStream, InputStreamForker}
+import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._
@@ -24,9 +23,7 @@ object IOHelper {
   val SamplingMaxReadPerPartitionFactor = 2
 
   def escapePath(path: String): String = {
-    path.replace(
-      CustomCollectionSpecifics.UserIdSeparator,
-      CustomCollectionSpecifics.PathUserEscape)
+    path.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
   }
 
   def tempDir[R](action: String => R): R = {
@@ -252,5 +249,13 @@ object IOHelper {
       Try(out.get.close())
       Try(HdfsIO.delete(path))
     }
+  }
+
+  def splitMergeInputStreams(in: InputStream, positions: Iterator[(Long, Long)]): InputStream = {
+    val split = IOUtil.splitStream(in, positions)
+    val merged = new ChainedInputStream(split, nextOnError = true)
+    val buffer = IOUtil.copyToBuffer(merged)
+    in.close()
+    new CleanupInputStream(buffer.get.get, () => buffer.clear(false))
   }
 }

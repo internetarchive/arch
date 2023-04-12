@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.processing.jobs._
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -12,14 +13,13 @@ object JobManager {
   private val collectionInstances =
     mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
-  val userJobs: Seq[DerivationJob] = Seq(
+  val userJobs: Set[DerivationJob] = Set(
     ArsLgaGeneration,
     ArsWaneGeneration,
     ArsWatGeneration,
     AudioInformationExtraction,
     DomainFrequencyExtraction,
     DomainGraphExtraction,
-    FileCountAndSize,
     ImageGraphExtraction,
     ImageInformationExtraction,
     PdfInformationExtraction,
@@ -31,11 +31,15 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val jobs: ListMap[String, DerivationJob] = ListMap(userJobs.sortBy(_.id).map { job =>
+  val systemJobs: Set[DerivationJob] = Set(
+    UserDefinedQuery
+  )
+
+  val jobs: ListMap[String, DerivationJob] = ListMap((userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
     job.id -> job
   }: _*)
 
-  val nameLookup: Map[String, DerivationJob] = userJobs.map { job =>
+  val nameLookup: Map[String, DerivationJob] = jobs.values.map { job =>
     job.name -> job
   }.toMap
 
@@ -84,6 +88,19 @@ object JobManager {
         job.history(conf)
       }
     }
+
+  def getInstanceOrGlobal(
+      jobId: String,
+      conf: DerivationJobConf,
+      globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
+    val instance = JobManager.getInstance(jobId, conf)
+    if (instance.isEmpty || instance.exists(_.state == ProcessingState.NotStarted)) {
+      val global = globalConf.filter(_.outputPath != conf.outputPath).flatMap { conf =>
+        JobManager.getInstance(jobId, conf)
+      }
+      if (global.exists(_.state > ProcessingState.NotStarted)) global else instance
+    } else instance
+  }
 
   def getRegistered(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
     instances.get(conf).flatMap(_.get(jobId))

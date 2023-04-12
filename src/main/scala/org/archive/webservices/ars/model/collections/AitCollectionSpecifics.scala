@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
@@ -14,7 +14,9 @@ import scala.io.Source
 import scala.util.Try
 
 class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
-  val aitId: Int = id.stripPrefix(AitCollectionSpecifics.Prefix).toInt
+  val (userId, collectionId) =
+    ArchCollection.splitIdUserCollection(id.stripPrefix(AitCollectionSpecifics.Prefix))
+  val aitId: Int = collectionId.toInt
 
   private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
     context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty) || context.loggedInOpt
@@ -32,7 +34,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .getJson(
         "/api/collection?id=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
-        Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten)))
+        Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten, userId)))
       .toOption
       .flatMap(_.headOption)
   }
@@ -68,8 +70,24 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .getOrElse(-1L)
   }
 
-  def loadWarcFiles(inputPath: String): RDD[(String, InputStream)] =
-    CollectionLoader.loadAitWarcFiles(aitId, inputPath, id)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
+    CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
+
+  def randomAccess(
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: CollectionSourcePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
+    CollectionLoader.randomAccessAit(
+      context,
+      sourceId,
+      inputPath + "/" + pointer.filename,
+      offset,
+      positions)
+  }
+
+  override def sourceId: String = AitCollectionSpecifics.Prefix + collectionId
 }
 
 object AitCollectionSpecifics {
@@ -99,16 +117,18 @@ object AitCollectionSpecifics {
       .flatMap(_.asNumber.flatMap(_.toInt))
   }
 
-  def parseCollections(json: Iterator[Json]): Seq[ArchCollection] = {
+  def parseCollections(json: Iterator[Json], userId: Option[String]): Seq[ArchCollection] = {
     json
       .map(_.hcursor)
       .flatMap { c =>
         c.get[Int]("id").right.toOption.map { aitId =>
-          val collectionId = Prefix + StringUtil.padNum(aitId, 5)
+          val collectionId = StringUtil.padNum(aitId, 5)
           ArchCollection(
-            collectionId,
-            c.get[String]("name").right.getOrElse(collectionId),
-            c.get[Boolean]("publicly_visible").right.getOrElse(false))
+            ArchCollection.prependUserId(collectionId, userId, Prefix),
+            c.get[String]("name").right.getOrElse(Prefix + collectionId),
+            c.get[Boolean]("publicly_visible").right.getOrElse(false),
+            userId.map((_, Prefix + collectionId)),
+            Prefix + collectionId)
         }
       }
       .toSeq
@@ -122,7 +142,7 @@ object AitCollectionSpecifics {
         .getJson(
           "/api/collection?limit=100&account=" + userId,
           basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
-          Some(parseCollections(c.values.toIterator.flatten)))
+          Some(parseCollections(c.values.toIterator.flatten, Some(user.id))))
         .getOrElse(Seq.empty)
     }
   }
@@ -133,7 +153,7 @@ object AitCollectionSpecifics {
       .flatMap { aitId =>
         Ait
           .getJson("/api/collection?id=" + aitId, basicAuth = ArchConf.foreignAitAuthHeader)(c =>
-            parseCollections(c.values.toIterator.flatten).headOption)
+            parseCollections(c.values.toIterator.flatten, Some(user.id)).headOption)
           .toOption
       }
   }

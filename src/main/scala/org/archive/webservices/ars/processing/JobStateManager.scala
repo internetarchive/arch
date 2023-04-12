@@ -5,8 +5,8 @@ import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.MailUtil
 import org.archive.webservices.sparkling.io.IOUtil
 
@@ -16,7 +16,7 @@ import scala.collection.immutable.ListMap
 import scala.io.Source
 
 object JobStateManager {
-  val LoggingDir = "logging"
+  val LoggingDir = ArchConf.jobLoggingPath
   val JobLogFile = "jobs.log"
   val RunningJobsFile = "running.json"
   val FailedJobsFile = "failed.lst"
@@ -29,8 +29,7 @@ object JobStateManager {
 
   private def access[R](action: => R): R = synchronized {
     init()
-    val r = action
-    r
+    action
   }
 
   private def saveRunning(): Unit = access {
@@ -235,16 +234,18 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
-        MailUtil.sendTemplate(
-          instance.job.failedNotificationTemplate,
-          Map(
-            "jobName" -> instance.job.name,
-            "jobId" -> instance.job.id,
-            "collectionName" -> instance.collection
-              .map(_.name)
-              .getOrElse(instance.conf.collectionId),
-            "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-            "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+        if (!Arch.debugging) {
+          MailUtil.sendTemplate(
+            instance.job.failedNotificationTemplate,
+            Map(
+              "jobName" -> instance.job.name,
+              "jobId" -> instance.job.id,
+              "collectionName" -> instance.collection
+                .map(_.name)
+                .getOrElse(instance.conf.collectionId),
+              "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+              "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+        }
       }
       println("Failed: " + str(instance))
     }

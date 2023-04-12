@@ -1,6 +1,6 @@
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
-<%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[(org.archive.webservices.ars.processing.DerivationJobInstance, org.archive.webservices.ars.processing.DerivationJobInstance)]] %>
+<%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[org.archive.webservices.ars.processing.DerivationJob]] %>
 
 #set (title)
   <%=collection.name%> Jobs
@@ -16,14 +16,14 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
           </div>
-          <div class="left subnav-link ng-scope research_services"
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId)%>/sub-collection-builder">Sub-Collection Builder</a></span
-          </div>
+<!--          <div class="left subnav-link ng-scope research_services"-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span-->
+<!--          </div>-->
           <hr />
         </div>
       </div>
@@ -69,21 +69,21 @@
           <p><%=categoryDescription%></p>
         </div>
         <div class="collapsible-content">
-          <% for ((instance, sampleInstance) <- jobs(category)) { %>
-            <div class="card" id="card-<%=unescape(instance.job.id)%>">
+          <% for (job <- jobs(category)) { %>
+            <div class="card" id="card-<%=unescape(job.id)%>">
               <div class="card-body">
-                <h3 class="card-title"><%=instance.job.name%></h3>
-                <p class="card-text"><%=instance.job.description%></p>
+                <h3 class="card-title"><%=job.name%></h3>
+                <p class="card-text"><%=job.description%></p>
                 <div class="job-card-flex">
                   <div class="job-card-sample">
                     <button class="job-runbutton job-button">Generate Example Dataset</button>
-                    <button class="job-statebutton job-button"><%=sampleInstance.stateStr%></button>
-                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>?sample=true';" type="button">View Example Dataset</button>
+                    <button class="job-statebutton job-button">.</button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>?sample=true';" type="button">View Example Dataset</button>
                   </div>
                   <div class="job-card-full">
                     <button class="job-runbutton job-button">Generate Dataset</button>
-                    <button class="job-statebutton job-button"><%=instance.stateStr%></button>
-                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.id)%>/analysis/<%=unescape(instance.job.id)%>';" type="button">View Dataset</button>
+                    <button class="job-statebutton job-button">.</button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>';" type="button">View Dataset</button>
                   </div>
                 </div>
               </div>

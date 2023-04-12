@@ -29,52 +29,54 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { _ =>
-      IOHelper
-        .sampleGrouped[String, String, Boolean](
-          CollectionLoader
-            .loadWarcsWithPath(conf.collectionId, conf.inputPath)
-            .map {
-              case (path, records) =>
-                (
-                  new Path(path).getName,
-                  records.chain(_.filter(_.http.exists(http =>
-                    http.mime.contains("text/html") && http.status == 200))))
+      CollectionLoader.loadWarcsWithSource(conf.collectionId, conf.inputPath) { rdd =>
+        IOHelper
+          .sampleGrouped[String, String, Boolean](
+            rdd
+              .map {
+                case (pointer, records) =>
+                  (
+                    new Path(pointer.filename).getName,
+                    records.chain(_.filter(_.http.exists(http =>
+                      http.mime.contains("text/html") && http.status == 200))))
+              }
+              .map {
+                case (f, r) =>
+                  val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
+                  val json = r.chain(_.flatMap {
+                    warc =>
+                      for {
+                        url <- warc.url
+                        timestamp <- warc.timestamp
+                        digest <- warc.payloadDigest
+                        http <- warc.http if http.status == 200
+                        html <- Try(
+                          HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
+                          .getOrElse(None)
+                        bodyText <- Try(
+                          HtmlProcessor
+                            .tagsWithText(html, Set("body"))
+                            .next
+                            ._2
+                            .take(MaxInputTextLength)).toOption
+                      } yield WANE.get(url, timestamp, digest, bodyText)
+                  }.filter(e =>
+                      e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
+                    .map(_.toJsonString))
+                  (outFile, json)
+              },
+            conf.sample) { rdd =>
+            val outPath = conf.outputPath + relativeOutPath + resultDir
+            val processed = RddUtil.saveGroupedAsNamedTextFile(
+              rdd.map { case (k, v) => (k, v) },
+              outPath,
+              skipIfExists = true)
+            RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
+              for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }
-            .map {
-              case (f, r) =>
-                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
-                val json = r.chain(_.flatMap {
-                  warc =>
-                    for {
-                      url <- warc.url
-                      timestamp <- warc.timestamp
-                      digest <- warc.payloadDigest
-                      http <- warc.http if http.status == 200
-                      html <- Try(HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
-                        .getOrElse(None)
-                      bodyText <- Try(
-                        HtmlProcessor
-                          .tagsWithText(html, Set("body"))
-                          .next
-                          ._2
-                          .take(MaxInputTextLength)).toOption
-                    } yield WANE.get(url, timestamp, digest, bodyText)
-                }.filter(e =>
-                    e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
-                  .map(_.toJsonString))
-                (outFile, json)
-            },
-          conf.sample) { rdd =>
-          val outPath = conf.outputPath + relativeOutPath + resultDir
-          val processed = RddUtil.saveGroupedAsNamedTextFile(
-            rdd.map { case (k, v) => (k, v) },
-            outPath,
-            skipIfExists = true)
-          RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
-            for (file <- files) DerivativeOutput.hashFileHdfs(file)
+            processed >= 0
           }
-          processed >= 0
-        }
+      }
     }
   }
 
