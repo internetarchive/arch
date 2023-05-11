@@ -29,7 +29,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
-      SparkJobManager.context.map { _ =>
+      SparkJobManager.context.map { sc =>
+        SparkJobManager.initThread(sc, ArsLgaGeneration, conf)
         CollectionLoader
           .loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
             IOHelper

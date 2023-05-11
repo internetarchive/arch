@@ -8,53 +8,77 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.util.SparkUtil
 
+import java.io.File
 import scala.concurrent.Future
 
-object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 60 * 24) {
+object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 60 * 3) {
   val SharedSparkContext = true
+  val SparkAllocationFile = "fairscheduler.xml"
+  val MaxPriorityWeight = 128
+  val PoolPrefix = "weight-"
 
   private var _context: Option[SparkContext] = None
 
-  def context: Future[SparkContext] = Future {
-    synchronized(_context.getOrElse {
-      val context = SparkUtil.config(
-        SparkSession.builder,
-        appName = "ARCH",
-        executors = 10,
-        executorCores = 4,
-        executorMemory = "16g",
-        queue = ArchConf.hadoopQueue,
-        additionalConfigs =
-          Map("spark.master" -> ArchConf.sparkMaster, "spark.scheduler.mode" -> "FAIR"),
-        verbose = true)
-      context.setLogLevel("INFO")
-      _context = Some(context)
-      Sparkling.resetSparkContext(Some(context))
-      println("New Spark context initialized: " + context.applicationId)
-      context
-    })
-  }
-
-  def stopContext(): Unit = synchronized {
-    if (!Arch.debugging) {
-      for (context <- _context) {
-        context.stop()
-        while (!context.isStopped) Thread.`yield`()
-        _context = None
-        Sparkling.resetSparkContext()
-      }
+  def context: Future[SparkContext] = {
+    Future {
+      synchronized(_context.getOrElse {
+        val context = SparkUtil.config(
+          SparkSession.builder,
+          appName = "ARCH",
+          executors = 20,
+          executorCores = 4,
+          executorMemory = "16g",
+          queue = ArchConf.hadoopQueue,
+          additionalConfigs = Map(
+            "spark.master" -> ArchConf.sparkMaster,
+            "spark.scheduler.mode" -> "FAIR",
+            "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath),
+          verbose = true)
+        context.setLogLevel("INFO")
+        _context = Some(context)
+        Sparkling.resetSparkContext(Some(context))
+        println("New Spark context initialized: " + context.applicationId)
+        context
+      })
     }
   }
 
-  override protected def onAllJobsFinished(): Unit = {
-    super.onAllJobsFinished()
-    stopContext()
+  def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
+    sc.setJobGroup(job.id + "-" + conf.hashCode, job.name + " " + conf.serialize)
+    sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + currentPriority)
   }
 
-  override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = {
+  def stopContext(): Unit = synchronized {
+    for (context <- _context) {
+      context.stop()
+      while (!context.isStopped) Thread.`yield`()
+      _context = None
+      Sparkling.resetSparkContext()
+    }
+  }
+
+  override protected def onAllJobsFinished(): Unit = synchronized {
+    super.onAllJobsFinished()
+    if (!Arch.debugging) stopContext()
+  }
+
+  override protected def onPriorityJobsFinished(priority: Int): Unit = synchronized {
+    super.onPriorityJobsFinished(priority)
+    removePriority(priority)
+  }
+
+  override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
     super.onTimeout(instances)
-    stopContext()
-    for (instance <- instances) instance.job.reset(instance.conf)
+//    stopContext()
+//    for (instance <- instances) instance.job.reset(instance.conf)
+    bypassJobs()
+  }
+
+  def bypassJobs(): Boolean = synchronized {
+    if (currentPriority < MaxPriorityWeight && priorityRunningCount > 0) {
+      newPriority(currentPriority * 2)
+      true
+    } else false
   }
 
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {

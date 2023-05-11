@@ -2,7 +2,7 @@ package org.archive.webservices.ars.processing.jobs.system
 
 import org.archive.webservices.ars.io.CollectionLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
-import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -80,9 +80,11 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
     }
   }
 
-  override def validateParams(params: DerivationJobParameters): Option[String] =
-    super.validateParams(params).orElse {
-      validateFields[String](params, Seq("surtPrefix", "surtPrefixes"), addOperators = true) {
+  override def validateParams(
+      collection: ArchCollection,
+      conf: DerivationJobConf): Option[String] =
+    super.validateParams(collection, conf).orElse {
+      validateFields[String](conf.params, Seq("surtPrefix", "surtPrefixes"), addOperators = true) {
         v =>
           if (v.contains(")")) SurtUtil.validateHost(v) match {
             case Some(_) => None
@@ -90,7 +92,7 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
           } else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
           else None
       }.orElse {
-        validateFields[String](params, Seq("timestampFrom", "timestampTo")) { v =>
+        validateFields[String](conf.params, Seq("timestampFrom", "timestampTo")) { v =>
           Time14Util.validate(v) match {
             case Some(_) => None
             case None => Some("Invalid timestamp: " + v)
@@ -101,6 +103,7 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
+      SparkJobManager.initThread(sc, UserDefinedQuery, conf)
       CollectionLoader.loadCdx(conf.collectionId, conf.inputPath) { rdd =>
         val paramsBc = sc.broadcast(conf.params)
         val filtered = rdd
@@ -163,5 +166,5 @@ object UserDefinedQuery extends SparkJob with DerivationJob {
 
   override def reset(conf: DerivationJobConf): Unit = HdfsIO.delete(conf.outputPath)
 
-  override val finishedNotificationTemplate: String = "udq-finished"
+  override val finishedNotificationTemplate: Option[String] = Some("udq-finished")
 }

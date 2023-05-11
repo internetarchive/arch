@@ -45,9 +45,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = action {
-    CustomCollectionSpecifics
-      .collectionInfo(customId)
-      .flatMap(_.get[String]("location").toOption) match {
+    CustomCollectionSpecifics.location(customId) match {
       case Some(location) =>
         val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
         val locationId = StringUtil
@@ -75,7 +73,16 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
     val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
-    action(CdxLoader.load(s"$cdxPath/*.cdx.gz"))
+    val locationPrefix = CustomCollectionSpecifics
+      .location(customId)
+      .map(_ + CollectionLoader.CdxCollectionLocationSeparator)
+      .getOrElse("")
+    val cdx = CdxLoader.load(s"$cdxPath/*.cdx.gz").map { r =>
+      val Seq(offsetStr, filename) = r.additionalFields
+      if (filename.contains(CollectionLoader.CdxCollectionLocationSeparator)) r
+      else r.copy(additionalFields = Seq(offsetStr, locationPrefix + filename))
+    }
+    action(cdx)
   }
 
   def randomAccess(
@@ -105,6 +112,9 @@ object CustomCollectionSpecifics {
       Try(parser.parse(str).right.get.hcursor).toOption
     } else None
   }
+
+  def location(id: String): Option[String] =
+    collectionInfo(id).flatMap(_.get[String]("location").toOption)
 
   def userPath(userId: String): String =
     ArchConf.customCollectionPath + "/" + userId.replace(

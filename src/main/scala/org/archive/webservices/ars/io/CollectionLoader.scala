@@ -8,7 +8,7 @@ import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil, StringUtil}
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
@@ -255,10 +255,12 @@ object CollectionLoader {
       .loadTextFiles(inputPath)
       .mapPartitions(_.map {
         case (file, lines) =>
-          val pointers = lines.flatMap(CdxRecord.fromString).map { cdx =>
-            val length = cdx.compressedSize
-            val (path, offset) = cdx.locationFromAdditionalFields
-            (cdx, path, offset, length)
+          val pointers = lines.flatMap(CdxRecord.fromString).flatMap { cdx =>
+            Try {
+              val length = cdx.compressedSize
+              val (path, offset) = cdx.locationFromAdditionalFields
+              (cdx, path, offset, length)
+            }.toOption
           }
           var prevGroup: Option[(String, Long, (String, Long))] = None
           val groups = IteratorUtil
@@ -277,13 +279,14 @@ object CollectionLoader {
             }
             .map {
               case ((file, initialOffset), group) =>
-                (
-                  (
+                val locationSeparatorIdx = file.lastIndexOf(CdxCollectionLocationSeparator)
+                val pointer =
+                  if (locationSeparatorIdx < 0) CollectionSourcePointer("", file)
+                  else
                     CollectionSourcePointer(
-                      StringUtil.prefixBySeparator(file, CdxCollectionLocationSeparator),
-                      StringUtil.stripPrefixBySeparator(file, CdxCollectionLocationSeparator)),
-                    initialOffset),
-                  group.map { case (r, _, o, l) => (r, o, l) })
+                      file.take(locationSeparatorIdx),
+                      file.drop(locationSeparatorIdx + 1))
+                ((pointer, initialOffset), group.map { case (r, _, o, l) => (r, o, l) })
             }
           (
             file.split('/').last,

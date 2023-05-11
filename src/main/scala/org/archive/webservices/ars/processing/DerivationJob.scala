@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -41,11 +41,11 @@ trait DerivationJob {
 
   def reset(conf: DerivationJobConf): Unit = {}
 
-  def failedNotificationTemplate = "failed"
+  def failedNotificationTemplate: Option[String] = Some("failed")
 
-  def finishedNotificationTemplate = "finished"
+  def finishedNotificationTemplate: Option[String] = Some("finished")
 
   def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
 
-  def validateParams(params: DerivationJobParameters): Option[String] = None
+  def validateParams(collection: ArchCollection, conf: DerivationJobConf): Option[String] = None
 }

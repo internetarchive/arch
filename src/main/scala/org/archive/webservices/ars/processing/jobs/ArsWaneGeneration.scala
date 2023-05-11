@@ -28,7 +28,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   val resultDir = "/wane.gz"
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
-    SparkJobManager.context.map { _ =>
+    SparkJobManager.context.map { sc =>
+      SparkJobManager.initThread(sc, ArsWaneGeneration, conf)
       CollectionLoader.loadWarcsWithSource(conf.collectionId, conf.inputPath) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](

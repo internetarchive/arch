@@ -72,7 +72,10 @@ class ApiController extends BaseController {
       job <- JobManager.get(jobId)
       conf <- DerivationJobConf.collection(collection, sample)
     } yield {
-      runJob(job, collection, if (params.isEmpty) conf else conf.copy(params = params), rerun)
+      val confWithParams = if (params.isEmpty) conf else conf.copy(params = params)
+      job.validateParams(collection, confWithParams).map(e => BadRequest(e)).getOrElse {
+        runJob(job, collection, conf, rerun)
+      }
     }
   }.getOrElse(NotFound())
 
@@ -95,13 +98,16 @@ class ApiController extends BaseController {
             val rerun = params.get("rerun").contains("true")
             params("jobid") match {
               case jobId if jobId == UserDefinedQuery.id => {
-                UserDefinedQuery.validateParams(p).map(e => BadRequest(e)).orElse {
-                  for {
-                    collection <- ArchCollection.get(collectionId)
-                    conf <- DerivationJobConf.userDefinedQuery(collection, p)
-                  } yield {
-                    runJob(UserDefinedQuery, collection, conf, rerun = rerun)
-                  }
+                for {
+                  collection <- ArchCollection.get(collectionId)
+                  conf <- DerivationJobConf.userDefinedQuery(collection, p)
+                } yield {
+                  UserDefinedQuery
+                    .validateParams(collection, conf)
+                    .map(e => BadRequest(e))
+                    .getOrElse {
+                      runJob(UserDefinedQuery, collection, conf, rerun = rerun)
+                    }
                 }
               }.getOrElse(NotFound())
               case jobId =>
@@ -129,6 +135,14 @@ class ApiController extends BaseController {
       if (context.isAdmin) {
         JobStateManager.rerunFailed()
         Found(Arch.BaseUrl + "/admin/logs/running")
+      } else Forbidden()
+    }
+  }
+
+  get("/bypass-spark") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      if (context.isAdmin) {
+        Ok(SparkJobManager.bypassJobs())
       } else Forbidden()
     }
   }

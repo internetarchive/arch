@@ -31,13 +31,12 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val systemJobs: Set[DerivationJob] = Set(
-    UserDefinedQuery
-  )
+  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery)
 
-  val jobs: ListMap[String, DerivationJob] = ListMap((userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
-    job.id -> job
-  }: _*)
+  val jobs: ListMap[String, DerivationJob] = ListMap(
+    (userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
+      job.id -> job
+    }: _*)
 
   val nameLookup: Map[String, DerivationJob] = jobs.values.map { job =>
     job.name -> job

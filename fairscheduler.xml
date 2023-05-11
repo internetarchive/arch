@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<allocations>
+    <pool name="weight-1"><schedulingMode>FAIR</schedulingMode><weight>1</weight><minShare>0</minShare></pool>
+    <pool name="weight-2"><schedulingMode>FAIR</schedulingMode><weight>2</weight><minShare>0</minShare></pool>
+    <pool name="weight-4"><schedulingMode>FAIR</schedulingMode><weight>4</weight><minShare>0</minShare></pool>
+    <pool name="weight-8"><schedulingMode>FAIR</schedulingMode><weight>8</weight><minShare>0</minShare></pool>
+    <pool name="weight-16"><schedulingMode>FAIR</schedulingMode><weight>16</weight><minShare>0</minShare></pool>
+    <pool name="weight-32"><schedulingMode>FAIR</schedulingMode><weight>32</weight><minShare>0</minShare></pool>
+    <pool name="weight-64"><schedulingMode>FAIR</schedulingMode><weight>64</weight><minShare>0</minShare></pool>
+    <pool name="weight-128"><schedulingMode>FAIR</schedulingMode><weight>128</weight><minShare>0</minShare></pool>
+</allocations>

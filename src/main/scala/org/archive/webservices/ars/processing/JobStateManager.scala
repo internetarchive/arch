@@ -7,7 +7,7 @@ import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.ars.util.MailUtil
+import org.archive.webservices.ars.util.{FormatUtil, MailUtil}
 import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{File, FileOutputStream, PrintStream}
@@ -164,11 +164,13 @@ object JobStateManager {
   def key(instance: DerivationJobInstance): String = instance.job.id + instance.conf.serialize
 
   def str(instance: DerivationJobInstance): String = {
-    instance.job.id + " (" + instance.hashCode.abs + ") " + instance.conf.serialize + s" $MetaSeparator " + instance.user
-      .map("user" -> _.id)
-      .toMap
-      .asJson
-      .noSpaces
+    instance.job.id + " (" + instance.hashCode.abs + ") " + instance.conf.serialize + s" $MetaSeparator " + {
+      {
+        ListMap(instance.user.map("user" -> _.id.asJson).toSeq: _*)
+      } ++ {
+        Seq("size" -> FormatUtil.formatBytes(instance.collection.size).asJson)
+      }.asJson.noSpaces
+    }
   }
 
   def strToKey(str: String): String = {
@@ -213,18 +215,19 @@ object JobStateManager {
         u <- instance.user
         email <- u.email
       } {
-        MailUtil.sendTemplate(
-          instance.job.finishedNotificationTemplate,
-          Map(
-            "to" -> email,
-            "jobName" -> instance.job.name,
-            "jobId" -> instance.job.id,
-            "collectionId" -> instance.conf.collectionId,
-            "collectionName" -> instance.collection
-              .map(_.name)
-              .getOrElse(instance.conf.collectionId),
-            "accountId" -> u.id,
-            "userName" -> u.fullName))
+        for (template <- instance.job.finishedNotificationTemplate)
+          MailUtil.sendTemplate(
+            template,
+            Map(
+              "to" -> email,
+              "jobName" -> instance.job.name,
+              "jobId" -> instance.job.id,
+              "collectionId" -> instance.conf.collectionId,
+              "collectionName" -> instance.collection
+                .map(_.name)
+                .getOrElse(instance.conf.collectionId),
+              "accountId" -> u.id,
+              "userName" -> u.fullName))
       }
     }
     println("Finished: " + str(instance))
@@ -235,16 +238,17 @@ object JobStateManager {
       if (!subJob) {
         registerFailed(instance)
         if (!Arch.debugging) {
-          MailUtil.sendTemplate(
-            instance.job.failedNotificationTemplate,
-            Map(
-              "jobName" -> instance.job.name,
-              "jobId" -> instance.job.id,
-              "collectionName" -> instance.collection
-                .map(_.name)
-                .getOrElse(instance.conf.collectionId),
-              "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-              "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+          for (template <- instance.job.failedNotificationTemplate)
+            MailUtil.sendTemplate(
+              template,
+              Map(
+                "jobName" -> instance.job.name,
+                "jobId" -> instance.job.id,
+                "collectionName" -> instance.collection
+                  .map(_.name)
+                  .getOrElse(instance.conf.collectionId),
+                "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+                "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
         }
       }
       println("Failed: " + str(instance))

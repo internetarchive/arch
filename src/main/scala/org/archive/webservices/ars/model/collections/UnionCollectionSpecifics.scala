@@ -37,17 +37,15 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
   private def loadUnion[A: ClassTag, R](
       inputPath: String,
       load: CollectionSpecifics => (RDD[A] => R) => R)(action: RDD[A] => R): R = {
-    def union(rdd: RDD[A], remaining: Seq[CollectionSpecifics]): R = {
+    def union(rdd: RDD[A], remaining: Seq[CollectionSpecifics], numPartitions: Int): R = {
       if (remaining.nonEmpty) {
         load(remaining.head) { nextRdd =>
-          union(rdd.union(nextRdd), remaining.tail)
+          union(rdd.union(nextRdd), remaining.tail, nextRdd.getNumPartitions.max(numPartitions))
         }
-      } else {
-        action(rdd)
-      }
+      } else action(rdd.coalesce(numPartitions))
     }
     val sourceIds = inputPath.split(',').map(_.trim).filter(_.nonEmpty).distinct
-    union(RddUtil.emptyRDD[A], sourceIds.flatMap(CollectionSpecifics.get))
+    union(RddUtil.emptyRDD[A], sourceIds.flatMap(CollectionSpecifics.get), 0)
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = {

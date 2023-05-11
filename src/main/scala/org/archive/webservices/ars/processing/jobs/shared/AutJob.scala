@@ -74,7 +74,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
-      SparkJobManager.context.map { _ =>
+      SparkJobManager.context.map { sc =>
+        SparkJobManager.initThread(sc, AutJob.this, conf)
         CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
           IOHelper
             .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
