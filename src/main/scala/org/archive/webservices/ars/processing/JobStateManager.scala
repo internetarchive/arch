@@ -165,9 +165,10 @@ object JobStateManager {
 
   def str(instance: DerivationJobInstance): String = {
     instance.job.id + " (" + instance.hashCode.abs + ") " + instance.conf.serialize + s" $MetaSeparator " + {
-      val meta = instance.user.map("user" -> _.id.asJson).toSeq ++ instance.collection.toSeq.map { collection =>
-        collection.ensureStats()
-        "size" -> FormatUtil.formatBytes(collection.size).asJson
+      val meta = instance.user.map("user" -> _.id.asJson).toSeq ++ instance.collection.toSeq.map {
+        collection =>
+          collection.ensureStats()
+          "size" -> FormatUtil.formatBytes(collection.size).asJson
       }
       ListMap(meta: _*).asJson.noSpaces
     }

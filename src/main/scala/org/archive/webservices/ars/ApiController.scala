@@ -1,8 +1,8 @@
 package org.archive.webservices.ars
 
 import _root_.io.circe._
-import _root_.io.circe.syntax._
 import _root_.io.circe.parser.parse
+import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, PublishedDatasets}
 import org.archive.webservices.ars.processing._
@@ -79,8 +79,7 @@ class ApiController extends BaseController {
               instance.user = context.loggedInOpt
               instance.collection = Some(collection)
             })
-          }
-          else None
+          } else None
         queued match {
           case Some(instance) => jobStateResponse(instance)
           case None => jobStateResponse(history)
@@ -256,13 +255,20 @@ class ApiController extends BaseController {
           PublishedDatasets.collectionItems(collection)
       }
       if (collectionItems.contains(item)) {
-        PublishedDatasets.metadata(item).map { metadata =>
-          Ok(metadata.mapValues { values =>
-            if (values.size == 1) values.head.asJson
-            else values.asJson
-          }.asJson.spaces4,
-            Map("Content-Type" -> "application/json"))
-        }.getOrElse(NotFound())
+        PublishedDatasets
+          .metadata(item)
+          .map { metadata =>
+            Ok(
+              metadata
+                .mapValues { values =>
+                  if (values.size == 1) values.head.asJson
+                  else values.asJson
+                }
+                .asJson
+                .spaces4,
+              Map("Content-Type" -> "application/json"))
+          }
+          .getOrElse(NotFound())
       } else NotFound()
     }
   }
@@ -275,14 +281,18 @@ class ApiController extends BaseController {
           PublishedDatasets.collectionItems(collection)
       }
       if (collectionItems.contains(item)) {
-        parse(request.body).toOption.map(PublishedDatasets.parseJsonMetadata).map { metadata =>
-          PublishedDatasets.validateMetadata(metadata) match {
-            case Some(error) => BadRequest(error)
-            case None => if (PublishedDatasets.updateItem(item, metadata)) {
-              Ok()
-            } else InternalServerError("Updating metadata failed.")
+        parse(request.body).toOption
+          .map(PublishedDatasets.parseJsonMetadata)
+          .map { metadata =>
+            PublishedDatasets.validateMetadata(metadata) match {
+              case Some(error) => BadRequest(error)
+              case None =>
+                if (PublishedDatasets.updateItem(item, metadata)) {
+                  Ok()
+                } else InternalServerError("Updating metadata failed.")
+            }
           }
-        }.getOrElse(BadRequest("Invalid metadata JSON."))
+          .getOrElse(BadRequest("Invalid metadata JSON."))
       } else NotFound()
     }
   }

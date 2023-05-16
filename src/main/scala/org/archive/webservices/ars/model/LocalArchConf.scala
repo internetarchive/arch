@@ -122,5 +122,6 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val githubBearer: Option[String] = confStrValue("ARCH_GITHUB_BEARER", "githubBearer")
 
-  val pboxCollection: String = confStrValue("ARCH_PBOX_COLLECTION", "pboxCollection").getOrElse("webarchivedatasets")
+  val pboxCollection: String =
+    confStrValue("ARCH_PBOX_COLLECTION", "pboxCollection").getOrElse("webarchivedatasets")
 }

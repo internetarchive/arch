@@ -4,12 +4,7 @@ import io.circe.Json
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.processing.{
-  DerivationJobConf,
-  DerivationJobInstance,
-  JobManager,
-  ProcessingState
-}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager, ProcessingState}
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 import java.io.InputStream
@@ -182,7 +177,8 @@ object PublishedDatasets {
   def datasetMetadata(instance: DerivationJobInstance): Map[String, Seq[String]] =
     Map("collection" -> Seq(ArchConf.pboxCollection))
 
-  def jobItem(dataset: DerivationJobInstance): Option[(String, Boolean)] = jobItem(PublishedDatasets.jobFile(dataset))
+  def jobItem(dataset: DerivationJobInstance): Option[(String, Boolean)] =
+    jobItem(PublishedDatasets.jobFile(dataset))
 
   def jobItem(jobFile: String): Option[(String, Boolean)] = {
     if (HdfsIO.exists(jobFile)) {

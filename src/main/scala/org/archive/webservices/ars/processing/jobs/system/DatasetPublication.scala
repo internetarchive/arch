@@ -33,7 +33,8 @@ object DatasetPublication extends SparkJob {
       }
       .orElse {
         conf.params.values.get("metadata") match {
-          case Some(json) => PublishedDatasets.validateMetadata(PublishedDatasets.parseJsonMetadata(json))
+          case Some(json) =>
+            PublishedDatasets.validateMetadata(PublishedDatasets.parseJsonMetadata(json))
           case None => Some("No metadata specified.")
         }
       }
@@ -44,9 +45,14 @@ object DatasetPublication extends SparkJob {
       collection <- ArchCollection.get(conf.collectionId)
       dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
-      (itemName, complete) <- PublishedDatasets.publish(jobId, collection, conf.isSample, metadata)
+      (itemName, complete) <- PublishedDatasets.publish(
+        jobId,
+        collection,
+        conf.isSample,
+        metadata)
     } yield {
-      if (complete) Future(true) else {
+      if (complete) Future(true)
+      else {
         SparkJobManager.context.map { sc =>
           SparkJobManager.initThread(sc, DatasetPublication, conf)
           val accessContext = CollectionAccessContext.fromLocalArchConf
