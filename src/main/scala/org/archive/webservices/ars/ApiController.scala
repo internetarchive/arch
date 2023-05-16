@@ -2,8 +2,9 @@ package org.archive.webservices.ars
 
 import _root_.io.circe._
 import _root_.io.circe.syntax._
+import _root_.io.circe.parser.parse
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, PublishedDatasets}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.FormatUtil
@@ -41,22 +42,19 @@ class ApiController extends BaseController {
     Ok(jobStateJson(instance).spaces4, Map("Content-Type" -> "application/json"))
   }
 
-  private def runJob(
+  private def conf(
       job: DerivationJob,
       collection: ArchCollection,
-      conf: DerivationJobConf,
-      rerun: Boolean)(implicit context: RequestContext): ActionResult = {
-    if (rerun) job.reset(conf)
-    val history = job.history(conf)
-    val queued =
-      if (history.state == ProcessingState.NotStarted) job.enqueue(conf, { instance =>
-        instance.user = context.loggedInOpt
-        instance.collection = Some(collection)
-      })
-      else None
-    queued match {
-      case Some(instance) => jobStateResponse(instance)
-      case None => jobStateResponse(history)
+      sample: Boolean,
+      params: DerivationJobParameters)(
+      implicit context: RequestContext): Option[DerivationJobConf] = {
+    job match {
+      case UserDefinedQuery =>
+        DerivationJobConf.userDefinedQuery(collection, params, sample)
+      case _ =>
+        DerivationJobConf.collection(collection, sample).map { conf =>
+          if (params.isEmpty) conf else conf.copy(params = params)
+        }
     }
   }
 
@@ -70,11 +68,23 @@ class ApiController extends BaseController {
     for {
       collection <- ArchCollection.get(collectionId)
       job <- JobManager.get(jobId)
-      conf <- DerivationJobConf.collection(collection, sample)
+      conf <- conf(job, collection, sample, params)
     } yield {
-      val confWithParams = if (params.isEmpty) conf else conf.copy(params = params)
-      job.validateParams(collection, confWithParams).map(e => BadRequest(e)).getOrElse {
-        runJob(job, collection, conf, rerun)
+      job.validateParams(collection, conf).map(e => BadRequest(e)).getOrElse {
+        if (rerun) job.reset(conf)
+        val history = job.history(conf)
+        val queued =
+          if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
+            job.enqueue(conf, { instance =>
+              instance.user = context.loggedInOpt
+              instance.collection = Some(collection)
+            })
+          }
+          else None
+        queued match {
+          case Some(instance) => jobStateResponse(instance)
+          case None => jobStateResponse(history)
+        }
       }
     }
   }.getOrElse(NotFound())
@@ -94,26 +104,12 @@ class ApiController extends BaseController {
       implicit context =>
         DerivationJobParameters.fromJson(request.body) match {
           case Some(p) =>
-            val collectionId = params("collectionid")
-            val rerun = params.get("rerun").contains("true")
-            params("jobid") match {
-              case jobId if jobId == UserDefinedQuery.id => {
-                for {
-                  collection <- ArchCollection.get(collectionId)
-                  conf <- DerivationJobConf.userDefinedQuery(collection, p)
-                } yield {
-                  UserDefinedQuery
-                    .validateParams(collection, conf)
-                    .map(e => BadRequest(e))
-                    .getOrElse {
-                      runJob(UserDefinedQuery, collection, conf, rerun = rerun)
-                    }
-                }
-              }.getOrElse(NotFound())
-              case jobId =>
-                val sample = params.get("sample").contains("true")
-                runJob(collectionId, jobId, sample = sample, rerun = rerun, params = p)
-            }
+            runJob(
+              params("collectionid"),
+              params("jobid"),
+              sample = params.get("sample").contains("true"),
+              rerun = params.get("rerun").contains("true"),
+              params = p)
           case None =>
             BadRequest("Invalid POST body, not a valid JSON job parameters object.")
         }
@@ -249,6 +245,78 @@ class ApiController extends BaseController {
           }.asJson.spaces4,
           Map("Content-Type" -> "application/json"))
       }).getOrElse(NotFound())
+    }
+  }
+
+  get("/petabox/:collectionid/metadata/:item") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val item = params("item")
+      val collectionItems = ArchCollection.get(params("collectionid")).toSet.flatMap {
+        collection =>
+          PublishedDatasets.collectionItems(collection)
+      }
+      if (collectionItems.contains(item)) {
+        PublishedDatasets.metadata(item).map { metadata =>
+          Ok(metadata.mapValues { values =>
+            if (values.size == 1) values.head.asJson
+            else values.asJson
+          }.asJson.spaces4,
+            Map("Content-Type" -> "application/json"))
+        }.getOrElse(NotFound())
+      } else NotFound()
+    }
+  }
+
+  post("/petabox/:collectionid/metadata/:item") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val item = params("item")
+      val collectionItems = ArchCollection.get(params("collectionid")).toSet.flatMap {
+        collection =>
+          PublishedDatasets.collectionItems(collection)
+      }
+      if (collectionItems.contains(item)) {
+        parse(request.body).toOption.map(PublishedDatasets.parseJsonMetadata).map { metadata =>
+          PublishedDatasets.validateMetadata(metadata) match {
+            case Some(error) => BadRequest(error)
+            case None => if (PublishedDatasets.updateItem(item, metadata)) {
+              Ok()
+            } else InternalServerError("Updating metadata failed.")
+          }
+        }.getOrElse(BadRequest("Invalid metadata JSON."))
+      } else NotFound()
+    }
+  }
+
+  get("/petabox/:collectionid") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      ArchCollection
+        .get(params("collectionid"))
+        .map { collection =>
+          Ok(
+            PublishedDatasets.collectionInfoJson(collection),
+            Map("Content-Type" -> "application/json"))
+        }
+        .getOrElse(Forbidden())
+    }
+  }
+
+  get("/petabox/:collectionid/:jobid") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val jobId = params("jobid")
+      val sample = params.get("sample").contains("true")
+      ArchCollection
+        .get(params("collectionid"))
+        .flatMap { collection =>
+          val dataset = PublishedDatasets.dataset(jobId, collection, sample)
+          dataset.flatMap(PublishedDatasets.jobItem)
+        }
+        .map {
+          case (itemName, complete) =>
+            Ok(
+              Map("item" -> itemName.asJson, "complete" -> complete.asJson).asJson.spaces4,
+              Map("Content-Type" -> "application/json"))
+        }
+        .getOrElse(NotFound())
     }
   }
 }

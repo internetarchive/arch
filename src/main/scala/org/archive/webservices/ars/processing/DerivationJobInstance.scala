@@ -78,7 +78,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             }
             JobStateManager.logFinished(this)
         }
-        info.save(conf.outputPath + "/" + job.id)
+        if (job.logJobInfo) info.save(conf.outputPath + "/" + job.id)
       } else {
         state match {
           case ProcessingState.Queued =>

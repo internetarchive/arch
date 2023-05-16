@@ -171,7 +171,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override def checkFinishedState(outPath: String): Option[Int] =
     if (HdfsIO.exists(outPath + "/" + MimeTypeCountFile)) Some {
-      if (HdfsIO.files(outPath + "/_*").isEmpty) ProcessingState.Finished
+      if (HdfsIO.files(outPath + "/_*-" + targetFile).isEmpty) ProcessingState.Finished
       else ProcessingState.Failed
     } else None
 

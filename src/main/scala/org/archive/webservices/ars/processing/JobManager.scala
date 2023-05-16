@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.processing.jobs._
-import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
+import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -31,7 +31,7 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery)
+  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication)
 
   val jobs: ListMap[String, DerivationJob] = ListMap(
     (userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>

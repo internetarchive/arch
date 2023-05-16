@@ -47,5 +47,7 @@ trait DerivationJob {
 
   def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
 
+  def logJobInfo: Boolean = true
+
   def validateParams(collection: ArchCollection, conf: DerivationJobConf): Option[String] = None
 }

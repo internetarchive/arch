@@ -13,7 +13,7 @@ import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil, Time14Util}
 
 import scala.concurrent.Future
 
-object UserDefinedQuery extends SparkJob with DerivationJob {
+object UserDefinedQuery extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "User-Defined Query"

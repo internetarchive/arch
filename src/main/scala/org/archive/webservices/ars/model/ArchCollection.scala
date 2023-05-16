@@ -20,7 +20,7 @@ case class ArchCollection(
   lazy val specifics: Option[CollectionSpecifics] = CollectionSpecifics.get(id)
 
   private var statsLoaded = false
-  def ensureStats()(implicit context: RequestContext): Unit = {
+  def ensureStats()(implicit context: RequestContext = RequestContext.None): Unit = {
     if (!statsLoaded) {
       statsLoaded = true
       for (s <- specifics) {

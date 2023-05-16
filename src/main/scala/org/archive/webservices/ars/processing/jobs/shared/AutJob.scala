@@ -67,7 +67,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def checkFinishedState(outPath: String): Option[Int] = {
     if (HdfsIO.exists(outPath + "/" + targetFile)) Some {
-      if (HdfsIO.files(outPath + "/_*").isEmpty) ProcessingState.Finished
+      if (!HdfsIO.exists(outPath + "/_" + targetFile)) ProcessingState.Finished
       else ProcessingState.Failed
     } else None
   }

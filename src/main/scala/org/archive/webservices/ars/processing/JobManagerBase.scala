@@ -4,6 +4,7 @@ import org.archive.webservices.sparkling.Sparkling.executionContext
 
 import java.time.Instant
 import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
+import scala.concurrent.Future
 
 class JobManagerBase(
     val name: String,
@@ -96,7 +97,7 @@ class JobManagerBase(
           priorityRunning.enqueue(instance)
           val currentPriorityRunning = priorityRunning
           val priority = currentPriority
-          instance.job.run(instance.conf).onComplete { opt =>
+          Future(instance.job).flatMap(_.run(instance.conf)).onComplete { opt =>
             synchronized {
               val success = opt.toOption.getOrElse(false)
               instance.updateState(

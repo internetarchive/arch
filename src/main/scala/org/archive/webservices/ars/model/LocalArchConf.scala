@@ -121,4 +121,6 @@ class LocalArchConf extends ArchConf with Serializable {
     confValueMap("ARCH_IA_AUTH_HEADER", "iaS3AuthHeader", identity)("LOW " + _)
 
   val githubBearer: Option[String] = confStrValue("ARCH_GITHUB_BEARER", "githubBearer")
+
+  val pboxCollection: String = confStrValue("ARCH_PBOX_COLLECTION", "pboxCollection").getOrElse("webarchivedatasets")
 }

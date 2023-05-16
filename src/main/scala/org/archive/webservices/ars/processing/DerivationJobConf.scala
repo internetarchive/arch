@@ -8,6 +8,7 @@ import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics, UnionCollectionSpecifics}
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import java.time.Instant
 
@@ -68,7 +69,7 @@ object DerivationJobConf {
     }
   }
 
-  def userDefinedQuery(collection: ArchCollection, params: DerivationJobParameters)(
+  def userDefinedQuery(collection: ArchCollection, params: DerivationJobParameters, sample: Boolean = false)(
       implicit context: RequestContext): Option[DerivationJobConf] = {
     context.userOpt.flatMap { user =>
       collection.specifics.map { specifics =>
@@ -83,7 +84,7 @@ object DerivationJobConf {
           collection.id,
           jobInPath(specifics, params),
           outPath,
-          -1,
+          if (sample) SampleSize else -1,
           params = params.set("location", collection.sourceId))
       }
     }
