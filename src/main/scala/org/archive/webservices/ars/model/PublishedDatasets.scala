@@ -335,7 +335,7 @@ object PublishedDatasets {
 
   def upload(itemName: String, filename: String, hdfsPath: String): Boolean = {
     val fileSize = HdfsIO.length(hdfsPath)
-    HdfsIO.access(hdfsPath) { in =>
+    HdfsIO.access(hdfsPath, decompress = false) { in =>
       request(itemName + "/" + filename, s3 = true, put = Some((in, fileSize))).isDefined
     }
   }
