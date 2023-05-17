@@ -320,11 +320,8 @@ class ApiController extends BaseController {
           val dataset = PublishedDatasets.dataset(jobId, collection, sample)
           dataset.flatMap(PublishedDatasets.jobItem)
         }
-        .map {
-          case (itemName, complete) =>
-            Ok(
-              Map("item" -> itemName.asJson, "complete" -> complete.asJson).asJson.spaces4,
-              Map("Content-Type" -> "application/json"))
+        .map { info =>
+          Ok(info.toJson(includeItem = true).spaces4, Map("Content-Type" -> "application/json"))
         }
         .getOrElse(NotFound())
     }

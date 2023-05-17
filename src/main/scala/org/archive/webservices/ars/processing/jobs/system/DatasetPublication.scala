@@ -45,14 +45,11 @@ object DatasetPublication extends SparkJob {
       collection <- ArchCollection.get(conf.collectionId)
       dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
-      (itemName, complete) <- PublishedDatasets.publish(
-        jobId,
-        collection,
-        conf.isSample,
-        metadata)
+      itemInfo <- PublishedDatasets.publish(jobId, collection, conf.isSample, metadata)
     } yield {
-      if (complete) Future(true)
+      if (itemInfo.complete) Future(true)
       else {
+        val itemName = itemInfo.item
         SparkJobManager.context.map { sc =>
           SparkJobManager.initThread(sc, DatasetPublication, conf)
           val accessContext = CollectionAccessContext.fromLocalArchConf
@@ -82,8 +79,8 @@ object DatasetPublication extends SparkJob {
       dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
     } {
       val jobFilePath = PublishedDatasets.jobFile(dataset)
-      for ((_, completed) <- PublishedDatasets.jobItem(jobFilePath)) {
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      for (info <- PublishedDatasets.jobItem(jobFilePath)) {
+        instance.state = if (info.complete) ProcessingState.Finished else ProcessingState.Failed
       }
     }
     instance
