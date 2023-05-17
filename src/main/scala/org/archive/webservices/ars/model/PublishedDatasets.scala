@@ -169,7 +169,7 @@ object PublishedDatasets {
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
     val connection =
-      new URL("https://ark.archive.org/mint").openConnection.asInstanceOf[HttpURLConnection]
+      new URL(ArkMintUrl).openConnection.asInstanceOf[HttpURLConnection]
     try {
       connection.setRequestMethod("POST")
       connection.setRequestProperty("Authorization", "Bearer " + arkMintBearer)
