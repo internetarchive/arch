@@ -125,5 +125,9 @@ class LocalArchConf extends ArchConf with Serializable {
   val arkMintBearer: Option[String] = confStrValue("ARCH_ARK_MINT_BEARER", "arkMintBearer")
 
   val pboxCollection: String =
-    confStrValue("ARCH_PBOX_COLLECTION", "pboxCollection").getOrElse("webarchivedatasets")
+    confStrValue("ARCH_PBOX_COLLECTION", "pboxCollection").getOrElse("ARCH-datasets")
+  val arkMintUrl: String =
+    confStrValue("ARCH_ARK_MINT_URL", "arkMintUrl").getOrElse("https://ark.archive.org/mint")
+  val pboxS3Url: String =
+    confStrValue("ARCH_PBOX_S3_URL", "pboxS3Url").getOrElse("http://s3.us.archive.org")
 }

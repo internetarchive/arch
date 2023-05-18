@@ -16,7 +16,6 @@ import scala.util.Try
 
 object PublishedDatasets {
   val MetadataFields: Set[String] = Set("title")
-  val ArkMintUrl: String = "https://ark.archive.org/mint"
 
   private var sync = Set.empty[String]
 
@@ -124,7 +123,7 @@ object PublishedDatasets {
       metadata: Map[String, Seq[String]] = Map.empty,
       put: Option[(InputStream, Long)] = None): Option[String] = ArchConf.iaAuthHeader.flatMap {
     iaAuthHeader =>
-      val url = (if (s3) "http://s3.us.archive.org/" else "https://archive.org/") + path
+      val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
       val connection = new URL(url).openConnection.asInstanceOf[HttpURLConnection]
       try {
@@ -169,7 +168,7 @@ object PublishedDatasets {
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
     val connection =
-      new URL(ArkMintUrl).openConnection.asInstanceOf[HttpURLConnection]
+      new URL(ArchConf.arkMintUrl).openConnection.asInstanceOf[HttpURLConnection]
     try {
       connection.setRequestMethod("POST")
       connection.setRequestProperty("Authorization", "Bearer " + arkMintBearer)
@@ -182,7 +181,7 @@ object PublishedDatasets {
           Map(
             "naan" -> 13960.asJson,
             "shoulder" -> "/a3".asJson,
-            "url" -> s"https://archive.org/details/$itemName".asJson,
+            "url" -> (ArchConf.iaBaseUrl + "/details/" + itemName).asJson,
             "metadata" -> Map.empty[String, String].asJson,
             "maintenance_commitment" -> Map.empty[String, String].asJson).asJson.noSpaces)
       } finally {

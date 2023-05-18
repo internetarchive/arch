@@ -26,9 +26,10 @@ trait ArchConf {
   def foreignAitAuthHeader: Option[String]
   def iaAuthHeader: Option[String]
   def githubBearer: Option[String]
-
   def arkMintBearer: Option[String]
   def pboxCollection: String
+  def arkMintUrl: String
+  def pboxS3Url: String
 }
 
 object ArchConf extends ArchConf {
@@ -58,7 +59,8 @@ object ArchConf extends ArchConf {
   def foreignAitAuthHeader: Option[String] = conf.foreignAitAuthHeader
   def iaAuthHeader: Option[String] = conf.iaAuthHeader
   def githubBearer: Option[String] = conf.githubBearer
-
   def arkMintBearer: Option[String] = conf.arkMintBearer
   def pboxCollection: String = conf.pboxCollection
+  def arkMintUrl: String = conf.arkMintUrl
+  def pboxS3Url: String = conf.pboxS3Url
 }
