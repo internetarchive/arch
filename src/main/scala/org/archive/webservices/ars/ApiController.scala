@@ -297,6 +297,22 @@ class ApiController extends BaseController {
     }
   }
 
+  post("/petabox/:collectionid/delete/:item") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val item = params("item")
+      ArchCollection.get(params("collectionid")).filter { collection =>
+        val collectionItems = PublishedDatasets.collectionItems(collection)
+        collectionItems.contains(item)
+      }.map { collection =>
+        val doDelete = parse(request.body).toOption.flatMap(_.hcursor.get[Boolean]("delete").toOption).getOrElse(false)
+        if (doDelete) {
+          if (PublishedDatasets.deletePublished(collection, item)) Ok()
+          else InternalServerError("Deleting item failed.")
+        } else BadRequest("In order to confirm the deletion, please send a JSON with boolean key 'delete' set to true.")
+      }.getOrElse(NotFound())
+    }
+  }
+
   get("/petabox/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       ArchCollection

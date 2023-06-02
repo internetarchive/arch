@@ -121,7 +121,8 @@ object PublishedDatasets {
       s3: Boolean = false,
       update: Boolean = false,
       metadata: Map[String, Seq[String]] = Map.empty,
-      put: Option[(InputStream, Long)] = None): Option[String] = ArchConf.iaAuthHeader.flatMap {
+      put: Option[(InputStream, Long)] = None,
+      post: Option[String] = None): Option[String] = ArchConf.iaAuthHeader.flatMap {
     iaAuthHeader =>
       val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
@@ -150,6 +151,17 @@ object PublishedDatasets {
             val out = connection.getOutputStream
             try {
               IOUtil.copy(in, out, length)
+            } finally {
+              Try(out.close())
+            }
+          }
+        } else if (post.isDefined) {
+          connection.setRequestMethod("POST")
+          for (postBody <- post) {
+            connection.setDoOutput(true)
+            val out = IOUtil.print(connection.getOutputStream, closing = true)
+            try {
+              out.println(postBody)
             } finally {
               Try(out.close())
             }
@@ -308,6 +320,43 @@ object PublishedDatasets {
         request(name, s3 = true, update = true, metadata = existingMetadata ++ metadata)
       }
       .isDefined
+  }
+
+  def deleteItem(name: String): Boolean = {
+    request("/services/tasks.php", post = Some {
+      ListMap(
+        "cmd" -> "make_dark.php".asJson,
+        "identifier" -> name.asJson,
+        "args" -> Map("comment" -> "Delete published item via ARCH.").asJson
+      ).asJson.noSpaces
+    }).isDefined
+  }
+
+  def deletePublished(collection: ArchCollection, itemName: String): Boolean = {
+    val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+    syncCollectionFile(collectionFilePath) {
+      val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
+        .flatMap(_.as[Map[String, Json]].toOption)
+        .getOrElse(Map.empty)
+      for (itemInfo <- in.get(itemName).map(_.hcursor)) yield {
+        if (deleteItem(itemName)) {
+          for {
+            jobId <- itemInfo.get[String]("collection").toOption
+            isSample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
+            conf <- DerivationJobConf.collection(collection, isSample)
+            instance <- JobManager.getInstanceOrGlobal(jobId, conf, {
+              DerivationJobConf.collection(collection, isSample, global = true)
+            })
+          } {
+            val jobFilePath = jobFile(instance)
+            if (jobItem(jobFilePath).exists(_.item == itemName)) HdfsIO.delete(jobFilePath)
+          }
+          val out = in - itemName
+          HdfsIO.writeLines(collectionFilePath, Seq(out.asJson.spaces4), overwrite = true)
+          true
+        } else false
+      }
+    }.getOrElse(false)
   }
 
   def files(itemName: String): Set[String] = {
