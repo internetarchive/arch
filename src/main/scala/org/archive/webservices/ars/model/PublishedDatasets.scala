@@ -32,12 +32,14 @@ object PublishedDatasets {
 
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
+  val MaxItemNameLength = 100
   def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
     val sample = if (instance.conf.isSample) "-sample" else ""
-    (
-      collection.sourceId + "_" + instance.job.id + sample + "_"
-      + instance.info.startTime.getOrElse(Instant.now).toString
-    ).replaceAll("[:.]", "-")
+    val suffix = "_" + instance.job.id + sample + "_" + instance.info.startTime
+      .getOrElse(Instant.now)
+      .toString
+      .replaceAll("[:.]", "-")
+    collection.sourceId.take(MaxItemNameLength - suffix.length) + suffix 
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
