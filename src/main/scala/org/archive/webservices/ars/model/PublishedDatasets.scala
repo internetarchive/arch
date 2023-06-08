@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.{
 }
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.util.DigestUtil
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
@@ -32,14 +33,20 @@ object PublishedDatasets {
 
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
-  val MaxItemNameLength = 100
+  val MaxCollectionIdLength = 25
   def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
     val sample = if (instance.conf.isSample) "-sample" else ""
     val suffix = "_" + instance.job.id + sample + "_" + instance.info.startTime
       .getOrElse(Instant.now)
       .toString
       .replaceAll("[:.]", "-")
-    collection.sourceId.take(MaxItemNameLength - suffix.length) + suffix 
+    val sourceId = collection.sourceId
+    val collectionId =
+      if (sourceId.length <= MaxCollectionIdLength) sourceId
+      else {
+        ArchCollection.prefix(sourceId).getOrElse("ARCH_") + DigestUtil.md5Hex(sourceId)
+      }.take(MaxCollectionIdLength)
+    collectionId + suffix
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
