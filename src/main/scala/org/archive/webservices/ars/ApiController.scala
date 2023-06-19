@@ -1,13 +1,19 @@
 package org.archive.webservices.ars
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, PublishedDatasets}
+import org.archive.webservices.ars.model.{
+  ArchCollection, ArchConf, ArchCollectionInfo, ArchJobCategories, PublishedDatasets
+}
+import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
-import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.util.FormatUtil
+import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
@@ -58,6 +64,16 @@ class ApiController extends BaseController {
     }
   }
 
+  private def prohibited(jobId: String, params: DerivationJobParameters): Boolean = {
+    // Enforce prohibited DatasetPublication datasets.
+    jobId == DatasetPublication.id && (
+      params.get[String]("dataset")
+        .flatMap(JobManager.get)
+        .map(PublishedDatasets.ProhibitedJobs.contains(_))
+        .getOrElse(false)
+    )
+  }
+
   private def runJob(
       collectionId: String,
       jobId: String,
@@ -69,6 +85,7 @@ class ApiController extends BaseController {
       collection <- ArchCollection.get(collectionId)
       job <- JobManager.get(jobId)
       conf <- conf(job, collection, sample, params)
+      if !prohibited(jobId, params)
     } yield {
       job.validateParams(collection, conf).map(e => BadRequest(e)).getOrElse {
         if (rerun) job.reset(conf)
@@ -91,7 +108,7 @@ class ApiController extends BaseController {
   get("/runjob/:jobid/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       runJob(
-        params("collectionid"),
+        ArchCollection.userCollectionId(params("collectionid"), context.user),
         params("jobid"),
         sample = params.get("sample").contains("true"),
         rerun = params.get("rerun").contains("true"))
@@ -104,7 +121,7 @@ class ApiController extends BaseController {
         DerivationJobParameters.fromJson(request.body) match {
           case Some(p) =>
             runJob(
-              params("collectionid"),
+              ArchCollection.userCollectionId(params("collectionid"), context.user),
               params("jobid"),
               sample = params.get("sample").contains("true"),
               rerun = params.get("rerun").contains("true"),
@@ -118,7 +135,7 @@ class ApiController extends BaseController {
   get("/rerunjob/:jobid/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       runJob(
-        params("collectionid"),
+        ArchCollection.userCollectionId(params("collectionid"), context.user),
         params("jobid"),
         params.get("sample").contains("true"),
         rerun = true)
@@ -129,7 +146,7 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       if (context.isAdmin) {
         JobStateManager.rerunFailed()
-        Found(Arch.BaseUrl + "/admin/logs/running")
+        Found(ArchConf.baseUrl + "/admin/logs/running")
       } else Forbidden()
     }
   }
@@ -145,7 +162,7 @@ class ApiController extends BaseController {
   get("/jobstate/:jobid/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       ArchCollection
-        .get(params("collectionid"))
+        .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .flatMap { collection =>
           val jobId = params("jobid")
           val sample = params.get("sample").contains("true")
@@ -165,10 +182,64 @@ class ApiController extends BaseController {
     }
   }
 
+  get("/available-jobs") {
+    ensureLogin(redirect = false, useSession = true) { _ =>
+      val categoryJobsMap = JobManager.userJobs.toSeq
+        .groupBy(_.category)
+        .map {
+          case (category, jobs) =>
+            category -> jobs.sortBy(_.name.toLowerCase)
+        }
+      Ok(
+        Seq(
+          (
+            ArchJobCategories.Collection,
+            "Discover domain-related patterns and high level information about the documents in a web archive.",
+            "/img/collection.png",
+            "collection"
+          ),
+          (
+            ArchJobCategories.Network,
+            "Explore connections in a web archive visually.",
+            "/img/network.png",
+            "network"
+          ),
+          (
+            ArchJobCategories.Text,
+            "Extract and analyze a web archive as text.",
+            "/img/text.png",
+            "text"
+          ),
+          (
+            ArchJobCategories.BinaryInformation,
+            "Find, describe, and use the files contained within a web archive, based on their format.",
+            "/img/file-formats.png",
+            "file-formats"
+          )
+        ).map({
+          case (category, categoryDescription, categoryImage, categoryId) => {
+            ListMap(
+              "categoryName" -> category.name.asJson,
+              "categoryDescription" -> categoryDescription.asJson,
+              "categoryImage" -> BaseController.staticPath(categoryImage).asJson,
+              "categoryId" -> categoryId.asJson,
+              "jobs" -> categoryJobsMap.get(category).head.map(job => ListMap(
+                "id" -> job.id.asJson,
+                "name" -> job.name.asJson,
+                "description" -> job.description.asJson,
+              )).asJson
+            )
+          }
+        }).asJson.spaces4,
+        Map("Content-Type" -> "application/json")
+      )
+    }
+  }
+
   get("/jobstates/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       ArchCollection
-        .get(params("collectionid"))
+        .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .map { collection =>
           val active = JobManager.getByCollection(collection.id)
           val instances = if (params.get("all").contains("true")) {
@@ -211,9 +282,108 @@ class ApiController extends BaseController {
     }
   }
 
+  private def collectionJson(collection: ArchCollection, user: ArchUser): Json = {
+    val info = ArchCollectionInfo.get(collection.id)
+    ListMap(
+      "id" -> collection.userUrlId(user.id).asJson,
+      "name" -> collection.name.asJson,
+      "public" -> collection.public.asJson,
+      "size" -> FormatUtil.formatBytes(collection.size).asJson,
+      "sortSize" -> collection.size.asJson,
+      "seeds" -> collection.seeds.asJson,
+      "lastCrawlDate" -> Option(collection.lastCrawlDate).filter(_.nonEmpty).asJson,
+      "lastJobId" -> info.map(_.lastJobId).asJson,
+      "lastJobSample" -> info.map(_.lastJobSample).asJson,
+      "lastJobName" -> info.map(_.lastJobName).asJson,
+      "lastJobTime" -> info.map(_.lastJobTime.map(FormatUtil.instantTimeString)).asJson,
+    )
+  }.asJson
+
+  get("/collections") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      val collections = ArchCollection.userCollections(context.user)
+      Ok(
+        collections.map(collection => {
+          collection.ensureStats()
+          collectionJson(collection, context.user)
+        }).asJson,
+        Map("Content-Type" -> "application/json"))
+    }
+  }
+
+  get("/datasets") {
+    ensureLogin(redirect = false, useSession = true) { context =>
+      val collectionIds = multiParams("collectionId").map(ArchCollection.userCollectionId(_, context.user))
+      val states = multiParams("state")
+      val notStates = multiParams("state!")
+      val jobs = multiParams("job")
+      val sample = multiParams("sample")
+      val user = context.user
+      val datasets =
+        ArchCollection.userCollections(user)
+        // Apply collections filter.
+        .filter(col => if (collectionIds.isEmpty) true else collectionIds.contains(col.id))
+        // Get (collection, [sample]userConf, [sample]globalConf) tuples
+        .flatMap(col =>
+          // Apply sample filter.
+          (if (sample.isEmpty) Set(true, false) else Seq(sample.contains("true"))).map(sample =>
+            (
+              col,
+              DerivationJobConf.collection(col, sample = sample, global = false).get,
+              DerivationJobConf.collection(col, sample = sample, global = true),
+            )
+          )
+        )
+        // Get (collection, jobInstance)
+        .flatMap{case (col, userConf, globalConf) =>
+          JobManager.userJobs
+          // Apply jobs filter.
+          .filter(job => if (jobs.isEmpty) true else jobs.contains(job.id))
+          .map(job => {
+            (
+              col,
+              JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get
+            )
+          })
+        }
+        // Apply states filters.
+        .filter(x => if (states.isEmpty) true else states.contains(x._2.stateStr))
+        .filter(x => if (notStates.isEmpty) true else !notStates.contains(x._2.stateStr))
+        // Sort by state asc, finishedTime desc.
+        .sortBy{x => (
+          x._2.state,
+          - x._2.info.finishedTime.getOrElse(Instant.ofEpochSecond(0)).getEpochSecond
+        )}
+        .map{
+          case (collection, jobInstance) =>
+            ListMap(
+              "id" -> DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance.job).asJson,
+              "collectionId" -> collection.userUrlId(user.id).asJson,
+              "collectionName" -> collection.name.asJson,
+              "isSample" -> (jobInstance.conf.sample != -1).asJson,
+              "jobId" -> jobInstance.job.id.asJson,
+              "category" -> jobInstance.job.category.name.asJson,
+              "name" -> jobInstance.job.name.asJson,
+              "sample" -> jobInstance.conf.sample.asJson,
+              "state" -> jobInstance.stateStr.asJson,
+              "numFiles" -> jobInstance.outFiles.size.asJson,
+            ) ++
+            jobInstance.info.startTime
+              .map(FormatUtil.instantTimeString)
+              .map("startTime" -> _.asJson)
+              .toSeq ++
+            jobInstance.info.finishedTime
+              .map(FormatUtil.instantTimeString)
+              .map("finishedTime" -> _.asJson)
+              .toSeq
+        }
+      Ok(datasets.asJson, Map("Content-Type" -> "application/json"))
+    }
+  }
+
   get("/collection/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
-      val collectionId = params("collectionid")
+      val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
       (for {
         collection <- ArchCollection.get(collectionId)
         info <- ArchCollectionInfo.get(collectionId)
@@ -250,7 +420,8 @@ class ApiController extends BaseController {
   get("/petabox/:collectionid/metadata/:item") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val item = params("item")
-      val collectionItems = ArchCollection.get(params("collectionid")).toSet.flatMap {
+      val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
+      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap {
         collection =>
           PublishedDatasets.collectionItems(collection)
       }
@@ -260,10 +431,7 @@ class ApiController extends BaseController {
           .map { metadata =>
             Ok(
               metadata
-                .mapValues { values =>
-                  if (values.size == 1) values.head.asJson
-                  else values.asJson
-                }
+                .mapValues { values => values.asJson }
                 .asJson
                 .spaces4,
               Map("Content-Type" -> "application/json"))
@@ -276,7 +444,8 @@ class ApiController extends BaseController {
   post("/petabox/:collectionid/metadata/:item") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val item = params("item")
-      val collectionItems = ArchCollection.get(params("collectionid")).toSet.flatMap {
+      val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
+      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap {
         collection =>
           PublishedDatasets.collectionItems(collection)
       }
@@ -300,7 +469,7 @@ class ApiController extends BaseController {
   get("/petabox/:collectionid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       ArchCollection
-        .get(params("collectionid"))
+        .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .map { collection =>
           Ok(
             PublishedDatasets.collectionInfoJson(collection),
@@ -315,7 +484,7 @@ class ApiController extends BaseController {
       val jobId = params("jobid")
       val sample = params.get("sample").contains("true")
       ArchCollection
-        .get(params("collectionid"))
+        .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .flatMap { collection =>
           val dataset = PublishedDatasets.dataset(jobId, collection, sample)
           dataset.flatMap(PublishedDatasets.jobItem)

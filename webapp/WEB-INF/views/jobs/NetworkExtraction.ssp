@@ -1,3 +1,4 @@
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
@@ -31,10 +32,11 @@
               <div id="graph"></div>
             </div>
           </div>
-          <script src="/ait/js/sigma.min.js"></script>
-          <script src="/ait/js/sigma-worker.js"></script>
-          <script src="/ait/js/sigma-supervisor.js"></script>
-          <script src="/ait/js/arch-sigma-graphs.js"></script>
+          <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
+          <script src="<%= staticPath("/js/sigma.min.js") %>"></script>
+          <script src="<%= staticPath("/js/sigma-worker.js") %>"></script>
+          <script src="<%= staticPath("/js/sigma-supervisor.js") %>"></script>
+          <script src="<%= staticPath("/js/arch-sigma-graphs.js") %>"></script>
           <script>
             var data = {
                 "nodes": [

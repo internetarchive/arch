@@ -12,11 +12,6 @@ import org.scalatra.servlet.ScalatraListener
 import java.io.File
 
 object Arch {
-  val Port: Int = ArchConf.port
-  val BasePath = "/ait"
-  val BaseUrl: String = ArchConf.baseUrl + BasePath
-  val BaseDir = "/research_services"
-
   def start(contextPath: String, port: Int): Unit = {
     val server = new Server(port)
 
@@ -40,7 +35,7 @@ object Arch {
     IOUtil.memoryBuffer = 1.mb.toInt
     RddUtil.saveRecordTimeoutMillis = -1
     JobStateManager.init()
-    start(BasePath, Port)
+    start(ArchConf.basePath, ArchConf.internalPort)
   }
 
   def debugging: Boolean = new File("_debugging").exists

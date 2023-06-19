@@ -13,7 +13,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import java.io.{InputStream, PrintStream}
 
 object WebPagesExtraction extends BinaryInformationAutJob {
-  val name = "Extract plain text of webpages"
+  val name = "Plain text of webpages"
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 

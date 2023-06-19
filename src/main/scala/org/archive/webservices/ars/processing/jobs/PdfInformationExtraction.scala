@@ -6,7 +6,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 object PdfInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract PDF information"
+  val name = "PDF file information"
 
   val description =
     "Create a CSV with the following columns: crawl date, last modified date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."

@@ -1,20 +1,17 @@
 From: arch-no-reply@archive-it.org
 To: $to
-Subject: ARCH: User-defined query on $collectionName has completed!
+Subject: ARCH: Your custom collection “$udqCollectionName” is ready to use
 MIME-Version: 1.0
 Content-Type: multipart/alternative; boundary=ARCHARCHARCH
 
 --ARCHARCHARCH
 Content-Type: text/plain; charset=utf-8
-Hi $userName,
-===============================================
+Hello $userName,
 
-Your Archives Research Compute Hub user-defined query on $collectionName has finished.
-Your new collection is now listed at: https://webdata.archive-it.org/ait/$accountId/research_services
+ARCH has created your custom collection, “$udqCollectionName.” You may find and use it here: $collectionsUrl
 
-Thank you for using the Archives Research Compute Hub, and have a great day!
-
-ARCH Team
+Best,
+The ARCH team
 --ARCHARCHARCH
 Content-Type: text/html; charset=utf-8
 
@@ -23,11 +20,18 @@ Content-Type: text/html; charset=utf-8
     <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
   </head>
   <body>
-    <p>Hi $userName,</p>
-    <p>Your Archives Research Compute Hub user-defined query on $collectionName has finished.</p>
-    <p>Your new collection is now listed at: https://webdata.archive-it.org/ait/$accountId/research_services</p>
-    <p>Thank you for using the Archives Research Compute Hub, and have a great day!</p>
-    <p>ARCH Team</p>
+    <p>Hello $userName,</p>
+    <p>
+      ARCH has created your custom collection, "$udqCollectionName.” You may find and use it here: <a href="$collectionsUrl">$collectionsUrl</a>
+    </p>
+    <p>
+      Best,
+      <br />
+      The ARCH team
+    </p>
+    <p>
+      Having trouble? <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/14795196010772">Let us know!</a>
+    </p>
   </body>
 </html>
 --ARCHARCHARCH--

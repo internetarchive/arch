@@ -3,7 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe._
 import _root_.io.circe.syntax._
 import org.apache.http.client.utils.URIBuilder
-import org.archive.webservices.ars.model.{ArchCollection, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchConf, ArchCollection, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.scalatra.{NotFound, Ok}
 
@@ -62,7 +62,7 @@ class WasapiController extends BaseController {
                                      .asJson
                                  else Json.Null),
                   "files" -> files.map { file =>
-                    val locationUrl = Arch.BaseUrl + "/files/download/" + collection.id + "/" + instance.job.id + "/" + file.filename + (if (instance.conf.isSample)
+                    val locationUrl = ArchConf.baseUrl + "/files/download/" + collection.id + "/" + instance.job.id + "/" + file.filename + (if (instance.conf.isSample)
                                                                                                                                            "?sample=true&access="
                                                                                                                                          else
                                                                                                                                            "?access=") + file.accessToken

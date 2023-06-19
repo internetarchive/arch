@@ -1,114 +1,12 @@
-<% import org.archive.webservices.ars.model.collections.AitCollectionSpecifics %>
-
-<%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
-<%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 
 #set (title)
-  <%=collection.name%> Sub-Collection
+  Custom Collection Builder
 #end
 
-#set (subtitle)
-  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#set (scripts)
+  <script src="<%=staticPath("/js/dist/arch-sub-collection-builder-2c0fad15.js")%>" type="module"></script>
 #end
 
-<subnav data="state.menus.research_services" class="ng-isolate-scope">
-  <div class="row subnav">
-    <div class="small-12 columns">
-      <div class="row">
-        <div class="subnav-box columns">
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
-          </div>
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
-          </div>
-          <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/subset">Sub-Collection Query</a></span>
-          </div>
-          <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span>
-          </div>
-          <hr />
-        </div>
-      </div>
-    </div>
-  </div>
-</subnav>
-
-<div class="row page-tab" id="summary-tab">
-  <div class="large-12 columns">
-    <h1>Sub-Collection Query</h1>
-    <p>
-      This form will create a sub-set of <strong><%=collection.name%></strong> by applying a number of optional filters to it. When you run this query, a parameterized job will be launched to derive a custom collection based on the specified criteria. Once the user-defined query has finished running, the new collection will be listed under <a href="/ait/<%=unescape(user.urlId)%>/research_services">your collections</a>. You can then generate new datasets based off of this sub-set of <strong><%=collection.name%></strong>. An email will be sent to you once the user-defined query has finished running.
-    </p>
-    <p>
-      If you don't want to apply one of the filters, you can leave the field blank.
-    </p>
-
-    <form>
-      <div class="sub-collection-form">
-        <label for="name" class="sub-collection-form-label required">Sub-collection name</label>
-        <input type="text" name="name" id="name" aria-labelledby="name nameDesc" placeholder="<%=collection.name%> - HTML pages from archive.org" required />
-        <p id="nameDesc">A <i>name</i> for the new sub-collection. It should be descriptive of the contained records.</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="surtPrefixesOR" class="sub-collection-form-label">SURT Prefix(es)</label>
-        <input type="text" name="surtPrefixesOR" id="surtPrefixesOR" aria-labelledby="surtPrefixesOR surtPrefixesORDesc" placeholder="org,archive|org,archivesunleashed" />
-        <p id="surtPrefixesORDesc">Keep records of URLs that start with the specified prefix in SURT form (i.e., a canonicalized URL format with the host in reversed order, for example <i>archive.org</i>   becomes <i>org, archive</i>). If multiple SURTs are entered, each SURT should be separated by a <code>|</code> character.</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="timestampFrom" class="sub-collection-form-label">Crawl date (start)</label>
-        <input type="text" name="timestampFrom" id="timestampFrom" aria-labelledby="timestampFrom timestampFromDesc" placeholder="19960115"/>
-        <p id="timestampFromDesc">Keep records after the specified time in the form <i>yyyyMMddHHmmss</i> (earliest), also just a prefix is valid (e.g., yyyyMM).</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="timestampTo" class="sub-collection-form-label">Crawl date (end)</label>
-        <input type="text" name="timestampTo" id="timestampTo" aria-labelledby="timestampTo timestampToDesc" placeholder="19991231235959" />
-        <p id="timestampToDesc">Keep records before the specified time in the form <i>yyyyMMddHHmmss</i> (latest), also just a prefix is valid (e.g., yyyyMM).</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="status" class="sub-collection-form-label">HTTP Status</label>
-        <input type="text" name="status" id="status" aria-labelledby="status statusDesc" placeholder="200" />
-        <p id="statusDesc">Keep records with the specified <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes" target="_blank">HTTP status code</a> (e.g., <i>200</i> for successful responses).</p>
-      </div>
-
-      <div class="sub-collection-form">
-        <label for="mime" class="sub-collection-form-label">MIME Type</label>
-          <input type="text" name="mime" id="mime" aria-labelledby="mime mimeDesc" placeholder="text/html" />
-          <p id="mimeDesc">Keep records with the specified <a href="https://en.wikipedia.org/wiki/Media_type" target="_blank">MIME type</a> (e.g., <i>text/html</i> for webpages).</p>
-      </div>
-
-      <button type="submit">Run Query</button>
-    </form>
-    <script type="text/javascript">
-      function handleSubmit(event) {
-        event.preventDefault();
-
-        const data = new FormData(event.target);
-        const value = {"name": data.get('name'),
-                     "surtPrefixesOR": data.get('surtPrefixesOR').split('|'),
-                     "timestampFrom": data.get('timestampFrom'),
-                     "timestampTo": data.get('timestampTo'),
-                     "status": data.get('status'),
-                     "mime": data.get('mime')};
-        const json = JSON.parse(JSON.stringify(value), (key, value) => {
-          if (value == null || value == '' || value == [] || value == {})
-            return undefined;
-          return value;
-        });
-
-        $.ajax({
-          url: "/ait/api/runjob/UserDefinedQuery/<%=unescape(collection.id)%>?user=<%=unescape(user.urlId)%>",
-          type: "POST",
-          contentType: "application/json",
-          data: JSON.stringify(json)
-        }).done(function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services";
-        })}
-        const form = document.querySelector('form');
-        form.addEventListener('submit', handleSubmit);
-    </script>
+<arch-sub-collection-builder>
+</arch-sub-collection-builder>

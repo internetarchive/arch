@@ -31,7 +31,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 
-  val name = "Extract text files (html, text, css, js, json, xml) information"
+  val name = "Text file information"
 
   val description =
     "Create a CSV with the following columns: crawl date, last modified date, URL of the text file, filename, text extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, text file MD5 hash and text file SHA1 hash, and text file content."

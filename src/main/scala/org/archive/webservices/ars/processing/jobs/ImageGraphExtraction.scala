@@ -11,7 +11,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import java.io.PrintStream
 
 object ImageGraphExtraction extends NetworkAutJob[Row] {
-  val name = "Extract image graph"
+  val name = "Image graph"
   val description =
     "Create a CSV with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
 

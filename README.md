@@ -12,11 +12,13 @@ Web application for distributed compute analysis of Archive-It web archive colle
 
 ## Building
 
-### Production
+### Backend
+
+#### Production
 
 * `sbt "prod/clean" "prod/assembly" "prod/assemblyPackageDependency"`
 
-### Docker
+#### Docker
 
 1. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
 2. Setup a `data` directory somewhere with the following sub-directories: `cache`, `collections`, `in`, `logging`, `out`, `tmp`
@@ -39,6 +41,10 @@ For the `data/input` directory, an example directory structure looks like this:
 │   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299798-20200624234136479-00000-h3.warc.gz
 │   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299799-20200624234136645-00000-h3.warc.gz
 ```
+
+### Frontend
+
+See [webapp/src/README.md](webapp/src/README.md) for information about building the web application.
 
 ## Citing ARCH
 

@@ -11,6 +11,7 @@ trait ArchConf {
   def aitBaseUrl: String
   def aitLoginPath: String
   def aitWarcsBaseUrl: String
+  def waybackBaseUrl: String
   def collectionCachePath: String
   def globalJobOutPath: String
   def jobOutPath: String
@@ -18,11 +19,16 @@ trait ArchConf {
   def customCollectionPath: String
   def localTempPath: String
   def sparkMaster: String
+  def baseDir: String
+  def basePath: String
   def baseUrl: String
   def loginUrl: String
   def hadoopQueue: String
   def production: Boolean
-  def port: Int
+  def proto: String
+  def host: String
+  def externalPort: Int
+  def internalPort: Int
   def foreignAitAuthHeader: Option[String]
   def iaAuthHeader: Option[String]
   def githubBearer: Option[String]
@@ -44,6 +50,7 @@ object ArchConf extends ArchConf {
   def aitBaseUrl: String = conf.aitBaseUrl
   def aitLoginPath: String = conf.aitLoginPath
   def aitWarcsBaseUrl: String = conf.aitWarcsBaseUrl
+  def waybackBaseUrl: String = conf.waybackBaseUrl
   def collectionCachePath: String = conf.collectionCachePath
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
@@ -51,11 +58,16 @@ object ArchConf extends ArchConf {
   def customCollectionPath: String = conf.customCollectionPath
   def localTempPath: String = conf.localTempPath
   def sparkMaster: String = conf.sparkMaster
+  def baseDir: String = conf.baseDir
+  def basePath: String = conf.basePath
   def baseUrl: String = conf.baseUrl
   def loginUrl: String = conf.loginUrl
   def hadoopQueue: String = conf.hadoopQueue
   def production: Boolean = conf.production
-  def port: Int = conf.port
+  def proto: String = conf.proto
+  def host: String = conf.host
+  def externalPort: Int = conf.externalPort
+  def internalPort: Int = conf.internalPort
   def foreignAitAuthHeader: Option[String] = conf.foreignAitAuthHeader
   def iaAuthHeader: Option[String] = conf.iaAuthHeader
   def githubBearer: Option[String] = conf.githubBearer

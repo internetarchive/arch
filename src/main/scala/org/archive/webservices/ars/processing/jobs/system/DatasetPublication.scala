@@ -94,5 +94,5 @@ object DatasetPublication extends SparkJob {
 
   override val finishedNotificationTemplate: Option[String] = None
 
-  override val logJobInfo: Boolean = false
+  override val logJobInfo: Boolean = true
 }

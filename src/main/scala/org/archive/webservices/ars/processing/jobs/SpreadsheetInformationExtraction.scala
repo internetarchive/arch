@@ -6,7 +6,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract spreadsheet information"
+  val name = "Spreadsheet file information"
 
   val description =
     "Create a CSV with the following columns: crawl date, last modified date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."

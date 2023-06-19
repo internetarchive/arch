@@ -1,8 +1,9 @@
+<% import org.archive.webservices.ars.model.ArchConf %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val baseUrl: String %>
 
 #set (title)
-    ARCH: Archive Research Compute Hub
+    Admin
 #end
 
 #set (subtitle)
@@ -13,15 +14,14 @@
 <div class="large-12 columns">
 <p>
     <br>
-    You're logged in as an admin user, please replace <code>admin</code> in the URL with the ID of the desired account you wish to access, or click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
+    You're logged in as an admin user, <s>please replace <code>admin</code> in the URL with the ID of the desired account you wish to access</s> (<em>TODO - figure out how to do this now that userId has been removed from the URL structure</em>), or click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
     <br>
-    <a href="/ait/admin/edit">Manage users and collections</a><br>
+    <a href="<%=ArchConf.basePath%>/admin/edit">Manage users and collections</a><br>
     <br>
     <h2>Logs</h2>
-    <a href="/ait/admin/logs/jobs?tail=5120" target="_blank">Jobs log</a><br>
-    <a href="/ait/admin/logs/running" target="_blank">Running jobs</a><br>
-    <a href="/ait/admin/logs/failed" target="_blank">Failed jobs</a><br>
+    <a href="<%=ArchConf.basePath%>/admin/logs/jobs?tail=5120" target="_blank">Jobs log</a><br>
+    <a href="<%=ArchConf.basePath%>/admin/logs/running" target="_blank">Running jobs</a><br>
+    <a href="<%=ArchConf.basePath%>/admin/logs/failed" target="_blank">Failed jobs</a><br>
 </p>
 </div>
 </div>
-

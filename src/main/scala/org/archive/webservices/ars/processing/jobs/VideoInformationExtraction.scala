@@ -6,7 +6,7 @@ import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJo
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 object VideoInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract video information"
+  val name = "Video file information"
 
   val description =
     "Create a CSV with the following columns: crawl date, last modified date, URL of the video file, filename, video extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, video MD5 hash and video SHA1 hash."

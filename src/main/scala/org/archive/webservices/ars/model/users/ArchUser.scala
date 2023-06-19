@@ -85,7 +85,7 @@ object ArchUser {
             !email.contains(" ") && {
               val split = email.split("@")
               split.length == 2 && split(0).nonEmpty && {
-                val domainSplit = split(1).split(".")
+                val domainSplit = split(1).split('.')
                 domainSplit.length > 1 && domainSplit.forall(_.nonEmpty)
               }
             }

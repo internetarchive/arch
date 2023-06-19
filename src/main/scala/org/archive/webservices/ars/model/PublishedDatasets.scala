@@ -4,7 +4,10 @@ import io.circe.Json
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager, ProcessingState}
+import org.archive.webservices.ars.processing.{
+  DerivationJobConf, DerivationJob, DerivationJobInstance, JobManager, ProcessingState
+}
+import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 import java.io.InputStream
@@ -15,7 +18,11 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
-  val MetadataFields: Set[String] = Set("title")
+  val MetadataFields: Set[String] = Set("creator", "description", "licenseurl", "subject", "title")
+
+  val ProhibitedJobs: Set[DerivationJob] = Set(
+    WebPagesExtraction,
+  )
 
   private var sync = Set.empty[String]
 
@@ -27,10 +34,10 @@ object PublishedDatasets {
 
   def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
     val sample = if (instance.conf.isSample) "-sample" else ""
-    collection.sourceId + "_" + instance.job.id + sample + "_" + instance.info.startTime
-      .getOrElse(Instant.now)
-      .toString
-      .replaceAll("[:.]", "-")
+    (
+      collection.sourceId + "_" + instance.job.id + sample + "_"
+      + instance.info.startTime.getOrElse(Instant.now).toString
+    ).replaceAll("[:.]", "-")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {

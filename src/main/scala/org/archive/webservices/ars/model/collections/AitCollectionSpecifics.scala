@@ -42,9 +42,11 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def seeds(implicit context: RequestContext = RequestContext.None): Int = {
     Ait
       .getJson(
-        "/api/seed?__count=id&active=true&deleted=false&limit=-1&collection=" + aitId,
+        "/api/seed?__count=id&__group=collection&deleted=false&limit=-1&collection=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-        _.get[Int]("id__count").toOption)
+        _.downField("groups").downArray
+          .get[Int]("id__count")
+          .toOption)
       .getOrElse(-1)
   }
 
@@ -62,11 +64,9 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def size(implicit context: RequestContext = RequestContext.None): Long = {
     Ait
       .getJson(
-        "/api/crawl_job?__group=collection&__sum=warc_content_bytes&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
+        "/api/warc_file?__sum=size&limit=-1&collection=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-        _.downField("groups").downArray
-          .get[Long]("warc_content_bytes__sum")
-          .toOption)
+          _.get[Long]("size__sum").toOption)
       .getOrElse(-1L)
   }
 

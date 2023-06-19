@@ -5,9 +5,10 @@ import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.Arch
+import org.archive.webservices.ars.ViewPathPatterns
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.ars.util.{FormatUtil, MailUtil}
+import org.archive.webservices.ars.util.{FormatUtil, DatasetUtil, MailUtil}
 import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{File, FileOutputStream, PrintStream}
@@ -216,19 +217,27 @@ object JobStateManager {
         u <- instance.user
         email <- u.email
       } {
-        for (template <- instance.job.finishedNotificationTemplate)
+        for (template <- instance.job.finishedNotificationTemplate) {
+          val collection = instance.collection.getOrElse(ArchCollection.get(instance.conf.collectionId).get)
           MailUtil.sendTemplate(
             template,
             Map(
               "to" -> email,
+              "collectionsUrl" -> ViewPathPatterns.reverseAbs(ViewPathPatterns.Collections),
+              "datasetUrl" -> ViewPathPatterns.reverseAbs(
+                ViewPathPatterns.Dataset,
+                Map(
+                  "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
+                  "sample" -> instance.conf.isSample.toString
+                )
+              ),
               "jobName" -> instance.job.name,
-              "jobId" -> instance.job.id,
-              "collectionId" -> instance.conf.collectionId,
-              "collectionName" -> instance.collection
-                .map(_.name)
-                .getOrElse(instance.conf.collectionId),
-              "accountId" -> u.id,
-              "userName" -> u.fullName))
+              "collectionName" -> collection.name,
+              "userName" -> u.fullName,
+              "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")
+            )
+          )
+        }
       }
     }
     println("Finished: " + str(instance))

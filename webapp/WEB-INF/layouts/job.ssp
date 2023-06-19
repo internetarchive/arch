@@ -1,15 +1,17 @@
+<% import org.archive.webservices.ars.model.ArchConf %>
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 <%@ val body: String %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
 <%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
 
-#set (title)
-  <%=collection.name%>: <%=job.job.name%>
+#set (scripts)
+  <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
 #end
 
-#set (subtitle)
-  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#set (title)
+  <%=collection.name%>: <%=job.job.name%> <%= if (job.conf.sample != -1) "(Sample)" else ""%>
 #end
 
 <br><br>
@@ -42,12 +44,12 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="/ait/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
               <% if (file.size < 1000000000) { %>
-                <a href="/ait/files/colab/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank"><img style="padding-top:15px;" src="ait/img/colab-badge.svg" alt="Open In Colab"/></a>
+                <a href="<%=ArchConf.basePath%>/files/colab/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank"><img style="padding-top:15px;" src="<%= staticPath("/img/colab-badge.svg") %>" alt="Open In Colab"/></a>
               <% } %>
             </div>
           </div>
@@ -79,13 +81,13 @@
     var $reRunButton = $reRunCard.find(".job-rerunbutton");
 
     $reRunButton.click(function () {
-      var url = "/ait/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
+      var url = "<%=ArchConf.basePath%>/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
       var reRunCofirm = confirm('Are you sure that you want to delete your existing derivatives, and re-run this job?');
 
       if (reRunCofirm) {
         $reRunCard.hide();
         $.getJSON(url, function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis";
+          document.location.href = "<%=ArchConf.basePath%>/datasets";
         });
       }
     });

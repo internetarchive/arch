@@ -3,6 +3,10 @@
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 
+#set (scripts)
+  <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
+#end
+
 #set (title)
 <%=collection.name%> Sub-Collection
 #end

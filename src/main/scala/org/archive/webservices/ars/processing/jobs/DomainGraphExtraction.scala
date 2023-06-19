@@ -12,7 +12,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import java.io.PrintStream
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
-  val name = "Extract domain graph"
+  val name = "Domain graph"
   val description =
     "Create a CSV with the following columns: crawl date, source domain, target domain, and count."
 

@@ -1,8 +1,14 @@
 package org.archive.webservices.ars.model
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.util.Success
+import scala.concurrent.duration._
+
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections._
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.util.FuturesUtil.waitAll
 import org.scalatra.guavaCache.GuavaCache
 
 case class ArchCollection(
@@ -24,9 +30,20 @@ case class ArchCollection(
     if (!statsLoaded) {
       statsLoaded = true
       for (s <- specifics) {
-        _size = s.size
-        _seeds = s.seeds
-        _lastCrawlDate = s.lastCrawlDate
+        Await.result(
+          waitAll(
+            Seq(
+              Future({ s.size }),
+              Future({ s.seeds }),
+              Future({ s.lastCrawlDate }))
+          ),
+          30.seconds
+        ).zipWithIndex.map{
+          case (Success(size: Long), 0) => _size = size
+          case (Success(seeds: Int), 1) => _seeds = seeds
+          case (Success(lastCrawlDate: String), 2) => _lastCrawlDate = lastCrawlDate
+          case _ => None
+        }
       }
     }
   }
@@ -73,12 +90,15 @@ object ArchCollection {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
       .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
       .userCollections(user))
-      .map { c =>
-        if (ArchConf.production) {
+    .map( c =>
+      if (ArchConf.production) {
+        GuavaCache.get[ArchCollection](cacheKey(c.id)).getOrElse({
           c.user = Some(user)
           GuavaCache.put(cacheKey(c.id), c, None)
-        } else c
-      }
+          c
+        })
+      } else c
+    )
       .sortBy(_.name.toLowerCase)
   }
 

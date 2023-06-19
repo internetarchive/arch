@@ -1,5 +1,9 @@
+<% import org.archive.webservices.ars.BaseController.relativePath %>
+<% import org.archive.webservices.ars.model.ArchConf %>
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 <%@ val title: String = "Archive Research Compute Hub" %>
 <%@ val subtitle: String = "" %>
+<%@ val scripts: String = "" %>
 <%@ val body: String %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser = org.archive.webservices.ars.model.users.ArchUser.None %>
 <%@ val breadcrumbs: Seq[(String, String)] = Seq.empty %>
@@ -10,55 +14,42 @@
 <base href="/">
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Archive-It: <%=unescape(title)%></title>
+<title>ARCH: <%=unescape(title)%></title>
 <meta name="description" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/normalize.css">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/html5-boilerplate/css/main.css">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/foundation-datepicker/css/foundation-datepicker.min.css">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/bower_components/c3/c3.min.css">
-<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/app.css">
-<%--<link rel="stylesheet" href="https://partner.archive-it.org/static/app/css/font-awesome.css">--%>
+<!-- Styles copied from partner.archive-it.org -->
+<link rel="stylesheet" href="<%= staticPath("/css/partner-site/static/app/bower_components/html5-boilerplate/css/normalize.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/partner-site/static/app/bower_components/html5-boilerplate/css/main.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/partner-site/static/app/bower_components/foundation-datepicker/css/foundation-datepicker.min.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/partner-site/static/app/bower_components/c3/c3.min.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/partner-site/static/app/css/app.css") %>">
+
+<!-- Thank you https://favicon.io -->
+<link rel="apple-touch-icon" sizes="180x180" href="<%= staticPath("/img/apple-touch-icon.png") %>">
+<link rel="icon" type="image/png" sizes="32x32" href="<%= staticPath("/img/favicon-32x32.png") %>">
+<link rel="icon" type="image/png" sizes="16x16" href="<%= staticPath("/img/favicon-16x16.png") %>">
+<link rel="manifest" href="<%= staticPath("/site.webmanifest") %>">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<link rel="stylesheet" href="/ait/css/arch-style.css">
-<link rel="stylesheet" href="/ait/css/bootstrap-cards.css">
-<link rel="stylesheet" href="/ait/css/bootstrap-alerts.css">
-<link rel="stylesheet" href="/ait/css/jsoneditor.min.css">
-<link rel="apple-touch-icon" sizes="57x57" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-57x57.png">
-<link rel="apple-touch-icon" sizes="60x60" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="72x72" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="76x76" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="114x114" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="120x120" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="144x144" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="152x152" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://partner.archive-it.org/static/favicon/apple-touch-icon-180x180.png">
-<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-32x32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-194x194.png" sizes="194x194">
-<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-96x96.png" sizes="96x96">
-<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/android-chrome-192x192.png" sizes="192x192">
-<link rel="icon" type="image/png" href="https://partner.archive-it.org/static/favicon/favicon-16x16.png" sizes="16x16">
-<link rel="manifest" href="https://partner.archive-it.org/static/favicon/manifest.json">
-<link rel="mask-icon" href="https://partner.archive-it.org/static/favicon/safari-pinned-tab.svg%22%20color%3D%22%235bbad5">
-<link rel="shortcut icon" href="https://partner.archive-it.org/static/favicon/favicon.ico">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="msapplication-TileImage" content="https://partner.archive-it.org/static/favicon/mstile-144x144.png">
-<meta name="msapplication-config" content="https://partner.archive-it.org/static/favicon/browserconfig.xml">
+<link rel="stylesheet" href="<%= staticPath("/css/arch-style.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/bootstrap-cards.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/bootstrap-alerts.css") %>">
+<link rel="stylesheet" href="<%= staticPath("/css/jsoneditor.min.css") %>">
 
 <meta class="foundation-mq-topbar"><meta class="foundation-mq-small"><meta class="foundation-mq-medium"><meta class="foundation-mq-large">
 
-<script src="https://partner.archive-it.org/static/app/bower_components/jquery/dist/jquery.min.js"></script>
-<script src="/ait/js/URI.min.js"></script>
-<script src="/ait/js/arch.js"></script>
-<script src="/ait/js/sorttable.js"></script>
-<script src="/ait/js/Chart.min.js"></script>
-<script src="/ait/js/jsoneditor.min.js"></script>
-<script src="/ait/js/d3.v3.min.js"></script>
-<script src="/ait/js/bootstrap.min.js"></script>
+<!-- Safari Custom Elements Polyfill -->
+<script src="<%= staticPath("/js/ungap-custom-elements-1-1-1-es.js") %>"></script>
 
-<script>/*<![CDATA[*/window.zEmbed||function(e,t){var n,o,d,i,s,a=[],r=document.createElement("iframe");window.zEmbed=function(){a.push(arguments)},window.zE=window.zE||window.zEmbed,r.src="javascript:false",r.title="",r.role="presentation",(r.frameElement||r).style.cssText="display: none",d=document.getElementsByTagName("script"),d=d[d.length-1],d.parentNode.insertBefore(r,d),i=r.contentWindow,s=i.document;try{o=s}catch(c){n=document.domain,r.src='javascript:var d=document.open();d.domain="'+n+'";void(0);',o=s}o.open()._l=function(){var o=this.createElement("script");n&&(this.domain=n),o.id="js-iframe-async",o.src=e,this.t=+new Date,this.zendeskHost=t,this.zEQueue=a,this.body.appendChild(o)},o.write('<body onload="document._l();">'),o.close()}("https://assets.zendesk.com/embeddable_framework/main.js","webarchive.zendesk.com");
+<!-- Zendesk help widget -->
+<script>/*<![CDATA[*/window.zEmbed||function(e,t){var n,o,d,i,s,a=[],r=document.createElement("iframe");window.zEmbed=function(){a.push(arguments)},window.zE=window.zE||window.zEmbed,r.src="javascript:false",r.title="",r.role="presentation",(r.frameElement||r).style.cssText="display: none",d=document.getElementsByTagName("script"),d=d[d.length-1],d.parentNode.insertBefore(r,d),i=r.contentWindow,s=i.document;try{o=s}catch(c){n=document.domain,r.src='javascript:var d=document.open();d.domain="'+n+'";void(0);',o=s}o.open()._l=function(){var o=this.createElement("script");n&&(this.domain=n),o.id="js-iframe-async",o.src=e,this.t=+new Date,this.zendeskHost=t,this.zEQueue=a,this.body.appendChild(o)},o.write('<body onload="document._l();">'),o.close()}("https://assets.zendesk.com/embeddable_framework/main.js","arch-webservices.zendesk.com");
     /*]]>*/</script>
+
+<% if (scripts != "") { %>
+  <%-- page specific script tags go here --%>
+  ${unescape(scripts)}
+<% } %>
 
 </head>
 <body style="padding-top: 70px;">
@@ -67,29 +58,29 @@
 <div id="top-shim"></div>
 <nav class="sticky top-bar top-bar ng-isolate-scope" ng-transclude="" scrolltop="false">
     <ul class="title-area ng-scope">
-        <li class="name"><h1><a href="https://archive-it.org/"><img src="https://partner.archive-it.org/static/app/img/ait-logo.png"></a></h1></li>
+        <li class="name"><h1><a href="<%=ArchConf.basePath%>"><img src="<%=unescape(ArchConf.baseUrl)%>/img/arch-logo.png"></a></h1></li>
         </ul>
         <% if (user.isUser) { %>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
             <ul class="left ng-scope">
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>">Home</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/collections">Collections</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/crawls">Crawls</a></li>
-                <li><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/archives">Archives</a></li>
-                <li><a href="/ait/<%=unescape(user.urlId)%>/research_services">ARCH</a></li>
+                <li><a href="<%=relativePath("/")%>">Dashboard</a></li>
+                <li><a href="<%=relativePath("/collections")%>">Collections</a></li>
+                <li><a href="<%=relativePath("/datasets")%>">Datasets</a></li>
+                <% if (user.isAdmin) { %>
+                <li><a href="/admin">Admin</a></li>
+                <% } %>
             </ul>
         </section>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
             <ul id="secondary-menu" class="right show-for-large-up ng-scope">
-                <li><a target="_blank" href="https://support.archive-it.org/">Help Center</a></li>
+                <li><a target="_blank" href="https://arch-webservices.zendesk.com/hc/en-us">Help Center</a></li>
                 <li class="has-dropdown ng-isolate-scope not-click" ng-transclude="" has-dropdown="">
                     <a name="_welcome" class="ng-scope">Welcome, <span class="ng-binding"><%=user.fullName%></span></a>
                     <ul class="dropdown ng-scope ng-isolate-scope" ng-transclude="" top-bar-dropdown=""><li class="title back js-generated ng-scope"><h5><a href="" ng-click="back($event);" class="ng-binding">Back</a></h5></li>
-                        <li class="ng-scope"><a href="https://partner.archive-it.org/<%=unescape(user.urlId)%>/settings">Administration</a></li>
-                        <li class="ng-scope"><a href="<%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>/logout" target="_self">Log Out</a></li>
+                        <li class="ng-scope"><a href="<%=unescape(ArchConf.baseUrl)%>/logout" target="_self">Log Out</a></li>
                     </ul>
                 </li>
-                <li ng-hide="user.username" class="ng-hide"><a href="<%=unescape(org.archive.webservices.ars.model.ArchConf.loginUrl)%><%=unescape(org.archive.webservices.ars.Arch.BaseUrl)%>">Log In</a></li>
+                <li ng-hide="user.username" class="ng-hide"><a href="<%=unescape(ArchConf.loginUrl)%><%=unescape(ArchConf.baseUrl)%>">Log In</a></li>
             </ul>
         </section>
         <% } %>
@@ -100,19 +91,13 @@
 </announcementdisplay>
 
 <!--[if lt IE 7]>
-<p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
 <![endif]-->
 <div ui-view="" autoscroll="true" class="ng-scope"><div class="research_services ng-scope">
 <header>
 <div class="row">
     <div class="small-12 columns">
         <ul class="breadcrumbs ng-isolate-scope" ncy-breadcrumb="">
-            <li ng-repeat="step in steps" class="ng-scope">
-                <a href="<%=(if (user.isUser) "https://partner.archive-it.org/" + user.urlId)%>" class="ng-binding">Home</a>
-            </li>
-            <li ng-repeat="step in steps" class="ng-scope">
-                <a href="<%=(if (user.isUser) "ait/" + user.urlId + "/research_services" else "/ait")%>" class="ng-binding">Archive Research Compute Hub</a>
-            </li>
             <% for ((href, text) <- breadcrumbs) { %>
                 <li ng-repeat="step in steps" class="ng-scope">
                     <a href="<%=unescape(href)%>" class="ng-binding"><%=text%></a>
@@ -128,6 +113,8 @@
         </div>
     </div>
 </div></header>
+
+<% if (subtitle.length > 0) { %>
 <sticky scroll-offset="60" classes="'sub header'" use-placeholder="1" placeholder-classes="'sub header placeholder'" class="ng-isolate-scope"><div class="sub header" ng-class="{ stuck: sticking }" ng-transclude="">
     <div class="panel darker sub header margin-bottom zero ng-scope">
         <div class="row">
@@ -139,14 +126,15 @@
     </div>
     <div class="sub header placeholder ng-hide" ng-show="show_placeholder" style="height: 41px;"></div>
 </sticky>
+<% } %>
 
 <%=unescape(body)%>
 
 </div>
 </div>
 <div class="footer">
-<div class="footer-link">© Internet Archive&nbsp;&nbsp;&nbsp;&nbsp;Archive-It</div>
-<div class="footer-link"><a target="_blank" href="https://support.archive-it.org/">Help Center</a></div>
+<div class="footer-link">© Internet Archive&nbsp;&nbsp;&nbsp;&nbsp;<a href="<%=ArchConf.baseUrl%>">ARCH</a></div>
+<div class="footer-link"><a target="_blank" href="https://arch-webservices.zendesk.com/hc/en-us">Help Center</a></div>
 
 <br><br><a href="https://partner.archive-it.org/angband"><span class="fa fa-question-circle smaller footer-link where-am-i"></span></a>
 </div>

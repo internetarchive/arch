@@ -1,0 +1,7 @@
+coverage/*
+yarn-error.log
+dist/**/*.d.ts
+dist/**/test/*
+dist/**/demo/*
+dist/**/src/*
+node_modules/*

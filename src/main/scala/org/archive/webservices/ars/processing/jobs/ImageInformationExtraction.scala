@@ -19,7 +19,7 @@ import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 object ImageInformationExtraction extends BinaryInformationAutJob {
-  val name = "Extract image information"
+  val name = "Image file information"
 
   val description =
     "Create a CSV with the following columns: crawl date, last modified date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."

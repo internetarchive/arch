@@ -42,7 +42,7 @@ object Ait {
             AitUser(
               id,
               userName,
-              json.get[String]("full_name").toOption.getOrElse(userName),
+              json.get[String]("full_name").toOption.filter(_.nonEmpty).getOrElse(userName),
               json.get[String]("email").toOption)
           request.getSession.setAttribute(UserSessionAttribute, user)
           user
@@ -73,10 +73,13 @@ object Ait {
   def login(username: String, password: String, response: HttpServletResponse)(
       implicit request: HttpServletRequest): Either[String, String] = {
     val either = login(username, password)
+    val aitRootDomain = (new URL(ArchConf.aitBaseUrl).getHost.split('.') match {
+      case xs => xs.slice(xs.length-2, xs.length)
+    }).mkString(".")
     for (sessionid <- either.right.toOption)
       response.addCookie(
         Cookie(AitSessionCookie, sessionid)(
-          if (ArchConf.production) CookieOptions("archive-it.org", path = "/")
+          if (ArchConf.production) CookieOptions(aitRootDomain, path = "/")
           else CookieOptions()))
     either
   }

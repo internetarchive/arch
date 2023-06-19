@@ -64,7 +64,7 @@ button.job-statebutton {
     float: left;
 }
 
-button.job-resultsbutton {
+a.button.job-resultsbutton {
     font-weight: bold;
     min-width: 100%;
     background-color: #28a745;
@@ -112,6 +112,20 @@ div#csv-preview {
     overflow: auto;
 }
 
+.card-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.card-container > * {
+  margin-top: 2rem;
+  margin-right: 2rem;
+}
+
+.card-container > *:last-child {
+  margin-right: 0;
+}
+
 .category-wrapper {
     display: block;
 }
@@ -144,8 +158,8 @@ div#csv-preview {
 
 .category-image {
     float: left;
-    max-width: 8%;
-    height: auto;
+    max-height: 5em;
+    width: auto;
 }
 
 /*
@@ -231,11 +245,11 @@ div.new-job-link {
     width: 50%;
 }
 
-.sub-collection-form {
-    padding-bottom: 15px;
+arch-sub-collection-builder > div:first-child {
+  margin-top: 1rem;
 }
 
-.sub-collection-form-label {
+arch-sub-collection-builder form > label {
     font-size: 1rem;
     color: black;
     cursor: pointer;
@@ -245,7 +259,18 @@ div.new-job-link {
     margin-bottom: 0;
 }
 
+arch-sub-collection-builder form > em {
+  display: inline-block;
+  padding: 0.5rem 0;
+  color: #444;
+}
+
 .required:after {
     content:" *";
     color: red;
+}
+
+/* Override the default partner-site css center column width */
+.row {
+  max-width: 80rem;
 }

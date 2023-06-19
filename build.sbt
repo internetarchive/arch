@@ -26,6 +26,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
   "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
+  "org.scalamock" %% "scalamock" % "5.2.0" % "test",
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",
   "com.thoughtworks.paranamer" % "paranamer" % "2.8",

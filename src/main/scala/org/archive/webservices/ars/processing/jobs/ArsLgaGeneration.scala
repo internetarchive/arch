@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object ArsLgaGeneration extends ChainedJob with ArsJob {
-  val name = "Extract longitudinal graph"
+  val name = "Longitudinal graph"
   val category: ArchJobCategory = ArchJobCategories.Network
   def description =
     "Creates Longitudinal Graph Analysis (LGA) files which contain a complete list of what URLs link to what URLs, along with a timestamp."

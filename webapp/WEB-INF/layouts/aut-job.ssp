@@ -1,16 +1,24 @@
+<% import org.archive.webservices.ars.BaseController.staticPath %>
+<% import org.archive.webservices.ars.model.ArchConf %>
 <%@ val body: String %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val job: org.archive.webservices.ars.processing.DerivationJobInstance %>
 <%@ val files: Iterator[org.archive.webservices.ars.model.DerivativeOutput] %>
 <%@ val showPreview: Boolean = true %>
+<%@ val publishingEnabled: Boolean = true %>
 
 #set (title)
-  <%=collection.name%>: <%=job.job.name%>
+  <%=collection.name%>: <%=job.job.name%> <%= if (job.conf.sample != -1) "(Sample)" else ""%>
 #end
 
-#set (subtitle)
-  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#set (scripts)
+  <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
+  <script src="<%= staticPath("/js/Chart.min.js") %>"></script>
+  <script src="<%= staticPath("/js/d3.v3.min.js") %>"></script>
+  #if (publishingEnabled)
+    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-0e87771c.js") %>" type="module"></script>
+  #end
 #end
 
 <br><br>
@@ -46,7 +54,22 @@
         }
         macosWarning();
     </script>
-    <h1>Dataset(s)</h1>
+
+  #if (publishingEnabled)
+    <h2>Publishing</h2>
+    <div class="card">
+      <div class="card-body">
+        <arch-dataset-publishing-card
+          collectionId="<%= collection.id %>"
+          jobId="<%= job.job.id %>"
+          <%= if (job.conf.isSample) "isSample" else "" %>
+        >
+        </arch-dataset-publishing-card>
+      </div>
+    </div>
+  #end
+
+    <h2>Dataset(s)</h2>
     <p><%=job.job.description.replace("Create a", "A")%></p>
     <% for (file <- files) { %>
       <div class="card">
@@ -70,12 +93,12 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="/ait/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
               <% if (file.size < 1000000000) { %>
-                <a href="/ait/files/colab/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank"><img style="padding-top:15px;" src="ait/img/colab-badge.svg" alt="Open In Colab"/></a>
+                <a href="<%=ArchConf.basePath%>/files/colab/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank"><img style="padding-top:15px;" src="<%= staticPath("/img/colab-badge.svg") %>" alt="Open In Colab"/></a>
               <% } %>
             </div>
           </div>
@@ -87,7 +110,7 @@
             <h2 class="card-title">Preview</h2>
             <div id="csv-preview">
               <script>
-                d3.text('/ait/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
+                d3.text('<%=ArchConf.basePath%>/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
                   var previewCSV  = d3.csv.parseRows(data);
                   var previewTbl  = d3.select("#csv-preview")
                                       .append("table")
@@ -115,7 +138,7 @@
               </script>
             </div>
             <br />
-            <a class="right" href="/ait/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true")%>" target="_blank">Download Preview Data</a>
+            <a class="right" href="<%=ArchConf.basePath%>/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true")%>" target="_blank">Download Preview Data</a>
           </div>
         </div>
       <% } %>
@@ -125,11 +148,15 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <h1>Re-run job?</h1>
+    <h2>Regenerate</h2>
     <div class="card" id="card-re-run-job">
       <div class="card-body">
-        <p>Have you or a member of your team run additional crawls since the last job was run, and would you like to re-run this job including this new data? Please note that the <strong>existing derivatives will be permanently deleted</strong>.</p>
-      <button class="job-rerunbutton">Re-run Job</button>
+        <p>
+          The new dataset will include any content added to the collection since this was last generated.
+          <br />
+          <strong>Regenerating this dataset will permanently overwrite the current version.</strong>
+        </p>
+        <button class="job-rerunbutton">Regenerate Dataset</button>
       </div>
     </div>
   </div>
@@ -145,13 +172,13 @@
     var $reRunButton = $reRunCard.find(".job-rerunbutton");
 
     $reRunButton.click(function () {
-      var url = "/ait/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
-      var reRunCofirm = confirm('Are you sure that you want to delete your existing derivatives, and re-run this job?');
+      var url = "<%=ArchConf.basePath%>/api/rerunjob/" + jobId + "/" + collectionId + (isSample ? "?sample=true" : "");
+      var reRunCofirm = confirm('You are about to regenerate this dataset which will permanently overwrite the existing version.');
 
       if (reRunCofirm) {
         $reRunCard.hide();
         $.getJSON(url, function () {
-          document.location.href = "/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis";
+          document.location.href = "<%=ArchConf.basePath%>/datasets";
         });
       }
     });

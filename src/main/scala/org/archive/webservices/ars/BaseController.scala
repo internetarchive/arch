@@ -38,36 +38,13 @@ class BaseController extends ScalatraServlet {
       }
     } else action(context)
   }
+}
 
-  def ensureUserBasePath(
-      userIdKey: String,
-      redirectOnForbidden: Boolean = true,
-      validateCollection: Option[String] = None)(action: RequestContext => ActionResult)(
-      implicit request: HttpServletRequest): ActionResult = {
-    val userId = params(userIdKey)
-    val userIdInt = Try(userId.toInt).toOption
-    if (userId.contains(":") || userIdInt.isDefined) {
-      val path = requestPath.stripPrefix("/" + userId)
-      ensureLogin(redirect = redirectOnForbidden, validateCollection = validateCollection) {
-        context =>
-          val viewUser = if (context.isAdmin) ArchUser.get(userId) else context.loggedInOpt
-          viewUser match {
-            case Some(u) =>
-              if (userId == u.id || u.aitUser.exists(aitUser => userIdInt.contains(aitUser.id))) {
-                if (u.urlId != userId) Found(relativePath(u, path, ""))
-                else action(RequestContext(context.loggedIn, u))
-              } else login(Arch.BaseUrl + "/" + userId + path)
-            case None =>
-              NotFound()
-          }
-      }
-    } else pass()
+object BaseController {
+  def relativePath(path: String): String =
+    ArchConf.baseUrl + "/" + path.stripPrefix("/")
+
+  def staticPath(path: String): String = {
+    ArchConf.baseUrl + "/" + path.stripPrefix("/")
   }
-
-  def relativePath(user: ArchUser, relative: String, dir: String = Arch.BaseDir): String = {
-    Arch.BaseUrl + "/" + user.urlId + dir + relative
-  }
-
-  def relativePath(relative: String)(implicit context: RequestContext): String =
-    relativePath(context.userOpt.getOrElse(context.loggedIn), relative, Arch.BaseDir)
 }

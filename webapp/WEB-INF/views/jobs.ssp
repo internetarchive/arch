@@ -1,3 +1,5 @@
+<% import org.archive.webservices.ars.model.ArchConf %>
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val collection: org.archive.webservices.ars.model.ArchCollection %>
 <%@ val jobs: Map[org.archive.webservices.ars.model.ArchJobCategory, Seq[org.archive.webservices.ars.processing.DerivationJob]] %>
@@ -6,8 +8,8 @@
   <%=collection.name%> Jobs
 #end
 
-#set (subtitle)
-  <strong>Learn More:</strong> <a href="https://support.archive-it.org/hc/en-us/articles/360061122492-Introduction-to-the-Archive-It-Research-Services-Cloud" target="_blank">ARCH Documentation</a>
+#set (scripts)
+  <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
 #end
 
 <subnav data="state.menus.research_services" class="ng-isolate-scope">
@@ -16,13 +18,13 @@
       <div class="row">
         <div class="subnav-box columns">
           <div class="left subnav-link ng-scope research_services">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="<%=ArchConf.basePath%>/<%=unescape(collection.userUrlId(user.id))%>/analysis">Job Summary</a></span>
           </div>
           <div class="left subnav-link ng-scope research_services active">
-            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
+            <span class="ng-scope"><a class="ng-binding ng-scope" href="<%=ArchConf.basePath%>/<%=unescape(collection.userUrlId(user.id))%>/jobs">Generate Datasets</a></span>
           </div>
 <!--          <div class="left subnav-link ng-scope research_services"-->
-<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span-->
+<!--            <span class="ng-scope"><a class="ng-binding ng-scope" href="/ait/<%=unescape(user.urlId)%>/<%=unescape(collection.userUrlId(user.id))%>/sub-collection-builder">Sub-Collection Builder</a></span-->
 <!--          </div>-->
           <hr />
         </div>
@@ -57,14 +59,14 @@
     <%
       import org.archive.webservices.ars.model._
       for (((category, categoryDescription, categoryImage, categoryId), categoryIdx) <- Seq(
-          (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "ait/img/collection.png", "collection"),
-          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "ait/img/network.png", "network"),
-          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", named entities, HTML, css, and other web elements.", "ait/img/text.png", "text"),
-          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "ait/img/file-formats.png", "file-formats")
+          (ArchJobCategories.Collection, "These jobs provide a basic overview of the collection.", "/img/collection.png", "collection"),
+          (ArchJobCategories.Network, "These jobs produce files that provide network graphs for analysis, and offer an opportunity to explore the way websites link to each other.", "/img/network.png", "network"),
+          (ArchJobCategories.Text, "These jobs produce files that allow the user to explore text components of a web archive, including extracted \"plain text\", named entities, HTML, css, and other web elements.", "/img/text.png", "text"),
+          (ArchJobCategories.BinaryInformation, "These jobs produce files that contain information on certain types of binary files found within a web archive.", "/img/file-formats.png", "file-formats")
       ).zipWithIndex) { %>
       <div class="job-category <%=unescape(if (categoryIdx == 0) "expanded" else "collapsed")%>" aria-controls="<%=category%>" aria-expanded="<%=unescape(if (categoryIdx == 0) "true" else "false")%>">
         <div class="category-wrapper">
-          <img class="category-image" src="<%=categoryImage%>" alt="Icon for <%=category%>" />
+          <img class="category-image" src="<%=staticPath(categoryImage)%>" alt="Icon for <%=category%>" />
           <h2 id="<%=categoryId%>" class="category-title"><%=category%></h2>
           <p><%=categoryDescription%></p>
         </div>
@@ -78,12 +80,12 @@
                   <div class="job-card-sample">
                     <button class="job-runbutton job-button">Generate Example Dataset</button>
                     <button class="job-statebutton job-button">.</button>
-                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>?sample=true';" type="button">View Example Dataset</button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='<%=ArchConf.basePath%>/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>?sample=true';" type="button">View Example Dataset</button>
                   </div>
                   <div class="job-card-full">
                     <button class="job-runbutton job-button">Generate Dataset</button>
                     <button class="job-statebutton job-button">.</button>
-                    <button class="job-resultsbutton job-button" onclick="window.location.href='/ait/<%=unescape(user.urlId)%>/research_services/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>';" type="button">View Dataset</button>
+                    <button class="job-resultsbutton job-button" onclick="window.location.href='<%=ArchConf.basePath%>/<%=unescape(collection.userUrlId(user.id))%>/analysis/<%=unescape(job.id)%>';" type="button">View Dataset</button>
                   </div>
                 </div>
               </div>

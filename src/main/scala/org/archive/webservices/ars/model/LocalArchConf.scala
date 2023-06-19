@@ -72,6 +72,9 @@ class LocalArchConf extends ArchConf with Serializable {
     confStrValue("ARCH_AIT_WARCS_BASE_URL", "aitWarcsBaseUrl").getOrElse(
       "https://warcs.archive-it.org")
 
+  val waybackBaseUrl: String =
+    confStrValue("ARCH_WAYBACK_BASE_URL", "waybackBaseUrl").getOrElse("https://wayback.archive-it.org/")
+
   val collectionCachePath: String =
     confStrValue("ARCH_COLLECTION_CACHE_PATH", "collectionCachePath").getOrElse("/data/cache")
 
@@ -94,18 +97,39 @@ class LocalArchConf extends ArchConf with Serializable {
   val sparkMaster: String =
     confStrValue("ARCH_SPARK_MASTER", "sparkMaster").getOrElse("local[*]")
 
+  val proto: String =
+    confStrValue("ARCH_PROTO", "proto").getOrElse("http")
+
+  val host: String =
+    confStrValue("ARCH_HOST", "host").getOrElse("127.0.0.1")
+
+  val internalPort: Int = confIntValue("ARCH_INTERNAL_PORT", "internalPort", 12341)
+
+  val externalPort: Int = confIntValue("ARCH_EXTERNAL_PORT", "externalPort", if (proto == "http") 80 else 443)
+
+  val basePath: String =
+    confStrValue("ARCH_BASE_PATH", "basePath").getOrElse("/ait")
+      match {
+      case "/" => ""
+      case x => x
+    }
+
   val baseUrl: String =
-    confStrValue("ARCH_BASE_URL", "baseUrl").getOrElse("http://127.0.0.1:" + Arch.Port)
+    confStrValue("ARCH_BASE_URL", "baseUrl").getOrElse({
+      val nonStdPort = (proto == "http" && externalPort != 80) || (proto == "https" && externalPort != 443)
+      proto + "://" + host + (if (nonStdPort) (":" + externalPort) else "") + basePath
+    })
 
   val loginUrl: String = confStrValue("ARCH_LOGIN_URL", "loginUrl").getOrElse(
-    "http://127.0.0.1:" + Arch.Port + "/ait/login?next=")
+    baseUrl + "/login?next=")
+
+  val baseDir: String =
+    confStrValue("ARCH_BASE_DIR", "baseDir").getOrElse("/research_services")
 
   val hadoopQueue: String =
     confStrValue("ARCH_HADOOP_QUEUE", "hadoopQueue").getOrElse("default")
 
   val production: Boolean = confBoolValue("ARCH_PRODUCTION", "production", false)
-
-  val port: Int = confIntValue("ARCH_PORT", "port", 12341)
 
   /** python:
    * import requests, base64

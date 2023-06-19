@@ -21,7 +21,7 @@ import scala.util.Try
 object ArsWatGeneration extends SparkJob with ArsJob {
   implicit val logContext: LogContext = LogContext(this)
 
-  val name = "Generate web archive transformation (WAT) files"
+  val name = "Web archive transformation (WAT)"
   val category: ArchJobCategory = ArchJobCategories.Collection
   def description =
     "Creates Web Archive Transformation (WAT) files that include a brief header which identifies its corresponding URL via \"WARC-Target-URI,\" corresponding W/ARC file via \"WARC-Refers-To,\" and additional mapping information."

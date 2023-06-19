@@ -1,0 +1,387 @@
+import { LitElement, html } from "lit";
+import { customElement, property, state, query } from "lit/decorators.js";
+
+import { isoStringToDateString } from "../../lib/helpers";
+import {
+  Collection,
+  Job,
+  JobState,
+  PublishedDatasetInfo,
+  PublishedDatasetMetadata,
+  PublishedDatasetMetadataJSONSchema,
+  PublishedDatasetMetadataValue,
+  PublishedDatasetMetadataKeys,
+} from "../../lib/types";
+import "../../archLoadingIndicator/index";
+import "../../archDatasetMetadataForm/index";
+
+import styles from "./styles";
+import * as metadataSchema from "../../archDatasetMetadataForm/src/schema.json";
+
+enum PublishState {
+  Loading = 0,
+  Unpublished,
+  PrePublish,
+  Publishing,
+  Published,
+}
+
+enum MetadataState {
+  Displaying,
+  Editing,
+  Saving,
+}
+
+const orderedMetadataKeys = Array.from(
+  Object.keys(PublishedDatasetMetadataKeys)
+) as Array<PublishedDatasetMetadataKeys>;
+
+function getMetadataKeyTitle(k: PublishedDatasetMetadataKeys) {
+  return (metadataSchema as PublishedDatasetMetadataJSONSchema).properties[k]
+    .title;
+}
+
+@customElement("arch-dataset-publishing-card")
+export class ArchDatasetPublishingCard extends LitElement {
+  @property({ type: String }) collectionId!: Collection["id"];
+  @property({ type: String }) jobId!: Job["id"];
+  @property({ type: Boolean }) isSample!: boolean;
+
+  @state() pubState: PublishState = PublishState.Loading;
+  @state() pubInfo: undefined | PublishedDatasetInfo = undefined;
+
+  @state() metadataState = MetadataState.Displaying;
+  @state() metadata: undefined | PublishedDatasetMetadata = undefined;
+
+  @query("arch-dataset-metadata-form") metadataForm!: HTMLFormElement;
+
+  static styles = styles;
+
+  connectedCallback() {
+    super.connectedCallback();
+    void this._fetchInitialData();
+  }
+
+  private get _sampleParam() {
+    /* Return a "sample=[true|false]" URL param string for the current isSample state */
+    return `sample=${this.isSample ? "true" : "false"}`;
+  }
+
+  private get _metadataFormData() {
+    /* Return the metadata <form> inputs as an object with Array-type values. */
+    const metadata: PublishedDatasetMetadata = {};
+    const metadataPairs = Array.from(
+      new FormData(this.metadataForm.form).entries()
+    ) as Array<[PublishedDatasetMetadataKeys, string]>;
+    for (let [name, value] of metadataPairs) {
+      // Replace any tabs with " " and "\n" with "<br>", which should only ever
+      // occur in the case of <textarea>.
+      value = value.replaceAll("\t", " ").replaceAll("\n", "<br>");
+      metadata[name] = (metadata[name] ?? []).concat(value);
+    }
+    return metadata;
+  }
+
+  render() {
+    const { pubState } = this;
+    if (pubState === PublishState.Loading) {
+      return html`<arch-loading-indicator></arch-loading-indicator>`;
+    }
+    const { metadata } = this;
+    const pubInfo = this.pubInfo as PublishedDatasetInfo;
+    return html`
+      <div class="container">
+        <div class="detail">
+          <dl>
+            <div>
+              <dt>Last Published</dt>
+              <dd>
+                ${pubState === PublishState.Published
+                  ? isoStringToDateString(pubInfo.time)
+                  : "never"}
+              </dd>
+            </div>
+            ${pubState !== PublishState.Published
+              ? html``
+              : html`
+                  <div>
+                    <dt>ARK</dt>
+                    <dd>
+                      <a href="https://ark.archive.org/${pubInfo.ark}"
+                        >${pubInfo.ark}</a
+                      >
+                    </dd>
+                  </div>
+                `}
+          </dl>
+
+          <!-- Metadata section header -->
+          <h2>
+            ${pubState < PublishState.PrePublish ||
+            pubState === PublishState.Publishing
+              ? ""
+              : pubState === PublishState.PrePublish
+              ? html`<i>Enter Metadata</i>`
+              : "Metadata"}
+            ${pubState < PublishState.Published ||
+            this.metadataState === MetadataState.Editing
+              ? ""
+              : html`
+                  <button
+                    class="text"
+                    @click=${() => (this.metadataState = MetadataState.Editing)}
+                  >
+                    (edit)
+                  </button>
+                `}
+          </h2>
+
+          <!-- Metadata display list -->
+          <div
+            class="metadata-display"
+            ?hidden=${pubState < PublishState.Published ||
+            this.metadataState === MetadataState.Editing}
+          >
+            ${metadata === undefined
+              ? html`<arch-loading-indicator></arch-loading-indicator>`
+              : Object.keys(metadata).length === 0
+              ? html`<i>none</i>`
+              : html`
+                  <dl>
+                    ${orderedMetadataKeys
+                      .filter((k) => metadata[k] !== undefined)
+                      .map((k) => {
+                        const title = getMetadataKeyTitle(k);
+                        let values = metadata[
+                          k
+                        ] as PublishedDatasetMetadataValue;
+                        if (!Array.isArray(values)) {
+                          values = [values];
+                        }
+                        return html`
+                          <div>
+                            <dt>${title}</dt>
+                            ${values.map((value) => html`<dd>${value}</dd>`)}
+                          </div>
+                        `;
+                      })}
+                  </dl>
+                `}
+          </div>
+
+          <!-- Metadata edit form -->
+          <div
+            class="metadata-edit"
+            ?hidden=${pubState !== PublishState.PrePublish &&
+            this.metadataState !== MetadataState.Editing}
+          >
+            ${pubState !== PublishState.PrePublish &&
+            this.metadataState !== MetadataState.Editing
+              ? html``
+              : html`
+                  <arch-dataset-metadata-form
+                    metadata="${JSON.stringify(metadata || {})}"
+                  >
+                  </arch-dataset-metadata-form>
+                `}
+            <br />
+            <span ?hidden=${pubState === PublishState.PrePublish}>
+              <button
+                type="button"
+                @click=${() => (this.metadataState = MetadataState.Displaying)}
+                ?disabled=${this.metadataState === MetadataState.Saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="primary"
+                @click=${() => this._saveMetadata()}
+                ?disabled=${this.metadataState === MetadataState.Saving}
+              >
+                Save
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <button
+          class="cancel"
+          @click=${() => (this.pubState = PublishState.Unpublished)}
+          ?hidden=${pubState !== PublishState.PrePublish}
+        >
+          Cancel
+        </button>
+
+        <button
+          class="${pubState === PublishState.Unpublished
+            ? "primary"
+            : pubState === PublishState.PrePublish
+            ? "success"
+            : ""}"
+          ?disabled=${pubState !== PublishState.Unpublished &&
+          pubState !== PublishState.PrePublish}
+          @click=${this._buttonClickHandler}
+        >
+          ${pubState === PublishState.Unpublished
+            ? "Publish"
+            : pubState === PublishState.PrePublish
+            ? "Publish Now"
+            : pubState === PublishState.Publishing
+            ? "Publish in progress..."
+            : "Published"}
+        </button>
+      </div>
+    `;
+  }
+
+  private async _fetchInitialData() {
+    // Fetch any existing publication info.
+    const pubInfo = await this._fetchPubInfo();
+    if (!pubInfo) {
+      // No publication info exists / dataset has not been published.
+      // Check whether a publish is in progress. Note that this check is
+      // collection-specific, not dataset-specific.
+      const isPublishing = await this._publishInProgress();
+      if (!isPublishing) {
+        // A publish is not in progress...this dataset is unpublished.
+        this.pubState = PublishState.Unpublished;
+      } else {
+        // A publish is in progress.
+        this.pubState = PublishState.Publishing;
+        // Check again for published info in 3 seconds.
+        setTimeout(() => void this._fetchInitialData(), 3000);
+      }
+      return;
+    }
+    // Publication info does exist / dataset has been published.
+    this.pubInfo = pubInfo;
+    this.pubState = PublishState.Published;
+    // Fetch the published metadata.
+    void this._pollItemMetadata();
+  }
+
+  private async _pollItemMetadata() {
+    /* Poll for the item metadata and save it once available. */
+    const pubInfo = this.pubInfo as PublishedDatasetInfo;
+    const metadata = await this._fetchItemMetadata(pubInfo.item);
+    if (metadata === undefined) {
+      // Try again in 3 seconds.
+      setTimeout(() => void this._pollItemMetadata(), 3000);
+    }
+    // Got it.
+    this.metadata = metadata;
+  }
+
+  private async _fetchPubInfo() {
+    /* Attempt to retrieve the info for any existing published dataset */
+    const response = await fetch(
+      `/api/petabox/${this.collectionId}/${this.jobId}?${this._sampleParam}`
+    );
+    if (response.status === 404) {
+      return undefined;
+    } else {
+      const pubInfo = (await response.json()) as PublishedDatasetInfo;
+      // Convert datetime string to Date.
+      pubInfo.time = new Date(pubInfo.time);
+      return pubInfo;
+    }
+  }
+
+  private async _publishInProgress() {
+    const { collectionId } = this;
+    const jobState = (await (
+      await fetch(
+        `/api/jobstate/DatasetPublication/${collectionId}?${this._sampleParam}`
+      )
+    ).json()) as JobState;
+    // The startTime and(?) finishedTime fields will be absent for a Collection
+    // with no published datasets.
+    const startTime = Date.parse(jobState.startTime ?? "");
+    const finishedTime = Date.parse(jobState.finishedTime ?? "");
+    if (Number.isNaN(startTime)) {
+      // startTime is not a valid time string, so return false.
+      return false;
+    } else if (Number.isNaN(finishedTime)) {
+      // startTime is a valid time string but finishedTime is not, so return true.
+      return true;
+    } else {
+      // startTime and finishedTime are both valid time strings, so return whether
+      // startTime is greater than finishedTime.
+      return startTime > finishedTime;
+    }
+  }
+
+  private async _fetchItemMetadata(itemId: PublishedDatasetInfo["item"]) {
+    /* Attempt to retrieve the published item metadata */
+    const response = await fetch(
+      `/api/petabox/${this.collectionId}/metadata/${itemId}`
+    );
+    if (response.status === 404) {
+      return undefined;
+    }
+    return (await response.json()) as PublishedDatasetMetadata;
+  }
+
+  private _buttonClickHandler() {
+    const { metadataForm } = this;
+    switch (this.pubState) {
+      case PublishState.Unpublished:
+        this.pubState = PublishState.PrePublish;
+        break;
+      case PublishState.PrePublish:
+        if (metadataForm.form.checkValidity()) {
+          void this._publish();
+        } else {
+          metadataForm.form.reportValidity();
+        }
+        break;
+    }
+  }
+
+  private async _publish() {
+    const { collectionId, jobId, _metadataFormData: metadata } = this;
+    await fetch(
+      `/api/runjob/DatasetPublication/${collectionId}?${this._sampleParam}`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        mode: "cors",
+        body: JSON.stringify({
+          dataset: jobId,
+          metadata,
+        }),
+      }
+    );
+    this.pubState = PublishState.Publishing;
+    // Start polling for pub info.
+    void this._fetchInitialData();
+  }
+
+  private async _saveMetadata() {
+    const { collectionId, pubInfo, _metadataFormData: metadata } = this;
+    const { item: itemId } = pubInfo as PublishedDatasetInfo;
+    this.metadata = metadata;
+    this.metadataState = MetadataState.Saving;
+    // Add empty array values for all unspecified metadata fields in order to delete
+    // any existing values from the item.
+    const finalMetadata = Object.assign(
+      Object.fromEntries(orderedMetadataKeys.map((k) => [k, []])),
+      metadata
+    );
+    await fetch(`/api/petabox/${collectionId}/metadata/${itemId}`, {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "cors",
+      body: JSON.stringify(finalMetadata),
+    });
+    this.metadataState = MetadataState.Displaying;
+  }
+}
+
+// Injects the tag into the global name space
+declare global {
+  interface HTMLElementTagNameMap {
+    "arch-dataset-publishing-card": ArchDatasetPublishingCard;
+  }
+}

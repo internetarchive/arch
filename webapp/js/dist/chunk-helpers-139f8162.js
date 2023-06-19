@@ -1,0 +1,2 @@
+function t(t){return t.replace(/"/g,"&quot;")}function n(t,n=3){for(const e of["","Ki","Mi","Gi","Ti","Pi"]){if(t<1024){const[i,r]=t.toString().split(".");return`${i}${r?`.${r.slice(0,n)}`:""} ${e}B`}t/=1024}return""}function e(t,n=!1){const e={month:"short",day:"numeric",year:"numeric"};return n?new Date(t).toLocaleTimeString(navigator.language,{...e,hour:"numeric",minute:"2-digit",timeZoneName:"short"}):new Date(t).toLocaleDateString(navigator.language,e)}export{t as a,n as h,e as i};
+//# sourceMappingURL=chunk-helpers-139f8162.js.map

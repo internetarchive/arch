@@ -47,6 +47,8 @@ object DerivationJobConf {
         .get[Array[String]]("input")
         .toSet
         .flatten
+        // Insert the user ID into the collectionId string if necessary.
+        .map { collectionId => ArchCollection.userCollectionId(collectionId, context.user) }
         .filter { collectionId =>
           ArchCollection.get(collectionId).isDefined
         }

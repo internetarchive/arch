@@ -3,6 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
+import org.archive.webservices.ars.BaseController.relativePath
 import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager

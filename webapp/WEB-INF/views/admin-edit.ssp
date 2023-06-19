@@ -1,3 +1,4 @@
+<% import org.archive.webservices.ars.BaseController.staticPath %>
 <%@ val usersJson: String %>
 <%@ val aitUsersJson: String %>
 <%@ val aitCollectionsJson: String %>
@@ -5,11 +6,17 @@
 <%@ val message: Option[String] = None %>
 
 #set (title)
-    ARCH: Archive Research Compute Hub
+    Admin
 #end
 
 #set (subtitle)
     Admin Area
+#end
+
+#set (scripts)
+  <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
+  <script src="<%= staticPath("/js/admin/jsoneditor.min.js") %>"></script>
+  <script src="<%= staticPath("/js/admin/arch.js") %>"></script>
 #end
 
 <div class="row">
@@ -111,4 +118,3 @@
 
 </div>
 </div>
-

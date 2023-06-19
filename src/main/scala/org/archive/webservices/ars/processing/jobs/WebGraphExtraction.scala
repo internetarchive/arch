@@ -11,7 +11,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import java.io.PrintStream
 
 object WebGraphExtraction extends NetworkAutJob[Row] {
-  val name = "Extract web graph"
+  val name = "Web graph"
   val description =
     "Create a CSV with the following columns: crawl date, source, target, and anchor text. Note that this contains all links and is not aggregated into domains."
 
