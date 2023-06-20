@@ -72,11 +72,17 @@ export class ArchDatasetPublishingCard extends LitElement {
     const metadata: PublishedDatasetMetadata = {};
     const metadataPairs = Array.from(
       new FormData(this.metadataForm.form).entries()
-    ) as Array<[PublishedDatasetMetadataKeys, string]>;
-    for (let [name, value] of metadataPairs) {
+    )
+      // Remove empty string values.
+      .filter(([k, v]) => (v as string).trim() !== "")
       // Replace any tabs with " " and "\n" with "<br>", which should only ever
       // occur in the case of <textarea>.
-      value = value.replaceAll("\t", " ").replaceAll("\n", "<br>");
+      .map(([k, v]) => [
+        k,
+        (v as string).replaceAll("\t", " ").replaceAll("\n", "<br>"),
+      ]) as Array<[PublishedDatasetMetadataKeys, string]>;
+
+    for (let [name, value] of metadataPairs) {
       metadata[name] = (metadata[name] ?? []).concat(value);
     }
     return metadata;
@@ -173,19 +179,24 @@ export class ArchDatasetPublishingCard extends LitElement {
           <div
             class="metadata-edit"
             ?hidden=${pubState !== PublishState.PrePublish &&
-            this.metadataState !== MetadataState.Editing}
+            this.metadataState !== MetadataState.Editing &&
+            this.metadataState !== MetadataState.Saving}
           >
             ${pubState !== PublishState.PrePublish &&
-            this.metadataState !== MetadataState.Editing
+            this.metadataState !== MetadataState.Editing &&
+            this.metadataState !== MetadataState.Saving
               ? html``
               : html`
                   <arch-dataset-metadata-form
-                    metadata="${JSON.stringify(metadata || {})}"
+                    metadata="${JSON.stringify(metadata ?? "")}"
                   >
                   </arch-dataset-metadata-form>
                 `}
             <br />
-            <span ?hidden=${pubState === PublishState.PrePublish}>
+            <div
+              ?hidden=${pubState === PublishState.PrePublish}
+              class="form-buttons"
+            >
               <button
                 type="button"
                 @click=${() => (this.metadataState = MetadataState.Displaying)}
@@ -199,9 +210,14 @@ export class ArchDatasetPublishingCard extends LitElement {
                 @click=${() => this._saveMetadata()}
                 ?disabled=${this.metadataState === MetadataState.Saving}
               >
-                Save
+                ${this.metadataState === MetadataState.Saving
+                  ? html`<arch-loading-indicator
+                      style="--color: #fff"
+                      text="Saving"
+                    ></arch-loading-indicator>`
+                  : html`Save`}
               </button>
-            </span>
+            </div>
           </div>
         </div>
 
@@ -246,6 +262,7 @@ export class ArchDatasetPublishingCard extends LitElement {
       if (!isPublishing) {
         // A publish is not in progress...this dataset is unpublished.
         this.pubState = PublishState.Unpublished;
+        this.metadata = {};
       } else {
         // A publish is in progress.
         this.pubState = PublishState.Publishing;

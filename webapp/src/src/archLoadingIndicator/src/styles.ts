@@ -9,7 +9,7 @@ import { css } from "lit";
 export default css`
   :host {
     font-style: italic;
-    color: #666;
+    color: var(--color, #666);
   }
 
   .la-ball-pulse {

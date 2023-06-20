@@ -1,12 +1,6 @@
 import Ajv from "ajv";
-import { LitElement, html } from "lit";
-import {
-  customElement,
-  property,
-  state,
-  query,
-  queryAll,
-} from "lit/decorators.js";
+import { LitElement, PropertyValues, html } from "lit";
+import { customElement, property, query, queryAll } from "lit/decorators.js";
 
 import {
   PublishedDatasetMetadata,
@@ -26,7 +20,8 @@ const metadataHasKey = (
 
 @customElement("arch-dataset-metadata-form")
 export class ArchDatasetMetadataForm extends LitElement {
-  @property({ type: Object }) metadata!: PublishedDatasetMetadata;
+  @property({ type: Object }) metadata: undefined | PublishedDatasetMetadata =
+    undefined;
 
   @query("form") form!: HTMLFormElement;
   @queryAll("input, textarea") inputs!: NodeList;
@@ -127,6 +122,12 @@ export class ArchDatasetMetadataForm extends LitElement {
         throw new Error(`Form input not defined for schema: ${schema}`);
         break;
     }
+
+    // Given that we're starting with a fairly limited initial set of metadata fields,
+    // I've been asked make all inputs always visible, so am hiding the remove buttons
+    // for scalar and non-index-zero array value input rows.
+    const hideRemoveButton = valueIndex === undefined || showAddButton;
+
     return html`
       <div class="input-row">
         ${inputHtml}
@@ -134,14 +135,15 @@ export class ArchDatasetMetadataForm extends LitElement {
           type="button"
           class="danger remove-value"
           title="Remove Value"
-          @click=${(e: Event) => this._removeMetadataValue(name, valueIndex)}
+          ?hidden=${hideRemoveButton}
+          @click=${() => this._removeMetadataValue(name, valueIndex)}
         >
           &times;
         </button>
         <button
           type="button"
           title="Add another ${title} value"
-          style="visibility: ${showAddButton ? "visible" : "hidden"}"
+          ?hidden=${!showAddButton}
           @click=${() => this._addMetadataValue(name)}
         >
           +
@@ -158,13 +160,14 @@ export class ArchDatasetMetadataForm extends LitElement {
       return html``;
     }
 
-    let availableKeys: Array<PublishedDatasetMetadataKeys> = [];
+    const availableKeys: Array<PublishedDatasetMetadataKeys> = [];
     const inputs = orderedMetadataKeys.map((k) => {
       // Abort if metadata doesn't specify this key.
       if (!metadataHasKey(metadata, k)) {
         availableKeys.push(k);
         return;
       }
+
       const value_s = metadata[k] as PublishedDatasetMetadataValue;
       const propSchema = schema.properties[k];
 
@@ -197,6 +200,7 @@ export class ArchDatasetMetadataForm extends LitElement {
     });
 
     return html`
+      <h2>Add/Edit Metadata</h2>
       <form>${inputs}</form>
       ${availableKeys.length === 0
         ? html``
@@ -213,21 +217,42 @@ export class ArchDatasetMetadataForm extends LitElement {
     `;
   }
 
-  willUpdate(changedProperties: Map<PropertyKey, undefined>) {
-    const { schema } = ArchDatasetMetadataForm;
+  willUpdate(changedProperties: PropertyValues<this>) {
+    const { orderedMetadataKeys, schema } = ArchDatasetMetadataForm;
     const { metadata } = this;
-    // Ensure that scalar-type metadata values are not wrapped in arrays.
-    if (changedProperties.has("metadata")) {
-      for (const [k, v] of Object.entries(metadata)) {
-        if (schema.properties[k].type !== "array" && Array.isArray(v)) {
-          if (v.length !== 1) {
+
+    // Normalize the metadata object on any change.
+    if (metadata && changedProperties.has("metadata")) {
+      // Ensure that scalar-type metadata values are not wrapped in arrays and that each
+      // key is represented in order to display all available form fields by default.
+      // The ARCH API sends and expects all-array-type metadata values but our schema definition
+      // is aware of which fields are scalars vs. arrays, so we normalize to our schema here.
+      for (const k of orderedMetadataKeys) {
+        // Get the metadata value or a default single-element array that will get unwrapped
+        // if necessary.
+        const wantsArray = schema.properties[k].type === "array";
+        const v = metadata[k];
+        // If key is undefined, populate it with a default value to ensure that the form
+        // field will be displayed.
+        if (v === undefined) {
+          metadata[k] = wantsArray ? [""] : "";
+          continue;
+        }
+        // If the value is an array and the schema wants a scalar, unwrap it if it's
+        // a single-element array, otherwise throw an error.
+        if (!wantsArray && Array.isArray(v)) {
+          if (v.length === 1) {
+            // Unwrap the scalar.
+            metadata[k] = v[0];
+          } else {
             throw new Error(
               `Invalid non-array type metadata (${k}) value: %{v}`
             );
-          } else {
-            // Unwrap the scalar.
-            metadata[k as PublishedDatasetMetadataKeys] = v[0];
           }
+        }
+        // Append an empty string to the end of each array as a new value placeholder.
+        if (wantsArray) {
+          metadata[k] = (metadata[k] as Array<string>).concat("");
         }
       }
     }
@@ -245,7 +270,7 @@ export class ArchDatasetMetadataForm extends LitElement {
   }
 
   private _addFieldSelectHandler(e: Event) {
-    const { metadata } = this;
+    const metadata = this.metadata as PublishedDatasetMetadata;
     const { schema } = ArchDatasetMetadataForm;
     const target = e.target as HTMLSelectElement;
     const name = target.value as PublishedDatasetMetadataKeys;
@@ -256,8 +281,8 @@ export class ArchDatasetMetadataForm extends LitElement {
   }
 
   private _addMetadataValue(metadataKey: PublishedDatasetMetadataKeys) {
-    const { metadata } = this;
-    const values = this.metadata[metadataKey] as Array<string>;
+    const metadata = this.metadata as PublishedDatasetMetadata;
+    const values = metadata[metadataKey] as Array<string>;
     values.push("");
     this.requestUpdate();
   }
@@ -267,10 +292,11 @@ export class ArchDatasetMetadataForm extends LitElement {
     value: string,
     valueIndex?: number
   ) {
+    const metadata = this.metadata as PublishedDatasetMetadata;
     if (valueIndex === undefined) {
-      this.metadata[metadataKey] = value;
+      metadata[metadataKey] = value;
     } else {
-      (this.metadata[metadataKey] as Array<string>)[valueIndex] = value;
+      (metadata[metadataKey] as Array<string>)[valueIndex] = value;
     }
     this.requestUpdate();
   }
@@ -279,18 +305,19 @@ export class ArchDatasetMetadataForm extends LitElement {
     metadataKey: PublishedDatasetMetadataKeys,
     valueIndex?: number
   ) {
+    const metadata = this.metadata as PublishedDatasetMetadata;
     /* Remove a value, and perhaps a key, from metadata. */
     if (valueIndex === undefined) {
       // This is a scalar / non-Array value, so remove the whole key.
-      delete this.metadata[metadataKey];
+      delete metadata[metadataKey];
     } else {
       // This is an Array-type value.
-      const values = this.metadata[metadataKey] as Array<string>;
+      const values = metadata[metadataKey] as Array<string>;
       // Remove the specified values index.
       values.splice(valueIndex, 1);
       // If the array is now empty, remove the whole key.
       if (values.length === 0) {
-        delete this.metadata[metadataKey];
+        delete metadata[metadataKey];
       }
     }
     this.requestUpdate();

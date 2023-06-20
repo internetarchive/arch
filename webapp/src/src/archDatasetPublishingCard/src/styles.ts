@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-import { global } from "../../lib/styles";
+import { global, defaultButtonBgColor } from "../../lib/styles";
 
 export default [
   global,
@@ -33,9 +33,14 @@ export default [
 
     div.metadata-display > dl,
     div.metadata-display > arch-loading-indicator,
-    div.metadata-display > i,
-    div.metadata-edit {
+    div.metadata-display > i {
       margin-left: 2rem;
+    }
+
+    div.metadata-edit {
+      background-color: ${defaultButtonBgColor};
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
     }
 
     dl > div,
@@ -45,6 +50,10 @@ export default [
 
     [hidden] {
       display: none;
+    }
+
+    div.form-buttons {
+      text-align: right;
     }
   `,
 ];

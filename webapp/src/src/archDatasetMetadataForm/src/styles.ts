@@ -9,6 +9,11 @@ export default [
       display: block;
     }
 
+    h2 {
+      margin: 1rem 0;
+      color: #444;
+    }
+
     label,
     input,
     select {
@@ -18,15 +23,10 @@ export default [
     input,
     textarea {
       font-size: 0.9rem;
-      border: none;
-      background-color: #eee;
+      border: solid #aaa 1px;
+      background-color: #fff;
       padding: 0.6rem;
-    }
-
-    input[type="text"],
-    textarea {
-      width: 42rem;
-      max-width: 42rem;
+      width: 100%;
     }
 
     textarea {
@@ -35,12 +35,13 @@ export default [
     }
 
     div.input-block {
-      margin-bottom: 0.7rem;
+      margin-bottom: 1rem;
     }
 
     div.input-row {
       display: flex;
       padding-bottom: 0.4rem;
+      margin-left: 0.5rem;
     }
 
     div.input-row:last-of-type {
@@ -49,18 +50,19 @@ export default [
 
     div.radio-row {
       display: flex;
-      width: 42rem;
-      margin-bottom: 0.5rem;
-      background-color: #eee;
-      padding: 0.4rem;
+      background-color: #fff;
+      padding: 1rem 0.5rem 1rem 0;
+      border: solid #aaa 1px;
+      border-bottom: none;
     }
 
     div.radio-row:last-child {
-      margin-bottom: 0;
+      border-bottom: solid #aaa 1px;
     }
 
     div.radio-row > input {
-      align-self: flex-start;
+      width: auto;
+      margin: 0 1rem;
       cursor: pointer;
     }
 
@@ -71,13 +73,16 @@ export default [
 
     div.radio-row > label > em {
       font-weight: normal;
-      line-height: 1.1em;
+      line-height: 1.3em;
+      display: inline-block;
+      margin-top: 0.4rem;
+      font-family: arial;
     }
 
     label {
       display: block;
       font-weight: bold;
-      padding-bottom: 0.3rem;
+      padding-bottom: 0.4rem;
       color: #444;
     }
 
@@ -87,10 +92,8 @@ export default [
     }
 
     div.input-row button {
-    }
-
-    div.input-row button {
       margin-left: 0.4rem;
+      border: solid #aaa 1px;
     }
 
     select[name="add-new-field"] {

@@ -1,16 +1,19 @@
 import { LitElement, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 
 import styles from "./styles";
 
 @customElement("arch-loading-indicator")
 export class ArchLoadingIndicator extends LitElement {
+  @property({ type: String }) text = "Loading";
+
   static styles = styles;
 
   render() {
     // Animation source: https://loading.io/css/
+    const { text } = this;
     return html`
-      Loading
+      ${text}
       <span class="la-ball-pulse">
         <span>&#x2B24;</span>
         <span>&#x2B24;</span>

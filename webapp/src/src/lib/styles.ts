@@ -8,6 +8,7 @@ export const primaryButtonBgColor = linkColor;
 export const primaryButtonFgColor = css`#fff`;
 export const successButtonBgColor = css`#28a745`;
 export const successButtonFgColor = css`#fff`;
+export const headerBgColor = css`#e3e7e8`;
 
 /* Bootstrap4 Constants */
 const bsPrimaryTextEmphasis = css`#052c65`;
