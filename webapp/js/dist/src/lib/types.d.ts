@@ -1,4 +1,5 @@
 import { JSONSchemaType } from "ajv";
+import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 export type Collection = {
     id: string;
     name: string;
@@ -85,19 +86,20 @@ export type PublishedDatasetInfo = {
     time: Date;
     ark: string;
 };
-export declare enum PublishedDatasetMetadataKeys {
-    title = "title",
-    description = "description",
-    creator = "creator",
-    subject = "subject",
-    licenseurl = "licenseurl"
-}
-export type PublishedDatasetMetadataValue = string | Array<string>;
-export type PublishedDatasetMetadata = Partial<Record<PublishedDatasetMetadataKeys, PublishedDatasetMetadataValue>>;
-export type PublishedDatasetMetadataJSONSchema = JSONSchemaType<{
-    creator?: PublishedDatasetMetadataValue;
-    description?: PublishedDatasetMetadataValue;
-    licenseurl?: PublishedDatasetMetadataValue;
-    subject?: PublishedDatasetMetadataValue;
-    title?: PublishedDatasetMetadataValue;
-}>;
+export type PublishedDatasetMetadataApiResponse = {
+    creator?: Array<string>;
+    description?: Array<string>;
+    licenseurl?: Array<string>;
+    subject?: Array<string>;
+    title?: Array<string>;
+};
+export type PublishedDatasetMetadata = {
+    creator?: Array<string>;
+    description?: string;
+    licenseurl?: string;
+    subject?: Array<string>;
+    title?: string;
+};
+export type PublishedDatasetMetadataValue = PublishedDatasetMetadata[keyof PublishedDatasetMetadata];
+export type PublishedDatasetMetadataJSONSchema = JSONSchemaType<PublishedDatasetMetadata>;
+export type PublishedDatasetMetadataJSONSchemaProps = Record<keyof PublishedDatasetMetadata, SomeJSONSchema>;

@@ -1,7 +1,0 @@
-import{o as t}from"./chunk-styles-690ba0e4.js";
-/**
- * @license
- * Copyright 2017 Google LLC
- * SPDX-License-Identifier: BSD-3-Clause
- */function n(n){return t({descriptor:t=>({get(){var t,o;return null!==(o=null===(t=this.renderRoot)||void 0===t?void 0:t.querySelectorAll(n))&&void 0!==o?o:[]},enumerable:!0,configurable:!0})})}var o,r,a;!function(t){t.ArsLgaGeneration="ArsLgaGeneration",t.ArsWaneGeneration="ArsWaneGeneration",t.ArsWatGeneration="ArsWatGeneration",t.AudioInformationExtraction="AudioInformationExtraction",t.DomainFrequencyExtraction="DomainFrequencyExtraction",t.DomainGraphExtraction="DomainGraphExtraction",t.ImageGraphExtraction="ImageGraphExtraction",t.ImageInformationExtraction="ImageInformationExtraction",t.PdfInformationExtraction="PdfInformationExtraction",t.PresentationProgramInformationExtraction="PresentationProgramInformationExtraction",t.SpreadsheetInformationExtraction="SpreadsheetInformationExtraction",t.TextFilesInformationExtraction="TextFilesInformationExtraction",t.VideoInformationExtraction="VideoInformationExtraction",t.WebGraphExtraction="WebGraphExtraction",t.WebPagesExtraction="WebPagesExtraction",t.WordProcessorInformationExtraction="WordProcessorInformationExtraction"}(o||(o={})),function(t){t.NotStarted="Not started",t.Queued="Queued",t.Running="Running",t.Finished="Finished",t.Failed="Failed"}(r||(r={})),function(t){t.title="title",t.description="description",t.creator="creator",t.subject="subject",t.licenseurl="licenseurl"}(a||(a={}));export{r as P,a,n as e};
-//# sourceMappingURL=chunk-types-df9f20ed.js.map

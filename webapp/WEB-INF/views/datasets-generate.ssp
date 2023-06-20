@@ -6,7 +6,7 @@
 #end
 
 #set (scripts)
-  <script src="<%=staticPath("/js/dist/arch-generate-dataset-form-e492768c.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-generate-dataset-form-4d5f3232.js")%>" type="module"></script>
 #end
 
 <subnav data="state.menus.research_services" class="ng-isolate-scope">

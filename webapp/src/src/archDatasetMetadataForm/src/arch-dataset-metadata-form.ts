@@ -1,12 +1,13 @@
 import Ajv from "ajv";
+import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, queryAll } from "lit/decorators.js";
 
 import {
   PublishedDatasetMetadata,
-  PublishedDatasetMetadataJSONSchema,
-  PublishedDatasetMetadataKeys,
   PublishedDatasetMetadataValue,
+  PublishedDatasetMetadataJSONSchema,
+  PublishedDatasetMetadataJSONSchemaProps,
 } from "../../lib/types";
 
 import styles from "./styles";
@@ -15,8 +16,12 @@ import * as _schema from "./schema.json";
 // Helper to check whether a metadata key is present.
 const metadataHasKey = (
   m: PublishedDatasetMetadata,
-  k: PublishedDatasetMetadataKeys
+  k: keyof PublishedDatasetMetadata
 ) => Object.prototype.hasOwnProperty.call(m, k);
+
+// Instantiate Ajv and add our custom keyword to prevent a compilation error.
+const ajv = new Ajv();
+ajv.addKeyword("propertiesOrder");
 
 @customElement("arch-dataset-metadata-form")
 export class ArchDatasetMetadataForm extends LitElement {
@@ -28,16 +33,23 @@ export class ArchDatasetMetadataForm extends LitElement {
 
   static styles = styles;
   static schema = _schema as PublishedDatasetMetadataJSONSchema;
-  static validator = new Ajv().compile(ArchDatasetMetadataForm.schema);
+  static validator = ajv.compile(ArchDatasetMetadataForm.schema);
+  static propertiesOrder = ArchDatasetMetadataForm.schema
+    .propertiesOrder as Array<string>;
 
   // PublishedDatasetMetadataKeys defines the display order.
-  static orderedMetadataKeys = Array.from(
-    Object.keys(PublishedDatasetMetadataKeys)
-  ) as Array<PublishedDatasetMetadataKeys>;
+  static orderedMetadataKeys = Object.keys(
+    ArchDatasetMetadataForm.schema.properties as object
+  ).sort((a, b) =>
+    ArchDatasetMetadataForm.propertiesOrder.indexOf(a) <
+    ArchDatasetMetadataForm.propertiesOrder.indexOf(b)
+      ? -1
+      : 1
+  ) as Array<keyof PublishedDatasetMetadata>;
 
   private _propToInput(
-    name: PublishedDatasetMetadataKeys,
-    schema: PublishedDatasetMetadataJSONSchema["properties"],
+    name: keyof PublishedDatasetMetadata,
+    schema: SomeJSONSchema,
     value: PublishedDatasetMetadataValue,
     valueIndex?: number,
     title?: string,
@@ -50,8 +62,9 @@ export class ArchDatasetMetadataForm extends LitElement {
       case "string":
         if (
           schema.oneOf &&
+          Array.isArray(schema.oneOf) &&
           typeof schema.oneOf[0] === "object" &&
-          schema.oneOf[0].const
+          (schema.oneOf[0] as SomeJSONSchema).const
         ) {
           // Display a radio input choice with description.
           inputHtml = html`
@@ -119,7 +132,9 @@ export class ArchDatasetMetadataForm extends LitElement {
         break;
 
       default:
-        throw new Error(`Form input not defined for schema: ${schema}`);
+        throw new Error(
+          `Form input not defined for schema: ${JSON.stringify(schema)}`
+        );
         break;
     }
 
@@ -160,7 +175,7 @@ export class ArchDatasetMetadataForm extends LitElement {
       return html``;
     }
 
-    const availableKeys: Array<PublishedDatasetMetadataKeys> = [];
+    const availableKeys: Array<keyof PublishedDatasetMetadata> = [];
     const inputs = orderedMetadataKeys.map((k) => {
       // Abort if metadata doesn't specify this key.
       if (!metadataHasKey(metadata, k)) {
@@ -169,7 +184,9 @@ export class ArchDatasetMetadataForm extends LitElement {
       }
 
       const value_s = metadata[k] as PublishedDatasetMetadataValue;
-      const propSchema = schema.properties[k];
+      const propSchema = (
+        schema.properties as PublishedDatasetMetadataJSONSchemaProps
+      )[k];
 
       // Handle a non-Array type field.
       if (!Array.isArray(value_s)) {
@@ -188,10 +205,10 @@ export class ArchDatasetMetadataForm extends LitElement {
           ${value_s.map((value, i) =>
             this._propToInput(
               k,
-              propSchema.items,
+              propSchema.items as SomeJSONSchema,
               value,
               i,
-              propSchema.title,
+              propSchema.title as string,
               i === value_s.length - 1
             )
           )}
@@ -209,7 +226,11 @@ export class ArchDatasetMetadataForm extends LitElement {
               <option value="">Add Metadata Field</option>
               ${availableKeys.map(
                 (k) => html`
-                  <option value=${k}>${schema.properties[k].title}</option>
+                  <option value=${k}>
+                    ${(
+                      schema.properties as PublishedDatasetMetadataJSONSchemaProps
+                    )[k].title}
+                  </option>
                 `
               )}
             </select>
@@ -230,12 +251,18 @@ export class ArchDatasetMetadataForm extends LitElement {
       for (const k of orderedMetadataKeys) {
         // Get the metadata value or a default single-element array that will get unwrapped
         // if necessary.
-        const wantsArray = schema.properties[k].type === "array";
+        const wantsArray =
+          (schema.properties as PublishedDatasetMetadataJSONSchemaProps)[k]
+            .type === "array";
         const v = metadata[k];
         // If key is undefined, populate it with a default value to ensure that the form
         // field will be displayed.
         if (v === undefined) {
-          metadata[k] = wantsArray ? [""] : "";
+          if (wantsArray) {
+            (metadata[k] as Array<string>) = [""];
+          } else {
+            (metadata[k] as string) = "";
+          }
           continue;
         }
         // If the value is an array and the schema wants a scalar, unwrap it if it's
@@ -243,7 +270,7 @@ export class ArchDatasetMetadataForm extends LitElement {
         if (!wantsArray && Array.isArray(v)) {
           if (v.length === 1) {
             // Unwrap the scalar.
-            metadata[k] = v[0];
+            (metadata[k] as string) = v[0];
           } else {
             throw new Error(
               `Invalid non-array type metadata (${k}) value: %{v}`
@@ -252,7 +279,9 @@ export class ArchDatasetMetadataForm extends LitElement {
         }
         // Append an empty string to the end of each array as a new value placeholder.
         if (wantsArray) {
-          metadata[k] = (metadata[k] as Array<string>).concat("");
+          (metadata[k] as Array<string>) = (
+            metadata[k] as Array<string>
+          ).concat("");
         }
       }
     }
@@ -273,14 +302,21 @@ export class ArchDatasetMetadataForm extends LitElement {
     const metadata = this.metadata as PublishedDatasetMetadata;
     const { schema } = ArchDatasetMetadataForm;
     const target = e.target as HTMLSelectElement;
-    const name = target.value as PublishedDatasetMetadataKeys;
-    metadata[name] = schema.properties[name].type === "array" ? [""] : "";
+    const name = target.value as keyof PublishedDatasetMetadata;
+    if (
+      (schema.properties as PublishedDatasetMetadataJSONSchemaProps)[name]
+        .type === "array"
+    ) {
+      (metadata[name] as Array<string>) = [""];
+    } else {
+      (metadata[name] as string) = "";
+    }
     // Reselect the first, placeholder option.
     target.options[0].selected = true;
     this.requestUpdate();
   }
 
-  private _addMetadataValue(metadataKey: PublishedDatasetMetadataKeys) {
+  private _addMetadataValue(metadataKey: keyof PublishedDatasetMetadata) {
     const metadata = this.metadata as PublishedDatasetMetadata;
     const values = metadata[metadataKey] as Array<string>;
     values.push("");
@@ -288,13 +324,13 @@ export class ArchDatasetMetadataForm extends LitElement {
   }
 
   private _updateMetadataValue(
-    metadataKey: PublishedDatasetMetadataKeys,
+    metadataKey: keyof PublishedDatasetMetadata,
     value: string,
     valueIndex?: number
   ) {
     const metadata = this.metadata as PublishedDatasetMetadata;
     if (valueIndex === undefined) {
-      metadata[metadataKey] = value;
+      (metadata[metadataKey] as string) = value;
     } else {
       (metadata[metadataKey] as Array<string>)[valueIndex] = value;
     }
@@ -302,7 +338,7 @@ export class ArchDatasetMetadataForm extends LitElement {
   }
 
   private _removeMetadataValue(
-    metadataKey: PublishedDatasetMetadataKeys,
+    metadataKey: keyof PublishedDatasetMetadata,
     valueIndex?: number
   ) {
     const metadata = this.metadata as PublishedDatasetMetadata;

@@ -1,4 +1,5 @@
 import { JSONSchemaType } from "ajv";
+import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 
 export type Collection = {
   id: string;
@@ -94,25 +95,29 @@ export type PublishedDatasetInfo = {
   ark: string;
 };
 
-// Metadata keys will be displayed in the order define here.
-export enum PublishedDatasetMetadataKeys {
-  title = "title",
-  description = "description",
-  creator = "creator",
-  subject = "subject",
-  licenseurl = "licenseurl",
-}
+export type PublishedDatasetMetadataApiResponse = {
+  creator?: Array<string>;
+  description?: Array<string>;
+  licenseurl?: Array<string>;
+  subject?: Array<string>;
+  title?: Array<string>;
+};
 
-export type PublishedDatasetMetadataValue = string | Array<string>;
+export type PublishedDatasetMetadata = {
+  creator?: Array<string>;
+  description?: string;
+  licenseurl?: string;
+  subject?: Array<string>;
+  title?: string;
+};
 
-export type PublishedDatasetMetadata = Partial<
-  Record<PublishedDatasetMetadataKeys, PublishedDatasetMetadataValue>
+export type PublishedDatasetMetadataValue =
+  PublishedDatasetMetadata[keyof PublishedDatasetMetadata];
+
+export type PublishedDatasetMetadataJSONSchema =
+  JSONSchemaType<PublishedDatasetMetadata>;
+
+export type PublishedDatasetMetadataJSONSchemaProps = Record<
+  keyof PublishedDatasetMetadata,
+  SomeJSONSchema
 >;
-
-export type PublishedDatasetMetadataJSONSchema = JSONSchemaType<{
-  creator?: PublishedDatasetMetadataValue;
-  description?: PublishedDatasetMetadataValue;
-  licenseurl?: PublishedDatasetMetadataValue;
-  subject?: PublishedDatasetMetadataValue;
-  title?: PublishedDatasetMetadataValue;
-}>;

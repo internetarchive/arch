@@ -32,6 +32,7 @@ export default [
     textarea {
       height: 4rem;
       vertical-align: top;
+      font-family: inherit;
     }
 
     div.input-block {

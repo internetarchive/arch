@@ -1,7 +1,8 @@
 import { LitElement } from "lit";
-import { Collection, Job, PublishedDatasetInfo, PublishedDatasetMetadata } from "../../lib/types";
+import { Collection, Job, PublishedDatasetInfo, PublishedDatasetMetadataApiResponse } from "../../lib/types";
 import "../../archLoadingIndicator/index";
 import "../../archDatasetMetadataForm/index";
+import { ArchDatasetMetadataForm } from "../../archDatasetMetadataForm/index";
 declare enum PublishState {
     Loading = 0,
     Unpublished = 1,
@@ -21,8 +22,8 @@ export declare class ArchDatasetPublishingCard extends LitElement {
     pubState: PublishState;
     pubInfo: undefined | PublishedDatasetInfo;
     metadataState: MetadataState;
-    metadata: undefined | PublishedDatasetMetadata;
-    metadataForm: HTMLFormElement;
+    metadata: undefined | PublishedDatasetMetadataApiResponse;
+    metadataForm: ArchDatasetMetadataForm;
     static styles: import("lit").CSSResult[];
     connectedCallback(): void;
     private get _sampleParam();

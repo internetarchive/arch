@@ -8,15 +8,19 @@ import {
   JobState,
   PublishedDatasetInfo,
   PublishedDatasetMetadata,
+  PublishedDatasetMetadataApiResponse,
   PublishedDatasetMetadataJSONSchema,
-  PublishedDatasetMetadataValue,
-  PublishedDatasetMetadataKeys,
+  PublishedDatasetMetadataJSONSchemaProps,
 } from "../../lib/types";
 import "../../archLoadingIndicator/index";
 import "../../archDatasetMetadataForm/index";
+import { ArchDatasetMetadataForm } from "../../archDatasetMetadataForm/index";
 
 import styles from "./styles";
-import * as metadataSchema from "../../archDatasetMetadataForm/src/schema.json";
+import * as _metadataSchema from "../../archDatasetMetadataForm/src/schema.json";
+
+const metadataSchema = _metadataSchema as PublishedDatasetMetadataJSONSchema;
+const propertiesOrder = metadataSchema.propertiesOrder as Array<string>;
 
 enum PublishState {
   Loading = 0,
@@ -32,13 +36,18 @@ enum MetadataState {
   Saving,
 }
 
-const orderedMetadataKeys = Array.from(
-  Object.keys(PublishedDatasetMetadataKeys)
-) as Array<PublishedDatasetMetadataKeys>;
+const orderedMetadataKeys = Object.keys(
+  metadataSchema.properties as object
+).sort((a, b) =>
+  propertiesOrder.indexOf(a) < propertiesOrder.indexOf(b) ? -1 : 1
+) as Array<keyof PublishedDatasetMetadata>;
 
-function getMetadataKeyTitle(k: PublishedDatasetMetadataKeys) {
-  return (metadataSchema as PublishedDatasetMetadataJSONSchema).properties[k]
-    .title;
+function getMetadataKeyTitle(k: keyof PublishedDatasetMetadata): string {
+  // Note that I can't figure out how to properly annotate metadataSchema.properties
+  // using something like PropertiesSchema from ajv/lib/types/json-schema.
+  return (metadataSchema.properties as PublishedDatasetMetadataJSONSchemaProps)[
+    k
+  ].title as string;
 }
 
 @customElement("arch-dataset-publishing-card")
@@ -51,9 +60,10 @@ export class ArchDatasetPublishingCard extends LitElement {
   @state() pubInfo: undefined | PublishedDatasetInfo = undefined;
 
   @state() metadataState = MetadataState.Displaying;
-  @state() metadata: undefined | PublishedDatasetMetadata = undefined;
+  @state() metadata: undefined | PublishedDatasetMetadataApiResponse =
+    undefined;
 
-  @query("arch-dataset-metadata-form") metadataForm!: HTMLFormElement;
+  @query("arch-dataset-metadata-form") metadataForm!: ArchDatasetMetadataForm;
 
   static styles = styles;
 
@@ -69,25 +79,27 @@ export class ArchDatasetPublishingCard extends LitElement {
 
   private get _metadataFormData() {
     /* Return the metadata <form> inputs as an object with Array-type values. */
-    const metadata: PublishedDatasetMetadata = {};
+    const metadata: PublishedDatasetMetadataApiResponse = {};
     const metadataPairs = Array.from(
       new FormData(this.metadataForm.form).entries()
     )
       // Remove empty string values.
-      .filter(([k, v]) => (v as string).trim() !== "")
+      .filter(([, v]) => (v as string).trim() !== "")
       // Replace any tabs with " " and "\n" with "<br>", which should only ever
       // occur in the case of <textarea>.
       .map(([k, v]) => [
         k,
         (v as string).replaceAll("\t", " ").replaceAll("\n", "<br>"),
-      ]) as Array<[PublishedDatasetMetadataKeys, string]>;
+      ]) as Array<[keyof PublishedDatasetMetadataApiResponse, string]>;
 
-    for (let [name, value] of metadataPairs) {
+    for (const [name, value] of metadataPairs) {
       metadata[name] = (metadata[name] ?? []).concat(value);
     }
     return metadata;
   }
 
+  // TODO - make this less complex
+  // eslint-disable-next-line complexity
   render() {
     const { pubState } = this;
     if (pubState === PublishState.Loading) {
@@ -158,9 +170,7 @@ export class ArchDatasetPublishingCard extends LitElement {
                       .filter((k) => metadata[k] !== undefined)
                       .map((k) => {
                         const title = getMetadataKeyTitle(k);
-                        let values = metadata[
-                          k
-                        ] as PublishedDatasetMetadataValue;
+                        let values = metadata[k] as string | Array<string>;
                         if (!Array.isArray(values)) {
                           values = [values];
                         }
@@ -337,11 +347,11 @@ export class ArchDatasetPublishingCard extends LitElement {
     if (response.status === 404) {
       return undefined;
     }
-    return (await response.json()) as PublishedDatasetMetadata;
+    return (await response.json()) as PublishedDatasetMetadataApiResponse;
   }
 
   private _buttonClickHandler() {
-    const { metadataForm } = this;
+    const metadataForm = this.metadataForm;
     switch (this.pubState) {
       case PublishState.Unpublished:
         this.pubState = PublishState.PrePublish;
