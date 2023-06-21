@@ -4,6 +4,7 @@ import io.circe.Json
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.processing.{
   DerivationJob,
   DerivationJobConf,
@@ -188,10 +189,25 @@ object PublishedDatasets {
           }
         }
         connection.connect()
-        if (connection.getResponseCode / 100 == 2) Some {
+        val responseCode = connection.getResponseCode
+        if (responseCode / 100 == 2) {
           val source = Source.fromInputStream(connection.getInputStream, "utf-8")
-          try source.mkString
+          try Some(source.mkString)
           finally source.close()
+        } else if (responseCode / 100 >= 4) {
+          // Report the request error.
+          val source = Source.fromInputStream(connection.getErrorStream, "utf-8")
+          try Arch.reportError(
+            "PublishedDatasets Petabox Response Error",
+            source.mkString,
+            Map(
+              "status_code" -> responseCode.toString,
+              "path" -> path,
+              "method" -> connection.getRequestMethod
+            )
+          )
+          finally source.close()
+          None
         } else None
       } finally {
         Try(connection.disconnect())
