@@ -1,8 +1,8 @@
-import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t as r,A as l}from"./chunk-arch-alert-13829860.js";var c;let i=c=class extends o{constructor(){super(...arguments),this.collections=[],this.sourceCollectionIds=new Set}createRenderRoot(){return this}async connectedCallback(){super.connectedCallback(),await this.initCollections(),this.sourceCollectionIds=new Set(new URLSearchParams(window.location.search).getAll(c.urlCollectionsParamName))}get _formData(){const e={},t=Array.from(new FormData(this.form).entries());for(const[o,s]of t){const t=e[o];void 0===t?e[o]=s:Array.isArray(t)?e[o]=t.concat(s):e[o]=[t,s]}return e}render(){const{collections:e,sourceCollectionIds:t}=this,o=e.filter((e=>t.has(e.id)));return s`
+import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t as l,A as r}from"./chunk-arch-alert-13829860.js";var c;let i=c=class extends o{constructor(){super(...arguments),this.collections=[],this.sourceCollectionIds=new Set}createRenderRoot(){return this}async connectedCallback(){super.connectedCallback(),await this.initCollections(),this.sourceCollectionIds=new Set(new URLSearchParams(window.location.search).getAll(c.urlCollectionsParamName))}get _formData(){const e={},t=Array.from(new FormData(this.form).entries());for(const[o,s]of t){const t=e[o];void 0===t?e[o]=s:Array.isArray(t)?e[o]=t.concat(s):e[o]=[t,s]}return e}render(){const{collections:e,sourceCollectionIds:t}=this,o=e.filter((e=>t.has(e.id)));return s`
       <div class="row">
         <div class="large-12 columns">
           <arch-alert
-            .alertClass=${l.Primary}
+            .alertClass=${r.Primary}
             .message=${'Use this form to create a custom collection by filtering the contents of one or more existing source collections. You may use as many of the filtering options below as you desire and leave others blank. <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/16107865758228" target="_blank">Learn about options and common choices here</a>. ARCH will email you when your custom collection is ready to use.'}
           >
           </arch-alert>
@@ -48,8 +48,8 @@ import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t a
               required
             />
 
-            <label for="surtPrefixesOR"> SURT Prefix(es) </label>
-            <em id="surtPrefixesORDesc">
+            <label for="surts"> SURT Prefix(es) </label>
+            <em id="surtsDesc">
               Choose
               <a
                 href="https://arch-webservices.zendesk.com/hc/en-us/articles/14410683244948#document"
@@ -67,8 +67,8 @@ import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t a
             <input
               type="text"
               name="surtPrefixesOR"
-              id="surtPrefixesOR"
-              aria-labelledby="surtPrefixesOR surtPrefixesORDesc"
+              id="surts"
+              aria-labelledby="surts surtsDesc"
               placeholder="org,archive|gov,congress)/committees"
             />
 
@@ -126,7 +126,7 @@ import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t a
             </em>
             <input
               type="text"
-              name="status"
+              name="statusPrefixesOR"
               id="status"
               aria-labelledby="status statusDesc"
               placeholder="200"
@@ -145,7 +145,7 @@ import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t a
             </em>
             <input
               type="text"
-              name="mime"
+              name="mimesOR"
               id="mime"
               aria-labelledby="mime mimeDesc"
               placeholder="text/html|application/pdf"
@@ -157,5 +157,5 @@ import{_ as e,b as t,s as o,y as s,a}from"./chunk-styles-55237338.js";import{t a
           </form>
         </div>
       </div>
-    `}async initCollections(){this.collections=await(await fetch("/api/collections")).json()}setSourceCollectionIdsUrlParam(e){const{urlCollectionsParamName:t}=c,o=new URL(window.location.href);o.searchParams.delete(t),e.forEach((e=>o.searchParams.append(t,e))),history.replaceState(null,"",o.toString())}sourceCollectionsChangeHandler(e){const t=Array.from(e.target.selectedOptions).map((e=>e.value));this.sourceCollectionIds=new Set(t),this.setSourceCollectionIdsUrlParam(t)}async createSubCollection(e){e.preventDefault();const{form:t}=this;if(!t.checkValidity())return void t.reportValidity();const o=e.target;o.disabled=!0;const s=Object.fromEntries(Array.from(Object.entries(this._formData)).filter((([,e])=>""!==e)).map((([e,t])=>[e,"surtPrefixesOR"===e?t.split("|"):t]))),a=s.sources;let r;delete s.sources,Array.isArray(a)?(r="UNION-UDQ",s.input=a):r=a;(await fetch(`/api/runjob/UserDefinedQuery/${r}`,{method:"POST",body:JSON.stringify(s),headers:{"content-type":"application/json"}})).ok?window.location.href="/collections":(window.alert("Could not create Sub-Collection"),o.disabled=!1)}};i.urlCollectionsParamName="cid[]",e([r()],i.prototype,"collections",void 0),e([r()],i.prototype,"sourceCollectionIds",void 0),e([t("form")],i.prototype,"form",void 0),e([t("select#source")],i.prototype,"sourceSelect",void 0),i=c=e([a("arch-sub-collection-builder")],i);export{i as ArchSubCollectionBuilder};
-//# sourceMappingURL=arch-sub-collection-builder-edfa6a2e.js.map
+    `}async initCollections(){this.collections=await(await fetch("/api/collections")).json()}setSourceCollectionIdsUrlParam(e){const{urlCollectionsParamName:t}=c,o=new URL(window.location.href);o.searchParams.delete(t),e.forEach((e=>o.searchParams.append(t,e))),history.replaceState(null,"",o.toString())}sourceCollectionsChangeHandler(e){const t=Array.from(e.target.selectedOptions).map((e=>e.value));this.sourceCollectionIds=new Set(t),this.setSourceCollectionIdsUrlParam(t)}async createSubCollection(e){e.preventDefault();const{form:t}=this;if(!t.checkValidity())return void t.reportValidity();const o=e.target;o.disabled=!0;const s=Object.fromEntries(Array.from(Object.entries(this._formData)).filter((([,e])=>""!==e)).map((([e,t])=>[e,"surtPrefixesOR"===e||"statusPrefixesOR"===e||"mimesOR"===e?t.split("|"):t]))),a=s.sources;let l;delete s.sources,Array.isArray(a)?(l="UNION-UDQ",s.input=a):l=a;(await fetch(`/api/runjob/UserDefinedQuery/${l}`,{method:"POST",body:JSON.stringify(s),headers:{"content-type":"application/json"}})).ok?window.location.href="/collections":(window.alert("Could not create Sub-Collection"),o.disabled=!1)}};i.urlCollectionsParamName="cid[]",e([l()],i.prototype,"collections",void 0),e([l()],i.prototype,"sourceCollectionIds",void 0),e([t("form")],i.prototype,"form",void 0),e([t("select#source")],i.prototype,"sourceSelect",void 0),i=c=e([a("arch-sub-collection-builder")],i);export{i as ArchSubCollectionBuilder};
+//# sourceMappingURL=arch-sub-collection-builder-f97088cf.js.map

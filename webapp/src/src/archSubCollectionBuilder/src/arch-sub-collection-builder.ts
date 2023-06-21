@@ -114,8 +114,8 @@ export class ArchSubCollectionBuilder extends LitElement {
               required
             />
 
-            <label for="surtPrefixesOR"> SURT Prefix(es) </label>
-            <em id="surtPrefixesORDesc">
+            <label for="surts"> SURT Prefix(es) </label>
+            <em id="surtsDesc">
               Choose
               <a
                 href="https://arch-webservices.zendesk.com/hc/en-us/articles/14410683244948#document"
@@ -133,8 +133,8 @@ export class ArchSubCollectionBuilder extends LitElement {
             <input
               type="text"
               name="surtPrefixesOR"
-              id="surtPrefixesOR"
-              aria-labelledby="surtPrefixesOR surtPrefixesORDesc"
+              id="surts"
+              aria-labelledby="surts surtsDesc"
               placeholder="org,archive|gov,congress)/committees"
             />
 
@@ -192,7 +192,7 @@ export class ArchSubCollectionBuilder extends LitElement {
             </em>
             <input
               type="text"
-              name="status"
+              name="statusPrefixesOR"
               id="status"
               aria-labelledby="status statusDesc"
               placeholder="200"
@@ -211,7 +211,7 @@ export class ArchSubCollectionBuilder extends LitElement {
             </em>
             <input
               type="text"
-              name="mime"
+              name="mimesOR"
               id="mime"
               aria-labelledby="mime mimeDesc"
               placeholder="text/html|application/pdf"
@@ -271,10 +271,12 @@ export class ArchSubCollectionBuilder extends LitElement {
       Array.from(Object.entries(this._formData))
         // Remove empty fields
         .filter(([, v]) => v !== "")
-        // Split surtPrefixesOR and rename "sources" to "input"
+        // Split pipe-delimited multi-valued strings into arrays.
         .map(([k, v]) => [
           k,
-          k === "surtPrefixesOR" ? (v as string).split("|") : v,
+          k === "surtPrefixesOR" || k === "statusPrefixesOR" || k === "mimesOR"
+            ? (v as string).split("|")
+            : v,
         ])
     );
 
