@@ -5,14 +5,20 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.processing.{
-  DerivationJobConf, DerivationJob, DerivationJobInstance, JobManager, ProcessingState
+  DerivationJob,
+  DerivationJobConf,
+  DerivationJobInstance,
+  JobManager,
+  ProcessingState
 }
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.util.DigestUtil
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.collection.immutable.{ListMap, Map}
 import scala.io.Source
 import scala.util.Try
@@ -32,12 +38,19 @@ object PublishedDatasets {
 
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
+  val MaxCollectionIdLength = 25
   def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
-    val sample = if (instance.conf.isSample) "-sample" else ""
-    (
-      collection.sourceId + "_" + instance.job.id + sample + "_"
-      + instance.info.startTime.getOrElse(Instant.now).toString
-    ).replaceAll("[:.]", "-")
+    val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
+    val sourceId = collection.sourceId
+    val collectionId =
+      if (sourceId.length <= MaxCollectionIdLength) sourceId
+      else ArchCollection.prefix(sourceId).getOrElse("") + DigestUtil.md5Hex(sourceId).take(16)
+    val timestamp = instance.info.startTime
+      .getOrElse(Instant.now)
+      .truncatedTo(ChronoUnit.SECONDS)
+      .toString
+      .replaceAll("[^\\dTZ]", "")
+    Seq("arch", collectionId, jobId, timestamp).mkString("_")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
