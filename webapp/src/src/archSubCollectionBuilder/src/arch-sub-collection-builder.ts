@@ -1,7 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 
-import { Collection } from "../../lib/types";
+import ArchAPI from "../../lib/ArchAPI";
+import { Collection, FilteredApiResponse } from "../../lib/types";
 import { AlertClass } from "../../archAlert/index";
 import "../../archAlert/index";
 
@@ -227,9 +228,9 @@ export class ArchSubCollectionBuilder extends LitElement {
   }
 
   private async initCollections() {
-    this.collections = (await (
-      await fetch("/api/collections")
-    ).json()) as Array<Collection>;
+    const response =
+      (await ArchAPI.collections.get()) as FilteredApiResponse<Collection>;
+    this.collections = response.results;
   }
 
   private setSourceCollectionIdsUrlParam(

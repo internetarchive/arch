@@ -1,11 +1,20 @@
 package org.archive.webservices.ars
 
+import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
 
 class BaseController extends ScalatraServlet {
+  // Report and rethrow any Exceptions.
+  error {
+    case e: Exception => {
+      Arch.reportException(e)
+      throw e
+    }
+  }
+
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 
   def ensureLogin(action: RequestContext => ActionResult): ActionResult = ensureLogin()(action)

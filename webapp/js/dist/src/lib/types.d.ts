@@ -103,3 +103,21 @@ export type PublishedDatasetMetadata = {
 export type PublishedDatasetMetadataValue = PublishedDatasetMetadata[keyof PublishedDatasetMetadata];
 export type PublishedDatasetMetadataJSONSchema = JSONSchemaType<PublishedDatasetMetadata>;
 export type PublishedDatasetMetadataJSONSchemaProps = Record<keyof PublishedDatasetMetadata, SomeJSONSchema>;
+export type BaseFilteredApiResponse<T> = {
+    count: number;
+    results: T;
+};
+type FilteredApiResults<T> = Array<T>;
+type DistinctApiResults<T> = Array<T[keyof T]>;
+export type FilteredApiResponse<T> = BaseFilteredApiResponse<FilteredApiResults<T>>;
+export type DistinctApiResponse<T> = BaseFilteredApiResponse<DistinctApiResults<T>>;
+export type ApiResponse<T> = FilteredApiResponse<T> | DistinctApiResponse<T>;
+type ApiParamOp = "=" | "!=";
+type ApiFilterKey = "distinct" | "limit" | "offset" | "search" | "sort";
+export type ApiParams<T> = Array<[
+    keyof T | ApiFilterKey,
+    ApiParamOp,
+    string | number | boolean
+]>;
+export type ApiPath = "/collections" | "/datasets";
+export {};

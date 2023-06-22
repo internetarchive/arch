@@ -15,7 +15,7 @@ export default [
     }
 
     data-table > table > thead > tr > th.sample {
-      width: 4em;
+      width: 6em;
     }
 
     data-table > table > thead > tr > th.state {

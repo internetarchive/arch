@@ -29,9 +29,9 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
     /* eslint-disable @typescript-eslint/restrict-template-expressions */
     this.cellRenderers = [
       (name, collection: Collection) => `
-        <a href="/collections/${_(collection.id)}" title="${_(
-        name as string
-      )}">${name}</a>
+        <a href="/collections/${_(collection.id)}" title="${_(name as string)}">
+          <span class="highlightable">${name}</span>
+        </a>
       `,
       { true: "Yes", false: "No" },
       (lastJobName, collection: Collection) => {
@@ -49,7 +49,7 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
             `${collection.id}:${lastJobId}`,
             datasetSample
           )}" title="${_(lastJobName)}">
-            ${lastJobName}
+            <span class="highlightable">${lastJobName}</span>
           </a>
         `;
       },
@@ -64,6 +64,7 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
     ];
     /* eslint-enable @typescript-eslint/restrict-template-expressions */
 
+    this.columnFilterDisplayMaps = [undefined, { true: "Yes", false: "No" }];
     this.columns = ["name", "public", "lastJobName", "lastJobTime", "sortSize"];
     this.columnHeaders = [
       "Name",
@@ -73,7 +74,13 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
       "Size",
     ];
     this.selectable = true;
+    this.sort = "name";
+    this.sortableColumns = [true, false, true, true, true];
+    this.filterableColumns = [false, true];
+    this.searchColumns = ["name"];
+    this.searchColumnLabels = ["Name"];
     this.singleName = "Collection";
+    this.persistSearchStateInUrl = true;
     this.pluralName = "Collections";
   }
 

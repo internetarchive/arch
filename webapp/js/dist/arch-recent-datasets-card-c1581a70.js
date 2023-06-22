@@ -1,4 +1,4 @@
-import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-75502ec5.js";import{t as l}from"./chunk-arch-alert-384569c4.js";import{P as c}from"./chunk-helpers-799bde6a.js";import{i as o}from"./chunk-helpers-139f8162.js";import"./chunk-arch-card-f8a29633.js";import"./chunk-arch-loading-indicator-37c0007d.js";import"./arch-sub-collection-builder-5c9f5725.js";import"./chunk-arch-generate-dataset-form-8e4f842f.js";import"./chunk-query-all-273a2103.js";var n,h=[t,a,e`
+import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-75502ec5.js";import{t as l,a as o}from"./chunk-arch-alert-a83c3a9d.js";import{P as c}from"./chunk-helpers-94bb8932.js";import{i as n}from"./chunk-helpers-139f8162.js";import"./chunk-arch-card-f8a29633.js";import"./chunk-arch-loading-indicator-37c0007d.js";import"./arch-sub-collection-builder-cd409a8e.js";import"./chunk-arch-generate-dataset-form-6a3e9363.js";import"./chunk-query-all-273a2103.js";var h,m=[t,a,e`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -18,7 +18,7 @@ import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-7550
     td.date {
       text-align: right;
     }
-  `];let m=n=class extends r{constructor(){super(),this.datasets=void 0,this.initDatasets()}render(){var t,a;const{numDisplayedDatasets:e}=n,s=void 0===this.datasets,r=(null!==(t=this.datasets)&&void 0!==t?t:[]).length>0,d=null!==(a=this.datasets)&&void 0!==a?a:[];return i`
+  `];let p=h=class extends r{constructor(){super(),this.numTotalDatasets=0,this.datasets=void 0,this.initDatasets()}render(){var t,a;const{numTotalDatasets:e}=this,s=void 0===this.datasets,r=(null!==(t=this.datasets)&&void 0!==t?t:[]).length>0,d=null!==(a=this.datasets)&&void 0!==a?a:[];return i`
       <arch-card
         title="Recent Datasets"
         ctatext="Generate New Dataset"
@@ -38,7 +38,7 @@ import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-7550
               <td colspan="3">
                 <arch-loading-indicator></arch-loading-indicator>
               </td>
-            </tr>`]:r?d.slice(0,e).map((t=>{const a=`${t.name}${-1!==t.sample?" (Sample)":""}`;return i`
+            </tr>`]:r?d.map((t=>{const a=`${t.name}${-1!==t.sample?" (Sample)":""}`;return i`
               <tr>
                 <td class="name">
                   <a
@@ -52,7 +52,7 @@ import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-7550
                   ${t.collectionName}
                 </td>
                 <td class="date">
-                  ${o(t.finishedTime)}
+                  ${n(t.finishedTime)}
                 </td>
               </tr>
             `})):[i`<tr>
@@ -65,11 +65,11 @@ import{g as t,f as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-7550
           ${s||!r?i``:i`
                 <a href="/datasets/explore" class="view-all">
                   View
-                  ${d.length>e?i`All ${d.length}`:i``}
+                  ${d.length<e?i`All ${e}`:i``}
                   Datasets
                 </a>
               `}
         </div>
       </arch-card>
-    `}async initDatasets(){this.datasets=await(await fetch("/api/datasets?state=Finished")).json()}};m.numDisplayedDatasets=10,m.styles=h,s([l()],m.prototype,"datasets",void 0),m=n=s([d("arch-recent-datasets-card")],m);export{m as ArchRecentDatasetsCard};
-//# sourceMappingURL=arch-recent-datasets-card-169b9c3e.js.map
+    `}async initDatasets(){const t=await o.datasets.get([["state","=","Finished"],["sort","=","-startTime"],["limit","=",h.maxDisplayedDatasets]]);this.numTotalDatasets=t.count,this.datasets=t.results}};p.maxDisplayedDatasets=10,p.styles=m,s([l()],p.prototype,"numTotalDatasets",void 0),s([l()],p.prototype,"datasets",void 0),p=h=s([d("arch-recent-datasets-card")],p);export{p as ArchRecentDatasetsCard};
+//# sourceMappingURL=arch-recent-datasets-card-c1581a70.js.map

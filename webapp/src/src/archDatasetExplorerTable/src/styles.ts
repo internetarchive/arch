@@ -11,15 +11,15 @@ export default [
     }
 
     data-table > table > thead > tr > th.category {
-      width: 6em;
+      width: 8em;
     }
 
     data-table > table > thead > tr > th.sample {
-      width: 4em;
+      width: 7em;
     }
 
     data-table > table > thead > tr > th.state {
-      width: 5em;
+      width: 6em;
     }
 
     data-table > table > thead > tr > th.started {
