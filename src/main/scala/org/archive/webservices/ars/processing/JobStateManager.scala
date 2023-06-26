@@ -268,7 +268,7 @@ object JobStateManager {
       if (!subJob) {
         registerFailed(instance)
         // TODO: KeystoneClient.logFailed(instance.uuid)
-        if (!Arch.debugging) {
+        if (!Arch.debugging && instance.attempt >= JobManager.MaxAttempts) {
           for (template <- instance.job.failedNotificationTemplate)
             MailUtil.sendTemplate(
               template,
