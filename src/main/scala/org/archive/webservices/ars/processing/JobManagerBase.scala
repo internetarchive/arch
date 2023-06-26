@@ -102,10 +102,10 @@ class JobManagerBase(
               val success = opt.toOption.getOrElse(false)
               instance.updateState(
                 if (success) ProcessingState.Finished else ProcessingState.Failed)
-              JobManager.unregister(instance)
               currentPriorityRunning.dequeueFirst(_ == instance)
               if (currentPriorityRunning.isEmpty) onPriorityJobsFinished(priority)
               running.dequeueFirst(_._1 == instance)
+              JobManager.unregister(instance)
               if (running.isEmpty) onAllJobsFinished()
               if (!success && opt.isFailure) opt.failed.get.printStackTrace()
             }

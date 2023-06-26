@@ -2,15 +2,20 @@ package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
+import org.archive.webservices.ars.util.UUID
 
 import java.time.Instant
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
+  val uuid: String = UUID.uuid7str
+
   var registered = false
   var state: Int = ProcessingState.NotStarted
 
   var user: Option[ArchUser] = None
   var collection: Option[ArchCollection] = None
+
+  var attempt: Int = 1
 
   private var _queue: Option[JobQueue] = None
   private var queuePos: Int = -1
@@ -51,7 +56,6 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def updateState(value: Int): Unit = {
     val prevState = state
     state = value
-    for (func <- _onStateChanged) func()
     if (registered) {
       if (job.partialOf.isEmpty) {
         val now = Instant.now
@@ -91,6 +95,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             JobStateManager.logFinished(this, subJob = true)
         }
       }
+      for (func <- _onStateChanged) func()
     }
   }
 
@@ -100,4 +105,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
   def onStateChanged(action: => Unit): Unit = _onStateChanged :+= (() => action)
+
+  private var _onUnregistered: Seq[() => Unit] = Seq.empty
+  def onUnregistered(action: => Unit): Unit = _onUnregistered :+= (() => action)
+
+  def unregistered(): Unit = for (func <- _onUnregistered) func()
 }

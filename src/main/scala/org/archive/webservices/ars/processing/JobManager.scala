@@ -7,6 +7,8 @@ import scala.collection.immutable.ListMap
 import scala.collection.mutable
 
 object JobManager {
+  var MaxAttempts = 3
+
   private val instances =
     mutable.Map.empty[DerivationJobConf, mutable.Map[String, DerivationJobInstance]]
 
@@ -47,6 +49,8 @@ object JobManager {
   def getByCollection(id: String): Set[DerivationJobInstance] =
     collectionInstances.get(id).map(_.toSet).getOrElse(Set.empty)
 
+  def registered: Set[DerivationJobInstance] = collectionInstances.values.flatten.toSet
+
   def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
     val conf = instance.conf
     val confJobs = instances.getOrElseUpdate(conf, mutable.Map.empty)
@@ -77,6 +81,18 @@ object JobManager {
       }
       instance.registered = false
       JobStateManager.logUnregister(instance)
+      if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
+        println("############# RESETTING")
+        instance.job.reset(instance.conf)
+        println("############# RESET DONE!!!!")
+        val resetted = instance.job.enqueue(instance.conf, { newInstance =>
+          newInstance.user = instance.user
+          newInstance.collection = instance.collection
+          newInstance.attempt = instance.attempt + 1
+        })
+        println(s"############# RESETTED: $instance ==== $resetted")
+      }
+      instance.unregistered()
       true
     } else false
   }

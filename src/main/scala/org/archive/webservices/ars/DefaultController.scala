@@ -1,9 +1,8 @@
 package org.archive.webservices.ars
 
 import org.archive.webservices.ars.BaseController.relativePath
-import org.archive.webservices.ars.ViewPathPatterns
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchConf, ArchCollection, ArchJobCategories, PublishedDatasets}
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
 import org.archive.webservices.ars.util.DatasetUtil
 import org.scalatra._
@@ -12,35 +11,35 @@ import org.scalatra.scalate.ScalateSupport
 import scala.util.Try
 
 private object BreadCrumbs {
-  def Login() = {
+  def login: (String, String) = {
     (ViewPathPatterns.reverse(ViewPathPatterns.Login), "Login")
   }
 
-  def Collections() = {
+  def collections: (String, String) = {
     (ViewPathPatterns.reverse(ViewPathPatterns.Collections), "Collections")
   }
 
-  def Collection(collection: ArchCollection, user: ArchUser) = {
+  def collection(collection: ArchCollection, user: ArchUser): (String, String) = {
     (
       ViewPathPatterns.reverse(ViewPathPatterns.Collection,
         Map("collection_id" -> collection.userUrlId(user.id))
       ),
       collection.name
-    ),
+    )
   }
 
-  def Datasets() = {
-    (ViewPathPatterns.reverse(ViewPathPatterns.Datasets), "Datasets"),
+  def datasets: (String, String) = {
+    (ViewPathPatterns.reverse(ViewPathPatterns.Datasets), "Datasets")
   }
 
-  def Dataset(datasetId: String, sample: Boolean) = {
+  def dataset(datasetId: String, sample: Boolean): (String, String) = {
     (
       ViewPathPatterns.reverse(
         ViewPathPatterns.Dataset,
         Map("dataset_id" -> datasetId, "sample" -> sample.toString)
       ),
       datasetId
-    ),
+    )
   }
 }
 
@@ -66,7 +65,7 @@ class DefaultController extends BaseController with ScalateSupport {
         ssp(
           "collections",
           "breadcrumbs" -> Seq(
-            BreadCrumbs.Collections,
+            BreadCrumbs.collections,
           ),
           "user" -> context.user,
         ),
@@ -92,8 +91,8 @@ class DefaultController extends BaseController with ScalateSupport {
             ssp(
               "collection-details",
               "breadcrumbs" -> Seq(
-                BreadCrumbs.Collections,
-                BreadCrumbs.Collection(collection, context.user),
+                BreadCrumbs.collections,
+                BreadCrumbs.collection(collection, context.user),
               ),
               "user" -> context.user,
               "collection" -> collection),
@@ -113,8 +112,8 @@ class DefaultController extends BaseController with ScalateSupport {
             ssp(
               "subset",
               "breadcrumbs" -> Seq(
-                BreadCrumbs.Collections,
-                BreadCrumbs.Collection(collection, context.user),
+                BreadCrumbs.collections,
+                BreadCrumbs.collection(collection, context.user),
                 (relativePath("/collections/" + collectionId + "/subset"), "Sub-Collection Query")
               ),
               "user" -> context.user,
@@ -131,7 +130,7 @@ class DefaultController extends BaseController with ScalateSupport {
         ssp(
           "sub-collection-builder",
           "breadcrumbs" -> Seq(
-            BreadCrumbs.Collections,
+            BreadCrumbs.collections,
             (ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder), "Custom Collection Builder"),
           ),
           "user" -> context.user,
@@ -199,8 +198,8 @@ class DefaultController extends BaseController with ScalateSupport {
           case Some(templateName) =>
             val attributes = Seq(
               "breadcrumbs" -> Seq(
-                BreadCrumbs.Datasets,
-                BreadCrumbs.Dataset(datasetId, sample),
+                BreadCrumbs.datasets,
+                BreadCrumbs.dataset(datasetId, sample),
               ),
               "user" -> context.user,
               "collection" -> collection,
@@ -246,7 +245,7 @@ class DefaultController extends BaseController with ScalateSupport {
         ssp(
           "datasets-explore",
           "breadcrumbs" -> Seq(
-            BreadCrumbs.Datasets,
+            BreadCrumbs.datasets,
             (ViewPathPatterns.reverse(ViewPathPatterns.DatasetExplorer), "Explore"),
           ),
           "user" -> context.user,
@@ -262,7 +261,7 @@ class DefaultController extends BaseController with ScalateSupport {
         ssp(
           "datasets-generate",
           "breadcrumbs" -> Seq(
-            BreadCrumbs.Datasets,
+            BreadCrumbs.datasets,
             (ViewPathPatterns.reverse(ViewPathPatterns.GenerateDataset), "Generate"),
           ),
           "user" -> context.user,
@@ -278,7 +277,7 @@ class DefaultController extends BaseController with ScalateSupport {
       ssp(
         "login",
         "breadcrumbs" -> Seq(
-          BreadCrumbs.Login,
+          BreadCrumbs.login,
         ),
         "next" -> next
       ),
@@ -298,7 +297,7 @@ class DefaultController extends BaseController with ScalateSupport {
               "error" -> Some(error),
               "next" -> next,
               "breadcrumbs" -> Seq(
-                BreadCrumbs.Login,
+                BreadCrumbs.login,
               ),
             ),
             Map("Content-Type" -> "text/html"))

@@ -37,6 +37,16 @@ object JobStateManager {
     IOUtil.writeLines(s"$LoggingDir/$RunningJobsFile", Iterator(running.asJson.spaces4))
   }
 
+  private def metaInfo(instance: DerivationJobInstance): Seq[(String, Json)] = {
+    Seq("uuid" -> instance.uuid.asJson, "attempt" -> instance.attempt.asJson) ++ {
+      instance.user.map("user" -> _.id.asJson)
+    } ++ instance.collection.toSeq.map {
+      collection =>
+        collection.ensureStats()
+        "size" -> FormatUtil.formatBytes(collection.size).asJson
+    }
+  }
+
   private def registerRunning(instance: DerivationJobInstance): Unit = access {
     unregisterFailed(instance)
     running = running.updated(
@@ -44,8 +54,7 @@ object JobStateManager {
       ListMap(
         "id" -> instance.job.id.asJson,
         "conf" -> instance.conf.toJson,
-        "state" -> instance.stateStr.asJson,
-        "user" -> instance.user.map(_.id).getOrElse("").asJson) ++ {
+        "state" -> instance.stateStr.asJson) ++ metaInfo(instance) ++ {
         val active = instance.active
         Seq("activeStage" -> active.job.stage.asJson) ++ active.queue
           .map("queue" -> _.name.asJson)
@@ -100,6 +109,7 @@ object JobStateManager {
       job.enqueue(conf, { instance =>
         instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
         instance.collection = ArchCollection.get(conf.collectionId)
+        instance.attempt = meta.downField("attempt").focus.flatMap(_.asNumber).flatMap(_.toInt).getOrElse(1) + 1
       })
     }
   }
@@ -147,6 +157,9 @@ object JobStateManager {
         conf <- values.get("conf").flatMap(DerivationJobConf.fromJson)
       } {
         for (job <- JobManager.get(id)) {
+          for (uuid <- values.get("uuid").flatMap(_.asString)) {
+            // TODO: KeystoneClient.logCancelled(uuid)
+          }
           job.reset(conf)
           job.enqueue(
             conf, { instance =>
@@ -156,6 +169,11 @@ object JobStateManager {
                 .filter(_.nonEmpty)
                 .flatMap(ArchUser.get(_))
               instance.collection = ArchCollection.get(conf.collectionId)
+              instance.attempt = values
+                .get("attempt")
+                .flatMap(_.asNumber)
+                .flatMap(_.toInt)
+                .getOrElse(1)
             })
         }
       }
@@ -166,12 +184,7 @@ object JobStateManager {
 
   def str(instance: DerivationJobInstance): String = {
     instance.job.id + " (" + instance.hashCode.abs + ") " + instance.conf.serialize + s" $MetaSeparator " + {
-      val meta = instance.user.map("user" -> _.id.asJson).toSeq ++ instance.collection.toSeq.map {
-        collection =>
-          collection.ensureStats()
-          "size" -> FormatUtil.formatBytes(collection.size).asJson
-      }
-      ListMap(meta: _*).asJson.noSpaces
+      ListMap(metaInfo(instance): _*).asJson.noSpaces
     }
   }
 
@@ -201,18 +214,25 @@ object JobStateManager {
   }
 
   def logQueued(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
-    if (!subJob) registerRunning(instance)
+    if (!subJob) {
+      registerRunning(instance)
+      // TODO: KeystoneClient.logQueued(uuid)
+    }
     println("Queued: " + str(instance))
   }
 
   def logRunning(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
-    if (!subJob) registerRunning(instance)
+    if (!subJob) {
+      registerRunning(instance)
+      // TODO: KeystoneClient.logRunning(instance)
+    }
     println("Running: " + str(instance))
   }
 
   def logFinished(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       unregisterRunning(instance)
+      // TODO: KeystoneClient.logFinished(instance.uuid)
       for {
         u <- instance.user
         email <- u.email
@@ -247,6 +267,7 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
+        // TODO: KeystoneClient.logFailed(instance.uuid)
         if (!Arch.debugging) {
           for (template <- instance.job.failedNotificationTemplate)
             MailUtil.sendTemplate(

@@ -282,6 +282,17 @@ class ApiController extends BaseController {
     }
   }
 
+  get("/jobstates") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      if (context.isAdmin) {
+        val states = JobManager.registered.toSeq
+          .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
+          .map(jobStateJson)
+        Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
+      } else Forbidden()
+    }
+  }
+
   private def collectionJson(collection: ArchCollection, user: ArchUser): Json = {
     val info = ArchCollectionInfo.get(collection.id)
     ListMap(
