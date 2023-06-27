@@ -7,7 +7,6 @@ export declare class ArchJobCategorySection extends LitElement {
     jobsCat: AvailableJobs[0];
     jobStates: Record<string, JobState>;
     createRenderRoot(): this;
-    connectedCallback(): void;
     expand(): void;
     collapse(): void;
     render(): import("lit-html").TemplateResult<1>;

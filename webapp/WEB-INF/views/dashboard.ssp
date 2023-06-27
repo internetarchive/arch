@@ -5,8 +5,8 @@
 #end
 
 #set (scripts)
-  <script src="<%=staticPath("/js/dist/arch-collections-card-271c2375.js")%>" type="module"></script>
-  <script src="<%=staticPath("/js/dist/arch-recent-datasets-card-86803ad7.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-collections-card-7525f2fb.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-recent-datasets-card-1be840f0.js")%>" type="module"></script>
 #end
 
 <div class="row">

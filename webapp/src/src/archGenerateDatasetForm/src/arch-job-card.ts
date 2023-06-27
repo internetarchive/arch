@@ -68,7 +68,7 @@ export class ArchJobCard extends LitElement {
       : "Select a source collection to enable this button";
     return html` <div class="card">
       <div class="card-body">
-        <h3 class="card-title">${job.name}</h3>
+        <h2 class="card-title">${job.name}</h2>
         <p class="card-text">${job.description}</p>
         <div class="job-card-flex">
           <div class="job-card-sample">

@@ -1,3 +1,36 @@
+
+/* Begin partner-site styles accessability improvements */
+a:any-link {
+  color: #2b74a1;
+}
+
+a:any-link:hover {
+  color: #1b4865;
+}
+
+.footer-link,
+.footer-link > a {
+  color: #444;
+}
+
+.breadcrumbs a {
+  color: #444;
+}
+
+.subnav .subnav-link a {
+  color: #666;
+}
+
+button {
+  background-color: #2b74a1;
+  color: #fff;
+}
+
+button:hover {
+  background-color: #1b4865;
+}
+/* End partner-site styles accessability improvements */
+
 div.job-card-flex {
     display: flex;
 }
@@ -44,6 +77,8 @@ button.job-runbutton {
     font-weight: bold;
     min-width: 100%;
     float: left;
+    background-color: #052c65;
+    color: #fff;
 }
 
 button.job-rerunbutton {
@@ -60,14 +95,17 @@ button.job-rerunbutton {
 button.job-statebutton {
     font-weight: bold;
     min-width: 100%;
-    background-color: #d8dbdc;
+    background-color: #f0f0f0;
+    color: #222;
     float: left;
+    cursor: wait;
 }
 
 a.button.job-resultsbutton {
     font-weight: bold;
     min-width: 100%;
-    background-color: #28a745;
+    background-color: #1e7b34;
+    color: #fff;
     float: left;
 }
 
@@ -126,24 +164,41 @@ div#csv-preview {
   margin-right: 0;
 }
 
-.category-wrapper {
-    display: block;
+.category-accordian-button {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  color: #000;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  cursor: default;
 }
 
-.category-wrapper p {
-    line-height: 1.5
+.category-accordian-button:hover,
+.category-accordian-button:focus {
+  background-color: inherit;
+  color: inherit;
 }
 
-.job-category.collapsed .category-wrapper {
-    padding: 5px;
-    padding-top: 15px;
-    border: 1px solid #DFDFDF;
-    border-radius: 4px;
-    margin: 1px;
-    margin-bottom: 20px;
+.category-accordian-button > span.category-title {
+  font-weight: bold;
+  font-size: 1.5rem;
 }
 
-.job-category.collapsed .category-wrapper:hover {
+.category-accordian-button > span.category-description {
+  line-height: 2.5rem;
+}
+
+.job-category.collapsed .category-accordian-button {
+  padding: 1rem 0.5rem 0.8rem 0.5rem;
+  border: 1px solid #DFDFDF;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+}
+
+.job-category.collapsed .category-accordian-button:hover {
     background-color: #FFFFFF;
     cursor: pointer;
 }
@@ -154,6 +209,10 @@ div#csv-preview {
 
 .job-category.expanded .collapsible-content {
     display: block;
+}
+
+.job-category.expanded .card-title {
+  font-size: 1.3rem;
 }
 
 .category-image {
