@@ -131,6 +131,8 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val production: Boolean = confBoolValue("ARCH_PRODUCTION", "production", false)
 
+  val sentryDsn: String = confStrValue("ARCH_SENTRY_DSN", "sentryDsn").getOrElse("")
+
   /** python:
    * import requests, base64
    * base64.b64encode("user:pass".encode())

@@ -36,6 +36,7 @@ trait ArchConf {
   def pboxCollection: String
   def arkMintUrl: String
   def pboxS3Url: String
+  def sentryDsn: String
 }
 
 object ArchConf extends ArchConf {
@@ -75,4 +76,5 @@ object ArchConf extends ArchConf {
   def pboxCollection: String = conf.pboxCollection
   def arkMintUrl: String = conf.arkMintUrl
   def pboxS3Url: String = conf.pboxS3Url
+  def sentryDsn: String = conf.sentryDsn
 }
