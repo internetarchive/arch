@@ -35,6 +35,8 @@ trait ArchConf {
   def pboxCollection: String
   def arkMintUrl: String
   def pboxS3Url: String
+  def keystoneBaseUrl: Option[String]
+  def keystonePrivateApiKey: Option[String]
   def sentryDsn: String
   def deploymentEnvironment: String
   def isDev: Boolean
@@ -76,6 +78,8 @@ object ArchConf extends ArchConf {
   def pboxCollection: String = conf.pboxCollection
   def arkMintUrl: String = conf.arkMintUrl
   def pboxS3Url: String = conf.pboxS3Url
+  def keystoneBaseUrl: Option[String] = conf.keystoneBaseUrl
+  def keystonePrivateApiKey: Option[String] = conf.keystonePrivateApiKey
   def sentryDsn: String = conf.sentryDsn
   def deploymentEnvironment: String = conf.deploymentEnvironment
   def isDev: Boolean = conf.isDev
