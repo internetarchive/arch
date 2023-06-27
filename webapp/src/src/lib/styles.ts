@@ -1,14 +1,16 @@
 import { css } from "lit";
 
-export const linkColor = css`#348fc6`;
-export const linkHoverColor = css`#1B79B0`;
-export const defaultButtonBgColor = css`#f0f0f0`;
-export const defaultButtonFgColor = css`#222`;
-export const primaryButtonBgColor = linkColor;
-export const primaryButtonFgColor = css`#fff`;
-export const successButtonBgColor = css`#28a745`;
-export const successButtonFgColor = css`#fff`;
-export const headerBgColor = css`#e3e7e8`;
+export * from "./webservices/src/lib/styles";
+import {
+  linkColor,
+  linkHoverColor,
+  defaultButtonBgColor,
+  defaultButtonFgColor,
+  primaryButtonBgColor,
+  primaryButtonFgColor,
+  successButtonBgColor,
+  successButtonFgColor,
+} from "./webservices/src/lib/styles";
 
 /* Bootstrap4 Constants */
 const bsPrimaryTextEmphasis = css`#052c65`;
@@ -154,7 +156,7 @@ export const cardTable = css`
   }
 
   tbody > tr:hover {
-    background-color: #eee;
+    background-color: #f7f7f7;
   }
 
   th,

@@ -1,12 +1,4 @@
-export declare const linkColor: import("lit").CSSResult;
-export declare const linkHoverColor: import("lit").CSSResult;
-export declare const defaultButtonBgColor: import("lit").CSSResult;
-export declare const defaultButtonFgColor: import("lit").CSSResult;
-export declare const primaryButtonBgColor: import("lit").CSSResult;
-export declare const primaryButtonFgColor: import("lit").CSSResult;
-export declare const successButtonBgColor: import("lit").CSSResult;
-export declare const successButtonFgColor: import("lit").CSSResult;
-export declare const headerBgColor: import("lit").CSSResult;
+export * from "./webservices/src/lib/styles";
 /**
  * Global Web Component Styles
  */

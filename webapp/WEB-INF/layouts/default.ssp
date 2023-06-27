@@ -58,7 +58,7 @@
 <div id="top-shim"></div>
 <nav class="sticky top-bar top-bar ng-isolate-scope" ng-transclude="" scrolltop="false">
     <ul class="title-area ng-scope">
-        <li class="name"><h1><a href="<%=ArchConf.basePath%>"><img src="<%=unescape(ArchConf.baseUrl)%>/img/arch-logo.png"></a></h1></li>
+        <li class="name"><h1><a href="<%=ArchConf.basePath%>"><img src="<%=unescape(ArchConf.baseUrl)%>/img/arch-logo.png" alt="ARCH Logo"></a></h1></li>
         </ul>
         <% if (user.isUser) { %>
         <section class="top-bar-section ng-scope ng-isolate-scope" ng-transclude="" style="left: 0%;">
@@ -136,7 +136,4 @@ p class="browsehappy">You are using an <strong>outdated</strong> browser. Please
 <div class="footer-link">© Internet Archive&nbsp;&nbsp;&nbsp;&nbsp;<a href="<%=ArchConf.baseUrl%>">ARCH</a></div>
 <div class="footer-link"><a target="_blank" href="https://arch-webservices.zendesk.com/hc/en-us">Help Center</a></div>
 
-<br><br><a href="https://partner.archive-it.org/angband"><span class="fa fa-question-circle smaller footer-link where-am-i"></span></a>
-</div>
-
-<iframe data-product="web_widget" title="No content" tabindex="-1" aria-hidden="true" style="width: 0px; height: 0px; border: 0px none; position: absolute; top: -9999px;" src="about:blank"></iframe><div><iframe title="Opens a widget where you can find more information" id="launcher" tabindex="0" style="width: 106px; height: 50px; padding: 0px; margin: 10px 20px; position: fixed; bottom: 0px; overflow: visible; opacity: 1; border: 0px none; z-index: 999998; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; right: 0px;"></iframe><iframe title="Find more information here" id="webWidget" tabindex="-1" style="width: 374px; max-height: calc(-32px + 100vh); height: 572px; position: fixed; opacity: 0; border: 0px none; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; top: -9999px; visibility: hidden; z-index: 999999;"></iframe></div></body></html>
+<iframe data-product="web_widget" title="No content" tabindex="-1" aria-hidden="true" style="width: 0px; height: 0px; border: 0px none; position: absolute; top: -9999px;" src="about:blank"></iframe><div><iframe title="Opens a widget where you can find more information" tabindex="0" style="width: 106px; height: 50px; padding: 0px; margin: 10px 20px; position: fixed; bottom: 0px; overflow: visible; opacity: 1; border: 0px none; z-index: 999998; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; right: 0px;"></iframe><iframe title="Find more information here" id="webWidget" tabindex="-1" style="width: 374px; max-height: calc(-32px + 100vh); height: 572px; position: fixed; opacity: 0; border: 0px none; transition-duration: 250ms; transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1); transition-property: opacity, top, bottom; top: -9999px; visibility: hidden; z-index: 999999;"></iframe></div></body></html>

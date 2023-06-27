@@ -18,11 +18,6 @@ export class ArchJobCategorySection extends LitElement {
     return this;
   }
 
-  connectedCallback() {
-    this.setAttribute("aria-controls", this.jobsCat.categoryName);
-    super.connectedCallback();
-  }
-
   expand() {
     this.collapsed = false;
   }
@@ -33,22 +28,26 @@ export class ArchJobCategorySection extends LitElement {
 
   render() {
     return html`
-      <div
-        class="job-category ${this.collapsed ? "collapsed" : "expanded"}"
-        aria-expanded="${this.collapsed ? "false" : "true"}"
-      >
-        <div class="category-wrapper">
+      <div class="job-category ${this.collapsed ? "collapsed" : "expanded"}">
+        <button
+          class="category-accordian-button"
+          aria-controls=${this.jobsCat.categoryName}
+          aria-expanded="${this.collapsed ? "false" : "true"}"
+        >
           <img
             class="category-image"
             src="${this.jobsCat.categoryImage}"
             alt="Icon for ${this.jobsCat.categoryName}"
           />
-          <h2 id="${this.jobsCat.categoryId}" class="category-title">
+          <span id="${this.jobsCat.categoryId}" class="category-title">
             ${this.jobsCat.categoryName}
-          </h2>
-          <p>${this.jobsCat.categoryDescription}</p>
-        </div>
-        <div class="collapsible-content">
+          </span>
+          <br />
+          <span class="category-description">
+            ${this.jobsCat.categoryDescription}
+          </span>
+        </button>
+        <div id=${this.jobsCat.categoryName} class="collapsible-content">
           ${this.jobsCat.jobs.map(
             (job) => html`
               <arch-job-card
