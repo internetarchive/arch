@@ -51,6 +51,9 @@ abstract class ChainedJob extends DerivationJob {
             if (child.state > ProcessingState.Running)
               onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
           }
+          child.onUnregistered {
+            if (instance.state > ProcessingState.Running) JobManager.unregister(instance)
+          }
           instance.setStage(child)
         })
         if (enqueued.isEmpty) {

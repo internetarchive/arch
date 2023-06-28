@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 
@@ -81,18 +82,15 @@ object JobManager {
       }
       instance.registered = false
       JobStateManager.logUnregister(instance)
+      instance.unregistered()
       if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
-        println("############# RESETTING")
         instance.job.reset(instance.conf)
-        println("############# RESET DONE!!!!")
-        val resetted = instance.job.enqueue(instance.conf, { newInstance =>
+        instance.job.enqueue(instance.conf, { newInstance =>
           newInstance.user = instance.user
           newInstance.collection = instance.collection
           newInstance.attempt = instance.attempt + 1
         })
-        println(s"############# RESETTED: $instance ==== $resetted")
       }
-      instance.unregistered()
       true
     } else false
   }

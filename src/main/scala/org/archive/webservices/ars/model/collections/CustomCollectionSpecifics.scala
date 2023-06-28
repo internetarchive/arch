@@ -37,7 +37,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .flatMap { info =>
         info.get[Long]("size").toOption
       }
-      .getOrElse(0L)
+      .getOrElse(-1)
   }
 
   def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
