@@ -8,7 +8,7 @@
 
 ## About
 
-Web application for distributed compute analysis of Archive-It web archive collections.
+Web application for distributed compute analysis of digital collections.
 
 ## Building
 
