@@ -5,13 +5,7 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.processing.{
-  DerivationJob,
-  DerivationJobConf,
-  DerivationJobInstance,
-  JobManager,
-  ProcessingState
-}
+import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
@@ -25,11 +19,11 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
-  val MetadataFields: Set[String] = Set("creator", "description", "licenseurl", "subject", "title")
+  val MetadataFields: Set[String] =
+    Set("creator", "description", "licenseurl", "subject", "title")
+  val DeleteCommentPrefix = "ARCH:"
 
-  val ProhibitedJobs: Set[DerivationJob] = Set(
-    WebPagesExtraction,
-  )
+  val ProhibitedJobs: Set[DerivationJob] = Set(WebPagesExtraction)
 
   private var sync = Set.empty[String]
 
@@ -203,9 +197,7 @@ object PublishedDatasets {
             Map(
               "status_code" -> responseCode.toString,
               "path" -> path,
-              "method" -> connection.getRequestMethod
-            )
-          )
+              "method" -> connection.getRequestMethod))
           finally source.close()
           None
         } else None
@@ -281,7 +273,11 @@ object PublishedDatasets {
           Seq(itemInfo.toJson(includeItem = true).spaces4),
           overwrite = true)
         itemInfo
-      } else jobItem(jobFilePath)
+      } else {
+        val itemInfoOpt = jobItem(jobFilePath)
+        for (info <- itemInfoOpt) updateItem(info.item, metadata)
+        itemInfoOpt
+      }
     }
   }.flatten
 
@@ -346,7 +342,35 @@ object PublishedDatasets {
   }
 
   def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
-    request(name, s3 = true, metadata = metadata).isDefined
+    request(name, s3 = true, metadata = metadata).isDefined || {
+      request("services/tasks.php?history=1&identifier=" + name) match {
+        case Some(tasks) =>
+          parse(tasks).toOption
+            .map(_.hcursor)
+            .flatMap { cursor =>
+              cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
+            }
+            .exists { lastTask =>
+              lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
+                lastTask
+                  .downField("args")
+                  .get[String]("curation")
+                  .toOption
+                  .exists(_.contains("[comment]" + DeleteCommentPrefix))
+              }
+            } && {
+            request(
+              "/services/tasks.php",
+              post = Some {
+                ListMap(
+                  "cmd" -> "make_undark.php".asJson,
+                  "identifier" -> name.asJson,
+                  "args" -> Map("comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
+              })
+          }.isDefined && request(name, s3 = true, update = true, metadata = metadata).isDefined
+        case None => false
+      }
+    }
   }
 
   def updateItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
@@ -359,13 +383,14 @@ object PublishedDatasets {
   }
 
   def deleteItem(name: String): Boolean = {
-    request("/services/tasks.php", post = Some {
-      ListMap(
-        "cmd" -> "make_dark.php".asJson,
-        "identifier" -> name.asJson,
-        "args" -> Map("comment" -> "Delete published item via ARCH.").asJson
-      ).asJson.noSpaces
-    }).isDefined
+    request(
+      "/services/tasks.php",
+      post = Some {
+        ListMap(
+          "cmd" -> "make_dark.php".asJson,
+          "identifier" -> name.asJson,
+          "args" -> Map("comment" -> s"$DeleteCommentPrefix Delete published item").asJson).asJson.noSpaces
+      }).isDefined
   }
 
   def deletePublished(collection: ArchCollection, itemName: String): Boolean = {
@@ -377,7 +402,7 @@ object PublishedDatasets {
       for (itemInfo <- in.get(itemName).map(_.hcursor)) yield {
         if (deleteItem(itemName)) {
           for {
-            jobId <- itemInfo.get[String]("collection").toOption
+            jobId <- itemInfo.get[String]("job").toOption
             isSample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
             conf <- DerivationJobConf.collection(collection, isSample)
             instance <- JobManager.getInstanceOrGlobal(jobId, conf, {
