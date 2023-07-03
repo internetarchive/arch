@@ -18,7 +18,7 @@ object WebPagesExtraction extends BinaryInformationAutJob {
   override val category: ArchJobCategory = ArchJobCategories.Text
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
+    "Location, technical metadata, and extracted full text contents of each text-bearing document in the collection. Output: one CSV file with columns for crawl date, last modified date, domain, URL, MIME type as reported by the web server and as detected by Apache TIKA, and content."
 
   val targetFile: String = "web-pages.csv.gz"
 

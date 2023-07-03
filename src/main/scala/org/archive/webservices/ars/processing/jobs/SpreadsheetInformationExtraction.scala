@@ -9,7 +9,7 @@ object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
   val name = "Spreadsheet file information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."
+    "Locations and metadata for CSV, XLS, ODS, and other spreadsheet formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "spreadsheet-information.csv.gz"
 

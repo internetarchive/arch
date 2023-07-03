@@ -9,7 +9,7 @@ object AudioInformationExtraction extends BinaryInformationAutJob {
   val name = "Audio file information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the audio file, filename, audio extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, audio MD5 hash and audio SHA1 hash."
+    "Locations and metadata for MP3, WAV, AAC, and other audio formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "audio-information.csv.gz"
 

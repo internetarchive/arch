@@ -17,7 +17,7 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
   val category: ArchJobCategory = ArchJobCategories.Collection
   val description =
-    "Create a CSV with the following columns: domain and count."
+    "The number of unique documents collected from each domain in the collection. Output: one CSV file with columns for domain and count."
 
   val targetFile: String = "domain-frequency.csv.gz"
 

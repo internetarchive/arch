@@ -22,7 +22,7 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
   val name = "Image file information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the image, filename, image extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, image width, image height, image MD5 hash and image SHA1 hash."
+    "Locations and metadata for JPEG, PNG, GIF, and other image formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "image-information.csv.gz"
 

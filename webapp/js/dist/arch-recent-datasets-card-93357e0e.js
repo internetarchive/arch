@@ -1,4 +1,4 @@
-import{g as t,d as a,i as e,_ as s,s as r,y as i,a as d}from"./chunk-styles-4a7b21cd.js";import{t as l}from"./chunk-arch-alert-3c1ceea9.js";import{P as c}from"./chunk-helpers-d7a83325.js";import{i as o}from"./chunk-helpers-139f8162.js";import"./chunk-arch-card-36181834.js";import"./chunk-arch-loading-indicator-044bc257.js";import"./arch-sub-collection-builder-ff752dbf.js";import"./chunk-arch-generate-dataset-form-4e7f3f51.js";import"./chunk-query-all-2f0be97e.js";var n,h=[t,a,e`
+import{g as t,d as a,i as e,_ as s,s as r,y as i,a as d}from"./chunk-styles-4a7b21cd.js";import{t as l}from"./chunk-arch-alert-3c1ceea9.js";import{P as c}from"./chunk-helpers-0f9368e1.js";import{i as o}from"./chunk-helpers-139f8162.js";import"./chunk-arch-card-36181834.js";import"./chunk-arch-loading-indicator-044bc257.js";import"./arch-sub-collection-builder-ff752dbf.js";import"./chunk-arch-generate-dataset-form-94c66d79.js";import"./chunk-query-all-2f0be97e.js";var n,h=[t,a,e`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -72,4 +72,4 @@ import{g as t,d as a,i as e,_ as s,s as r,y as i,a as d}from"./chunk-styles-4a7b
         </div>
       </arch-card>
     `}async initDatasets(){this.datasets=await(await fetch("/api/datasets?state=Finished")).json()}};m.numDisplayedDatasets=10,m.styles=h,s([l()],m.prototype,"datasets",void 0),m=n=s([d("arch-recent-datasets-card")],m);export{m as ArchRecentDatasetsCard};
-//# sourceMappingURL=arch-recent-datasets-card-30c29312.js.map
+//# sourceMappingURL=arch-recent-datasets-card-93357e0e.js.map

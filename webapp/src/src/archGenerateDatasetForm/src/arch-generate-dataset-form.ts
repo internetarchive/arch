@@ -78,13 +78,13 @@ export class ArchGenerateDatasetForm extends LitElement {
       <arch-alert
         class="sample"
         alertClass=${AlertClass.Secondary}
-        message="Sample datasets can be quickly generated in order to ensure that the analysis will produce datasets that meet your needs. These datasets use the first 100 relative records from the collection if they are available. We strongly recommend running sample jobs on any collections over 100GB."
+        message="Sample datasets can be quickly generated in order to ensure that the analysis will produce datasets that meet your needs. These datasets use the first 100 relative records from the collection if they are available. We strongly recommend generating samples for any collections over 100GB."
       ></arch-alert>
 
       <arch-alert
         class="email"
         alertClass=${AlertClass.Primary}
-        message="Your job has been queued. An e-mail will be sent once it is complete."
+        message="ARCH is creating your dataset. You will receive an email notification when the dataset is complete."
         hidden
       ></arch-alert>
 

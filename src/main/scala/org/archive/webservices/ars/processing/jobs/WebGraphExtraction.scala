@@ -13,7 +13,7 @@ import java.io.PrintStream
 object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Web graph"
   val description =
-    "Create a CSV with the following columns: crawl date, source, target, and anchor text. Note that this contains all links and is not aggregated into domains."
+    "Links between all documents in the collection over time and any descriptive anchor text about with them. Output: one CSV file with columns for crawl date, source, target, and anchor text."
 
   val targetFile: String = "web-graph.csv.gz"
 
