@@ -26,7 +26,7 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <h2>Dataset</h2>
+    <h2 id="dataset">Dataset</h2>
     <p><%=job.job.description.stripPrefix("Creates ")%></p>
     <div class="card">
       <div class="card-body">
@@ -43,7 +43,7 @@
     </div>
     <div class="card">
       <div class="card-body">
-        <h2 class="card-title">Download</h2>
+        <h2 id="download" class="card-title">Download</h2>
         <p>To download the files of this dataset, please use the <a href="https://github.com/WASAPI-Community/data-transfer-apis" target="_blank">WASAPI Data Transfer APIs</a> and follow the instructions <a href="https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI" target="_blank">here.</a>
         </p>
         <p>The <a href="https://support.archive-it.org/hc/en-us/articles/360028548952" target="_blank">WASAPI result endpoint URL</a> of this dataset is:
@@ -91,7 +91,7 @@
   <div class="large-12 columns">
 
   #if (publishingEnabled)
-    <h2>Publishing</h2>
+    <h2 id="publishing">Publishing</h2>
     <div class="card">
       <div class="card-body">
         <arch-dataset-publishing-card
@@ -104,7 +104,7 @@
     </div>
   #end
 
-  <h2>Regenerate</h2>
+  <h2 id="regenerate">Regenerate</h2>
     <div class="card" id="card-re-run-job">
       <div class="card-body">
         <p>
