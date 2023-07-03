@@ -34,7 +34,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
   val name = "Text file information"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the text file, filename, text extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, text file MD5 hash and text file SHA1 hash, and text file content."
+    "Locations, metadata, and the extracted text contents for CSS, JSON, XML, plain text, JS, and HTML documents in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, MD5 and SHA1 hash values, and content."
 
   val targetFile: String = "file-information.csv.gz"
 

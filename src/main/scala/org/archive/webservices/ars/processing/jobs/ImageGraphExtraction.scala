@@ -13,7 +13,7 @@ import java.io.PrintStream
 object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Image graph"
   val description =
-    "Create a CSV with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
+    "Timestamp, location, and any original description for each image file in the collection. Output: one CSV with columns for crawl date, source page, image file url, and alt text."
 
   val targetFile: String = "image-graph.csv.gz"
 

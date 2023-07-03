@@ -24,7 +24,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   val name = "Web archive transformation (WAT)"
   val category: ArchJobCategory = ArchJobCategories.Collection
   def description =
-    "Creates Web Archive Transformation (WAT) files that include a brief header which identifies its corresponding URL via \"WARC-Target-URI,\" corresponding W/ARC file via \"WARC-Refers-To,\" and additional mapping information."
+    "Metadata extracted from WARC-info and WARC record headers and HTML headers, meta tags, and anchor tags thoughout the collection. Output: one WAT file with data in JSON format for each WARC file."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wat.gz"

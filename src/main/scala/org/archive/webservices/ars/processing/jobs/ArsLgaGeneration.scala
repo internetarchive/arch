@@ -19,7 +19,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   val name = "Longitudinal graph"
   val category: ArchJobCategory = ArchJobCategories.Network
   def description =
-    "Creates Longitudinal Graph Analysis (LGA) files which contain a complete list of what URLs link to what URLs, along with a timestamp."
+    "All links between URLs in the collection over time. Output: one compressed TGZ file containing two compressed GZ files with data in JSON format representing, 1) a unique ID and SURT for each URL, and 2) the source URL ID, target URL ID, and timestamp for each link."
 
   val relativeOutPath = s"/$id"
   val MapFile = "id.map.gz"

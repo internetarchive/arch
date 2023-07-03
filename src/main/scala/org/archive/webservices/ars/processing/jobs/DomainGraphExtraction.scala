@@ -14,7 +14,7 @@ import java.io.PrintStream
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Domain graph"
   val description =
-    "Create a CSV with the following columns: crawl date, source domain, target domain, and count."
+    "Links between domains in the collection over time. Output: one CSV file with columns for crawl date, source, target, and count."
 
   val targetFile: String = "domain-graph.csv.gz"
 
