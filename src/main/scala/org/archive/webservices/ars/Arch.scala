@@ -27,7 +27,14 @@ object Arch {
     context.setInitParameter(
       ScalatraListener.LifeCycleKey,
       classOf[ScalatraBootstrap].getCanonicalName)
-    if (ArchConf.production) context.setInitParameter(org.scalatra.EnvironmentKey, "production")
+    context.setInitParameter(
+      org.scalatra.EnvironmentKey,
+      ArchConf.deploymentEnvironment match {
+        case "DEV" => "development"
+        case "QA" => "qa"
+        case "PROD" => "production"
+      }
+    )
     context.setEventListeners(Array(new ScalatraListener))
 
     server.setHandler(context)
@@ -38,6 +45,7 @@ object Arch {
   def initSentry(): Unit = {
     Sentry.init(options => {
       options.setDsn(ArchConf.sentryDsn);
+      options.setEnvironment(ArchConf.deploymentEnvironment);
       // Set traces_sample_rate to 0.10 to capture 10% of transactions for performance monitoring.
       options.setTracesSampleRate(0.10);
     })

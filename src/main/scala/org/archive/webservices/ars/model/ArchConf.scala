@@ -24,7 +24,6 @@ trait ArchConf {
   def baseUrl: String
   def loginUrl: String
   def hadoopQueue: String
-  def production: Boolean
   def proto: String
   def host: String
   def externalPort: Int
@@ -37,6 +36,8 @@ trait ArchConf {
   def arkMintUrl: String
   def pboxS3Url: String
   def sentryDsn: String
+  def deploymentEnvironment: String
+  def isDev: Boolean
 }
 
 object ArchConf extends ArchConf {
@@ -64,7 +65,6 @@ object ArchConf extends ArchConf {
   def baseUrl: String = conf.baseUrl
   def loginUrl: String = conf.loginUrl
   def hadoopQueue: String = conf.hadoopQueue
-  def production: Boolean = conf.production
   def proto: String = conf.proto
   def host: String = conf.host
   def externalPort: Int = conf.externalPort
@@ -77,4 +77,6 @@ object ArchConf extends ArchConf {
   def arkMintUrl: String = conf.arkMintUrl
   def pboxS3Url: String = conf.pboxS3Url
   def sentryDsn: String = conf.sentryDsn
+  def deploymentEnvironment: String = conf.deploymentEnvironment
+  def isDev: Boolean = conf.isDev
 }

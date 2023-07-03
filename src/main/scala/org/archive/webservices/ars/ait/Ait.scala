@@ -79,7 +79,7 @@ object Ait {
     for (sessionid <- either.right.toOption)
       response.addCookie(
         Cookie(AitSessionCookie, sessionid)(
-          if (ArchConf.production) CookieOptions(aitRootDomain, path = "/")
+          if (!ArchConf.isDev) CookieOptions(aitRootDomain, path = "/")
           else CookieOptions()))
     either
   }

@@ -66,7 +66,7 @@ object ArchCollection {
 
   def get(id: String)(
       implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
-    (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
+    (if (!ArchConf.isDev) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
         context.isInternal || context.loggedIn.isAdmin || c.user
           .map(_.id)
@@ -77,7 +77,7 @@ object ArchCollection {
           .get(id)
           .flatMap(_.collection)
           .map { c =>
-            if (ArchConf.production) {
+            if (!ArchConf.isDev) {
               for (u <- context.loggedInOpt) c.user = Some(u)
               GuavaCache.put(cacheKey(c.id), c, None)
             } else c
@@ -91,7 +91,7 @@ object ArchCollection {
       .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
       .userCollections(user))
     .map( c =>
-      if (ArchConf.production) {
+      if (!ArchConf.isDev) {
         GuavaCache.get[ArchCollection](cacheKey(c.id)).getOrElse({
           c.user = Some(user)
           GuavaCache.put(cacheKey(c.id), c, None)
