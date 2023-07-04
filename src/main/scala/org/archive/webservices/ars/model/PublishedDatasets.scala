@@ -8,7 +8,7 @@ import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.DigestUtil
+import org.archive.webservices.sparkling.util.{Common, DigestUtil}
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
@@ -265,6 +265,7 @@ object PublishedDatasets {
         val item = itemName(collection, instance)
         val itemInfo = newItemInfo(item, collection, instance)
         if (!createItem(item, datasetMetadata(instance, itemInfo) ++ metadata)) {
+          HdfsIO.delete(jobFilePath)
           throw new RuntimeException(s"Creating new Petabox item $item failed.")
         }
         appendCollectionFile(DerivationJobConf.jobOutPath(collection), itemInfo)
@@ -341,34 +342,51 @@ object PublishedDatasets {
     }
   }
 
+  private def isDark(name: String): Option[Boolean] = {
+    request("services/tasks.php?history=1&identifier=" + name).map { tasks =>
+      parse(tasks).toOption
+      .map(_.hcursor)
+      .flatMap { cursor =>
+        cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
+      }
+      .exists { lastTask =>
+        lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
+          lastTask
+            .downField("args")
+            .get[String]("curation")
+            .toOption
+            .exists(_.contains("[comment]" + DeleteCommentPrefix))
+        }
+      }
+    }
+  }
+
   def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
     request(name, s3 = true, metadata = metadata).isDefined || {
-      request("services/tasks.php?history=1&identifier=" + name) match {
-        case Some(tasks) =>
-          parse(tasks).toOption
-            .map(_.hcursor)
-            .flatMap { cursor =>
-              cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
+      isDark(name).contains(true) && {
+        request(
+          "/services/tasks.php",
+          post = Some {
+            ListMap(
+              "cmd" -> "make_undark.php".asJson,
+              "identifier" -> name.asJson,
+              "args" -> Map("comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
+          }).isDefined && {
+          var sleepMs = 100
+          while (isDark(name).getOrElse(true)) {
+            Thread.sleep(sleepMs)
+            sleepMs *= 2
+          }
+          request(name, s3 = true, update = true, metadata = metadata).isDefined || {
+            // roll back
+            sleepMs = 100
+            while (!deleteItem(name)) {
+              Thread.sleep(sleepMs)
+              sleepMs *= 2
             }
-            .exists { lastTask =>
-              lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
-                lastTask
-                  .downField("args")
-                  .get[String]("curation")
-                  .toOption
-                  .exists(_.contains("[comment]" + DeleteCommentPrefix))
-              }
-            } && {
-            request(
-              "/services/tasks.php",
-              post = Some {
-                ListMap(
-                  "cmd" -> "make_undark.php".asJson,
-                  "identifier" -> name.asJson,
-                  "args" -> Map("comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
-              })
-          }.isDefined && request(name, s3 = true, update = true, metadata = metadata).isDefined
-        case None => false
+            false
+          }
+        }
       }
     }
   }
