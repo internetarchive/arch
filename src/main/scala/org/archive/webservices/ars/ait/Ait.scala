@@ -74,7 +74,7 @@ object Ait {
       implicit request: HttpServletRequest): Either[String, String] = {
     val either = login(username, password)
     val aitRootDomain = (new URL(ArchConf.aitBaseUrl).getHost.split('.') match {
-      case xs => xs.slice(xs.length-2, xs.length)
+      case xs => xs.slice(xs.length - 2, xs.length)
     }).mkString(".")
     for (sessionid <- either.right.toOption)
       response.addCookie(

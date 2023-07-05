@@ -5,9 +5,6 @@ import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
 
-import javax.servlet.http.HttpServletRequest
-import scala.util.Try
-
 class BaseController extends ScalatraServlet {
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 

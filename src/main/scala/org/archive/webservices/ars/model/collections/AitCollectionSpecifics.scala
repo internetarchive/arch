@@ -66,7 +66,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .getJson(
         "/api/warc_file?__sum=size&limit=-1&collection=" + aitId,
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-          _.get[Long]("size__sum").toOption)
+        _.get[Long]("size__sum").toOption)
       .getOrElse(-1L)
   }
 

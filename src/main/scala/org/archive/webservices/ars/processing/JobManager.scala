@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 

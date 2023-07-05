@@ -21,11 +21,10 @@ private object BreadCrumbs {
 
   def collection(collection: ArchCollection, user: ArchUser): (String, String) = {
     (
-      ViewPathPatterns.reverse(ViewPathPatterns.Collection,
-        Map("collection_id" -> collection.userUrlId(user.id))
-      ),
-      collection.name
-    )
+      ViewPathPatterns.reverse(
+        ViewPathPatterns.Collection,
+        Map("collection_id" -> collection.userUrlId(user.id))),
+      collection.name)
   }
 
   def datasets: (String, String) = {
@@ -36,10 +35,8 @@ private object BreadCrumbs {
     (
       ViewPathPatterns.reverse(
         ViewPathPatterns.Dataset,
-        Map("dataset_id" -> datasetId, "sample" -> sample.toString)
-      ),
-      datasetId
-    )
+        Map("dataset_id" -> datasetId, "sample" -> sample.toString)),
+      datasetId)
   }
 }
 
@@ -49,13 +46,10 @@ class DefaultController extends BaseController with ScalateSupport {
       Ok(
         ssp(
           "dashboard",
-          "breadcrumbs" -> Seq(
-            (ViewPathPatterns.reverse(ViewPathPatterns.Home), "Home"),
-          ),
+          "breadcrumbs" -> Seq((ViewPathPatterns.reverse(ViewPathPatterns.Home), "Home"), ),
           "user" -> context.user,
         ),
-        Map("Content-Type" -> "text/html")
-      )
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -64,13 +58,10 @@ class DefaultController extends BaseController with ScalateSupport {
       Ok(
         ssp(
           "collections",
-          "breadcrumbs" -> Seq(
-            BreadCrumbs.collections,
-          ),
+          "breadcrumbs" -> Seq(BreadCrumbs.collections, ),
           "user" -> context.user,
         ),
-        Map("Content-Type" -> "text/html")
-      )
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -114,8 +105,7 @@ class DefaultController extends BaseController with ScalateSupport {
               "breadcrumbs" -> Seq(
                 BreadCrumbs.collections,
                 BreadCrumbs.collection(collection, context.user),
-                (relativePath("/collections/" + collectionId + "/subset"), "Sub-Collection Query")
-              ),
+                (relativePath("/collections/" + collectionId + "/subset"), "Sub-Collection Query")),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -131,12 +121,13 @@ class DefaultController extends BaseController with ScalateSupport {
           "sub-collection-builder",
           "breadcrumbs" -> Seq(
             BreadCrumbs.collections,
-            (ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder), "Custom Collection Builder"),
+            (
+              ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder),
+              "Custom Collection Builder"),
           ),
           "user" -> context.user,
         ),
-        Map("Content-Type" -> "text/html")
-      )
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -191,15 +182,12 @@ class DefaultController extends BaseController with ScalateSupport {
         instance <- JobManager.getInstanceOrGlobal(
           job.id,
           conf,
-          DerivationJobConf.collection(collection, sample, global = true)
-        )
+          DerivationJobConf.collection(collection, sample, global = true))
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>
             val attributes = Seq(
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.datasets,
-                BreadCrumbs.dataset(datasetId, sample),
+              "breadcrumbs" -> Seq(BreadCrumbs.datasets, BreadCrumbs.dataset(datasetId, sample),
               ),
               "user" -> context.user,
               "collection" -> collection,
@@ -250,8 +238,7 @@ class DefaultController extends BaseController with ScalateSupport {
           ),
           "user" -> context.user,
         ),
-        Map("Content-Type" -> "text/html")
-      )
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -266,21 +253,14 @@ class DefaultController extends BaseController with ScalateSupport {
           ),
           "user" -> context.user,
         ),
-        Map("Content-Type" -> "text/html")
-      )
+        Map("Content-Type" -> "text/html"))
     }
   }
 
   get(ViewPathPatterns.Login) {
     val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArchConf.baseUrl)
     Ok(
-      ssp(
-        "login",
-        "breadcrumbs" -> Seq(
-          BreadCrumbs.login,
-        ),
-        "next" -> next
-      ),
+      ssp("login", "breadcrumbs" -> Seq(BreadCrumbs.login, ), "next" -> next),
       Map("Content-Type" -> "text/html"))
   }
 
@@ -296,9 +276,7 @@ class DefaultController extends BaseController with ScalateSupport {
               "login",
               "error" -> Some(error),
               "next" -> next,
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.login,
-              ),
+              "breadcrumbs" -> Seq(BreadCrumbs.login, ),
             ),
             Map("Content-Type" -> "text/html"))
         case None =>

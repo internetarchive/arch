@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-
 object FuturesUtil {
   // https://stackoverflow.com/a/29344937
   private def lift[T](futures: Seq[Future[T]]) =

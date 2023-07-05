@@ -7,8 +7,9 @@ import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
+import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.{Common, DigestUtil}
+import org.archive.webservices.sparkling.util.DigestUtil
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
@@ -345,19 +346,19 @@ object PublishedDatasets {
   private def isDark(name: String): Option[Boolean] = {
     request("services/tasks.php?history=1&identifier=" + name).map { tasks =>
       parse(tasks).toOption
-      .map(_.hcursor)
-      .flatMap { cursor =>
-        cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
-      }
-      .exists { lastTask =>
-        lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
-          lastTask
-            .downField("args")
-            .get[String]("curation")
-            .toOption
-            .exists(_.contains("[comment]" + DeleteCommentPrefix))
+        .map(_.hcursor)
+        .flatMap { cursor =>
+          cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
         }
-      }
+        .exists { lastTask =>
+          lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
+            lastTask
+              .downField("args")
+              .get[String]("curation")
+              .toOption
+              .exists(_.contains("[comment]" + DeleteCommentPrefix))
+          }
+        }
     }
   }
 
@@ -372,17 +373,16 @@ object PublishedDatasets {
               "identifier" -> name.asJson,
               "args" -> Map("comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
           }).isDefined && {
-          var sleepMs = 100
-          while (isDark(name).getOrElse(true)) {
-            Thread.sleep(sleepMs)
-            sleepMs *= 2
-          }
-          request(name, s3 = true, update = true, metadata = metadata).isDefined || {
-            // roll back
-            sleepMs = 100
-            while (!deleteItem(name)) {
-              Thread.sleep(sleepMs)
-              sleepMs *= 2
+          {
+            Common.retryWhile(isDark(name).getOrElse(true), sleepMs = 500, maxTimes = 12, _ * 2) && {
+              request(name, s3 = true, update = true, metadata = metadata).isDefined
+            }
+          } || {
+            if (!Common.retryWhile(!deleteItem(name), sleepMs = 100, maxTimes = 10, _ * 2)) {
+              Arch.reportWarning(
+                "PublishedDatasets Create/Undark Item Error",
+                "An Item is likely to be undarked, but not in use, please double check.",
+                Map("item" -> name))
             }
             false
           }

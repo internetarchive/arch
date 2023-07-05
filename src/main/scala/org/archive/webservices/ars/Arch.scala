@@ -1,5 +1,7 @@
 package org.archive.webservices.ars
 
+import _root_.io.sentry.protocol.Message
+import _root_.io.sentry.{Sentry, SentryEvent, SentryLevel}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.sparkling._
@@ -9,11 +11,8 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
-import _root_.io.sentry.{Sentry, SentryEvent, SentryLevel}
-import _root_.io.sentry.protocol.Message;
-
 import java.io.File
-import collection.JavaConversions._ // For SentryEvent.setExtras
+import scala.collection.JavaConversions._ // For SentryEvent.setExtras
 
 object Arch {
   def start(contextPath: String, port: Int): Unit = {
@@ -51,8 +50,11 @@ object Arch {
     })
   }
 
-  def reportEvent(title: String, message: String, extraContext: Map[String, Object] = Map.empty,
-    level: SentryLevel = SentryLevel.INFO): Unit = {
+  def reportEvent(
+      title: String,
+      message: String,
+      extraContext: Map[String, Object] = Map.empty,
+      level: SentryLevel = SentryLevel.INFO): Unit = {
     // Send an event to Sentry.
     val event = new SentryEvent()
     val _message = new Message()

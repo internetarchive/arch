@@ -1,15 +1,15 @@
 package org.archive.webservices.ars.model
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.util.Success
-import scala.concurrent.duration._
-
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections._
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.FuturesUtil.waitAll
 import org.scalatra.guavaCache.GuavaCache
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.util.Success
 
 case class ArchCollection(
     id: String,
@@ -30,20 +30,17 @@ case class ArchCollection(
     if (!statsLoaded) {
       statsLoaded = true
       for (s <- specifics) {
-        Await.result(
-          waitAll(
-            Seq(
-              Future({ s.size }),
-              Future({ s.seeds }),
-              Future({ s.lastCrawlDate }))
-          ),
-          30.seconds
-        ).zipWithIndex.map{
-          case (Success(size: Long), 0) => _size = size
-          case (Success(seeds: Int), 1) => _seeds = seeds
-          case (Success(lastCrawlDate: String), 2) => _lastCrawlDate = lastCrawlDate
-          case _ => None
-        }
+        Await
+          .result(
+            waitAll(Seq(Future({ s.size }), Future({ s.seeds }), Future({ s.lastCrawlDate }))),
+            30.seconds)
+          .zipWithIndex
+          .map {
+            case (Success(size: Long), 0) => _size = size
+            case (Success(seeds: Int), 1) => _seeds = seeds
+            case (Success(lastCrawlDate: String), 2) => _lastCrawlDate = lastCrawlDate
+            case _ => None
+          }
       }
     }
   }
@@ -90,15 +87,16 @@ object ArchCollection {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
       .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
       .userCollections(user))
-    .map( c =>
-      if (!ArchConf.isDev) {
-        GuavaCache.get[ArchCollection](cacheKey(c.id)).getOrElse({
-          c.user = Some(user)
-          GuavaCache.put(cacheKey(c.id), c, None)
-          c
-        })
-      } else c
-    )
+      .map(c =>
+        if (!ArchConf.isDev) {
+          GuavaCache
+            .get[ArchCollection](cacheKey(c.id))
+            .getOrElse({
+              c.user = Some(user)
+              GuavaCache.put(cacheKey(c.id), c, None)
+              c
+            })
+        } else c)
       .sortBy(_.name.toLowerCase)
   }
 

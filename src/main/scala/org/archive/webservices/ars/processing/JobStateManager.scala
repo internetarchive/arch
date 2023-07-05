@@ -4,11 +4,10 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
-import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.ViewPathPatterns
+import org.archive.webservices.ars.{Arch, ViewPathPatterns}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.ars.util.{FormatUtil, DatasetUtil, MailUtil}
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil, MailUtil}
 import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{File, FileOutputStream, PrintStream}
@@ -40,10 +39,9 @@ object JobStateManager {
   private def metaInfo(instance: DerivationJobInstance): Seq[(String, Json)] = {
     Seq("uuid" -> instance.uuid.asJson, "attempt" -> instance.attempt.asJson) ++ {
       instance.user.map("user" -> _.id.asJson)
-    } ++ instance.collection.toSeq.map {
-      collection =>
-        collection.ensureStats()
-        "size" -> FormatUtil.formatBytes(collection.size).asJson
+    } ++ instance.collection.toSeq.map { collection =>
+      collection.ensureStats()
+      "size" -> FormatUtil.formatBytes(collection.size).asJson
     }
   }
 
@@ -106,11 +104,17 @@ object JobStateManager {
       job <- JobManager.get(id)
     } {
       job.reset(conf)
-      job.enqueue(conf, { instance =>
-        instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
-        instance.collection = ArchCollection.get(conf.collectionId)
-        instance.attempt = meta.downField("attempt").focus.flatMap(_.asNumber).flatMap(_.toInt).getOrElse(1) + 1
-      })
+      job.enqueue(
+        conf, { instance =>
+          instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
+          instance.collection = ArchCollection.get(conf.collectionId)
+          instance.attempt = meta
+            .downField("attempt")
+            .focus
+            .flatMap(_.asNumber)
+            .flatMap(_.toInt)
+            .getOrElse(1) + 1
+        })
     }
   }
 
@@ -238,7 +242,8 @@ object JobStateManager {
         email <- u.email
       } {
         for (template <- instance.job.finishedNotificationTemplate) {
-          val collection = instance.collection.getOrElse(ArchCollection.get(instance.conf.collectionId).get)
+          val collection =
+            instance.collection.getOrElse(ArchCollection.get(instance.conf.collectionId).get)
           MailUtil.sendTemplate(
             template,
             Map(
@@ -248,15 +253,11 @@ object JobStateManager {
                 ViewPathPatterns.Dataset,
                 Map(
                   "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
-                  "sample" -> instance.conf.isSample.toString
-                )
-              ),
+                  "sample" -> instance.conf.isSample.toString)),
               "jobName" -> instance.job.name,
               "collectionName" -> collection.name,
               "userName" -> u.fullName,
-              "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")
-            )
-          )
+              "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")))
         }
       }
     }

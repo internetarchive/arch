@@ -1,22 +1,17 @@
 package org.archive.webservices.ars
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-
 import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.{
-  ArchCollection, ArchConf, ArchCollectionInfo, ArchJobCategories, PublishedDatasets
-}
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
+import java.time.Instant
 import scala.collection.immutable.ListMap
 
 class ApiController extends BaseController {
@@ -67,11 +62,12 @@ class ApiController extends BaseController {
   private def prohibited(jobId: String, params: DerivationJobParameters): Boolean = {
     // Enforce prohibited DatasetPublication datasets.
     jobId == DatasetPublication.id && (
-      params.get[String]("dataset")
+      params
+        .get[String]("dataset")
         .flatMap(JobManager.get)
         .map(PublishedDatasets.ProhibitedJobs.contains(_))
         .getOrElse(false)
-    )
+      )
   }
 
   private def runJob(
@@ -196,43 +192,45 @@ class ApiController extends BaseController {
             ArchJobCategories.Collection,
             "Discover domain-related patterns and high level information about the documents in a web archive.",
             "/img/collection.png",
-            "collection"
-          ),
+            "collection"),
           (
             ArchJobCategories.Network,
             "Explore connections in a web archive visually.",
             "/img/network.png",
-            "network"
-          ),
+            "network"),
           (
             ArchJobCategories.Text,
             "Extract and analyze a web archive as text.",
             "/img/text.png",
-            "text"
-          ),
+            "text"),
           (
             ArchJobCategories.BinaryInformation,
             "Find, describe, and use the files contained within a web archive, based on their format.",
             "/img/file-formats.png",
-            "file-formats"
-          )
-        ).map({
-          case (category, categoryDescription, categoryImage, categoryId) => {
-            ListMap(
-              "categoryName" -> category.name.asJson,
-              "categoryDescription" -> categoryDescription.asJson,
-              "categoryImage" -> BaseController.staticPath(categoryImage).asJson,
-              "categoryId" -> categoryId.asJson,
-              "jobs" -> categoryJobsMap.get(category).head.map(job => ListMap(
-                "id" -> job.id.asJson,
-                "name" -> job.name.asJson,
-                "description" -> job.description.asJson,
-              )).asJson
-            )
-          }
-        }).asJson.spaces4,
-        Map("Content-Type" -> "application/json")
-      )
+            "file-formats"))
+          .map({
+            case (category, categoryDescription, categoryImage, categoryId) => {
+              ListMap(
+                "categoryName" -> category.name.asJson,
+                "categoryDescription" -> categoryDescription.asJson,
+                "categoryImage" -> BaseController.staticPath(categoryImage).asJson,
+                "categoryId" -> categoryId.asJson,
+                "jobs" -> categoryJobsMap
+                  .get(category)
+                  .head
+                  .map(
+                    job =>
+                      ListMap(
+                        "id" -> job.id.asJson,
+                        "name" -> job.name.asJson,
+                        "description" -> job.description.asJson,
+                    ))
+                  .asJson)
+            }
+          })
+          .asJson
+          .spaces4,
+        Map("Content-Type" -> "application/json"))
     }
   }
 
@@ -314,80 +312,85 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val collections = ArchCollection.userCollections(context.user)
       Ok(
-        collections.map(collection => {
-          collection.ensureStats()
-          collectionJson(collection, context.user)
-        }).asJson,
+        collections
+          .map(collection => {
+            collection.ensureStats()
+            collectionJson(collection, context.user)
+          })
+          .asJson,
         Map("Content-Type" -> "application/json"))
     }
   }
 
   get("/datasets") {
     ensureLogin(redirect = false, useSession = true) { context =>
-      val collectionIds = multiParams("collectionId").map(ArchCollection.userCollectionId(_, context.user))
+      val collectionIds =
+        multiParams("collectionId").map(ArchCollection.userCollectionId(_, context.user))
       val states = multiParams("state")
       val notStates = multiParams("state!")
       val jobs = multiParams("job")
       val sample = multiParams("sample")
       val user = context.user
       val datasets =
-        ArchCollection.userCollections(user)
-        // Apply collections filter.
-        .filter(col => if (collectionIds.isEmpty) true else collectionIds.contains(col.id))
-        // Get (collection, [sample]userConf, [sample]globalConf) tuples
-        .flatMap(col =>
-          // Apply sample filter.
-          (if (sample.isEmpty) Set(true, false) else Seq(sample.contains("true"))).map(sample =>
+        ArchCollection
+          .userCollections(user)
+          // Apply collections filter.
+          .filter(col => if (collectionIds.isEmpty) true else collectionIds.contains(col.id))
+          // Get (collection, [sample]userConf, [sample]globalConf) tuples
+          .flatMap(
+            col =>
+              // Apply sample filter.
+              (if (sample.isEmpty) Set(true, false) else Seq(sample.contains("true"))).map(
+                sample =>
+                  (
+                    col,
+                    DerivationJobConf.collection(col, sample = sample, global = false).get,
+                    DerivationJobConf.collection(col, sample = sample, global = true),
+                )))
+          // Get (collection, jobInstance)
+          .flatMap {
+            case (col, userConf, globalConf) =>
+              JobManager.userJobs
+              // Apply jobs filter.
+                .filter(job => if (jobs.isEmpty) true else jobs.contains(job.id))
+                .map(job => {
+                  (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
+                })
+          }
+          // Apply states filters.
+          .filter(x => if (states.isEmpty) true else states.contains(x._2.stateStr))
+          .filter(x => if (notStates.isEmpty) true else !notStates.contains(x._2.stateStr))
+          // Sort by state asc, finishedTime desc.
+          .sortBy { x =>
             (
-              col,
-              DerivationJobConf.collection(col, sample = sample, global = false).get,
-              DerivationJobConf.collection(col, sample = sample, global = true),
-            )
-          )
-        )
-        // Get (collection, jobInstance)
-        .flatMap{case (col, userConf, globalConf) =>
-          JobManager.userJobs
-          // Apply jobs filter.
-          .filter(job => if (jobs.isEmpty) true else jobs.contains(job.id))
-          .map(job => {
-            (
-              col,
-              JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get
-            )
-          })
-        }
-        // Apply states filters.
-        .filter(x => if (states.isEmpty) true else states.contains(x._2.stateStr))
-        .filter(x => if (notStates.isEmpty) true else !notStates.contains(x._2.stateStr))
-        // Sort by state asc, finishedTime desc.
-        .sortBy{x => (
-          x._2.state,
-          - x._2.info.finishedTime.getOrElse(Instant.ofEpochSecond(0)).getEpochSecond
-        )}
-        .map{
-          case (collection, jobInstance) =>
-            ListMap(
-              "id" -> DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance.job).asJson,
-              "collectionId" -> collection.userUrlId(user.id).asJson,
-              "collectionName" -> collection.name.asJson,
-              "isSample" -> (jobInstance.conf.sample != -1).asJson,
-              "jobId" -> jobInstance.job.id.asJson,
-              "category" -> jobInstance.job.category.name.asJson,
-              "name" -> jobInstance.job.name.asJson,
-              "sample" -> jobInstance.conf.sample.asJson,
-              "state" -> jobInstance.stateStr.asJson,
-              "numFiles" -> jobInstance.outFiles.size.asJson,
-            ) ++
-            jobInstance.info.startTime
-              .map(FormatUtil.instantTimeString)
-              .map("startTime" -> _.asJson)
-              .toSeq ++
-            jobInstance.info.finishedTime
-              .map(FormatUtil.instantTimeString)
-              .map("finishedTime" -> _.asJson)
-              .toSeq
-        }
+              x._2.state,
+              -x._2.info.finishedTime.getOrElse(Instant.ofEpochSecond(0)).getEpochSecond)
+          }
+          .map {
+            case (collection, jobInstance) =>
+              ListMap(
+                "id" -> DatasetUtil
+                  .formatId(collection.userUrlId(context.user.id), jobInstance.job)
+                  .asJson,
+                "collectionId" -> collection.userUrlId(user.id).asJson,
+                "collectionName" -> collection.name.asJson,
+                "isSample" -> (jobInstance.conf.sample != -1).asJson,
+                "jobId" -> jobInstance.job.id.asJson,
+                "category" -> jobInstance.job.category.name.asJson,
+                "name" -> jobInstance.job.name.asJson,
+                "sample" -> jobInstance.conf.sample.asJson,
+                "state" -> jobInstance.stateStr.asJson,
+                "numFiles" -> jobInstance.outFiles.size.asJson,
+              ) ++
+                jobInstance.info.startTime
+                  .map(FormatUtil.instantTimeString)
+                  .map("startTime" -> _.asJson)
+                  .toSeq ++
+                jobInstance.info.finishedTime
+                  .map(FormatUtil.instantTimeString)
+                  .map("finishedTime" -> _.asJson)
+                  .toSeq
+          }
       Ok(datasets.asJson, Map("Content-Type" -> "application/json"))
     }
   }
@@ -432,9 +435,8 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val item = params("item")
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
-      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap {
-        collection =>
-          PublishedDatasets.collectionItems(collection)
+      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap { collection =>
+        PublishedDatasets.collectionItems(collection)
       }
       if (collectionItems.contains(item)) {
         PublishedDatasets
@@ -442,7 +444,9 @@ class ApiController extends BaseController {
           .map { metadata =>
             Ok(
               metadata
-                .mapValues { values => values.asJson }
+                .mapValues { values =>
+                  values.asJson
+                }
                 .asJson
                 .spaces4,
               Map("Content-Type" -> "application/json"))
@@ -456,9 +460,8 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val item = params("item")
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
-      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap {
-        collection =>
-          PublishedDatasets.collectionItems(collection)
+      val collectionItems = ArchCollection.get(collectionId).toSet.flatMap { collection =>
+        PublishedDatasets.collectionItems(collection)
       }
       if (collectionItems.contains(item)) {
         parse(request.body).toOption
@@ -480,16 +483,24 @@ class ApiController extends BaseController {
   post("/petabox/:collectionid/delete/:item") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val item = params("item")
-      ArchCollection.get(params("collectionid")).filter { collection =>
-        val collectionItems = PublishedDatasets.collectionItems(collection)
-        collectionItems.contains(item)
-      }.map { collection =>
-        val doDelete = parse(request.body).toOption.flatMap(_.hcursor.get[Boolean]("delete").toOption).getOrElse(false)
-        if (doDelete) {
-          if (PublishedDatasets.deletePublished(collection, item)) Ok()
-          else InternalServerError("Deleting item failed.")
-        } else BadRequest("In order to confirm the deletion, please send a JSON with boolean key 'delete' set to true.")
-      }.getOrElse(NotFound())
+      ArchCollection
+        .get(params("collectionid"))
+        .filter { collection =>
+          val collectionItems = PublishedDatasets.collectionItems(collection)
+          collectionItems.contains(item)
+        }
+        .map { collection =>
+          val doDelete = parse(request.body).toOption
+            .flatMap(_.hcursor.get[Boolean]("delete").toOption)
+            .getOrElse(false)
+          if (doDelete) {
+            if (PublishedDatasets.deletePublished(collection, item)) Ok()
+            else InternalServerError("Deleting item failed.")
+          } else
+            BadRequest(
+              "In order to confirm the deletion, please send a JSON with boolean key 'delete' set to true.")
+        }
+        .getOrElse(NotFound())
     }
   }
 
