@@ -129,9 +129,13 @@ class LocalArchConf extends ArchConf with Serializable {
   val hadoopQueue: String =
     confStrValue("ARCH_HADOOP_QUEUE", "hadoopQueue").getOrElse("default")
 
-  val production: Boolean = confBoolValue("ARCH_PRODUCTION", "production", false)
-
   val sentryDsn: String = confStrValue("ARCH_SENTRY_DSN", "sentryDsn").getOrElse("")
+
+  // One of "DEV", "QA", "PROD"
+  val deploymentEnvironment: String =
+    confStrValue("ARCH_DEPLOYMENT_ENVIRONMENT", "deploymentEnvironment").getOrElse("DEV")
+
+  val isDev: Boolean = deploymentEnvironment == "DEV"
 
   /** python:
    * import requests, base64
