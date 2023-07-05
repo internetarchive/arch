@@ -43,55 +43,50 @@ object DerivationJobConf {
       params: DerivationJobParameters = DerivationJobParameters.Empty)(
       implicit context: RequestContext): String = {
     if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
-      params
-        .get[Array[String]]("input")
-        .toSet
-        .flatten
-        // Insert the user ID into the collectionId string if necessary.
-        .map { collectionId =>
-          ArchCollection.userCollectionId(collectionId, context.user)
-        }
-        .filter { collectionId =>
-          ArchCollection.get(collectionId).isDefined
-        }
-        .mkString(",")
+      UnionCollectionSpecifics.collections(params).mkString(",")
     } else specifics.inputPath
+  }
+
+  def collectionInstance(
+      jobId: String,
+      collection: ArchCollection,
+      sample: Boolean): Option[DerivationJobInstance] = {
+    JobManager.getInstanceOrGlobal(
+      jobId,
+      DerivationJobConf
+        .collection(collection, sample = sample),
+      DerivationJobConf.collection(collection, sample = sample, global = true))
   }
 
   def collection(
       collection: ArchCollection,
       sample: Boolean = false,
-      global: Boolean = false): Option[DerivationJobConf] = {
-    collection.specifics.map { specifics =>
-      val outDir = if (sample) "/samples" else "/out"
-      DerivationJobConf(
-        collection.id,
-        specifics.inputPath,
-        jobOutPath(collection, global) + outDir,
-        if (sample) SampleSize else -1)
-    }
+      global: Boolean = false): DerivationJobConf = {
+    DerivationJobConf(
+      collection.id,
+      collection.specifics.inputPath,
+      jobOutPath(collection, global) + (if (sample) "/samples" else "/out"),
+      if (sample) SampleSize else -1)
   }
 
   def userDefinedQuery(
       collection: ArchCollection,
       params: DerivationJobParameters,
       sample: Boolean = false)(implicit context: RequestContext): Option[DerivationJobConf] = {
-    context.userOpt.flatMap { user =>
-      collection.specifics.map { specifics =>
-        val collectionUserId = collection.userSpecificId
-          .filter(_._1 == user.id)
-          .map(_._2)
-          .getOrElse(collection.sourceId)
-        val outPath = new Path(
-          CustomCollectionSpecifics.path(user),
-          IOHelper.escapePath(collectionUserId + "_" + Instant.now.toEpochMilli)).toString
-        DerivationJobConf(
-          collection.id,
-          jobInPath(specifics, params),
-          outPath,
-          if (sample) SampleSize else -1,
-          params = params.set("location", collection.sourceId))
-      }
+    context.userOpt.map { user =>
+      val collectionUserId = collection.userSpecificId
+        .filter(_._1 == user.id)
+        .map(_._2)
+        .getOrElse(collection.sourceId)
+      val outPath = new Path(
+        CustomCollectionSpecifics.path(user),
+        IOHelper.escapePath(collectionUserId + "_" + Instant.now.toEpochMilli)).toString
+      DerivationJobConf(
+        collection.id,
+        jobInPath(collection.specifics, params),
+        outPath,
+        if (sample) SampleSize else -1,
+        params = params.set("location", collection.sourceId))
     }
   }
 

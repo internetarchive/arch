@@ -4,9 +4,9 @@ import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
-import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.io.InputStream
@@ -31,12 +31,9 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
     else None
   }
 
-  def size(implicit context: RequestContext = RequestContext.None): Long =
-    HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength
-
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
+  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+    ArchCollectionStats(HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength)
+  }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
     CollectionLoader.loadWarcFiles(inputPath)(action)

@@ -2,8 +2,9 @@ package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
-import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
+import org.archive.webservices.ars.processing.DerivationJobInstance
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
 import java.io.InputStream
@@ -12,9 +13,10 @@ abstract class CollectionSpecifics {
   def id: String
   def inputPath: String
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
-  def size(implicit context: RequestContext = RequestContext.None): Long
-  def seeds(implicit context: RequestContext = RequestContext.None): Int
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats
+  def inputSize(instance: DerivationJobInstance): Long = {
+    instance.collection.stats.size
+  }
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
   def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) {
     rdd =>

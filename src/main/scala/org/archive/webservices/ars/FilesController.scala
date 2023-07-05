@@ -4,7 +4,7 @@ import _root_.io.circe._
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
@@ -74,11 +74,7 @@ class FilesController extends BaseController {
         val jobId = params("job_id")
         (for {
           collection <- ArchCollection.get(collectionId)
-          conf <- DerivationJobConf.collection(collection, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(
-            jobId,
-            conf,
-            DerivationJobConf.collection(collection, sample = sample, global = true))
+          instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
@@ -94,11 +90,7 @@ class FilesController extends BaseController {
           val jobId = params("job_id")
           (for {
             collection <- ArchCollection.get(collectionId)
-            conf <- DerivationJobConf.collection(collection, sample = sample)
-            instance <- JobManager.getInstanceOrGlobal(
-              jobId,
-              conf,
-              DerivationJobConf.collection(collection, sample = sample, global = true))
+            instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
           } yield {
             instance.outFiles.find(_.filename == filename) match {
               case Some(file) =>
@@ -119,11 +111,7 @@ class FilesController extends BaseController {
       val jobId = params("job_id")
       (for {
         collection <- ArchCollection.get(collectionId)
-        conf <- DerivationJobConf.collection(collection, sample = sample)
-        instance <- JobManager.getInstanceOrGlobal(
-          jobId,
-          conf,
-          DerivationJobConf.collection(collection, sample = sample, global = true))
+        instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
       } yield {
         instance.outFiles.find(_.filename == filename) match {
           case Some(file) =>
@@ -207,11 +195,7 @@ class FilesController extends BaseController {
         val jobId = params("job_id")
         (for {
           collection <- ArchCollection.get(collectionId)
-          conf <- DerivationJobConf.collection(collection, sample = sample)
-          instance <- JobManager.getInstanceOrGlobal(
-            jobId,
-            conf,
-            DerivationJobConf.collection(collection, sample = sample, global = true))
+          instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
         } yield {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>

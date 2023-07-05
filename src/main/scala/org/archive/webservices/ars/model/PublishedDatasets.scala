@@ -245,13 +245,7 @@ object PublishedDatasets {
       collection: ArchCollection,
       sample: Boolean): Option[DerivationJobInstance] = {
     DerivationJobConf
-      .collection(collection, sample = sample)
-      .flatMap {
-        JobManager.getInstanceOrGlobal(
-          jobId,
-          _,
-          DerivationJobConf.collection(collection, sample = sample, global = true))
-      }
+      .collectionInstance(jobId, collection, sample)
       .filter(_.state == ProcessingState.Finished)
   }
 
@@ -421,11 +415,8 @@ object PublishedDatasets {
         if (deleteItem(itemName)) {
           for {
             jobId <- itemInfo.get[String]("job").toOption
-            isSample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
-            conf <- DerivationJobConf.collection(collection, isSample)
-            instance <- JobManager.getInstanceOrGlobal(jobId, conf, {
-              DerivationJobConf.collection(collection, isSample, global = true)
-            })
+            sample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
+            instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
           } {
             val jobFilePath = jobFile(instance)
             if (jobItem(jobFilePath).exists(_.item == itemName)) HdfsIO.delete(jobFilePath)

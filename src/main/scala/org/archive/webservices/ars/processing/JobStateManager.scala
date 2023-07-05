@@ -4,10 +4,10 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
-import org.archive.webservices.ars.{Arch, ViewPathPatterns}
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil, MailUtil}
+import org.archive.webservices.ars.{Arch, ViewPathPatterns}
 import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{File, FileOutputStream, PrintStream}
@@ -37,11 +37,11 @@ object JobStateManager {
   }
 
   private def metaInfo(instance: DerivationJobInstance): Seq[(String, Json)] = {
-    Seq("uuid" -> instance.uuid.asJson, "attempt" -> instance.attempt.asJson) ++ {
+    Seq(
+      "uuid" -> instance.uuid.asJson,
+      "attempt" -> instance.attempt.asJson,
+      "size" -> FormatUtil.formatBytes(instance.inputSize).asJson) ++ {
       instance.user.map("user" -> _.id.asJson)
-    } ++ instance.collection.toSeq.map { collection =>
-      collection.ensureStats()
-      "size" -> FormatUtil.formatBytes(collection.size).asJson
     }
   }
 
@@ -107,7 +107,6 @@ object JobStateManager {
       job.enqueue(
         conf, { instance =>
           instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
-          instance.collection = ArchCollection.get(conf.collectionId)
           instance.attempt = meta
             .downField("attempt")
             .focus
@@ -172,7 +171,6 @@ object JobStateManager {
                 .flatMap(_.asString)
                 .filter(_.nonEmpty)
                 .flatMap(ArchUser.get(_))
-              instance.collection = ArchCollection.get(conf.collectionId)
               instance.attempt = values
                 .get("attempt")
                 .flatMap(_.asNumber)
@@ -242,8 +240,7 @@ object JobStateManager {
         email <- u.email
       } {
         for (template <- instance.job.finishedNotificationTemplate) {
-          val collection =
-            instance.collection.getOrElse(ArchCollection.get(instance.conf.collectionId).get)
+          val collection = instance.collection
           MailUtil.sendTemplate(
             template,
             Map(
@@ -276,9 +273,7 @@ object JobStateManager {
               Map(
                 "jobName" -> instance.job.name,
                 "jobId" -> instance.job.id,
-                "collectionName" -> instance.collection
-                  .map(_.name)
-                  .getOrElse(instance.conf.collectionId),
+                "collectionName" -> instance.collection.name,
                 "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
                 "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
         }

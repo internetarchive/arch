@@ -13,7 +13,21 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var state: Int = ProcessingState.NotStarted
 
   var user: Option[ArchUser] = None
-  var collection: Option[ArchCollection] = None
+
+  private var _collection: Option[ArchCollection] = None
+  def collection: ArchCollection =
+    _collection.orElse {
+      _collection = ArchCollection.get(conf.collectionId)
+      _collection
+    } match {
+      case Some(collection) => collection
+      case None =>
+        throw new RuntimeException(
+          s"Collection ${conf.collectionId} of job ${uuid} (${job.id}, $conf) not found.")
+    }
+  def collection_=(c: ArchCollection): Unit = _collection = Some(c)
+
+  lazy val inputSize: Long = collection.specifics.inputSize(this)
 
   var attempt: Int = 1
 

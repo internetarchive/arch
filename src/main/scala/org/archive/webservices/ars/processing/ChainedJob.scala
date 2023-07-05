@@ -45,18 +45,20 @@ abstract class ChainedJob extends DerivationJob {
       if (idx + 1 < children.size) {
         val nextChild = children(idx + 1)
         val enqueued =
-          nextChild.enqueue(instance.conf, child => {
-            child.user = instance.user
-            child.collection = instance.collection
-            child.onStateChanged {
-              if (child.state > ProcessingState.Running)
-                onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
-            }
-            child.onUnregistered {
-              if (instance.state > ProcessingState.Running) JobManager.unregister(instance)
-            }
-            instance.setStage(child)
-          })
+          nextChild.enqueue(
+            instance.conf,
+            child => {
+              child.user = instance.user
+              child.collection = instance.collection
+              child.onStateChanged {
+                if (child.state > ProcessingState.Running)
+                  onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
+              }
+              child.onUnregistered {
+                if (instance.state > ProcessingState.Running) JobManager.unregister(instance)
+              }
+              instance.setStage(child)
+            })
         if (enqueued.isEmpty) {
           instance.updateState(ProcessingState.Failed)
         }
@@ -75,19 +77,21 @@ abstract class ChainedJob extends DerivationJob {
       super.enqueue(conf, get).filter { instance =>
         JobManager.register(instance) && {
           val enqueued =
-            children.head.enqueue(conf, child => {
-              child.user = instance.user
-              child.collection = instance.collection
-              child.onStateChanged {
-                if (child.state > ProcessingState.Running)
-                  onChildComplete(instance, 0, child.state == ProcessingState.Finished)
-                else instance.updateState(child.state)
-              }
-              child.onUnregistered {
-                if (instance.state > ProcessingState.Running) JobManager.unregister(instance)
-              }
-              instance.setStage(child)
-            })
+            children.head.enqueue(
+              conf,
+              child => {
+                child.user = instance.user
+                child.collection = instance.collection
+                child.onStateChanged {
+                  if (child.state > ProcessingState.Running)
+                    onChildComplete(instance, 0, child.state == ProcessingState.Finished)
+                  else instance.updateState(child.state)
+                }
+                child.onUnregistered {
+                  if (instance.state > ProcessingState.Running) JobManager.unregister(instance)
+                }
+                instance.setStage(child)
+              })
           if (enqueued.isDefined) true
           else {
             JobManager.unregister(instance)

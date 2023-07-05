@@ -24,9 +24,13 @@ object DatasetPublication extends SparkJob {
       .orElse {
         conf.params.get[String]("dataset") match {
           case Some(jobId) =>
-            PublishedDatasets.dataset(jobId, collection, conf.isSample) match {
-              case Some(_) => None
-              case None => Some("Derivation job " + jobId + " not found.")
+            PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
+              case Some(_) => Some("Derivation job " + jobId + " prohibited to be published.")
+              case None =>
+                PublishedDatasets.dataset(jobId, collection, conf.isSample) match {
+                  case Some(_) => None
+                  case None => Some("Derivation job " + jobId + " not found.")
+                }
             }
           case None => Some("No dataset specified.")
         }

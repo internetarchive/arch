@@ -3,13 +3,7 @@ package org.archive.webservices.ars.model
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections._
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.util.FuturesUtil.waitAll
 import org.scalatra.guavaCache.GuavaCache
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.Success
 
 case class ArchCollection(
     id: String,
@@ -23,36 +17,20 @@ case class ArchCollection(
   def userUrlId(userId: String): String =
     userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
 
-  lazy val specifics: Option[CollectionSpecifics] = CollectionSpecifics.get(id)
-
-  private var statsLoaded = false
-  def ensureStats()(implicit context: RequestContext = RequestContext.None): Unit = {
-    if (!statsLoaded) {
-      statsLoaded = true
-      for (s <- specifics) {
-        Await
-          .result(
-            waitAll(Seq(Future({ s.size }), Future({ s.seeds }), Future({ s.lastCrawlDate }))),
-            30.seconds)
-          .zipWithIndex
-          .map {
-            case (Success(size: Long), 0) => _size = size
-            case (Success(seeds: Int), 1) => _seeds = seeds
-            case (Success(lastCrawlDate: String), 2) => _lastCrawlDate = lastCrawlDate
-            case _ => None
-          }
-      }
-    }
+  lazy val specifics: CollectionSpecifics = CollectionSpecifics.get(id) match {
+    case Some(specifics) => specifics
+    case None => throw new RuntimeException("No specifics found for collection " + id)
   }
 
-  private var _size: Long = -1
-  def size: Long = _size
-
-  private var _seeds: Int = -1
-  def seeds: Int = _seeds
-
-  private var _lastCrawlDate: String = ""
-  def lastCrawlDate: String = _lastCrawlDate
+  private var _stats: Option[ArchCollectionStats] = None
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats = {
+    _stats.orElse {
+      synchronized {
+        _stats = Some(specifics.stats)
+        _stats
+      }
+    }.get
+  }
 }
 
 object ArchCollection {

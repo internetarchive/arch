@@ -22,16 +22,16 @@
         <div class="job-card-flex">
           <% if (collection.id.startsWith(AitCollectionSpecifics.Prefix)) { %>
             <div class="job-card-sample">
-              <h3><%=collection.seeds%> seeds</h3>
+              <h3><%=collection.stats.seeds%> seeds</h3>
               <p><i class="fa fa-files-o fa-4x" aria-hidden="true"></i></p>
             </div>
             <div class="job-card-full">
-              <h3>Crawled <%=collection.lastCrawlDate.split("T")(0)%></h3>
+              <h3>Crawled <%=collection.stats.lastCrawlDate.split("T")(0)%></h3>
               <p><i class="fa fa-calendar-o fa-4x" aria-hidden="true"></i></p>
             </div>
           <% } %>
           <div class="job-card-sample">
-            <h3><%=FormatUtil.formatBytes(collection.size)%></h3>
+            <h3><%=FormatUtil.formatBytes(collection.stats.size)%></h3>
             <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
           </div>
           <div class="job-card-full">

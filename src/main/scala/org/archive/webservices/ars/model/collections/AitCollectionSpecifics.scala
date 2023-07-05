@@ -6,12 +6,16 @@ import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
+import org.archive.webservices.ars.util.FuturesUtil.waitAll
+import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.io.Source
-import scala.util.Try
+import scala.util.{Success, Try}
 
 class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val (userId, collectionId) =
@@ -39,35 +43,49 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .flatMap(_.headOption)
   }
 
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = {
-    Ait
-      .getJson(
-        "/api/seed?__count=id&__group=collection&deleted=false&limit=-1&collection=" + aitId,
-        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-        _.downField("groups").downArray
-          .get[Int]("id__count")
-          .toOption)
-      .getOrElse(-1)
-  }
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = {
-    Ait
-      .getJson(
-        "/api/crawl_job_run?__group=collection&__max=processing_end_date&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
-        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-        _.downField("groups").downArray
-          .get[String]("processing_end_date__max")
-          .toOption)
-      .getOrElse("")
-  }
-
-  def size(implicit context: RequestContext = RequestContext.None): Long = {
-    Ait
-      .getJson(
-        "/api/warc_file?__sum=size&limit=-1&collection=" + aitId,
-        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-        _.get[Long]("size__sum").toOption)
-      .getOrElse(-1L)
+  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+    var stats = ArchCollectionStats.Empty
+    Await
+      .result(
+        waitAll(
+          Seq(
+            Future({
+              Ait
+                .getJson(
+                  "/api/warc_file?__sum=size&limit=-1&collection=" + aitId,
+                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
+                  _.get[Long]("size__sum").toOption)
+                .getOrElse(-1L)
+            }),
+            Future({
+              Ait
+                .getJson(
+                  "/api/seed?__count=id&__group=collection&deleted=false&limit=-1&collection=" + aitId,
+                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
+                  _.downField("groups").downArray
+                    .get[Int]("id__count")
+                    .toOption)
+                .getOrElse(-1)
+            }),
+            Future({
+              Ait
+                .getJson(
+                  "/api/crawl_job_run?__group=collection&__max=processing_end_date&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
+                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
+                  _.downField("groups").downArray
+                    .get[String]("processing_end_date__max")
+                    .toOption)
+                .getOrElse("")
+            }))),
+        30.seconds)
+      .zipWithIndex
+      .map {
+        case (Success(v: Long), 0) => stats = stats.copy(size = v)
+        case (Success(v: Int), 1) => stats = stats.copy(seeds = v)
+        case (Success(v: String), 2) => stats = stats.copy(lastCrawlDate = v)
+        case _ => None
+      }
+    stats
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =

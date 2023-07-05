@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
@@ -31,18 +31,16 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
     else None
   }
 
-  def size(implicit context: RequestContext = RequestContext.None): Long = {
-    CustomCollectionSpecifics
+  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+    var stats = ArchCollectionStats.Empty
+    val size = CustomCollectionSpecifics
       .collectionInfo(customId)
       .flatMap { info =>
         info.get[Long]("size").toOption
       }
-      .getOrElse(-1)
+    for (s <- size) stats = stats.copy(size = s)
+    stats
   }
-
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = action {
     CustomCollectionSpecifics.location(customId) match {

@@ -2,8 +2,9 @@ package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer}
-import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
+import org.archive.webservices.ars.processing.{DerivationJobInstance, DerivationJobParameters}
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.RddUtil
@@ -28,11 +29,16 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
         sourceId))
   }
 
-  def size(implicit context: RequestContext = RequestContext.None): Long = -1
+  override def stats(implicit context: RequestContext): ArchCollectionStats =
+    ArchCollectionStats.Empty
 
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
+  override def inputSize(instance: DerivationJobInstance): Long = {
+    UnionCollectionSpecifics
+      .collections(instance.conf.params)
+      .map(_.specifics.inputSize(instance))
+      .filter(_ > -1)
+      .sum
+  }
 
   private def loadUnion[A: ClassTag, R](
       inputPath: String,
@@ -75,4 +81,19 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
 object UnionCollectionSpecifics {
   val Prefix = "UNION-"
+
+  def collections(params: DerivationJobParameters)(
+      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+    params
+      .get[Array[String]]("input")
+      .toSeq
+      .flatten
+      .distinct
+      // TODO: Insert the user ID into the collectionId string if necessary. Is this really needed? why? we're not operating on collection outputs here, so the user ID shouldn't matter?
+      .map { collectionId =>
+        ArchCollection.userCollectionId(collectionId, context.user)
+      }
+      .sorted
+      .flatMap(ArchCollection.get(_))
+  }
 }
