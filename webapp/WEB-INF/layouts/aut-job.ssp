@@ -27,34 +27,6 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <div class="alert alert-warning text-center" id="macos-warning">
-      <p>We've detected macOS, and there is <a href="https://apple.stackexchange.com/questions/388759/archive-utility-cant-open-some-gzipped-text-files-based-on-their-contents" target="_blank">a known issue with Safari and Finder extracting gzipped text</a>. <br />Please use <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a> to extract your datasets.</p>
-    </div>
-    <script>
-        function macosWarning() {
-          var userAgent = window.navigator.userAgent,
-          platform = window.navigator.platform,
-          macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-          windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-          iosPlatforms = ['iPhone', 'iPad', 'iPod'],
-          os = null;
-
-          if (macosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "block";
-          } else if (iosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (windowsPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (/Android/.test(userAgent)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (!os && /Linux/.test(platform)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          }
-          return os;
-        }
-        macosWarning();
-    </script>
-
   #if (publishingEnabled)
     <h2 id="publishing">Publishing</h2>
     <div class="card">
@@ -70,7 +42,9 @@
   #end
 
     <h2 id="datasets">Dataset(s)</h2>
-    <p><%=job.job.description.replace("Create a", "A")%></p>
+    <p>
+      <%=job.job.description%> For help and information, see: <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/17137082448276" target="_blank">How to download and open ARCH datasets.</a>
+    </p>
     <% for (file <- files) { %>
       <div class="card">
         <div class="card-body">
