@@ -21,11 +21,12 @@ import scala.util.Try
 class AdminController extends BaseController with ScalateSupport {
   get("/?") {
     ensureLogin { implicit context =>
-      if (context.isAdmin)
+      if (context.isAdmin) {
+        for (u <- params.get("masquerade-user")) masqueradeUser(u)
         Ok(
-          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath("")),
+          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath(""), "masqueradeUser" -> masqueradeUser.getOrElse("")),
           Map("Content-Type" -> "text/html"))
-      else Forbidden()
+      } else Forbidden()
     }
   }
 

@@ -6,19 +6,29 @@ import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
 
 class BaseController extends ScalatraServlet {
+  val MasqueradeUserIdSessionAttribute = "masquerade-user"
+
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 
   def ensureLogin(action: RequestContext => ActionResult): ActionResult = ensureLogin()(action)
+
+  def masqueradeUser(userId: String): Unit = {
+    if (userId.trim.isEmpty) request.getSession.removeAttribute(MasqueradeUserIdSessionAttribute)
+    else request.getSession.setAttribute(MasqueradeUserIdSessionAttribute, userId)
+  }
+
+  def masqueradeUser: Option[String] = Option(request.getSession.getAttribute(MasqueradeUserIdSessionAttribute)).map(_.toString.trim).filter(_.nonEmpty)
 
   def ensureLogin(
       requiresLogin: Boolean = true,
       redirect: Boolean = true,
       useSession: Boolean = false,
-      validateCollection: Option[String] = None,
-      userId: Option[String] = None)(action: RequestContext => ActionResult): ActionResult = {
+      validateCollection: Option[String] = None)(action: RequestContext => ActionResult): ActionResult = {
     val context = ArchUser.get(useSession) match {
       case Some(loggedIn) =>
-        val user = userId
+        println("masqueradeUser: " + masqueradeUser)
+        println("masqueradeUserObj: " + masqueradeUser.flatMap(ArchUser.get))
+        val user = masqueradeUser
           .flatMap(ArchUser.get)
           .filter(u => loggedIn.isAdmin || loggedIn.id == u.id)
           .getOrElse(loggedIn)
