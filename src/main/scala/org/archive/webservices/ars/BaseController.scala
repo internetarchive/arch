@@ -1,6 +1,5 @@
 package org.archive.webservices.ars
 
-import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}

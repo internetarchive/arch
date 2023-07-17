@@ -4,132 +4,59 @@ import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model._
+import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.api.{Collection, Dataset}
 import org.archive.webservices.ars.processing._
-import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
-import java.time.Instant
-import java.lang.reflect.Field
-import scala.collection.immutable.ListMap
-import scala.reflect.{ClassTag, classTag}
-import scala.util.{Try, Success}
+import scala.collection.immutable.{ListMap, Set}
+import scala.util.Try
 
 class ApiController extends BaseController {
-  private def filterAndSerialize[T: ClassTag: Encoder](objs: Seq[T]): Json = {
-    // Create an object class { fieldName -> Field } map.
-    val fieldMap = classTag[T].runtimeClass.getDeclaredFields
-      .map(field => {
-        field.setAccessible(true)
-        (field.getName, field)
-      })
-      .toMap
-    // Attempt to parse string-type param values per the corresponding
-    // object field type.
-    val parsedMultiParams =
-      (multiParams.keys.toSet
-        -- Set("distinct", "limit", "offset", "search", "sort")).flatMap(paramKey =>
-        (paramKey.charAt(paramKey.size - 1) match {
-          case '!' => (paramKey.slice(0, paramKey.size - 1), Some('!'))
-          case _ => (paramKey, None)
-        }) match {
-          case (fieldName, opChar) =>
-            for {
-              field <- fieldMap.get(fieldName)
-              paramValues <- multiParams.get(paramKey)
-            } yield (
-              fieldName,
-              opChar,
-              field.getType match {
-                // Boolean
-                case t if t == classOf[Boolean] => paramValues.map { _ == "true" }
-                // Int
-                case t if t == classOf[Int] =>
-                  paramValues.map(s => Try(s.toInt)).collect { case Success(x) => x }
-                // Long
-                case t if t == classOf[Long] =>
-                  paramValues.map(s => Try(s.toLong)).collect { case Success(x) => x }
-                // Option[String]
-                case t if t == classOf[Option[String]] =>
-                  paramValues.map { paramValue =>
-                    if (paramValue == "null") None else Some(paramValue)
-                  }
-                // String / Default
-                case _ => paramValues
-              })
-        })
-    // Apply field filters.
-    var filtered = objs.filter(obj => {
-      parsedMultiParams.forall { case (paramKey, opChar, paramValues) =>
-        fieldMap
-          .get(paramKey)
-          .map(_.get(obj))
-          .map(objValue =>
-            opChar match {
-              case Some('!') => !paramValues.contains(objValue)
-              case _ => paramValues.contains(objValue)
-            })
-          .getOrElse(true)
-      } && params
-        .get("search")
-        .map(searchTerm => {
-          // Filter by any String-type field that contains the search term.
-          val lowerSearchTerm = searchTerm.toLowerCase
-          fieldMap.values.exists(field =>
-            field.getType match {
-              case t if t == classOf[String] =>
-                field.get(obj).asInstanceOf[String].toLowerCase.contains(lowerSearchTerm)
-              case _ => false
-            })
-        })
-        .getOrElse(true)
-    })
+  private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
 
-    // Helper to get the ordering for the specified field.
-    def getOrdering(field: Field, reverse: Boolean) = {
-      val ordering = field.getType match {
-        case t if t == classOf[Boolean] => Ordering.by[Object, Boolean](_.asInstanceOf[Boolean])
-        case t if t == classOf[Int] => Ordering.by[Object, Int](_.asInstanceOf[Int])
-        case t if t == classOf[Long] => Ordering.by[Object, Long](_.asInstanceOf[Long])
-        case t if t == classOf[Option[String]] =>
-          Ordering.by[Object, Option[String]](_.asInstanceOf[Option[String]])
-        case _ => Ordering.by[Object, String](_.asInstanceOf[String])
+  private def filterAndSerialize[T <: ApiResponseObject[T]](objs: Seq[T])(implicit responseType: ApiResponseType[T]): Json = {
+    val fields = responseType.fields
+
+    val predicates = (multiParams -- ReservedParams).flatMap { case (paramKey, paramValues) =>
+      val positive = !paramKey.endsWith("!")
+      val fieldName = if (!positive) paramKey.dropRight(1) else paramKey
+      def predicate[A](obj: T, expected: Set[A]): Boolean = obj.get[A](fieldName).map(expected.contains).forall(_ == positive)
+      fields.get(fieldName).map {
+        case ApiFieldType.Boolean => predicate[Boolean](_, paramValues.map(_ == "true").toSet)
+        case ApiFieldType.Int => predicate[Int](_, paramValues.flatMap(s => Try(s.toInt).toOption).toSet)
+        case ApiFieldType.Long => predicate[Long](_, paramValues.flatMap(s => Try(s.toLong).toOption).toSet)
+        case ApiFieldType.String => predicate[String](_, paramValues.filter(_ != null).map(_.trim).filter(_.nonEmpty).filter(_ != "null").toSet)
       }
-      if (reverse) ordering.reverse else ordering
     }
 
-    if (params.get("distinct").isEmpty) {
-      // Return normal, paginated, response.
-      val (sortField, reverseSort) = Option(params.get("sort").getOrElse("id"))
-        .map(s => if (s.startsWith("-")) (s.slice(1, s.size), true) else (s, false))
-        .map { case (fieldName, reverse) => (fieldMap.get(fieldName).get, reverse) }
-        .get
-      Map(
-        "count" -> filtered.size.asJson,
-        "results" ->
-          filtered
-            .sortBy(sortField.get)(getOrdering(sortField, reverseSort))
-            .drop(params.getAsOrElse[Int]("offset", 0))
-            .take(params.getAsOrElse[Int]("limit", Int.MaxValue))
-            .map(_.asJson)
-            .asJson).asJson
-    } else {
-      // Return distinct response with results comprising a flat list of
-      // sorted, distinct values.
-      val results = params
-        .get("distinct")
-        .map(k => {
-          val sortField = fieldMap.get(k).get
-          filtered
-            .sortBy(sortField.get)(getOrdering(sortField, false))
-            .flatMap(_.asJson.findAllByKey(k))
-            .distinct
-        })
-      Map("count" -> results.size.asJson, "results" -> results.asJson).asJson
+    val filtered = objs.filter { obj =>
+      predicates.forall(_(obj)) && params.get("search").map(_.toLowerCase).forall { searchTerm =>
+        // Filter by any String-type field that contains the search term.
+        val strings = fields.filter(_._2 == ApiFieldType.String).keys.flatMap(obj.get[String](_)).map(_.toLowerCase)
+        strings.exists(_.contains(searchTerm))
+      }
+    }
+
+    params.get("distinct") match {
+      case Some(distinct) =>
+        // Return distinct response with results comprising a flat list of sorted, distinct values.
+        val results = filtered.sorted(responseType.ordering(distinct)).flatMap(_.toJson.findAllByKey(distinct)).distinct
+        Map("count" -> results.size.asJson, "results" -> results.asJson).asJson
+      case None =>
+        // Return normal, paginated, response.
+        val sortQuery = params.get("sort").getOrElse("id")
+        val reverseSort = sortQuery.startsWith("-")
+        val sortField = if (reverseSort) sortQuery.drop(1) else sortQuery
+        val offset = params.getAsOrElse[Int]("offset", 0)
+        val limit = params.getAsOrElse[Int]("limit", Int.MaxValue)
+        val results = filtered.sorted(responseType.ordering(sortField, reverseSort))
+        Map(
+          "count" -> results.size.asJson,
+          "results" -> results.toIterator.drop(offset).map(_.toJson).take(limit).toArray.asJson).asJson
     }
   }
 
@@ -379,14 +306,13 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val collections = ArchCollection.userCollections(context.user)
       Ok(
-        filterAndSerialize[Collection](
-          collections.map(collection => new Collection(collection, context.user))),
+        filterAndSerialize(collections.map(Collection(_))),
         Map("Content-Type" -> "application/json"))
     }
   }
 
   get("/datasets") {
-    ensureLogin(redirect = false, useSession = true) { context =>
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
       val datasets =
         ArchCollection
@@ -405,10 +331,8 @@ class ApiController extends BaseController {
                 (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
               })
           }
-          .map { case (collection, jobInstance) =>
-            new Dataset(collection, jobInstance, context.user)
-          }
-      Ok(filterAndSerialize[Dataset](datasets), Map("Content-Type" -> "application/json"))
+          .map { case (collection, jobInstance) => Dataset(collection, jobInstance) }
+      Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
     }
   }
 

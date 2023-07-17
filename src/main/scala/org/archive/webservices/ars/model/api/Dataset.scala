@@ -1,44 +1,38 @@
 package org.archive.webservices.ars.model.api
 
-import io.circe._
-import io.circe.syntax._
-
 import org.archive.webservices.ars.model.ArchCollection
-import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.processing.DerivationJobInstance
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 
-class Dataset(collection: ArchCollection, jobInstance: DerivationJobInstance, user: ArchUser) {
-  val id = DatasetUtil.formatId(collection.userUrlId(user.id), jobInstance.job)
-  val collectionId = collection.userUrlId(user.id)
-  val collectionName = collection.name
-  val isSample = (jobInstance.conf.sample != -1)
-  val jobId = jobInstance.job.id
-  val category = jobInstance.job.category.name
-  val name = jobInstance.job.name
-  val sample = jobInstance.conf.sample
-  val state = jobInstance.stateStr
-  val numFiles = jobInstance.outFiles.size
-  val startTime = jobInstance.info.startTime.map(FormatUtil.instantTimeString)
-  val finishedTime = jobInstance.info.finishedTime.map(FormatUtil.instantTimeString)
-}
+case class Dataset(
+  id: String,
+  collectionId: String,
+  collectionName: String,
+  isSample: Boolean,
+  jobId: String,
+  category: String,
+  name: String,
+  sample: Int,
+  state: String,
+  numFiles: Int,
+  startTime: Option[String],
+  finishedTime: Option[String]) extends ApiResponseObject[Dataset]
 
 object Dataset {
-  private def encode(ds: Dataset): Json = {
-    Json.obj(
-      "id" -> ds.id.asJson,
-      "collectionId" -> ds.collectionId.asJson,
-      "collectionName" -> ds.collectionName.asJson,
-      "isSample" -> ds.isSample.asJson,
-      "jobId" -> ds.jobId.asJson,
-      "category" -> ds.category.asJson,
-      "name" -> ds.name.asJson,
-      "sample" -> ds.sample.asJson,
-      "state" -> ds.state.asJson,
-      "numFiles" -> ds.numFiles.asJson,
-      "startTime" -> ds.startTime.asJson,
-      "finishedTime" -> ds.finishedTime.asJson)
+  def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(implicit context: RequestContext): Dataset = {
+    Dataset(
+      id = DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance.job),
+      collectionId = collection.userUrlId(context.user.id),
+      collectionName = collection.name,
+      isSample = jobInstance.conf.isSample,
+      jobId = jobInstance.job.id,
+      category = jobInstance.job.category.name,
+      name = jobInstance.job.name,
+      sample = jobInstance.conf.sample,
+      state = jobInstance.stateStr,
+      numFiles = jobInstance.outFiles.size,
+      startTime = jobInstance.info.startTime.map(FormatUtil.instantTimeString),
+      finishedTime = jobInstance.info.finishedTime.map(FormatUtil.instantTimeString))
   }
-
-  implicit val encodeDataset: Encoder[Dataset] = encode
 }
