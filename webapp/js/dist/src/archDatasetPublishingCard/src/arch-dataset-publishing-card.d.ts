@@ -8,7 +8,8 @@ declare enum PublishState {
     Unpublished = 1,
     PrePublish = 2,
     Publishing = 3,
-    Published = 4
+    Published = 4,
+    Unpublishing = 5
 }
 declare enum MetadataState {
     Displaying = 0,
@@ -34,8 +35,9 @@ export declare class ArchDatasetPublishingCard extends LitElement {
     private _fetchPubInfo;
     private _publishInProgress;
     private _fetchItemMetadata;
-    private _buttonClickHandler;
+    private _publishButtonClickHandler;
     private _publish;
+    private _unpublish;
     private _saveMetadata;
 }
 declare global {

@@ -28,6 +28,7 @@ enum PublishState {
   PrePublish,
   Publishing,
   Published,
+  Unpublishing,
 }
 
 enum MetadataState {
@@ -244,10 +245,12 @@ export class ArchDatasetPublishingCard extends LitElement {
             ? "primary"
             : pubState === PublishState.PrePublish
             ? "success"
+            : pubState === PublishState.Published
+            ? "danger"
             : ""}"
-          ?disabled=${pubState !== PublishState.Unpublished &&
-          pubState !== PublishState.PrePublish}
-          @click=${this._buttonClickHandler}
+          ?disabled=${pubState === PublishState.Publishing ||
+          pubState === PublishState.Unpublishing}
+          @click=${this._publishButtonClickHandler}
         >
           ${pubState === PublishState.Unpublished
             ? "Publish"
@@ -255,7 +258,11 @@ export class ArchDatasetPublishingCard extends LitElement {
             ? "Publish Now"
             : pubState === PublishState.Publishing
             ? "Publish in progress..."
-            : "Published"}
+            : pubState === PublishState.Published
+            ? "Unpublish"
+            : pubState === PublishState.Unpublishing
+            ? "Unpublishing..."
+            : ""}
         </button>
       </div>
     `;
@@ -290,9 +297,10 @@ export class ArchDatasetPublishingCard extends LitElement {
 
   private async _pollItemMetadata() {
     /* Poll for the item metadata and save it once available. */
+    const { pubState } = this;
     const pubInfo = this.pubInfo as PublishedDatasetInfo;
     const metadata = await this._fetchItemMetadata(pubInfo.item);
-    if (metadata === undefined) {
+    if (metadata === undefined && pubState === PublishState.Published) {
       // Try again in 3 seconds.
       setTimeout(() => void this._pollItemMetadata(), 3000);
     }
@@ -350,7 +358,7 @@ export class ArchDatasetPublishingCard extends LitElement {
     return (await response.json()) as PublishedDatasetMetadataApiResponse;
   }
 
-  private _buttonClickHandler() {
+  private _publishButtonClickHandler() {
     const metadataForm = this.metadataForm;
     switch (this.pubState) {
       case PublishState.Unpublished:
@@ -361,6 +369,13 @@ export class ArchDatasetPublishingCard extends LitElement {
           void this._publish();
         } else {
           metadataForm.form.reportValidity();
+        }
+        break;
+      case PublishState.Published:
+        if (
+          window.confirm("Are you sure you want to unpublish this dataset?")
+        ) {
+          void this._unpublish();
         }
         break;
     }
@@ -382,6 +397,21 @@ export class ArchDatasetPublishingCard extends LitElement {
     );
     this.pubState = PublishState.Publishing;
     // Start polling for pub info.
+    void this._fetchInitialData();
+  }
+
+  private async _unpublish() {
+    const { collectionId, pubInfo } = this;
+    const { item: itemId } = pubInfo as PublishedDatasetInfo;
+    this.pubState = PublishState.Unpublishing;
+    await fetch(`/api/petabox/${collectionId}/delete/${itemId}`, {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "cors",
+      body: JSON.stringify({ delete: true }),
+    });
+    this.pubState = PublishState.Unpublished;
+    // Call fetchInitialData to reset the component state.
     void this._fetchInitialData();
   }
 
