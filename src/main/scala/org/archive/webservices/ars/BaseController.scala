@@ -4,16 +4,21 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
+import org.scalatra.scalate.ScalateSupport
 
-class BaseController extends ScalatraServlet {
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+
+class BaseController extends ScalatraServlet with ScalateSupport {
   val MasqueradeUserIdSessionAttribute = "masquerade-user"
 
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 
   def ensureLogin(action: RequestContext => ActionResult): ActionResult = ensureLogin()(action)
 
+  def clearMasqueradeUser(): Unit = request.getSession.removeAttribute(MasqueradeUserIdSessionAttribute)
+
   def masqueradeUser(userId: String): Unit = {
-    if (userId.trim.isEmpty) request.getSession.removeAttribute(MasqueradeUserIdSessionAttribute)
+    if (userId.trim.isEmpty) clearMasqueradeUser()
     else request.getSession.setAttribute(MasqueradeUserIdSessionAttribute, userId)
   }
 
@@ -26,8 +31,6 @@ class BaseController extends ScalatraServlet {
       validateCollection: Option[String] = None)(action: RequestContext => ActionResult): ActionResult = {
     val context = ArchUser.get(useSession) match {
       case Some(loggedIn) =>
-        println("masqueradeUser: " + masqueradeUser)
-        println("masqueradeUserObj: " + masqueradeUser.flatMap(ArchUser.get))
         val user = masqueradeUser
           .flatMap(ArchUser.get)
           .filter(u => loggedIn.isAdmin || loggedIn.id == u.id)
@@ -44,6 +47,10 @@ class BaseController extends ScalatraServlet {
         if (redirect) login(request.uri.toString) else Forbidden()
       }
     } else action(context)
+  }
+
+  def ssp(path: String, attributes: (String, Any)*)(implicit request: HttpServletRequest, response: HttpServletResponse, context: RequestContext = RequestContext(request)): String = {
+    super.ssp(path, attributes ++ Seq("requestContext" -> context): _*)
   }
 }
 

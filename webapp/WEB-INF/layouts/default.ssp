@@ -5,6 +5,7 @@
 <%@ val subtitle: String = "" %>
 <%@ val scripts: String = "" %>
 <%@ val body: String %>
+<%@ val requestContext: org.archive.webservices.ars.model.app.RequestContext = org.archive.webservices.ars.model.app.RequestContext.None %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser = org.archive.webservices.ars.model.users.ArchUser.None %>
 <%@ val breadcrumbs: Seq[(String, String)] = Seq.empty %>
 
@@ -66,7 +67,7 @@
                 <li><a href="<%=relativePath("/")%>">Dashboard</a></li>
                 <li><a href="<%=relativePath("/collections")%>">Collections</a></li>
                 <li><a href="<%=relativePath("/datasets")%>">Datasets</a></li>
-                <% if (user.isAdmin) { %>
+                <% if (requestContext.isAdmin) { %>
                 <li><a href="/admin">Admin</a></li>
                 <% } %>
             </ul>

@@ -4,6 +4,7 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
 import org.archive.webservices.ars.BaseController.relativePath
+import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager
@@ -12,13 +13,12 @@ import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.DigestUtil
 import org.scalatra._
-import org.scalatra.scalate.ScalateSupport
 
 import java.io.{File, FileInputStream}
 import scala.io.Source
 import scala.util.Try
 
-class AdminController extends BaseController with ScalateSupport {
+class AdminController extends BaseController {
   get("/?") {
     ensureLogin { implicit context =>
       if (context.isAdmin) {
@@ -30,7 +30,7 @@ class AdminController extends BaseController with ScalateSupport {
     }
   }
 
-  private def renderEdit(user: ArchUser, message: Option[String] = None): ActionResult = {
+  private def renderEdit(user: ArchUser, message: Option[String] = None)(implicit context: RequestContext): ActionResult = {
     Ok(
       ssp(
         "admin-edit",
@@ -46,14 +46,14 @@ class AdminController extends BaseController with ScalateSupport {
   }
 
   get("/edit") {
-    ensureLogin { context =>
+    ensureLogin { implicit context =>
       if (context.isAdmin) renderEdit(context.loggedIn)
       else Forbidden()
     }
   }
 
   post("/edit") {
-    ensureLogin { context =>
+    ensureLogin { implicit context =>
       if (context.isAdmin) {
         val r = for {
           usersJsonStr <- params.get("users-json")
