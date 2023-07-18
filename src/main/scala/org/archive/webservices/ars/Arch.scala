@@ -26,14 +26,11 @@ object Arch {
     context.setInitParameter(
       ScalatraListener.LifeCycleKey,
       classOf[ScalatraBootstrap].getCanonicalName)
-    context.setInitParameter(
-      org.scalatra.EnvironmentKey,
-      ArchConf.deploymentEnvironment match {
-        case "DEV" => "development"
-        case "QA" => "qa"
-        case "PROD" => "production"
-      }
-    )
+    context.setInitParameter(org.scalatra.EnvironmentKey, ArchConf.deploymentEnvironment match {
+      case "DEV" => "development"
+      case "QA" => "qa"
+      case "PROD" => "production"
+    })
     context.setEventListeners(Array(new ScalatraListener))
 
     server.setHandler(context)

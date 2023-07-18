@@ -6,21 +6,23 @@ import org.archive.webservices.ars.processing.DerivationJobInstance
 import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 
 case class Dataset(
-  id: String,
-  collectionId: String,
-  collectionName: String,
-  isSample: Boolean,
-  jobId: String,
-  category: String,
-  name: String,
-  sample: Int,
-  state: String,
-  numFiles: Int,
-  startTime: Option[String],
-  finishedTime: Option[String]) extends ApiResponseObject[Dataset]
+    id: String,
+    collectionId: String,
+    collectionName: String,
+    isSample: Boolean,
+    jobId: String,
+    category: String,
+    name: String,
+    sample: Int,
+    state: String,
+    numFiles: Int,
+    startTime: Option[String],
+    finishedTime: Option[String])
+    extends ApiResponseObject[Dataset]
 
 object Dataset {
-  def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(implicit context: RequestContext): Dataset = {
+  def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(
+      implicit context: RequestContext): Dataset = {
     Dataset(
       id = DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance.job),
       collectionId = collection.userUrlId(context.user.id),

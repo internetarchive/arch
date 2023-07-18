@@ -18,25 +18,42 @@ import scala.util.Try
 class ApiController extends BaseController {
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
 
-  private def filterAndSerialize[T <: ApiResponseObject[T]](objs: Seq[T])(implicit responseType: ApiResponseType[T]): Json = {
+  private def filterAndSerialize[T <: ApiResponseObject[T]](objs: Seq[T])(
+      implicit responseType: ApiResponseType[T]): Json = {
     val fields = responseType.fields
 
-    val predicates = (multiParams -- ReservedParams).flatMap { case (paramKey, paramValues) =>
-      val positive = !paramKey.endsWith("!")
-      val fieldName = if (!positive) paramKey.dropRight(1) else paramKey
-      def predicate[A](obj: T, expected: Set[A]): Boolean = obj.get[A](fieldName).map(expected.contains).forall(_ == positive)
-      fields.get(fieldName).map {
-        case ApiFieldType.Boolean => predicate[Boolean](_, paramValues.map(_ == "true").toSet)
-        case ApiFieldType.Int => predicate[Int](_, paramValues.flatMap(s => Try(s.toInt).toOption).toSet)
-        case ApiFieldType.Long => predicate[Long](_, paramValues.flatMap(s => Try(s.toLong).toOption).toSet)
-        case ApiFieldType.String => predicate[String](_, paramValues.filter(_ != null).map(_.trim).filter(_.nonEmpty).filter(_ != "null").toSet)
-      }
+    val predicates = (multiParams -- ReservedParams).flatMap {
+      case (paramKey, paramValues) =>
+        val positive = !paramKey.endsWith("!")
+        val fieldName = if (!positive) paramKey.dropRight(1) else paramKey
+        def predicate[A](obj: T, expected: Set[A]): Boolean =
+          obj.get[A](fieldName).map(expected.contains).forall(_ == positive)
+        fields.get(fieldName).map {
+          case ApiFieldType.Boolean => predicate[Boolean](_, paramValues.map(_ == "true").toSet)
+          case ApiFieldType.Int =>
+            predicate[Int](_, paramValues.flatMap(s => Try(s.toInt).toOption).toSet)
+          case ApiFieldType.Long =>
+            predicate[Long](_, paramValues.flatMap(s => Try(s.toLong).toOption).toSet)
+          case ApiFieldType.String =>
+            predicate[String](
+              _,
+              paramValues
+                .filter(_ != null)
+                .map(_.trim)
+                .filter(_.nonEmpty)
+                .filter(_ != "null")
+                .toSet)
+        }
     }
 
     val filtered = objs.filter { obj =>
       predicates.forall(_(obj)) && params.get("search").map(_.toLowerCase).forall { searchTerm =>
         // Filter by any String-type field that contains the search term.
-        val strings = fields.filter(_._2 == ApiFieldType.String).keys.flatMap(obj.get[String](_)).map(_.toLowerCase)
+        val strings = fields
+          .filter(_._2 == ApiFieldType.String)
+          .keys
+          .flatMap(obj.get[String](_))
+          .map(_.toLowerCase)
         strings.exists(_.contains(searchTerm))
       }
     }
@@ -44,7 +61,10 @@ class ApiController extends BaseController {
     params.get("distinct") match {
       case Some(distinct) =>
         // Return distinct response with results comprising a flat list of sorted, distinct values.
-        val results = filtered.sorted(responseType.ordering(distinct)).flatMap(_.toJson.findAllByKey(distinct)).distinct
+        val results = filtered
+          .sorted(responseType.ordering(distinct))
+          .flatMap(_.toJson.findAllByKey(distinct))
+          .distinct
         Map("count" -> results.size.asJson, "results" -> results.asJson).asJson
       case None =>
         // Return normal, paginated, response.
@@ -56,7 +76,12 @@ class ApiController extends BaseController {
         val results = filtered.sorted(responseType.ordering(sortField, reverseSort))
         Map(
           "count" -> results.size.asJson,
-          "results" -> results.toIterator.drop(offset).map(_.toJson).take(limit).toArray.asJson).asJson
+          "results" -> results.toIterator
+            .drop(offset)
+            .map(_.toJson)
+            .take(limit)
+            .toArray
+            .asJson).asJson
     }
   }
 
@@ -92,7 +117,8 @@ class ApiController extends BaseController {
       job: DerivationJob,
       collection: ArchCollection,
       sample: Boolean,
-      params: DerivationJobParameters)(implicit
+      params: DerivationJobParameters)(
+      implicit
       context: RequestContext): Option[DerivationJobConf] = {
     job match {
       case UserDefinedQuery =>
@@ -108,7 +134,8 @@ class ApiController extends BaseController {
       jobId: String,
       sample: Boolean,
       rerun: Boolean = false,
-      params: DerivationJobParameters = DerivationJobParameters.Empty)(implicit
+      params: DerivationJobParameters = DerivationJobParameters.Empty)(
+      implicit
       context: RequestContext): ActionResult = {
     for {
       collection <- ArchCollection.get(collectionId)
@@ -120,12 +147,10 @@ class ApiController extends BaseController {
         val history = job.history(conf)
         val queued =
           if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
-            job.enqueue(
-              conf,
-              { instance =>
-                instance.user = context.loggedInOpt
-                instance.collection = collection
-              })
+            job.enqueue(conf, { instance =>
+              instance.user = context.loggedInOpt
+              instance.collection = collection
+            })
           } else None
         queued match {
           case Some(instance) => jobStateResponse(instance)
@@ -206,8 +231,9 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { _ =>
       val categoryJobsMap = JobManager.userJobs.toSeq
         .groupBy(_.category)
-        .map { case (category, jobs) =>
-          category -> jobs.sortBy(_.name.toLowerCase)
+        .map {
+          case (category, jobs) =>
+            category -> jobs.sortBy(_.name.toLowerCase)
         }
       Ok(
         Seq(
@@ -241,11 +267,12 @@ class ApiController extends BaseController {
                 "jobs" -> categoryJobsMap
                   .get(category)
                   .head
-                  .map(job =>
-                    ListMap(
-                      "id" -> job.id.asJson,
-                      "name" -> job.name.asJson,
-                      "description" -> job.description.asJson))
+                  .map(
+                    job =>
+                      ListMap(
+                        "id" -> job.id.asJson,
+                        "name" -> job.name.asJson,
+                        "description" -> job.description.asJson))
                   .asJson)
             }
           })
@@ -318,18 +345,21 @@ class ApiController extends BaseController {
         ArchCollection
           .userCollections(user)
           // Get (collection, [sample]userConf, [sample]globalConf) tuples
-          .flatMap(col =>
-            Set(true, false).map(sample =>
-              (
-                col,
-                DerivationJobConf.collection(col, sample = sample, global = false),
-                DerivationJobConf.collection(col, sample = sample, global = true))))
+          .flatMap(
+            col =>
+              Set(true, false).map(
+                sample =>
+                  (
+                    col,
+                    DerivationJobConf.collection(col, sample = sample, global = false),
+                    DerivationJobConf.collection(col, sample = sample, global = true))))
           // Get (collection, jobInstance)
-          .flatMap { case (col, userConf, globalConf) =>
-            JobManager.userJobs
-              .map(job => {
-                (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
-              })
+          .flatMap {
+            case (col, userConf, globalConf) =>
+              JobManager.userJobs
+                .map(job => {
+                  (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
+                })
           }
           .map { case (collection, jobInstance) => Dataset(collection, jobInstance) }
       Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))

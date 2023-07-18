@@ -5,17 +5,18 @@ import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.util.FormatUtil
 
 case class Collection(
-  id: String,
-  name: String,
-  public: Boolean,
-  size: String,
-  sortSize: Long,
-  seeds: Long,
-  lastCrawlDate: Option[String],
-  lastJobId: Option[String],
-  lastJobSample: Option[java.lang.Boolean],
-  lastJobName: Option[String],
-  lastJobTime: Option[String]) extends ApiResponseObject[Collection]
+    id: String,
+    name: String,
+    public: Boolean,
+    size: String,
+    sortSize: Long,
+    seeds: Long,
+    lastCrawlDate: Option[String],
+    lastJobId: Option[String],
+    lastJobSample: Option[java.lang.Boolean],
+    lastJobName: Option[String],
+    lastJobTime: Option[String])
+    extends ApiResponseObject[Collection]
 
 object Collection {
   def apply(collection: ArchCollection)(implicit context: RequestContext): Collection = {
