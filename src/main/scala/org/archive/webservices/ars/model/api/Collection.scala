@@ -13,7 +13,7 @@ case class Collection(
   seeds: Long,
   lastCrawlDate: Option[String],
   lastJobId: Option[String],
-  lastJobSample: Option[Boolean],
+  lastJobSample: Option[java.lang.Boolean],
   lastJobName: Option[String],
   lastJobTime: Option[String]) extends ApiResponseObject[Collection]
 
@@ -29,7 +29,7 @@ object Collection {
       seeds = collection.stats.seeds,
       lastCrawlDate = Option(collection.stats.lastCrawlDate).filter(_.nonEmpty),
       lastJobId = info.flatMap(_.lastJobId),
-      lastJobSample = info.flatMap(_.lastJobSample),
+      lastJobSample = info.flatMap(_.lastJobSample).map(Boolean.box),
       lastJobName = info.flatMap(_.lastJobName),
       lastJobTime = info.flatMap(_.lastJobTime).map(FormatUtil.instantTimeString))
   }
