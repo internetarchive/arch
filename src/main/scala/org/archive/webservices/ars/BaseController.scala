@@ -8,7 +8,7 @@ import org.scalatra.scalate.ScalateSupport
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
-class BaseController extends ScalatraServlet {
+class BaseController extends ScalatraServlet with ScalateSupport {
   val MasqueradeUserIdSessionAttribute = "masquerade-user"
 
   // Report and rethrow any Exceptions.
