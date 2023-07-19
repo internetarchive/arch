@@ -8,8 +8,16 @@ import org.scalatra.scalate.ScalateSupport
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
-class BaseController extends ScalatraServlet with ScalateSupport {
+class BaseController extends ScalatraServlet {
   val MasqueradeUserIdSessionAttribute = "masquerade-user"
+
+  // Report and rethrow any Exceptions.
+  error {
+    case e: Exception => {
+      Arch.reportException(e)
+      throw e
+    }
+  }
 
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 

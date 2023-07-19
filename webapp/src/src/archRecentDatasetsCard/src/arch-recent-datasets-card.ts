@@ -1,8 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
+import ArchAPI from "../../lib/ArchAPI";
 import { Paths } from "../../lib/helpers";
-import { Dataset } from "../../lib/types";
+import { Dataset, FilteredApiResponse } from "../../lib/types";
 import { isoStringToDateString } from "../../lib/webservices/src/lib/helpers";
 
 import "../../archCard/index";
@@ -12,9 +13,10 @@ import styles from "./styles";
 
 @customElement("arch-recent-datasets-card")
 export class ArchRecentDatasetsCard extends LitElement {
+  @state() numTotalDatasets = 0;
   @state() datasets: undefined | Array<Dataset> = undefined;
 
-  static numDisplayedDatasets = 10;
+  static maxDisplayedDatasets = 10;
   static styles = styles;
 
   constructor() {
@@ -23,7 +25,7 @@ export class ArchRecentDatasetsCard extends LitElement {
   }
 
   render() {
-    const { numDisplayedDatasets } = ArchRecentDatasetsCard;
+    const { numTotalDatasets } = this;
     const isLoading = this.datasets === undefined;
     // Note that the value of hasDatasets is only valid when isLoading=false;
     const hasDatasets = (this.datasets ?? []).length > 0;
@@ -44,7 +46,7 @@ export class ArchRecentDatasetsCard extends LitElement {
               <td colspan="3"><i>New datasets will be listed here.</i></td>
             </tr>`,
           ]
-        : datasets.slice(0, numDisplayedDatasets).map((dataset) => {
+        : datasets.map((dataset) => {
             const name = `${dataset.name}${
               dataset.sample !== -1 ? " (Sample)" : ""
             }`;
@@ -94,8 +96,8 @@ export class ArchRecentDatasetsCard extends LitElement {
             : html`
                 <a href="/datasets/explore" class="view-all">
                   View
-                  ${datasets.length > numDisplayedDatasets
-                    ? html`All ${datasets.length}`
+                  ${datasets.length < numTotalDatasets
+                    ? html`All ${numTotalDatasets}`
                     : html``}
                   Datasets
                 </a>
@@ -106,9 +108,13 @@ export class ArchRecentDatasetsCard extends LitElement {
   }
 
   private async initDatasets() {
-    this.datasets = (await (
-      await fetch("/api/datasets?state=Finished")
-    ).json()) as Array<Dataset>;
+    const response = (await ArchAPI.datasets.get([
+      ["state", "=", "Finished"],
+      ["sort", "=", "-startTime"],
+      ["limit", "=", ArchRecentDatasetsCard.maxDisplayedDatasets],
+    ])) as FilteredApiResponse<Dataset>;
+    this.numTotalDatasets = response.count;
+    this.datasets = response.results;
   }
 }
 

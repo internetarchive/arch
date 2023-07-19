@@ -1,20 +1,90 @@
 package org.archive.webservices.ars
+
 import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model._
+import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
+import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
-import java.time.Instant
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{ListMap, Set}
+import scala.util.Try
 
 class ApiController extends BaseController {
+  private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
+
+  private def filterAndSerialize[T <: ApiResponseObject[T]](objs: Seq[T])(
+      implicit responseType: ApiResponseType[T]): Json = {
+    val fields = responseType.fields
+
+    val predicates = (multiParams -- ReservedParams).flatMap {
+      case (paramKey, paramValues) =>
+        val positive = !paramKey.endsWith("!")
+        val fieldName = if (!positive) paramKey.dropRight(1) else paramKey
+        def predicate[A](obj: T, expected: Set[A]): Boolean =
+          obj.get[A](fieldName).map(expected.contains).forall(_ == positive)
+        fields.get(fieldName).map {
+          case ApiFieldType.Boolean => predicate[Boolean](_, paramValues.map(_ == "true").toSet)
+          case ApiFieldType.Int =>
+            predicate[Int](_, paramValues.flatMap(s => Try(s.toInt).toOption).toSet)
+          case ApiFieldType.Long =>
+            predicate[Long](_, paramValues.flatMap(s => Try(s.toLong).toOption).toSet)
+          case ApiFieldType.String =>
+            predicate[String](
+              _,
+              paramValues
+                .filter(_ != null)
+                .map(_.trim)
+                .filter(_.nonEmpty)
+                .filter(_ != "null")
+                .toSet)
+        }
+    }
+
+    val filtered = objs.filter { obj =>
+      predicates.forall(_(obj)) && params.get("search").map(_.toLowerCase).forall { searchTerm =>
+        // Filter by any String-type field that contains the search term.
+        val strings = fields
+          .filter(_._2 == ApiFieldType.String)
+          .keys
+          .flatMap(obj.get[String](_))
+          .map(_.toLowerCase)
+        strings.exists(_.contains(searchTerm))
+      }
+    }
+
+    params.get("distinct") match {
+      case Some(distinct) =>
+        // Return distinct response with results comprising a flat list of sorted, distinct values.
+        val results = filtered
+          .sorted(responseType.ordering(distinct))
+          .flatMap(_.toJson.findAllByKey(distinct))
+          .distinct
+        Map("count" -> results.size.asJson, "results" -> results.asJson).asJson
+      case None =>
+        // Return normal, paginated, response.
+        val sortQuery = params.get("sort").getOrElse("id")
+        val reverseSort = sortQuery.startsWith("-")
+        val sortField = if (reverseSort) sortQuery.drop(1) else sortQuery
+        val offset = params.getAsOrElse[Int]("offset", 0)
+        val limit = params.getAsOrElse[Int]("limit", Int.MaxValue)
+        val results = filtered.sorted(responseType.ordering(sortField, reverseSort))
+        Map(
+          "count" -> results.size.asJson,
+          "results" -> results.toIterator
+            .drop(offset)
+            .map(_.toJson)
+            .take(limit)
+            .toArray
+            .asJson).asJson
+    }
+  }
+
   private def jobStateJson(instance: DerivationJobInstance): Json = {
     ListMap(
       "id" -> instance.job.id.asJson,
@@ -48,7 +118,8 @@ class ApiController extends BaseController {
       collection: ArchCollection,
       sample: Boolean,
       params: DerivationJobParameters)(
-      implicit context: RequestContext): Option[DerivationJobConf] = {
+      implicit
+      context: RequestContext): Option[DerivationJobConf] = {
     job match {
       case UserDefinedQuery =>
         DerivationJobConf.userDefinedQuery(collection, params, sample)
@@ -64,7 +135,8 @@ class ApiController extends BaseController {
       sample: Boolean,
       rerun: Boolean = false,
       params: DerivationJobParameters = DerivationJobParameters.Empty)(
-      implicit context: RequestContext): ActionResult = {
+      implicit
+      context: RequestContext): ActionResult = {
     for {
       collection <- ArchCollection.get(collectionId)
       job <- JobManager.get(jobId)
@@ -200,8 +272,7 @@ class ApiController extends BaseController {
                       ListMap(
                         "id" -> job.id.asJson,
                         "name" -> job.name.asJson,
-                        "description" -> job.description.asJson,
-                    ))
+                        "description" -> job.description.asJson))
                   .asJson)
             }
           })
@@ -258,99 +329,40 @@ class ApiController extends BaseController {
     }
   }
 
-  private def collectionJson(collection: ArchCollection, user: ArchUser): Json = {
-    val info = ArchCollectionInfo.get(collection.id)
-    ListMap(
-      "id" -> collection.userUrlId(user.id).asJson,
-      "name" -> collection.name.asJson,
-      "public" -> collection.public.asJson,
-      "size" -> FormatUtil.formatBytes(collection.stats.size).asJson,
-      "sortSize" -> collection.stats.size.asJson,
-      "seeds" -> collection.stats.seeds.asJson,
-      "lastCrawlDate" -> Option(collection.stats.lastCrawlDate).filter(_.nonEmpty).asJson,
-      "lastJobId" -> info.map(_.lastJobId).asJson,
-      "lastJobSample" -> info.map(_.lastJobSample).asJson,
-      "lastJobName" -> info.map(_.lastJobName).asJson,
-      "lastJobTime" -> info.map(_.lastJobTime.map(FormatUtil.instantTimeString)).asJson,
-    )
-  }.asJson
-
   get("/collections") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val collections = ArchCollection.userCollections(context.user)
       Ok(
-        collections.map(collectionJson(_, context.user)).asJson,
+        filterAndSerialize(collections.map(Collection(_))),
         Map("Content-Type" -> "application/json"))
     }
   }
 
   get("/datasets") {
-    ensureLogin(redirect = false, useSession = true) { context =>
-      val collectionIds =
-        multiParams("collectionId").map(ArchCollection.userCollectionId(_, context.user))
-      val states = multiParams("state")
-      val notStates = multiParams("state!")
-      val jobs = multiParams("job")
-      val sample = multiParams("sample")
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
       val datasets =
         ArchCollection
           .userCollections(user)
-          // Apply collections filter.
-          .filter(col => if (collectionIds.isEmpty) true else collectionIds.contains(col.id))
           // Get (collection, [sample]userConf, [sample]globalConf) tuples
-          .flatMap { col =>
-            // Apply sample filter.
-            (if (sample.isEmpty) Set(true, false) else Seq(sample.contains("true"))).map {
-              sample =>
-                (col, sample)
-            }
-          }
+          .flatMap(
+            col =>
+              Set(true, false).map(
+                sample =>
+                  (
+                    col,
+                    DerivationJobConf.collection(col, sample = sample, global = false),
+                    DerivationJobConf.collection(col, sample = sample, global = true))))
           // Get (collection, jobInstance)
           .flatMap {
-            case (col, sample) =>
+            case (col, userConf, globalConf) =>
               JobManager.userJobs
-              // Apply jobs filter.
-                .filter(job => if (jobs.isEmpty) true else jobs.contains(job.id))
-                .map { job =>
-                  (col, DerivationJobConf.collectionInstance(job.id, col, sample).get)
-                }
+                .map(job => {
+                  (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
+                })
           }
-          // Apply states filters.
-          .filter(x => if (states.isEmpty) true else states.contains(x._2.stateStr))
-          .filter(x => if (notStates.isEmpty) true else !notStates.contains(x._2.stateStr))
-          // Sort by state asc, finishedTime desc.
-          .sortBy { x =>
-            (
-              x._2.state,
-              -x._2.info.finishedTime.getOrElse(Instant.ofEpochSecond(0)).getEpochSecond)
-          }
-          .map {
-            case (collection, jobInstance) =>
-              ListMap(
-                "id" -> DatasetUtil
-                  .formatId(collection.userUrlId(context.user.id), jobInstance.job)
-                  .asJson,
-                "collectionId" -> collection.userUrlId(user.id).asJson,
-                "collectionName" -> collection.name.asJson,
-                "isSample" -> (jobInstance.conf.sample != -1).asJson,
-                "jobId" -> jobInstance.job.id.asJson,
-                "category" -> jobInstance.job.category.name.asJson,
-                "name" -> jobInstance.job.name.asJson,
-                "sample" -> jobInstance.conf.sample.asJson,
-                "state" -> jobInstance.stateStr.asJson,
-                "numFiles" -> jobInstance.outFiles.size.asJson,
-              ) ++
-                jobInstance.info.startTime
-                  .map(FormatUtil.instantTimeString)
-                  .map("startTime" -> _.asJson)
-                  .toSeq ++
-                jobInstance.info.finishedTime
-                  .map(FormatUtil.instantTimeString)
-                  .map("finishedTime" -> _.asJson)
-                  .toSeq
-          }
-      Ok(datasets.asJson, Map("Content-Type" -> "application/json"))
+          .map { case (collection, jobInstance) => Dataset(collection, jobInstance) }
+      Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
     }
   }
 

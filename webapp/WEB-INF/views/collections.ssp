@@ -5,7 +5,7 @@
 #end
 
 #set (scripts)
-  <script src="<%=staticPath("/js/dist/arch-collections-table-b3d6ee29.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-collections-table-14e3346b.js")%>" type="module"></script>
 #end
 
 <div class="row">
