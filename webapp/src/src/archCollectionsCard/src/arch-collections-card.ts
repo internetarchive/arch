@@ -1,7 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
-import { Collection, Dataset } from "../../lib/types";
+import ArchAPI from "../../lib/ArchAPI";
+import { FilteredApiResponse, Collection, Dataset } from "../../lib/types";
 import { Paths, humanBytes } from "../../lib/helpers";
 
 import "../../archCard/index";
@@ -11,12 +12,13 @@ import styles from "./styles";
 
 @customElement("arch-collections-card")
 export class ArchCollectionsCard extends LitElement {
+  @state() numTotalCollections = 0;
   @state() collections: undefined | Array<Collection> = undefined;
   @state() collectionDatasetCounts:
     | undefined
     | Record<Collection["id"], number> = undefined;
 
-  static numDisplayedCollections = 10;
+  static maxDisplayedCollections = 10;
   static styles = styles;
 
   constructor() {
@@ -26,10 +28,10 @@ export class ArchCollectionsCard extends LitElement {
   }
 
   render() {
-    const { numDisplayedCollections } = ArchCollectionsCard;
+    const { maxDisplayedCollections } = ArchCollectionsCard;
     const isLoading = this.collections === undefined;
     // Note that the value of hasCollection is only valid when isLoading=false;
-    const hasCollections = (this.collections ?? []).length > 0;
+    const hasCollections = this.numTotalCollections > 0;
     const getRows = () =>
       isLoading
         ? [
@@ -58,7 +60,7 @@ export class ArchCollectionsCard extends LitElement {
               </tr>
             `,
           ]
-        : (this.collections ?? []).slice(0, numDisplayedCollections).map(
+        : (this.collections ?? []).slice(0, maxDisplayedCollections).map(
             (collection) => html`
               <tr>
                 <td class="name">
@@ -115,8 +117,8 @@ export class ArchCollectionsCard extends LitElement {
             : html`
                 <a href="/collections" class="view-all">
                   View
-                  ${(this.collections ?? []).length > numDisplayedCollections
-                    ? html`All ${(this.collections ?? []).length}`
+                  ${this.numTotalCollections > maxDisplayedCollections
+                    ? html`All ${this.numTotalCollections}`
                     : html``}
                   Collections
                 </a>
@@ -127,15 +129,19 @@ export class ArchCollectionsCard extends LitElement {
   }
 
   private async initCollections() {
-    this.collections = (await (
-      await fetch("/api/collections")
-    ).json()) as Array<Collection>;
+    const response = (await ArchAPI.collections.get([
+      ["sort", "=", "-lastJobTime"],
+      ["limit", "=", ArchCollectionsCard.maxDisplayedCollections],
+    ])) as FilteredApiResponse<Collection>;
+    this.numTotalCollections = response.count;
+    this.collections = response.results;
   }
 
   private async initCollectionDatasetCounts() {
-    const datasets = (await (
-      await fetch("/api/datasets?state=Finished")
-    ).json()) as Array<Dataset>;
+    const response = (await ArchAPI.datasets.get([
+      ["state", "=", "Finished"],
+    ])) as FilteredApiResponse<Dataset>;
+    const { results: datasets } = response;
     const counts: typeof this.collectionDatasetCounts = {};
     for (const dataset of datasets) {
       const { collectionId } = dataset;

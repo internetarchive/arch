@@ -43,6 +43,11 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
           ? ""
           : (finishedTime as string)?.slice(0, -3),
     ];
+    this.columnFilterDisplayMaps = [
+      undefined,
+      undefined,
+      { 100: "Yes", [-1]: "No" },
+    ];
     this.columns = [
       "name",
       "category",
@@ -61,9 +66,12 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       "Finished",
       "Files",
     ];
+    this.filterableColumns = [true, true, true, true, false, false, false];
     this.nonSelectionActionLabels = ["Generate a New Dataset"];
     this.nonSelectionActions = [Topics.GENERATE_DATASET];
     this.singleName = "Dataset";
+    this.sort = "-startTime";
+    this.sortableColumns = [true, true, false, true, true, true, true];
     this.pluralName = "Datasets";
   }
 

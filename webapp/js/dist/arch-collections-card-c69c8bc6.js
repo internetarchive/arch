@@ -1,4 +1,4 @@
-import{g as t,f as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-75502ec5.js";import{t as c}from"./chunk-arch-alert-384569c4.js";import{P as n}from"./chunk-helpers-799bde6a.js";import"./chunk-arch-card-f8a29633.js";import"./chunk-arch-loading-indicator-37c0007d.js";import{h as r}from"./chunk-helpers-139f8162.js";import"./arch-sub-collection-builder-5c9f5725.js";import"./chunk-arch-generate-dataset-form-8e4f842f.js";import"./chunk-query-all-273a2103.js";var d,h=[t,o,e`
+import{g as t,f as o,i as s,_ as e,b as a,y as i,a as l}from"./chunk-styles-75502ec5.js";import{t as c,a as n}from"./chunk-arch-alert-a83c3a9d.js";import{P as r}from"./chunk-helpers-94bb8932.js";import"./chunk-arch-card-f8a29633.js";import"./chunk-arch-loading-indicator-37c0007d.js";import{h as d}from"./chunk-helpers-139f8162.js";import"./arch-sub-collection-builder-cd409a8e.js";import"./chunk-arch-generate-dataset-form-6a3e9363.js";import"./chunk-query-all-273a2103.js";var h,u=[t,o,s`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -26,17 +26,17 @@ import{g as t,f as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-7550
     td.num-datasets {
       text-align: right;
     }
-  `];let u=d=class extends a{constructor(){super(),this.collections=void 0,this.collectionDatasetCounts=void 0,this.initCollections(),this.initCollectionDatasetCounts()}render(){var t,o,e;const{numDisplayedCollections:s}=d,a=void 0===this.collections,l=(null!==(t=this.collections)&&void 0!==t?t:[]).length>0;return i`
+  `];let m=h=class extends a{constructor(){super(),this.numTotalCollections=0,this.collections=void 0,this.collectionDatasetCounts=void 0,this.initCollections(),this.initCollectionDatasetCounts()}render(){const{maxDisplayedCollections:t}=h,o=void 0===this.collections,s=this.numTotalCollections>0;return i`
       <arch-card
         title="Collections"
-        ctatext=${!a&&l?"Create Custom Collection":""}
-        ctahref="${n.buildSubCollection()}"
+        ctatext=${!o&&s?"Create Custom Collection":""}
+        ctahref="${r.buildSubCollection()}"
       >
         <div slot="content">
           <table>
             <thead>
               <tr
-                class="${a||!l?"hidden-header":""}"
+                class="${o||!s?"hidden-header":""}"
               >
                 <th class="name">Collection Name</th>
                 <th class="size">Collection Size</th>
@@ -44,13 +44,13 @@ import{g as t,f as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-7550
               </tr>
             </thead>
             <tbody>
-              ${(()=>{var t;return a?[i`
+              ${(()=>{var e;return o?[i`
               <tr>
                 <td colspan="3">
                   <arch-loading-indicator></arch-loading-indicator>
                 </td>
               </tr>
-            `]:l?(null!==(t=this.collections)&&void 0!==t?t:[]).slice(0,s).map((t=>{var o;return i`
+            `]:s?(null!==(e=this.collections)&&void 0!==e?e:[]).slice(0,t).map((t=>{var o;return i`
               <tr>
                 <td class="name">
                   <a
@@ -61,7 +61,7 @@ import{g as t,f as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-7550
                   </a>
                 </td>
                 <td class="size">
-                  ${r(-1===t.sortSize?0:t.sortSize,1)}
+                  ${d(-1===t.sortSize?0:t.sortSize,1)}
                 </td>
                 <td class="num-datasets">
                   ${void 0===this.collectionDatasetCounts?i`<arch-loading-indicator></arch-loading-indicator>`:`${null!==(o=this.collectionDatasetCounts[t.id])&&void 0!==o?o:0} Datasets`}
@@ -85,14 +85,14 @@ import{g as t,f as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-7550
           </table>
         </div>
         <div slot="footer">
-          ${a||!l?i``:i`
+          ${o||!s?i``:i`
                 <a href="/collections" class="view-all">
                   View
-                  ${(null!==(o=this.collections)&&void 0!==o?o:[]).length>s?i`All ${(null!==(e=this.collections)&&void 0!==e?e:[]).length}`:i``}
+                  ${this.numTotalCollections>t?i`All ${this.numTotalCollections}`:i``}
                   Collections
                 </a>
               `}
         </div>
       </arch-card>
-    `}async initCollections(){this.collections=await(await fetch("/api/collections")).json()}async initCollectionDatasetCounts(){var t;const o=await(await fetch("/api/datasets?state=Finished")).json(),e={};for(const s of o){const{collectionId:o}=s;e[o]=(null!==(t=e[o])&&void 0!==t?t:0)+1}this.collectionDatasetCounts=e}};u.numDisplayedCollections=10,u.styles=h,s([c()],u.prototype,"collections",void 0),s([c()],u.prototype,"collectionDatasetCounts",void 0),u=d=s([l("arch-collections-card")],u);export{u as ArchCollectionsCard};
-//# sourceMappingURL=arch-collections-card-0db226ec.js.map
+    `}async initCollections(){const t=await n.collections.get([["sort","=","-lastJobTime"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.results}async initCollectionDatasetCounts(){var t;const o=await n.datasets.get([["state","=","Finished"]]),{results:s}=o,e={};for(const o of s){const{collectionId:s}=o;e[s]=(null!==(t=e[s])&&void 0!==t?t:0)+1}this.collectionDatasetCounts=e}};m.maxDisplayedCollections=10,m.styles=u,e([c()],m.prototype,"numTotalCollections",void 0),e([c()],m.prototype,"collections",void 0),e([c()],m.prototype,"collectionDatasetCounts",void 0),m=h=e([l("arch-collections-card")],m);export{m as ArchCollectionsCard};
+//# sourceMappingURL=arch-collections-card-c69c8bc6.js.map

@@ -3,8 +3,9 @@ import { Dataset } from "../../lib/types";
 import "../../archCard/index";
 import "../../archLoadingIndicator/index";
 export declare class ArchRecentDatasetsCard extends LitElement {
+    numTotalDatasets: number;
     datasets: undefined | Array<Dataset>;
-    static numDisplayedDatasets: number;
+    static maxDisplayedDatasets: number;
     static styles: import("lit").CSSResult[];
     constructor();
     render(): import("lit-html").TemplateResult<1>;

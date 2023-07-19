@@ -1,9 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, query, queryAll, state } from "lit/decorators.js";
 
+import ArchAPI from "../../lib/ArchAPI";
 import {
   AvailableJobs,
   Collection,
+  FilteredApiResponse,
   JobState,
   ProcessingState,
 } from "../../lib/types";
@@ -156,9 +158,9 @@ export class ArchGenerateDatasetForm extends LitElement {
   }
 
   private async initCollections() {
-    this.collections = (await (
-      await fetch("/api/collections")
-    ).json()) as Array<Collection>;
+    const response =
+      (await ArchAPI.collections.get()) as FilteredApiResponse<Collection>;
+    this.collections = response.results;
     // Maybe select an initial Collection.
     const initialCollectionId = new URLSearchParams(window.location.search).get(
       ArchGenerateDatasetForm.urlCollectionParamName

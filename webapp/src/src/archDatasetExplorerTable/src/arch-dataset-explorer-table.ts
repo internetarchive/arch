@@ -24,14 +24,14 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       (name, dataset) =>
         dataset.state !== ProcessingState.Finished
           ? `${dataset.name}`
-          : `<a href="${Paths.dataset(dataset.id, dataset.sample)}">${
-              dataset.name
-            }</a>`,
+          : `<a href="${Paths.dataset(dataset.id, dataset.sample)}">
+               <span class="highlightable">${dataset.name}</span>
+            </a>`,
       undefined,
       (collectionName, dataset) =>
-        `<a href="${Paths.collection(dataset.collectionId)}">${
-          collectionName as string
-        }</a>`,
+        `<a href="${Paths.collection(dataset.collectionId)}">
+           <span class="highlightable">${collectionName as string}</span>
+        </a>`,
       (sample) => ((sample as Dataset["sample"]) === -1 ? "No" : "Yes"),
       undefined,
       (startTime) => (startTime as string)?.slice(0, -3),
@@ -39,6 +39,12 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
         dataset.state === ProcessingState.Running
           ? ""
           : (finishedTime as string)?.slice(0, -3),
+    ];
+    this.columnFilterDisplayMaps = [
+      undefined,
+      undefined,
+      undefined,
+      { 100: "Yes", [-1]: "No" },
     ];
     this.columns = [
       "name",
@@ -60,7 +66,22 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       "Finished",
       "Files",
     ];
+    this.filterableColumns = [
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ];
+    this.searchColumns = ["name", "category", "collectionName", "state"];
+    this.searchColumnLabels = ["Name", "Category", "Collection", "State"];
     this.singleName = "Dataset";
+    this.sort = "-startTime";
+    this.sortableColumns = [true, true, true, true, true, true, true, true];
+    this.persistSearchStateInUrl = true;
     this.pluralName = "Datasets";
   }
 }
