@@ -6,7 +6,6 @@ import org.archive.webservices.ars.model.{ArchCollection, ArchConf, PublishedDat
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.util.DatasetUtil
 import org.scalatra._
-import org.scalatra.scalate.ScalateSupport
 
 import scala.util.Try
 
@@ -40,7 +39,7 @@ private object BreadCrumbs {
   }
 }
 
-class DefaultController extends BaseController with ScalateSupport {
+class DefaultController extends BaseController {
   get(ViewPathPatterns.Home) {
     ensureLogin { implicit context =>
       Ok(
@@ -232,6 +231,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/logout") {
     ArchUser.logout()
+    clearMasqueradeUser()
     login(ArchConf.baseUrl)
   }
 }

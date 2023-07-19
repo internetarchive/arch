@@ -171,7 +171,7 @@ class ApiController extends BaseController {
   }
 
   post("/runjob/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true, userId = params.get("user")) {
+    ensureLogin(redirect = false, useSession = true) {
       implicit context =>
         DerivationJobParameters.fromJson(request.body) match {
           case Some(p) =>
