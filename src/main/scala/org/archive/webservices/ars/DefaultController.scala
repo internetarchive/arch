@@ -88,29 +88,6 @@ class DefaultController extends BaseController {
     }
   }
 
-  get("/collections/:collection_id/subset") {
-    ensureLogin { implicit context =>
-      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
-      ArchCollection
-        .get(collectionId)
-        .map { collection =>
-          Ok(
-            ssp(
-              "subset",
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.collections,
-                BreadCrumbs.collection(collection, context.user),
-                (
-                  relativePath("/collections/" + collectionId + "/subset"),
-                  "Sub-Collection Query")),
-              "user" -> context.user,
-              "collection" -> collection),
-            Map("Content-Type" -> "text/html"))
-        }
-        .getOrElse(NotFound())
-    }
-  }
-
   get(ViewPathPatterns.CustomCollectionBuilder) {
     ensureLogin { implicit context =>
       Ok(
