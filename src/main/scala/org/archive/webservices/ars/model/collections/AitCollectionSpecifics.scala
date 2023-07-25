@@ -21,6 +21,8 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val (userId, collectionId) =
     ArchCollection.splitIdUserCollection(id.stripPrefix(AitCollectionSpecifics.Prefix))
   val aitId: Int = collectionId.toInt
+  private var _collection: Option[ArchCollection] = None
+  private var _stats: Option[ArchCollectionStats] = None
 
   private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
     context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty) || context.loggedInOpt
@@ -32,60 +34,60 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def inputPath: String =
     ArchConf.aitCollectionPath + s"/$aitId/" + ArchConf.aitCollectionWarcDir
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  private def fetchCollection(
+    implicit context: RequestContext = RequestContext.None): Option[(ArchCollection, ArchCollectionStats)] = {
     Ait
       .getJson(
-        "/api/collection?id=" + aitId,
-        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c =>
-        Some(AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten, userId)))
+        s"/api/collection?id=$aitId"
+          + "&annotate__count=seed__id"
+          + "&seed__deleted__in=false,null"
+          + "&annotate__max=crawljobrun__processing_end_date"
+          + "&crawljobrun__crawl_job__type__in=null,ANNUAL,BIMONTHLY,CRAWL_SELECTED_SEEDS,DAILY,MISSING_URLS_PATCH_CRAWL,MONTHLY,ONE_TIME,QUARTERLY,SEMIANNUAL,TEST_SAVED,TWELVE_HOURS,WEEKLY,TEST",
+        basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c => {
+          val stats = c.values.toSeq.head.map(_.hcursor).map{ collection =>
+            ArchCollectionStats(
+              collection.get[Long]("total_warc_bytes").right.getOrElse(0L),
+              collection.get[Long]("seed__id").right.getOrElse(-1L),
+              collection.get[String]("crawljobrun__processing_end_date").right.getOrElse("")
+            )
+          }.head
+          Some(
+            AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten, userId).head,
+            stats
+          )
+        })
       .toOption
-      .flatMap(_.headOption)
   }
 
-  override def stats(implicit context: RequestContext): ArchCollectionStats = {
-    var stats = ArchCollectionStats.Empty
-    Await
-      .result(
-        waitAll(
-          Seq(
-            Future({
-              Ait
-                .getJson(
-                  "/api/warc_file?__sum=size&limit=-1&collection=" + aitId,
-                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-                  _.get[Long]("size__sum").toOption)
-                .getOrElse(-1L)
-            }),
-            Future({
-              Ait
-                .getJson(
-                  "/api/seed?__count=id&__group=collection&deleted=false&limit=-1&collection=" + aitId,
-                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-                  _.downField("groups").downArray
-                    .get[Int]("id__count")
-                    .toOption)
-                .getOrElse(-1)
-            }),
-            Future({
-              Ait
-                .getJson(
-                  "/api/crawl_job_run?__group=collection&__max=processing_end_date&exclude__type__in=TEST,TEST_DELETED,TEST_EXPIRED&limit=1&collection=" + aitId,
-                  basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(
-                  _.downField("groups").downArray
-                    .get[String]("processing_end_date__max")
-                    .toOption)
-                .getOrElse("")
-            }))),
-        30.seconds)
-      .zipWithIndex
-      .map {
-        case (Success(v: Long), 0) => stats = stats.copy(size = v)
-        case (Success(v: Int), 1) => stats = stats.copy(seeds = v)
-        case (Success(v: String), 2) => stats = stats.copy(lastCrawlDate = v)
+
+  def collection(
+    implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+    _collection match {
+      case Some(collection) => Some(collection)
+      case _ => fetchCollection() match {
+        case Some((collection, stats)) => {
+          _collection = Some(collection)
+          _stats = Some(stats)
+          _collection
+        }
         case _ => None
       }
-    stats
+    }
+  }
+
+  override def stats(
+    implicit context: RequestContext = RequestContext.None): ArchCollectionStats = {
+    _stats match {
+      case Some(stats) => stats
+      case _ => fetchCollection() match {
+        case Some((collection, stats)) => {
+          _collection = Some(collection)
+          _stats = Some(stats)
+          stats
+        }
+        case _ => ArchCollectionStats.Empty
+      }
+    }
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
