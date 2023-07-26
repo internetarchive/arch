@@ -1,5 +1,5 @@
 import { PropertyValues } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
 import { Dataset, ProcessingState } from "../../lib/types";
@@ -8,6 +8,13 @@ import Styles from "./styles";
 
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
+  @state() columnNameHeaderTooltipMap = {
+    category:
+      "Dataset categories are Collection, Network, Text, and File Format",
+    sample:
+      "Sample datasets contain only the first 100 available records from a collection",
+  };
+
   static styles = [...ArchDataTable.styles, ...Styles];
 
   willUpdate(_changedProperties: PropertyValues) {
