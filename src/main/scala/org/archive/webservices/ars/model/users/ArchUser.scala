@@ -118,31 +118,36 @@ object ArchUser {
       case AitPrefix =>
         Ait.login(name, password, response).left.toOption
       case KeystonePrefix =>
-        val keystoneBaseUrl = ArchConf.keystoneBaseUrl.get
-        val r: Response = requests.post(
-          keystoneBaseUrl + "/private/api/proxy_login",
-          data = Map("username" -> username, "password" -> password).asJson.noSpaces,
-          headers = Map("X-API-Key" -> ArchConf.keystonePrivateApiKey.get),
-        )
-        if (r.statusCode != 200) {
-          Some("Wrong username or password")
+        // TODO: extract Keystone login into client class
+        if (ArchConf.keystoneBaseUrl.isEmpty | ArchConf.keystonePrivateApiKey.isEmpty) {
+          Some("User not found.")
         } else {
-          parser.parse(r.text) match {
-            case Left(error) =>
-              Some("Wrong username or password")
-            case Right(json) =>
-              val cursor = json.hcursor
-              val user = DefaultArchUser(
-                id = KeystonePrefix + ":" + cursor.get[String]("username").toOption.get,
-                userName = cursor.get[String]("username").toOption.get,
-                fullName = cursor.get[String]("fullname").toOption.get,
-                email = cursor.get[String]("email").toOption,
-                isAdmin = cursor.get[Boolean]("is_staff").toOption.get,
-              )
-              request.getSession.setAttribute(UserSessionAttribute, user)
-              scala.None
+          val keystoneBaseUrl = ArchConf.keystoneBaseUrl.get
+          val r: Response = requests.post(
+            keystoneBaseUrl + "/private/api/proxy_login",
+            data = Map("username" -> username, "password" -> password).asJson.noSpaces,
+            headers = Map("X-API-Key" -> ArchConf.keystonePrivateApiKey.get),
+          )
+          if (r.statusCode != 200) {
+            Some("Wrong username or password")
+          } else {
+            parser.parse(r.text) match {
+              case Left(error) =>
+                Some("Wrong username or password")
+              case Right(json) =>
+                val cursor = json.hcursor
+                val user = DefaultArchUser(
+                  id = KeystonePrefix + ":" + cursor.get[String]("username").toOption.get,
+                  userName = cursor.get[String]("username").toOption.get,
+                  fullName = cursor.get[String]("fullname").toOption.get,
+                  email = cursor.get[String]("email").toOption,
+                  isAdmin = cursor.get[Boolean]("is_staff").toOption.get,
+                )
+                request.getSession.setAttribute(UserSessionAttribute, user)
+                scala.None
+            }
           }
-        }
+      }
       case _ =>
         Some("User not found.")
     }
