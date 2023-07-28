@@ -29,6 +29,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.scalamock" %% "scalamock" % "5.2.0" % "test",
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",
+  "com.lihaoyi" %% "requests" % "0.8.0",
   "com.thoughtworks.paranamer" % "paranamer" % "2.8",
   "com.syncthemall" % "boilerpipe" % "1.2.2",
   "xerces" % "xercesImpl" % "2.12.0",

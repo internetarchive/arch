@@ -160,4 +160,8 @@ class LocalArchConf extends ArchConf with Serializable {
     confStrValue("ARCH_ARK_MINT_URL", "arkMintUrl").getOrElse("https://ark.archive.org/mint")
   val pboxS3Url: String =
     confStrValue("ARCH_PBOX_S3_URL", "pboxS3Url").getOrElse("http://s3.us.archive.org")
+  val keystoneBaseUrl: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_BASE_URL", configKey = "keystoneBaseUrl")
+  val keystonePrivateApiKey: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_PRIVATE_API_KEY", configKey = "keystonePrivateApiKey")
 }
