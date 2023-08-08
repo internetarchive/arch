@@ -17,6 +17,7 @@ object UserDefinedQuery extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "User-Defined Query"
+  val uuid = "018950a1-6773-79f3-8eb2-fba4356e23b9"
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to run a user-defined query (internal system job)"
 

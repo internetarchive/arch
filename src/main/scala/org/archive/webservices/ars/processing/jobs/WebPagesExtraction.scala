@@ -14,6 +14,7 @@ import java.io.{InputStream, PrintStream}
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Plain text of webpages"
+  val uuid = "0189506a-46f3-7d73-9dcf-a8fce59c50cc"
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 

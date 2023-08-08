@@ -7,6 +7,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {
   val name = "Word processing file information"
+  val uuid = "0189506a-d09d-7571-9d3c-a44698d58d39"
 
   val description =
     "Locations and metadata for DOC, RTF, ODT, and other word processing files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."

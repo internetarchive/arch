@@ -20,6 +20,7 @@ import scala.util.Try
 
 object ImageInformationExtraction extends BinaryInformationAutJob {
   val name = "Image file information"
+  val uuid = "01895067-d598-7db8-88ad-46fed66e27f5"
 
   val description =
     "Locations and metadata for JPEG, PNG, GIF, and other image formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."

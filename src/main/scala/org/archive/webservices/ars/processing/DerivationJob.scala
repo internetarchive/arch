@@ -12,6 +12,8 @@ trait DerivationJob {
 
   def name: String
 
+  def uuid: String
+
   val stage = "Processing"
 
   def category: ArchJobCategory

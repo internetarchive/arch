@@ -13,6 +13,7 @@ import java.io.PrintStream
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Domain graph"
+  val uuid = "01895067-417d-7665-ba60-a9bb9ca0aa3e"
   val description =
     "Links between domains in the collection over time. Output: one CSV file with columns for crawl date, source, target, and count."
 

@@ -22,6 +22,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "Web archive transformation (WAT)"
+  val uuid = "01895066-11f7-7c35-af62-603955c6c20f"
   val category: ArchJobCategory = ArchJobCategories.Collection
   def description =
     "Metadata extracted from WARC-info and WARC record headers and HTML headers, meta tags, and anchor tags thoughout the collection. Output: one WAT file with data in JSON format for each WARC file."

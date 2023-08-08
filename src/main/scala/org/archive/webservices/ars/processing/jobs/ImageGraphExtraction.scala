@@ -12,6 +12,7 @@ import java.io.PrintStream
 
 object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Image graph"
+  val uuid = "01895067-92fb-739c-a99d-037fde1798a4"
   val description =
     "Timestamp, location, and any original description for each image file in the collection. Output: one CSV with columns for crawl date, source page, image file url, and alt text."
 

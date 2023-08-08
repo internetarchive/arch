@@ -15,6 +15,7 @@ import java.io.PrintStream
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
+  val uuid = "01894bc7-ff6a-7e25-a5b5-4570425a8ab7"
   val category: ArchJobCategory = ArchJobCategories.Collection
   val description =
     "The number of unique documents collected from each domain in the collection. Output: one CSV file with columns for domain and count."

@@ -13,6 +13,7 @@ object DatasetPublication extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "Dataset publication"
+  val uuid = "018950a2-21cb-7034-8d2a-03dff990cc1a"
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to publish a dataset on archive.org (internal system job)"
 

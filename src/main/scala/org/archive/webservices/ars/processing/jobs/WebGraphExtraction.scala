@@ -12,6 +12,7 @@ import java.io.PrintStream
 
 object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Web graph"
+  val uuid = "01895069-e74c-79de-8292-effb45265179"
   val description =
     "Links between all documents in the collection over time and any descriptive anchor text about with them. Output: one CSV file with columns for crawl date, source, target, and anchor text."
 
