@@ -122,7 +122,20 @@ class ApiController extends BaseController {
       context: RequestContext): Option[DerivationJobConf] = {
     job match {
       case UserDefinedQuery =>
-        DerivationJobConf.userDefinedQuery(collection, params, sample)
+        DerivationJobConf.userDefinedQuery(
+          collection,
+          // If input param is specified, insert the requesting user ID into the
+          // collection names as necessary.
+          params
+            .get[Seq[String]]("input")
+            .map(
+              collectionNames => params.set(
+                "input", collectionNames.map(ArchCollection.userCollectionId)
+              )
+            )
+            .getOrElse(params),
+        sample
+        )
       case _ =>
         val conf = DerivationJobConf.collection(collection, sample)
         Some(if (params.isEmpty) conf else conf.copy(params = params))
