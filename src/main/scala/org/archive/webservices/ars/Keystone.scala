@@ -98,18 +98,6 @@ object Keystone {
         inputStream.close()
         response
       } else {
-        // report error to sentry
-        val source = Source.fromInputStream(connection.getErrorStream, "utf-8")
-        try
-          Arch.reportError(
-            "Keystone Http Request Error",
-            source.mkString,
-            Map(
-              "status_code" -> responseCode.toString,
-              "path" -> endpoint,
-              "method" -> connection.getRequestMethod))
-        finally source.close()
-
         throw new RuntimeException("HTTP request failed with response code: " + responseCode)
       }
     } finally {
@@ -123,7 +111,19 @@ object Keystone {
       case Failure(_) if triesRemaining > 0 =>
         println("Retrying HTTP request, attempt: " + (maxRetries - triesRemaining + 1))
         retryHttpRequest(url, postData, triesRemaining - 1)
-      case Failure(exception) => Failure(exception)
+      case Failure(exception) => {
+        // report failure to sentry
+        Try(
+          Arch.reportError(
+            s"Keystone Request Error - $url",
+            exception.getMessage,
+            Map(
+              "url" -> url,
+              "method" -> "POST",
+              "data" -> postData))
+        )
+        Failure(exception)
+      }
     }
   }
 
