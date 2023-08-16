@@ -43,7 +43,7 @@ object DerivationJobConf {
       params: DerivationJobParameters = DerivationJobParameters.Empty)(
       implicit context: RequestContext): String = {
     if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
-      UnionCollectionSpecifics.collections(params).mkString(",")
+      UnionCollectionSpecifics.collections(params).map(_.id).mkString(",")
     } else specifics.inputPath
   }
 

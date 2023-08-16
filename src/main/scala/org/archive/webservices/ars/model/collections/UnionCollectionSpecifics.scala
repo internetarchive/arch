@@ -89,10 +89,6 @@ object UnionCollectionSpecifics {
       .toSeq
       .flatten
       .distinct
-      // TODO: Insert the user ID into the collectionId string if necessary. Is this really needed? why? we're not operating on collection outputs here, so the user ID shouldn't matter?
-      .map { collectionId =>
-        ArchCollection.userCollectionId(collectionId, context.user)
-      }
       .sorted
       .flatMap(ArchCollection.get(_))
   }
