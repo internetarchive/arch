@@ -3,7 +3,11 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{
+  CollectionAccessContext,
+  CollectionLoader,
+  CollectionSourcePointer
+}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
@@ -21,8 +25,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val (userId, collectionId) =
     ArchCollection.splitIdUserCollection(id.stripPrefix(AitCollectionSpecifics.Prefix))
   val aitId: Int = collectionId.toInt
-  private var _collection: Option[ArchCollection] = None
-  private var _stats: Option[ArchCollectionStats] = None
+  private var collectionStatsOpt: Option[(ArchCollection, ArchCollectionStats)] = None
 
   private def foreignAccess(implicit context: RequestContext = RequestContext.None): Boolean = {
     context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty) || context.loggedInOpt
@@ -34,8 +37,8 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def inputPath: String =
     ArchConf.aitCollectionPath + s"/$aitId/" + ArchConf.aitCollectionWarcDir
 
-  private def fetchCollection(
-    implicit context: RequestContext = RequestContext.None): Option[(ArchCollection, ArchCollectionStats)] = {
+  private def fetchCollection(implicit context: RequestContext = RequestContext.None)
+      : Option[(ArchCollection, ArchCollectionStats)] = {
     Ait
       .getJson(
         s"/api/collection?id=$aitId"
@@ -44,51 +47,38 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
           + "&annotate__max=crawljobrun__processing_end_date"
           + "&crawljobrun__crawl_job__type__in=null,ANNUAL,BIMONTHLY,CRAWL_SELECTED_SEEDS,DAILY,MISSING_URLS_PATCH_CRAWL,MONTHLY,ONE_TIME,QUARTERLY,SEMIANNUAL,TEST_SAVED,TWELVE_HOURS,WEEKLY,TEST",
         basicAuth = if (foreignAccess) ArchConf.foreignAitAuthHeader else None)(c => {
-          val stats = c.values.toSeq.head.map(_.hcursor).map{ collection =>
+        val stats = c.values.toSeq.head
+          .map(_.hcursor)
+          .map { collection =>
             ArchCollectionStats(
               collection.get[Long]("total_warc_bytes").right.getOrElse(0L),
               collection.get[Long]("seed__id").right.getOrElse(-1L),
-              collection.get[String]("crawljobrun__processing_end_date").right.getOrElse("")
-            )
-          }.head
-          Some(
-            AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten, userId).head,
-            stats
-          )
-        })
+              collection.get[String]("crawljobrun__processing_end_date").right.getOrElse(""))
+          }
+          .head
+        Some(
+          AitCollectionSpecifics.parseCollections(c.values.toIterator.flatten, userId).head,
+          stats)
+      })
       .toOption
   }
 
-
-  def collection(
-    implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
-    _collection match {
-      case Some(collection) => Some(collection)
-      case _ => fetchCollection() match {
-        case Some((collection, stats)) => {
-          _collection = Some(collection)
-          _stats = Some(stats)
-          _collection
-        }
-        case _ => None
-      }
-    }
+  def ensureCollectionStats[R](get: ((ArchCollection, ArchCollectionStats)) => R)(implicit
+      context: RequestContext = RequestContext.None): Option[R] = {
+    if (collectionStatsOpt.isEmpty) collectionStatsOpt = fetchCollection
+    collectionStatsOpt.map(get)
   }
 
-  override def stats(
-    implicit context: RequestContext = RequestContext.None): ArchCollectionStats = {
-    _stats match {
-      case Some(stats) => stats
-      case _ => fetchCollection() match {
-        case Some((collection, stats)) => {
-          _collection = Some(collection)
-          _stats = Some(stats)
-          stats
-        }
-        case _ => ArchCollectionStats.Empty
-      }
+  def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection] =
+    ensureCollectionStats {
+      _._1
     }
-  }
+
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats =
+    ensureCollectionStats {
+      _._2
+    }.getOrElse(ArchCollectionStats.Empty)
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
     CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
@@ -154,9 +144,10 @@ object AitCollectionSpecifics {
       .toSeq
   }
 
-  def userCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
-    val foreignAccess = context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty)
+  def userCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+    val foreignAccess =
+      context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty)
     user.aitUser.map(_.id).toSeq.flatMap { userId =>
       Ait
         .getJson(
@@ -167,8 +158,8 @@ object AitCollectionSpecifics {
     }
   }
 
-  def foreignUserCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+  def foreignUserCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     foreignCollectionIds(user)
       .flatMap { aitId =>
         Ait
