@@ -42,7 +42,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
     Ait
       .getJson(
         s"/api/collection?id=$aitId"
-          + "&annotate__count_distinct=seed__id"
+          + "&annotate__count=seed__id"
           + "&seed__deleted__in=false,null"
           + "&annotate__max=crawljobrun__processing_end_date"
           + "&crawljobrun__crawl_job__type__in=null,ANNUAL,BIMONTHLY,CRAWL_SELECTED_SEEDS,DAILY,MISSING_URLS_PATCH_CRAWL,MONTHLY,ONE_TIME,QUARTERLY,SEMIANNUAL,TEST_SAVED,TWELVE_HOURS,WEEKLY,TEST",
