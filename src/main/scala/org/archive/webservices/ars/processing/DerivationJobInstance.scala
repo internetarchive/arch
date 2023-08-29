@@ -30,6 +30,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   lazy val inputSize: Long = collection.specifics.inputSize(this)
 
   var attempt: Int = 1
+  var slots: Int = 1
 
   private var _queue: Option[JobQueue] = None
   private var queuePos: Int = -1

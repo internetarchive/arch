@@ -21,5 +21,9 @@ class JobQueue(val name: String) {
     queue.dequeue
   }
 
+  def dequeue(freeSlots: Int): Option[DerivationJobInstance] = synchronized {
+    queue.dequeueFirst(_.slots <= freeSlots)
+  }
+
   def pos: Int = _pos
 }

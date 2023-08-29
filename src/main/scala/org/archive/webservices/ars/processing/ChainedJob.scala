@@ -48,6 +48,7 @@ abstract class ChainedJob extends DerivationJob {
           nextChild.enqueue(
             instance.conf,
             child => {
+              child.slots = instance.slots
               child.user = instance.user
               child.collection = instance.collection
               child.onStateChanged {
@@ -80,6 +81,7 @@ abstract class ChainedJob extends DerivationJob {
             children.head.enqueue(
               conf,
               child => {
+                child.slots = instance.slots
                 child.user = instance.user
                 child.collection = instance.collection
                 child.onStateChanged {

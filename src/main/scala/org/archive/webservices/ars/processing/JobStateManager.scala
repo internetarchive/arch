@@ -41,6 +41,7 @@ object JobStateManager {
     Seq(
       "uuid" -> instance.uuid.asJson,
       "attempt" -> instance.attempt.asJson,
+      "slots" -> instance.slots.asJson,
       "size" -> FormatUtil.formatBytes(instance.inputSize).asJson) ++ {
       instance.user.map("user" -> _.id.asJson)
     }
@@ -114,6 +115,12 @@ object JobStateManager {
             .flatMap(_.asNumber)
             .flatMap(_.toInt)
             .getOrElse(1) + 1
+          instance.slots = meta
+            .downField("slots")
+            .focus
+            .flatMap(_.asNumber)
+            .flatMap(_.toInt)
+            .getOrElse(1)
         })
     }
   }
@@ -174,6 +181,11 @@ object JobStateManager {
                 .flatMap(ArchUser.get(_))
               instance.attempt = values
                 .get("attempt")
+                .flatMap(_.asNumber)
+                .flatMap(_.toInt)
+                .getOrElse(1)
+              instance.slots = values
+                .get("slots")
                 .flatMap(_.asNumber)
                 .flatMap(_.toInt)
                 .getOrElse(1)

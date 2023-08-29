@@ -7,9 +7,9 @@ import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.concurrent.Future
 
 class JobManagerBase(
-    val name: String,
-    val maxJobsRunning: Int = 5,
-    val timeoutSeconds: Int = -1) {
+  val name: String,
+  val slots: Int = 5,
+  val timeoutSeconds: Int = -1) {
   val TimeoutCheckPeriodSeconds: Int = 60 * 5
 
   private val mainQueue = new JobQueue(name + " Queue")
@@ -66,7 +66,7 @@ class JobManagerBase(
   }
 
   def checkTimeout(): Unit = synchronized {
-    if (timeoutSeconds >= 0 && priorityRunning.size == maxJobsRunning && queues.exists(
+    if (timeoutSeconds >= 0 && priorityRunning.size == slots && queues.exists(
           _.nonEmpty)) {
       val threshold = Instant.now.getEpochSecond - timeoutSeconds
       if (running.forall(_._2 < threshold)) onTimeout(running.map(_._1))
@@ -87,29 +87,31 @@ class JobManagerBase(
   }
 
   private def processQueues(): Unit = synchronized {
-    while (priorityRunning.size < maxJobsRunning && queues.exists(_.nonEmpty)) {
+    while (priorityRunning.map(_.slots).sum < slots && queues.exists(_.nonEmpty)) {
       for (queue <- nextQueue) {
         queue.synchronized {
-          val instance = queue.dequeue
-          instance.unsetQueue()
-          instance.updateState(ProcessingState.Running)
-          running.enqueue((instance, Instant.now.getEpochSecond))
-          priorityRunning.enqueue(instance)
-          val currentPriorityRunning = priorityRunning
-          val priority = currentPriority
-          Future(instance.job).flatMap(_.run(instance.conf)).onComplete { opt =>
-            synchronized {
-              val success = opt.toOption.getOrElse(false)
-              instance.updateState(
-                if (success) ProcessingState.Finished else ProcessingState.Failed)
-              currentPriorityRunning.dequeueFirst(_ == instance)
-              if (currentPriorityRunning.isEmpty) onPriorityJobsFinished(priority)
-              running.dequeueFirst(_._1 == instance)
-              JobManager.unregister(instance)
-              if (running.isEmpty) onAllJobsFinished()
-              if (!success && opt.isFailure) opt.failed.get.printStackTrace()
+          val freeSlots = slots - priorityRunning.map(_.slots).sum
+          for (instance <- queue.dequeue(freeSlots)) {
+            instance.unsetQueue()
+            instance.updateState(ProcessingState.Running)
+            running.enqueue((instance, Instant.now.getEpochSecond))
+            priorityRunning.enqueue(instance)
+            val currentPriorityRunning = priorityRunning
+            val priority = currentPriority
+            Future(instance.job).flatMap(_.run(instance.conf)).onComplete { opt =>
+              synchronized {
+                val success = opt.toOption.getOrElse(false)
+                instance.updateState(
+                  if (success) ProcessingState.Finished else ProcessingState.Failed)
+                currentPriorityRunning.dequeueFirst(_ == instance)
+                if (currentPriorityRunning.isEmpty) onPriorityJobsFinished(priority)
+                running.dequeueFirst(_._1 == instance)
+                JobManager.unregister(instance)
+                if (running.isEmpty) onAllJobsFinished()
+                if (!success && opt.isFailure) opt.failed.get.printStackTrace()
+              }
+              processQueues()
             }
-            processQueues()
           }
         }
       }

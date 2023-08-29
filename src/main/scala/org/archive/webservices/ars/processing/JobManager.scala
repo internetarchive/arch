@@ -8,6 +8,7 @@ import scala.collection.mutable
 
 object JobManager {
   var MaxAttempts = 3
+  var MaxSlots = 3
 
   private val instances =
     mutable.Map.empty[DerivationJobConf, mutable.Map[String, DerivationJobInstance]]
@@ -88,6 +89,7 @@ object JobManager {
           newInstance.user = instance.user
           newInstance.collection = instance.collection
           newInstance.attempt = instance.attempt + 1
+          if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
         })
       }
       true
