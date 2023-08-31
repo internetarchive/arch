@@ -2,6 +2,7 @@ package org.archive.webservices.ars.processing
 
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
+import org.archive.webservices.sparkling._
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling.Sparkling
@@ -32,6 +33,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
           additionalConfigs = Map(
             "spark.master" -> ArchConf.sparkMaster,
             "spark.scheduler.mode" -> "FAIR",
+            "spark.yarn.executor.memoryOverhead" -> (4.gb / 1.mb).toString, // off-heap memory in MiB
             "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath),
           verbose = true)
         context.setLogLevel("INFO")
