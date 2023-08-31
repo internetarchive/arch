@@ -121,6 +121,7 @@ object JobStateManager {
             .flatMap(_.asNumber)
             .flatMap(_.toInt)
             .getOrElse(1)
+          if (instance.slots < JobManager.MaxSlots) instance.slots += 1
         })
     }
   }
