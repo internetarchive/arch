@@ -80,14 +80,19 @@ class JobManagerBase(
   protected def onPriorityJobsFinished(priority: Int): Unit = {}
 
   private def nextQueue: Option[JobQueue] = {
+    val freeSlots = slots - priorityRunning.map(_.slots).sum
     val next = (queues.drop(nextQueueIdx).toIterator ++ queues.take(nextQueueIdx).toIterator)
-      .find(_.nonEmpty)
+      .find(_.items.exists(_.slots <= freeSlots))
     nextQueueIdx = (nextQueueIdx + 1) % queues.size
     next
   }
 
   private def processQueues(): Unit = synchronized {
-    while (priorityRunning.map(_.slots).sum < slots && queues.exists(_.nonEmpty)) {
+    var nextQueue: Option[JobQueue] = None
+    while (priorityRunning.map(_.slots).sum < slots && {
+      nextQueue = this.nextQueue
+      nextQueue.nonEmpty
+    }) {
       for (queue <- nextQueue) {
         queue.synchronized {
           val freeSlots = slots - priorityRunning.map(_.slots).sum

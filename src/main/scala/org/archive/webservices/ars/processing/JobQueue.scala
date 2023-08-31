@@ -4,6 +4,8 @@ class JobQueue(val name: String) {
   private var _pos = 0
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
 
+  def items: Iterator[DerivationJobInstance] = queue.toIterator
+
   def isEmpty: Boolean = queue.isEmpty
   def nonEmpty: Boolean = queue.nonEmpty
   def size: Int = queue.size
