@@ -23,6 +23,8 @@ class JobManagerBase(
 
   private var priorities = Map(_currentPriority -> priorityRunning)
 
+  private def freeSlots: Int = slots - priorityRunning.map(_.slots).sum
+
   private val timeoutExecutor = {
     new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(
       () => checkTimeout(),
@@ -32,7 +34,6 @@ class JobManagerBase(
   }
 
   def currentPriority: Int = _currentPriority
-  def runningCount: Int = running.size
   def priorityRunningCount: Int = priorityRunning.size
 
   def newPriority(priority: Int): Unit = synchronized {
@@ -66,10 +67,12 @@ class JobManagerBase(
   }
 
   def checkTimeout(): Unit = synchronized {
-    if (timeoutSeconds >= 0 && priorityRunning.size == slots && queues.exists(
-          _.nonEmpty)) {
+    if (timeoutSeconds >= 0 && queues.exists(_.nonEmpty)) {
       val threshold = Instant.now.getEpochSecond - timeoutSeconds
-      if (running.forall(_._2 < threshold)) onTimeout(running.map(_._1))
+      if (running.forall(_._2 < threshold) && {
+        val freeSlots = this.freeSlots
+        queues.flatMap(_.items).forall(_.slots > freeSlots)
+      }) onTimeout(running.map(_._1))
     }
   }
 
@@ -80,7 +83,7 @@ class JobManagerBase(
   protected def onPriorityJobsFinished(priority: Int): Unit = {}
 
   private def nextQueue: Option[JobQueue] = {
-    val freeSlots = slots - priorityRunning.map(_.slots).sum
+    val freeSlots = this.freeSlots
     val next = (queues.drop(nextQueueIdx).toIterator ++ queues.take(nextQueueIdx).toIterator)
       .find(_.items.exists(_.slots <= freeSlots))
     nextQueueIdx = (nextQueueIdx + 1) % queues.size
@@ -95,7 +98,6 @@ class JobManagerBase(
     }) {
       for (queue <- nextQueue) {
         queue.synchronized {
-          val freeSlots = slots - priorityRunning.map(_.slots).sum
           for (instance <- queue.dequeue(freeSlots)) {
             instance.unsetQueue()
             instance.updateState(ProcessingState.Running)
