@@ -67,12 +67,9 @@ class JobManagerBase(
   }
 
   def checkTimeout(): Unit = synchronized {
-    if (timeoutSeconds >= 0 && queues.exists(_.nonEmpty)) {
+    if (timeoutSeconds >= 0 && queues.exists(_.nonEmpty) && freeSlots == 0) {
       val threshold = Instant.now.getEpochSecond - timeoutSeconds
-      if (running.forall(_._2 < threshold) && {
-        val freeSlots = this.freeSlots
-        queues.flatMap(_.items).forall(_.slots > freeSlots)
-      }) onTimeout(running.map(_._1))
+      if (running.forall(_._2 < threshold)) onTimeout(running.map(_._1))
     }
   }
 
@@ -92,7 +89,7 @@ class JobManagerBase(
 
   private def processQueues(): Unit = synchronized {
     var nextQueue: Option[JobQueue] = None
-    while (priorityRunning.map(_.slots).sum < slots && {
+    while (freeSlots > 0 && {
       nextQueue = this.nextQueue
       nextQueue.nonEmpty
     }) {
