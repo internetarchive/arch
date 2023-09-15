@@ -26,6 +26,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   val MapFile = "id.map.gz"
   val GraphFile = "id.graph.gz"
 
+  val MaxPartitions = 500
+
   override def children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
@@ -46,7 +48,7 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
                 },
                 conf.sample) { parsed =>
                 val outPath = conf.outputPath + relativeOutPath
-                val cached = parsed.persist(StorageLevel.DISK_ONLY)
+                val cached = parsed.coalesce(MaxPartitions).persist(StorageLevel.DISK_ONLY)
                 val processed = LGA.parsedToGraph(parsed) { mapRdd =>
                   val path = outPath + "/_" + MapFile
                   val strings = mapRdd.map(_.toJsonString)
