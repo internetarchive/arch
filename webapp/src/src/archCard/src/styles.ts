@@ -35,5 +35,9 @@ export default [
       bottom: 1rem;
       text-align: center;
     }
+
+    :host arch-tooltip {
+      margin: auto 0 auto 0.5rem;
+    }
   `,
 ];

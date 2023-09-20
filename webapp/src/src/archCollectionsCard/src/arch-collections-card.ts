@@ -94,6 +94,9 @@ export class ArchCollectionsCard extends LitElement {
           ? "Create Custom Collection"
           : ""}
         ctahref="${Paths.buildSubCollection()}"
+        ctaTooltipHeader="Custom Collection"
+        ctaTooltipText="Combine and filter your collections into a Custom Collection of only the data you need."
+        ctaTooltipLearnMoreUrl="https://arch-webservices.zendesk.com/hc/en-us/articles/16107865758228-How-to-create-a-custom-ARCH-collection"
       >
         <div slot="content">
           <table>
