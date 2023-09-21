@@ -17,10 +17,10 @@ case class DerivativeOutput(filename: String, dir: String, fileType: String, mim
 
   lazy val path: String = dir + "/" + filename
 
-  lazy val (size, time) = {
+  lazy val (size, time) = Try {
     val status = HdfsIO.fs.getFileStatus(new Path(path))
     (status.getLen, status.getModificationTime)
-  }
+  }.getOrElse((0L,0L))
   lazy val sizeStr: String = IOHelper.sizeStr(path)
 
   lazy val lineCount: Long = {

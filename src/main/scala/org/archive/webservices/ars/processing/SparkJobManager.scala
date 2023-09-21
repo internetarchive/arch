@@ -26,7 +26,7 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
         val context = SparkUtil.config(
           SparkSession.builder,
           appName = "ARCH",
-          executors = 20,
+          executors = 15,
           executorCores = 4,
           executorMemory = "16g",
           queue = ArchConf.hadoopQueue,

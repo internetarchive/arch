@@ -23,8 +23,8 @@ class JobQueue(val name: String) {
     queue.dequeue
   }
 
-  def dequeue(freeSlots: Int): Option[DerivationJobInstance] = synchronized {
-    queue.dequeueFirst(_.slots <= freeSlots)
+  def dequeue(freeSlots: Int, excludeSources: Set[String] = Set.empty): Option[DerivationJobInstance] = synchronized {
+    queue.dequeueFirst(instance => instance.slots <= freeSlots && !excludeSources.contains(instance.collection.sourceId))
   }
 
   def pos: Int = _pos

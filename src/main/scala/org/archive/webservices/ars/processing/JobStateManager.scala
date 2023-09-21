@@ -15,6 +15,7 @@ import java.io.{File, FileOutputStream, PrintStream}
 import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.io.Source
+import scala.util.Try
 
 object JobStateManager {
   val LoggingDir = ArchConf.jobLoggingPath
@@ -170,7 +171,7 @@ object JobStateManager {
       } {
         for (job <- JobManager.get(id)) {
           for (uuid <- values.get("uuid").flatMap(_.asString)) {
-          Keystone.registerJobEvent(uuid, "CANCELLED")
+            Try(Keystone.registerJobEvent(uuid, "CANCELLED"))
           }
           job.reset(conf)
           job.enqueue(
@@ -223,18 +224,18 @@ object JobStateManager {
 
   def logRegister(instance: DerivationJobInstance): Unit = {
     println("Registered: " + str(instance))
-    Keystone.registerJobStart(instance)
+    Try(Keystone.registerJobStart(instance))
   }
 
   def logUnregister(instance: DerivationJobInstance): Unit = {
     println("Unregistered: " + str(instance))
-    Keystone.registerJobComplete(instance)
+    Try(Keystone.registerJobComplete(instance))
   }
 
   def logQueued(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      Keystone.registerJobEvent(instance.uuid, "QUEUED")
+      Try(Keystone.registerJobEvent(instance.uuid, "QUEUED"))
     }
     println("Queued: " + str(instance))
   }
@@ -242,7 +243,7 @@ object JobStateManager {
   def logRunning(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      Keystone.registerJobEvent(instance.uuid, "RUNNING")
+      Try(Keystone.registerJobEvent(instance.uuid, "RUNNING"))
     }
     println("Running: " + str(instance))
   }
@@ -250,7 +251,7 @@ object JobStateManager {
   def logFinished(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       unregisterRunning(instance)
-      Keystone.registerJobEvent(instance.uuid, "FINISHED")
+      Try(Keystone.registerJobEvent(instance.uuid, "FINISHED"))
       for {
         u <- instance.user
         email <- u.email
@@ -281,7 +282,7 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
-        Keystone.registerJobEvent(instance.uuid, "FAILED")
+        Try(Keystone.registerJobEvent(instance.uuid, "FAILED"))
         if (!Arch.debugging && instance.attempt >= JobManager.MaxAttempts) {
           for (template <- instance.job.failedNotificationTemplate)
             MailUtil.sendTemplate(

@@ -24,6 +24,7 @@ class JobManagerBase(
   private var priorities = Map(_currentPriority -> priorityRunning)
 
   private def freeSlots: Int = slots - priorityRunning.map(_.slots).sum
+  private def congestingSources: Set[String] = running.map(_._1.collection.sourceId).toSet -- priorityRunning.map(_.collection.sourceId)
 
   private val timeoutExecutor = {
     new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(
@@ -81,8 +82,9 @@ class JobManagerBase(
 
   private def nextQueue: Option[JobQueue] = {
     val freeSlots = this.freeSlots
+    val congestingSources = this.congestingSources
     val next = (queues.drop(nextQueueIdx).toIterator ++ queues.take(nextQueueIdx).toIterator)
-      .find(_.items.exists(_.slots <= freeSlots))
+      .find(_.items.exists(instance => instance.slots <= freeSlots && !congestingSources.contains(instance.collection.sourceId)))
     nextQueueIdx = (nextQueueIdx + 1) % queues.size
     next
   }
@@ -95,7 +97,7 @@ class JobManagerBase(
     }) {
       for (queue <- nextQueue) {
         queue.synchronized {
-          for (instance <- queue.dequeue(freeSlots)) {
+          for (instance <- queue.dequeue(freeSlots, congestingSources)) {
             instance.unsetQueue()
             instance.updateState(ProcessingState.Running)
             running.enqueue((instance, Instant.now.getEpochSecond))
