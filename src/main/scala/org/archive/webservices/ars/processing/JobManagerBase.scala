@@ -9,7 +9,7 @@ import scala.concurrent.Future
 class JobManagerBase(
   val name: String,
   val slots: Int = 5,
-  val timeoutSeconds: Int = -1) {
+  val timeoutSecondsMinMax: Option[(Int, Int)] = None) {
   val TimeoutCheckPeriodSeconds: Int = 60 * 5
 
   private val mainQueue = new JobQueue(name + " Queue")
@@ -25,6 +25,8 @@ class JobManagerBase(
 
   private def freeSlots: Int = slots - priorityRunning.map(_.slots).sum
   private def congestingSources: Set[String] = running.map(_._1.collection.sourceId).toSet -- priorityRunning.map(_.collection.sourceId)
+
+  private val recentUsers = collection.mutable.Queue.empty[String]
 
   private val timeoutExecutor = {
     new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(
@@ -68,9 +70,11 @@ class JobManagerBase(
   }
 
   def checkTimeout(): Unit = synchronized {
-    if (timeoutSeconds >= 0 && queues.exists(_.nonEmpty) && freeSlots == 0) {
-      val threshold = Instant.now.getEpochSecond - timeoutSeconds
-      if (running.forall(_._2 < threshold)) onTimeout(running.map(_._1))
+    if (timeoutSecondsMinMax.isDefined && queues.exists(_.nonEmpty) && freeSlots == 0) {
+      val (timeoutSecondsMin, timeoutSecondsMax) = timeoutSecondsMinMax.get
+      val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
+      val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax
+      if (running.forall(_._2 < minThreshold) && running.exists(_._2 < maxThreshold)) onTimeout(running.map(_._1))
     }
   }
 
@@ -97,7 +101,11 @@ class JobManagerBase(
     }) {
       for (queue <- nextQueue) {
         queue.synchronized {
-          for (instance <- queue.dequeue(freeSlots, congestingSources)) {
+          for (instance <- queue.dequeue(freeSlots, congestingSources, recentUsers)) {
+            for (user <- instance.user) {
+              recentUsers.dequeueFirst(_ == user.id)
+              recentUsers.enqueue(user.id)
+            }
             instance.unsetQueue()
             instance.updateState(ProcessingState.Running)
             running.enqueue((instance, Instant.now.getEpochSecond))

@@ -161,7 +161,7 @@ class ApiController extends BaseController {
         val queued =
           if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
             job.enqueue(conf, { instance =>
-              instance.user = context.loggedInOpt
+              instance.user = context.userOpt
               instance.collection = collection
             })
           } else None

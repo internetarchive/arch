@@ -12,7 +12,7 @@ import org.archive.webservices.sparkling.util.SparkUtil
 import java.io.File
 import scala.concurrent.Future
 
-object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 60 * 3) {
+object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
   val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128
