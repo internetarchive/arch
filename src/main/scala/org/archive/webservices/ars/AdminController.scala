@@ -119,10 +119,10 @@ class AdminController extends BaseController {
             val logFile = new File(s"${JobStateManager.LoggingDir}/${JobStateManager.JobLogFile}")
             val log = if (logFile.exists) {
               val skip = if (tail < 0) 0L else (logFile.length - tail.min(MaxLogLength)).max(0L)
-              val in = new BoundedInputStream(new FileInputStream(logFile), MaxLogLength)
+              val in = new FileInputStream(logFile)
               try {
                 IOUtil.skip(in, skip)
-                val source = Source.fromInputStream(in, JobStateManager.Charset)
+                val source = Source.fromInputStream(new BoundedInputStream(in, MaxLogLength), JobStateManager.Charset)
                 try {
                   source.mkString
                 } finally {
