@@ -64,6 +64,6 @@
     "roll": "yarn rollup -c rollup.config.js",
     "roll:watch": "yarn rollup --watch -c rollup.config.js ",
     "test:setup": "yarn playwright install --force",
-    "test": "yarn wtr --config web-test-runner.config.mjs --node-resolve"
+    "test": "yarn wtr --config web-test-runner.config.mjs"
   }
 }
