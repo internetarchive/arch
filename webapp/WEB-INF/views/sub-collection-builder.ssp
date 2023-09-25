@@ -5,8 +5,13 @@
 #end
 
 #set (scripts)
-  <script src="<%=staticPath("/js/dist/arch-sub-collection-builder-46e3dce6.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-sub-collection-builder-b75d93c9.js")%>" type="module"></script>
 #end
 
-<arch-sub-collection-builder>
-</arch-sub-collection-builder>
+<div class="row">
+  <div class="large-12 columns">
+    <br>
+    <arch-sub-collection-builder>
+    </arch-sub-collection-builder>
+  </div>
+</div>

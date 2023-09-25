@@ -11,7 +11,7 @@
 #end
 
 #set (scripts)
-  <script src="<%=staticPath("/js/dist/arch-collection-details-dataset-table-4956c4e7.js")%>" type="module"></script>
+  <script src="<%=staticPath("/js/dist/arch-collection-details-dataset-table-06e02d61.js")%>" type="module"></script>
 #end
 
 <div class="row page-tab" id="summary-tab">

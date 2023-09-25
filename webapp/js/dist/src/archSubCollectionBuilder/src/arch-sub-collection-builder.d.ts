@@ -6,14 +6,21 @@ export declare class ArchSubCollectionBuilder extends LitElement {
     sourceCollectionIds: Set<Collection["id"]>;
     form: HTMLFormElement;
     sourceSelect: HTMLSelectElement;
+    static styles: import("lit").CSSResult[];
     static urlCollectionsParamName: string;
-    createRenderRoot(): this;
     connectedCallback(): Promise<void>;
-    private get _formData();
     render(): import("lit-html").TemplateResult<1>;
+    private inputHandler;
     private initCollections;
     private setSourceCollectionIdsUrlParam;
     private sourceCollectionsChangeHandler;
+    private static fieldValueParserMap;
+    private static fieldValueValidatorMessagePairMap;
+    private static decodeFormDataValue;
+    private static validateDecodedFormData;
+    private get formData();
+    private setFormInputValidity;
+    private doPost;
     private createSubCollection;
 }
 declare global {

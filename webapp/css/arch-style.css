@@ -304,31 +304,6 @@ div.new-job-link {
     width: 50%;
 }
 
-arch-sub-collection-builder > div:first-child {
-  margin-top: 1rem;
-}
-
-arch-sub-collection-builder form > label {
-    font-size: 1rem;
-    color: black;
-    cursor: pointer;
-    display: block;
-    font-weight: bold;
-    line-height: 1.5;
-    margin-bottom: 0;
-}
-
-arch-sub-collection-builder form > em {
-  display: inline-block;
-  padding: 0.5rem 0;
-  color: #444;
-}
-
-.required:after {
-    content:" *";
-    color: red;
-}
-
 /* Override the default partner-site css center column width */
 .row {
   max-width: 80rem;
