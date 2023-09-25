@@ -63,6 +63,10 @@ export const global = css`
     color: ${defaultButtonFgColor};
   }
 
+  button:disabled {
+    cursor: default;
+  }
+
   button.primary {
     background-color: ${primaryButtonBgColor};
     color: ${primaryButtonFgColor};
@@ -150,19 +154,12 @@ export const global = css`
 
   input,
   select {
-    -webkit-appearance: none;
-    -webkit-border-radius: 0px;
     background-color: #fff;
     font-family: inherit;
     border: 1px solid #ccc;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
     color: rgba(0, 0, 0, 0.75);
     font-size: 0.875rem;
     padding: 0.5rem;
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-    transition: box-shadow 0.45s, border-color 0.45s ease-in-out;
   }
 
   label.required:after {
