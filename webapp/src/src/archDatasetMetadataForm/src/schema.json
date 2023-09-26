@@ -23,7 +23,7 @@
       "type": "string",
       "description": "A description of this dataset.",
       "minLength": 8,
-      "maxLength": 500,
+      "maxLength": 1000,
       "nullable": true,
       "title": "Description"
     },
