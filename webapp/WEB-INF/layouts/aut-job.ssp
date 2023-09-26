@@ -17,7 +17,7 @@
   <script src="<%= staticPath("/js/Chart.min.js") %>"></script>
   <script src="<%= staticPath("/js/d3.v3.min.js") %>"></script>
   #if (publishingEnabled)
-    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-7f051913.js") %>" type="module"></script>
+    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-5a49f8bc.js") %>" type="module"></script>
     <script src="<%= staticPath("/js/dist/arch-hover-tooltip-24269d55.js") %>" type="module"></script>
   #end
 #end
