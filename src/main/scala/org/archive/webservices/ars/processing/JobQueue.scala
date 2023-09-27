@@ -24,12 +24,22 @@ class JobQueue(val name: String) {
   }
 
   def dequeue(freeSlots: Int, excludeSources: Set[String] = Set.empty, recentUsers: Seq[String]): Option[DerivationJobInstance] = synchronized {
-    recentUsers.tails.flatMap { userTail =>
-      val excludeUsers = userTail.toSet
-      queue.dequeueFirst { instance =>
-        instance.slots <= freeSlots && !excludeSources.contains(instance.collection.sourceId) && !instance.user.exists(u => excludeUsers.contains(u.id))
+    val idxs = recentUsers.zipWithIndex.map{case (user, idx) => user -> (idx + 1)}.toMap
+    var minIdx = 0
+    var minUserInstance: Option[DerivationJobInstance] = None
+    queue.find { instance =>
+      instance.slots <= freeSlots && !excludeSources.contains(instance.collection.sourceId) && instance.user.map(_.id).forall { id =>
+        idxs.get(id) match {
+          case Some(idx) =>
+            if (minIdx == 0 || idx < minIdx) {
+              minIdx = idx
+              minUserInstance = Some(instance)
+            }
+            false
+          case None => true
+        }
       }
-    }.buffered.headOption
+    }.orElse(minUserInstance)
   }
 
   def pos: Int = _pos

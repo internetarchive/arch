@@ -45,9 +45,11 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSecondsMinMax =
     }
   }
 
+  private def priorityWeight: Int = if (currentPriority == 0) 1 else currentPriority
+
   def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
     sc.setJobGroup(job.id + "-" + conf.hashCode, job.name + " " + conf.serialize)
-    sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + currentPriority)
+    sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
   }
 
   def stopContext(): Unit = synchronized {
@@ -77,8 +79,8 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSecondsMinMax =
   }
 
   def bypassJobs(): Boolean = synchronized {
-    if (currentPriority < MaxPriorityWeight && priorityRunningCount > 0) {
-      newPriority(currentPriority * 2)
+    if (priorityWeight < MaxPriorityWeight && priorityRunningCount > 0) {
+      newPriority(priorityWeight * 2)
       true
     } else false
   }
