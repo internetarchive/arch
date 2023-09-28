@@ -5,7 +5,6 @@ import { isoStringToDateString } from "../../lib/helpers";
 import {
   Collection,
   Job,
-  JobState,
   PublishedDatasetInfo,
   PublishedDatasetMetadata,
   PublishedDatasetMetadataApiResponse,
@@ -272,23 +271,19 @@ export class ArchDatasetPublishingCard extends LitElement {
     // Fetch any existing publication info.
     const pubInfo = await this._fetchPubInfo();
     if (!pubInfo) {
-      // No publication info exists / dataset has not been published.
-      // Check whether a publish is in progress. Note that this check is
-      // collection-specific, not dataset-specific.
-      const isPublishing = await this._publishInProgress();
-      if (!isPublishing) {
-        // A publish is not in progress...this dataset is unpublished.
-        this.pubState = PublishState.Unpublished;
-        this.metadata = {};
-      } else {
-        // A publish is in progress.
-        this.pubState = PublishState.Publishing;
-        // Check again for published info in 3 seconds.
-        setTimeout(() => void this._fetchInitialData(), 3000);
-      }
+      // No publication job exists for this dataset.
+      this.pubState = PublishState.Unpublished;
+      this.metadata = {};
       return;
     }
-    // Publication info does exist / dataset has been published.
+    // Check whether the job is in progress.
+    if (pubInfo.complete === false) {
+      this.pubState = PublishState.Publishing;
+      // Check again for published info in 3 seconds.
+      setTimeout(() => void this._fetchInitialData(), 3000);
+      return;
+    }
+    // Dataset has been published.
     this.pubInfo = pubInfo;
     this.pubState = PublishState.Published;
     // Fetch the published metadata.
@@ -320,30 +315,6 @@ export class ArchDatasetPublishingCard extends LitElement {
       // Convert datetime string to Date.
       pubInfo.time = new Date(pubInfo.time);
       return pubInfo;
-    }
-  }
-
-  private async _publishInProgress() {
-    const { collectionId } = this;
-    const jobState = (await (
-      await fetch(
-        `/api/jobstate/DatasetPublication/${collectionId}?${this._sampleParam}`
-      )
-    ).json()) as JobState;
-    // The startTime and(?) finishedTime fields will be absent for a Collection
-    // with no published datasets.
-    const startTime = Date.parse(jobState.startTime ?? "");
-    const finishedTime = Date.parse(jobState.finishedTime ?? "");
-    if (Number.isNaN(startTime)) {
-      // startTime is not a valid time string, so return false.
-      return false;
-    } else if (Number.isNaN(finishedTime)) {
-      // startTime is a valid time string but finishedTime is not, so return true.
-      return true;
-    } else {
-      // startTime and finishedTime are both valid time strings, so return whether
-      // startTime is greater than finishedTime.
-      return startTime > finishedTime;
     }
   }
 
@@ -396,8 +367,9 @@ export class ArchDatasetPublishingCard extends LitElement {
       }
     );
     this.pubState = PublishState.Publishing;
-    // Start polling for pub info.
-    void this._fetchInitialData();
+    // Start polling for pub info after a lengthy timeout in order to
+    // give the backend time to register the job.
+    setTimeout(() => void this._fetchInitialData(), 30000);
   }
 
   private async _unpublish() {
