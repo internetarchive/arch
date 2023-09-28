@@ -31,7 +31,7 @@ class JobQueue(val name: String) {
     var minIdx = 0
     var minUserInstance: Option[DerivationJobInstance] = None
     queue
-      .find { instance =>
+      .dequeueFirst { instance =>
         instance.slots <= freeSlots && !excludeSources.contains(
           instance.collection.sourceId) && instance.user.map(_.id).forall { id =>
           idxs.get(id) match {
@@ -45,7 +45,7 @@ class JobQueue(val name: String) {
           }
         }
       }
-      .orElse(minUserInstance)
+      .orElse(minUserInstance.flatMap(instance => queue.dequeueFirst(_ == instance)))
   }
 
   def pos: Int = _pos
