@@ -336,9 +336,8 @@ class ApiController extends BaseController {
 
   get("/collections") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
-      val collections = ArchCollection.userCollections(context.user)
       Ok(
-        filterAndSerialize(collections.map(Collection(_))),
+        filterAndSerialize(ArchCollection.userCollections(context.user).map(Collection(_))),
         Map("Content-Type" -> "application/json"))
     }
   }
