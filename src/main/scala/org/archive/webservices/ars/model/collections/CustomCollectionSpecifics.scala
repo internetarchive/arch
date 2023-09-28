@@ -8,7 +8,7 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
-import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
@@ -83,17 +83,28 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
     action(cdx)
   }
 
+  private val collectionSpecifics =
+    scala.collection.mutable.Map.empty[String, Option[CollectionSpecifics]]
   def randomAccess(
       context: CollectionAccessContext,
       inputPath: String,
       pointer: CollectionSourcePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    CollectionLoader.randomAccessHdfs(
-      context,
-      inputPath + "/" + pointer.filename,
-      offset,
-      positions)
+    if (pointer.sourceId == sourceId) {
+      CollectionLoader.randomAccessHdfs(
+        context,
+        inputPath + "/" + pointer.filename,
+        offset,
+        positions)
+    } else {
+      collectionSpecifics
+        .getOrElseUpdate(pointer.sourceId, CollectionSpecifics.get(pointer.sourceId))
+        .map { specifics =>
+          specifics.randomAccess(context, specifics.inputPath, pointer, offset, positions)
+        }
+        .getOrElse(IOUtil.EmptyStream)
+    }
   }
 }
 

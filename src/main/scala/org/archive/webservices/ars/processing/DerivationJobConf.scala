@@ -86,7 +86,9 @@ object DerivationJobConf {
         jobInPath(collection.specifics, params),
         outPath,
         if (sample) SampleSize else -1,
-        params = params.set("location", collection.sourceId))
+        params = params.set("location", if (collection.id.startsWith(CustomCollectionSpecifics.Prefix)) {
+          CustomCollectionSpecifics.location(collection.id).getOrElse(collection.sourceId)
+        } else collection.sourceId))
     }
   }
 
