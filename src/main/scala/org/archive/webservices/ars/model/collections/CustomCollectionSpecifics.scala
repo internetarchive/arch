@@ -14,7 +14,7 @@ import org.archive.webservices.sparkling.util.StringUtil
 import java.io.InputStream
 import scala.util.Try
 
-class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
+class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with GenericRandomAccess {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
   val Some((userId, collectionId)) = ArchCollection.splitIdUserCollectionOpt(customId)
 
@@ -81,30 +81,6 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       else r.copy(additionalFields = Seq(offsetStr, locationPrefix + filename))
     }
     action(cdx)
-  }
-
-  private val collectionSpecifics =
-    scala.collection.mutable.Map.empty[String, Option[CollectionSpecifics]]
-  def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    if (pointer.sourceId == sourceId) {
-      CollectionLoader.randomAccessHdfs(
-        context,
-        inputPath + "/" + pointer.filename,
-        offset,
-        positions)
-    } else {
-      collectionSpecifics
-        .getOrElseUpdate(pointer.sourceId, CollectionSpecifics.get(pointer.sourceId))
-        .map { specifics =>
-          specifics.randomAccess(context, specifics.inputPath, pointer, offset, positions)
-        }
-        .getOrElse(IOUtil.EmptyStream)
-    }
   }
 }
 

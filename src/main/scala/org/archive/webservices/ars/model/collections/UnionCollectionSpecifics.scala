@@ -12,7 +12,7 @@ import org.archive.webservices.sparkling.util.RddUtil
 import java.io.InputStream
 import scala.reflect.ClassTag
 
-class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
+class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics with GenericRandomAccess {
   val (userId, collectionId) =
     ArchCollection.splitIdUserCollection(id.stripPrefix(UnionCollectionSpecifics.Prefix))
 
@@ -60,22 +60,6 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
     loadUnion[CdxRecord, R](inputPath, s => s.loadCdx(s.inputPath))(action)
-  }
-
-  private val collectionSpecifics =
-    scala.collection.mutable.Map.empty[String, Option[CollectionSpecifics]]
-  def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    collectionSpecifics
-      .getOrElseUpdate(pointer.sourceId, CollectionSpecifics.get(pointer.sourceId))
-      .map { specifics =>
-        specifics.randomAccess(context, specifics.inputPath, pointer, offset, positions)
-      }
-      .getOrElse(IOUtil.EmptyStream)
   }
 }
 
