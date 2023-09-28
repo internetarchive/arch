@@ -66,11 +66,6 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSecondsMinMax =
     if (!Arch.debugging) stopContext()
   }
 
-  override protected def onPriorityJobsFinished(priority: Int): Unit = synchronized {
-    super.onPriorityJobsFinished(priority)
-    removePriority(priority)
-  }
-
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
     super.onTimeout(instances)
 //    stopContext()

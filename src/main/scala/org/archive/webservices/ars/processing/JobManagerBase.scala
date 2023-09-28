@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.processing.SparkJobManager.removePriority
 import org.archive.webservices.sparkling.Sparkling.executionContext
 
 import java.time.Instant
@@ -82,8 +83,6 @@ class JobManagerBase(
 
   protected def onAllJobsFinished(): Unit = {}
 
-  protected def onPriorityJobsFinished(priority: Int): Unit = {}
-
   private def nextQueue: Option[JobQueue] = synchronized {
     val isPriority = this.isPriority
     val freeSlots = this.freeSlots
@@ -117,7 +116,7 @@ class JobManagerBase(
               instance.updateState(
                 if (success) ProcessingState.Finished else ProcessingState.Failed)
               currentPriorityRunning.dequeueFirst(_ == instance)
-              if (currentPriorityRunning.isEmpty) onPriorityJobsFinished(priority)
+              if (currentPriorityRunning.isEmpty) removePriority(priority)
               running.remove(instance)
               JobManager.unregister(instance)
               if (running.isEmpty) onAllJobsFinished()
