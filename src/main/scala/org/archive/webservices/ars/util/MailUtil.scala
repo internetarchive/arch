@@ -15,8 +15,8 @@ object MailUtil {
       if (file.exists && file.isFile) {
         val source = Source.fromFile(file, "utf-8")
         try {
-          variables.foldLeft(source.mkString) {
-            case (content, (variable, value)) => content.replace("$" + variable, value)
+          variables.foldLeft(source.mkString) { case (content, (variable, value)) =>
+            content.replace("$" + variable, value)
           }
         } finally {
           Try(source.close())

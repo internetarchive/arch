@@ -23,11 +23,11 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .path(customId)
       .get
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
-          u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
-        }) CustomCollectionSpecifics.collection(customId)
+        u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
+      }) CustomCollectionSpecifics.collection(customId)
     else None
   }
 
@@ -135,10 +135,9 @@ object CustomCollectionSpecifics {
   def path(id: String): Option[String] = {
     ArchCollection
       .splitIdUserCollectionOpt(id.stripPrefix(Prefix))
-      .map {
-        case (user, collection) =>
-          val p = userPath(user)
-          s"$p/$collection"
+      .map { case (user, collection) =>
+        val p = userPath(user)
+        s"$p/$collection"
       }
       .filter(HdfsIO.exists)
   }

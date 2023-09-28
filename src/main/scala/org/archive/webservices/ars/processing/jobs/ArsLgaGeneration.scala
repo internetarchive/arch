@@ -113,8 +113,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
         instance.state =
           if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
-                .files(conf.outputPath + relativeOutPath + "/_*")
-                .isEmpty)
+              .files(conf.outputPath + relativeOutPath + "/_*")
+              .isEmpty)
             ProcessingState.Finished
           else ProcessingState.Failed
       }

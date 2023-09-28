@@ -153,33 +153,31 @@ object IOHelper {
                       context.partitionId,
                       CleanupIterator
                         .flatten(partition.map(_._2))
-                        .iter {
-                          iter =>
-                            val conditions = conditionsBc.value.zipWithIndex
-                            val candidates = iter.take(sample * SamplingMaxReadPerPartitionFactor)
-                            var matches = Set.empty[Int]
-                            while (matches.size < conditions.size && candidates.hasNext) {
-                              val r = candidates.next
-                              read += 1
-                              val matching = conditions.filter(_._1(r)).map(_._2).toSet
-                              if ((matching -- matches).nonEmpty) {
-                                matches ++= matching
-                                take = read
-                              }
+                        .iter { iter =>
+                          val conditions = conditionsBc.value.zipWithIndex
+                          val candidates = iter.take(sample * SamplingMaxReadPerPartitionFactor)
+                          var matches = Set.empty[Int]
+                          while (matches.size < conditions.size && candidates.hasNext) {
+                            val r = candidates.next
+                            read += 1
+                            val matching = conditions.filter(_._1(r)).map(_._2).toSet
+                            if ((matching -- matches).nonEmpty) {
+                              matches ++= matching
+                              take = read
                             }
-                            matches
+                          }
+                          matches
                         },
                       take)
                   },
                   partitions)
               var matches = Set.empty[Int]
               totalResults = (totalResults ++ results).sortBy(-_._2.size)
-              val matchingPartitions = totalResults.flatMap {
-                case (p, c, t) =>
-                  if ((c -- matches).nonEmpty) {
-                    matches ++= c
-                    Some((p, t))
-                  } else None
+              val matchingPartitions = totalResults.flatMap { case (p, c, t) =>
+                if ((c -- matches).nonEmpty) {
+                  matches ++= c
+                  Some((p, t))
+                } else None
               }.sorted
               val continue = end < maxPartitions && matches.size < conditions.size
               if (continue) {
@@ -210,11 +208,14 @@ object IOHelper {
           IteratorUtil.whileDefined {
             if (remaining > 0 && p.hasNext) Some {
               val (k, records) = p.next
-              (k, records.chain(_.take(remaining).map { r =>
-                remaining -= 1
-                r
-              }))
-            } else None
+              (
+                k,
+                records.chain(_.take(remaining).map { r =>
+                  remaining -= 1
+                  r
+                }))
+            }
+            else None
           }
         } else Iterator.empty
       })

@@ -1,17 +1,14 @@
 package org.archive.webservices.ars
 
-import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
-import _root_.io.circe.Json
-import org.archive.webservices.ars.processing.DerivationJobInstance
-import org.archive.webservices.ars.processing.JobManager
 import org.archive.webservices.ars.model.ArchConf
-import java.time.Instant
-import scala.util.{Try, Success, Failure}
+import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
 
-import java.io.{DataOutputStream}
+import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
+import java.time.Instant
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 object Keystone {
   val jobStartEndpoint: String = "/private/api/job/start"
@@ -117,11 +114,7 @@ object Keystone {
           Arch.reportError(
             s"Keystone Request Error - $url",
             exception.getMessage,
-            Map(
-              "url" -> url,
-              "method" -> "POST",
-              "data" -> postData))
-        )
+            Map("url" -> url, "method" -> "POST", "data" -> postData)))
         Failure(exception)
       }
     }

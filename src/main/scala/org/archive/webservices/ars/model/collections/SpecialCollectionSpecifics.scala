@@ -23,11 +23,11 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .flatMap(_.get[String]("path").toOption)
       .get
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
-          u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
-        }) SpecialCollectionSpecifics.collection(specialId, userId)
+        u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
+      }) SpecialCollectionSpecifics.collection(specialId, userId)
     else None
   }
 

@@ -44,9 +44,8 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
 
     try {
       val nodes = hostEdges
-        .flatMap {
-          case ((src, dst), count) =>
-            Iterator((src, count), (dst, count))
+        .flatMap { case ((src, dst), count) =>
+          Iterator((src, count), (dst, count))
         }
         .reduceByKey(_ + _)
         .sortBy(-_._2)
@@ -57,9 +56,8 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       val edges = hostEdges
         .mapPartitions { partition =>
           val nodes = nodesBc.value
-          partition.map(_._1).filter {
-            case (src, dst) =>
-              nodes.contains(src) && nodes.contains(dst)
+          partition.map(_._1).filter { case (src, dst) =>
+            nodes.contains(src) && nodes.contains(dst)
           }
         }
         .collect
@@ -70,10 +68,10 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       var sampleSize = 0
       val sample = nodes.toIterator.flatMap { node =>
         if (sampleSize < SampleTopNEdges) {
-          available =
-            CollectionUtil.combineMaps(available, edges.getOrElse(node, Seq.empty).groupBy {
-              case (src, dst) =>
-                if (src == node) dst else src
+          available = CollectionUtil.combineMaps(
+            available,
+            edges.getOrElse(node, Seq.empty).groupBy { case (src, dst) =>
+              if (src == node) dst else src
             })(values => Some(values.reduce(_ ++ _)))
           val next = available.getOrElse(node, Seq.empty)
           sampleSize += next.size
@@ -95,9 +93,11 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
       overwrite = true)
 
     createVizSample(data) { derivative =>
-      HdfsIO.writeLines(outPath + "/" + sampleGraphFile, derivative.map {
-        case (s, d) => s"$s\t$d"
-      })
+      HdfsIO.writeLines(
+        outPath + "/" + sampleGraphFile,
+        derivative.map { case (s, d) =>
+          s"$s\t$d"
+        })
     }
   }
 
@@ -122,17 +122,18 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
         n = SampleTopNEdges + SampleTopNNodes)
       .map(_.split('\t'))
       .filter(_.length == 2)
-      .map {
-        case Array(src, dst) =>
-          (src, dst)
+      .map { case Array(src, dst) =>
+        (src, dst)
       }
 
     val nodes =
       edges.flatMap { case (src, dst) => Iterator(src, dst) }.distinct.sorted.zipWithIndex
     val nodeMap = nodes.toMap
 
-    super.templateVariables(conf) ++ Seq("nodes" -> nodes.map {
-      case (node, id) => (node.split(',').reverse.mkString("."), id)
-    }, "edges" -> edges.map { case (src, dst) => (nodeMap(src), nodeMap(dst)) })
+    super.templateVariables(conf) ++ Seq(
+      "nodes" -> nodes.map { case (node, id) =>
+        (node.split(',').reverse.mkString("."), id)
+      },
+      "edges" -> edges.map { case (src, dst) => (nodeMap(src), nodeMap(dst)) })
   }
 }

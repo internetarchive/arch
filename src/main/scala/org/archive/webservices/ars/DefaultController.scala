@@ -46,8 +46,7 @@ class DefaultController extends BaseController {
         ssp(
           "dashboard",
           "breadcrumbs" -> Seq((ViewPathPatterns.reverse(ViewPathPatterns.Home), "Home")),
-          "user" -> context.user,
-        ),
+          "user" -> context.user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -55,8 +54,7 @@ class DefaultController extends BaseController {
   get(ViewPathPatterns.Collections) {
     ensureLogin { implicit context =>
       Ok(
-        ssp("collections", "breadcrumbs" -> Seq(BreadCrumbs.collections), "user" -> context.user,
-        ),
+        ssp("collections", "breadcrumbs" -> Seq(BreadCrumbs.collections), "user" -> context.user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -78,8 +76,7 @@ class DefaultController extends BaseController {
               "collection-details",
               "breadcrumbs" -> Seq(
                 BreadCrumbs.collections,
-                BreadCrumbs.collection(collection, context.user),
-              ),
+                BreadCrumbs.collection(collection, context.user)),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -97,10 +94,8 @@ class DefaultController extends BaseController {
             BreadCrumbs.collections,
             (
               ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder),
-              "Custom Collection Builder"),
-          ),
-          "user" -> context.user,
-        ),
+              "Custom Collection Builder")),
+          "user" -> context.user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -128,14 +123,13 @@ class DefaultController extends BaseController {
         instance.job.templateName match {
           case Some(templateName) =>
             val attributes = Seq(
-              "breadcrumbs" -> Seq(BreadCrumbs.datasets, BreadCrumbs.dataset(datasetId, sample),
-              ),
+              "breadcrumbs" -> Seq(BreadCrumbs.datasets, BreadCrumbs.dataset(datasetId, sample)),
               "user" -> context.user,
               "collection" -> collection,
               "job" -> instance,
               "files" -> instance.outFiles,
-              "publishingEnabled" -> !PublishedDatasets.ProhibitedJobs.contains(instance.job),
-            ) ++ instance.templateVariables
+              "publishingEnabled" -> !PublishedDatasets.ProhibitedJobs.contains(
+                instance.job)) ++ instance.templateVariables
             Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
           case None =>
             NotFound()
@@ -151,10 +145,8 @@ class DefaultController extends BaseController {
           "datasets-explore",
           "breadcrumbs" -> Seq(
             BreadCrumbs.datasets,
-            (ViewPathPatterns.reverse(ViewPathPatterns.DatasetExplorer), "Explore"),
-          ),
-          "user" -> context.user,
-        ),
+            (ViewPathPatterns.reverse(ViewPathPatterns.DatasetExplorer), "Explore")),
+          "user" -> context.user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -166,10 +158,8 @@ class DefaultController extends BaseController {
           "datasets-generate",
           "breadcrumbs" -> Seq(
             BreadCrumbs.datasets,
-            (ViewPathPatterns.reverse(ViewPathPatterns.GenerateDataset), "Generate"),
-          ),
-          "user" -> context.user,
-        ),
+            (ViewPathPatterns.reverse(ViewPathPatterns.GenerateDataset), "Generate")),
+          "user" -> context.user),
         Map("Content-Type" -> "text/html"))
     }
   }
@@ -193,8 +183,7 @@ class DefaultController extends BaseController {
               "login",
               "error" -> Some(error),
               "next" -> next,
-              "breadcrumbs" -> Seq(BreadCrumbs.login),
-            ),
+              "breadcrumbs" -> Seq(BreadCrumbs.login)),
             Map("Content-Type" -> "text/html"))
         case None =>
           Found(next)

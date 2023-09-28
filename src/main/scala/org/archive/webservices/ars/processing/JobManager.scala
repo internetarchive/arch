@@ -85,12 +85,14 @@ object JobManager {
       instance.unregistered()
       if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
         instance.job.reset(instance.conf)
-        instance.job.enqueue(instance.conf, { newInstance =>
-          newInstance.user = instance.user
-          newInstance.collection = instance.collection
-          newInstance.attempt = instance.attempt + 1
-          if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
-        })
+        instance.job.enqueue(
+          instance.conf,
+          { newInstance =>
+            newInstance.user = instance.user
+            newInstance.collection = instance.collection
+            newInstance.attempt = instance.attempt + 1
+            if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
+          })
       }
       true
     } else false

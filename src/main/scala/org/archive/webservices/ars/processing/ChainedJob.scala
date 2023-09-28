@@ -13,9 +13,8 @@ abstract class ChainedJob extends DerivationJob {
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
     val currentChild = children.zipWithIndex.reverseIterator
-      .map {
-        case (job, idx) =>
-          (job.history(conf), idx)
+      .map { case (job, idx) =>
+        (job.history(conf), idx)
       }
       .find { case (child, idx) => child.state > ProcessingState.NotStarted || idx == 0 }
     for ((child, idx) <- currentChild) {

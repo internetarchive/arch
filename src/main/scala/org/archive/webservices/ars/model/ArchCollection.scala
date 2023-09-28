@@ -39,8 +39,8 @@ object ArchCollection {
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
-  def get(id: String)(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def get(id: String)(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     (if (!ArchConf.isDev) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
         context.isInternal || context.loggedIn.isAdmin || c.user
@@ -60,10 +60,11 @@ object ArchCollection {
       }
   }
 
-  def userCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+  def userCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
-      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
+      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(
+      user) ++ CustomCollectionSpecifics
       .userCollections(user))
       .map(c =>
         if (!ArchConf.isDev) {

@@ -7,9 +7,8 @@ import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil, MailUtil}
-import org.archive.webservices.ars.{Arch, ViewPathPatterns}
+import org.archive.webservices.ars.{Arch, Keystone, ViewPathPatterns}
 import org.archive.webservices.sparkling.io.IOUtil
-import org.archive.webservices.ars.Keystone
 
 import java.io.{File, FileOutputStream, PrintStream}
 import java.time.Instant
@@ -108,7 +107,8 @@ object JobStateManager {
     } {
       job.reset(conf)
       job.enqueue(
-        conf, { instance =>
+        conf,
+        { instance =>
           instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
           instance.attempt = meta
             .downField("attempt")
@@ -175,7 +175,8 @@ object JobStateManager {
           }
           job.reset(conf)
           job.enqueue(
-            conf, { instance =>
+            conf,
+            { instance =>
               instance.user = values
                 .get("user")
                 .flatMap(_.asString)

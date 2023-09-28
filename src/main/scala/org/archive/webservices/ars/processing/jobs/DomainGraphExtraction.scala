@@ -29,9 +29,8 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
       rdd
         .reduceByKey(_ + _)
         .filter(_._2 > 5)
-        .map {
-          case ((date, source, target), count) =>
-            Row(date, source, target, count)
+        .map { case ((date, source, target), count) =>
+          Row(date, source, target, count)
         }
     AutLoader.domainGraph(rows).orderBy(desc("count"))
   }
@@ -46,17 +45,15 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
               val url = AutUtil.url(r)
               AutUtil
                 .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
-                .map {
-                  case (source, target, _) =>
-                    (
-                      AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
-                      AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
+                .map { case (source, target, _) =>
+                  (
+                    AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
+                    AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
                 }
                 .distinct
                 .filter { case (s, t) => s != "" && t != "" }
-                .map {
-                  case (source, target) =>
-                    ((AutUtil.timestamp(r).take(8), source, target), 1L)
+                .map { case (source, target) =>
+                  ((AutUtil.timestamp(r).take(8), source, target), 1L)
                 }
             }
             .toIterator

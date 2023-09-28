@@ -39,7 +39,8 @@ object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
     "text/tab-separated-values")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
-    SpreadsheetMimeTypes.contains(tika) || server == "text/csv" || server == "text/tab-separated-values" || ((url.toLowerCase
+    SpreadsheetMimeTypes.contains(
+      tika) || server == "text/csv" || server == "text/tab-separated-values" || ((url.toLowerCase
       .endsWith(".csv") || url.toLowerCase.endsWith(".tsv")) && tika == "text/plain")
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)

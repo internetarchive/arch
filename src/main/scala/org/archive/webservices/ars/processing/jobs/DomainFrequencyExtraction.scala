@@ -27,9 +27,8 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   override def df(rdd: RDD[(String, Long)]): Dataset[Row] = {
     val rows = rdd
       .reduceByKey(_ + _)
-      .map {
-        case (domain, count) =>
-          Row(domain, count)
+      .map { case (domain, count) =>
+        Row(domain, count)
       }
     AutLoader.domainFrequency(rows).orderBy(desc("count"))
   }

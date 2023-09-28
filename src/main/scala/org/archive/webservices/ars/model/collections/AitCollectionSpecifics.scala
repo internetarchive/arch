@@ -32,8 +32,8 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def inputPath: String =
     ArchConf.aitCollectionPath + s"/$aitId/" + ArchConf.aitCollectionWarcDir
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     Ait
       .getJson(
         "/api/collection?id=" + aitId,
@@ -152,9 +152,10 @@ object AitCollectionSpecifics {
       .toSeq
   }
 
-  def userCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
-    val foreignAccess = context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty)
+  def userCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+    val foreignAccess =
+      context.isInternal || (context.isAdmin && context.loggedIn.aitUser.isEmpty)
     user.aitUser.map(_.id).toSeq.flatMap { userId =>
       Ait
         .getJson(
@@ -165,8 +166,8 @@ object AitCollectionSpecifics {
     }
   }
 
-  def foreignUserCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+  def foreignUserCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     foreignCollectionIds(user)
       .flatMap { aitId =>
         Ait

@@ -33,9 +33,8 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
             val url = AutUtil.url(r)
             AutUtil
               .extractLinks(ExtractImageLinks.apply, url, HttpUtil.bodyString(http.body, http))
-              .map {
-                case (source, target, alt) =>
-                  Row(AutUtil.timestamp(r), source, target, alt)
+              .map { case (source, target, alt) =>
+                Row(AutUtil.timestamp(r), source, target, alt)
               }
           }
           .toIterator

@@ -21,14 +21,13 @@ package object api {
     }
 
     def toJson(implicit responseType: ApiResponseType[T]): Json =
-      ListMap(responseType.fields.toSeq.map {
-        case (field, fieldType) =>
-          field -> (fieldType match {
-            case ApiFieldType.Boolean => get[Boolean](field).asJson
-            case ApiFieldType.Int => get[Int](field).asJson
-            case ApiFieldType.Long => get[Long](field).asJson
-            case ApiFieldType.String => get[String](field).asJson
-          })
+      ListMap(responseType.fields.toSeq.map { case (field, fieldType) =>
+        field -> (fieldType match {
+          case ApiFieldType.Boolean => get[Boolean](field).asJson
+          case ApiFieldType.Int => get[Int](field).asJson
+          case ApiFieldType.Long => get[Long](field).asJson
+          case ApiFieldType.String => get[String](field).asJson
+        })
       }: _*).asJson
   }
 
@@ -52,15 +51,15 @@ package object api {
         (f.getName, f)
       }: _*)
 
-    val fields: Map[String, ApiFieldType.Value] = ListMap(_fields.toSeq.map {
-      case (name, field) =>
+    val fields: Map[String, ApiFieldType.Value] = ListMap(
+      _fields.toSeq.map { case (name, field) =>
         val fieldType = field.getType
         val valueType =
           if (fieldType == classOf[Option[_]])
             field.getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
           else fieldType
         name -> TypeMap(valueType)
-    }: _*)
+      }: _*)
 
     def ordering(field: String, reverse: Boolean = false): Ordering[T] = {
       val ordering: Ordering[T] = fields.getOrElse(field, fields.head._2) match {

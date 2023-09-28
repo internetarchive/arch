@@ -35,37 +35,34 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
         IOHelper
           .sampleGrouped[String, String, Boolean](
             rdd
-              .map {
-                case (pointer, records) =>
-                  (
-                    new Path(pointer.filename).getName,
-                    records.chain(_.filter(_.http.exists(http =>
-                      http.mime.contains("text/html") && http.status == 200))))
+              .map { case (pointer, records) =>
+                (
+                  new Path(pointer.filename).getName,
+                  records.chain(_.filter(_.http.exists(http =>
+                    http.mime.contains("text/html") && http.status == 200))))
               }
-              .map {
-                case (f, r) =>
-                  val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
-                  val json = r.chain(_.flatMap {
-                    warc =>
-                      for {
-                        url <- warc.url
-                        timestamp <- warc.timestamp
-                        digest <- warc.payloadDigest
-                        http <- warc.http if http.status == 200
-                        html <- Try(
-                          HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
-                          .getOrElse(None)
-                        bodyText <- Try(
-                          HtmlProcessor
-                            .tagsWithText(html, Set("body"))
-                            .next
-                            ._2
-                            .take(MaxInputTextLength)).toOption
-                      } yield WANE.get(url, timestamp, digest, bodyText)
+              .map { case (f, r) =>
+                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
+                val json = r.chain(
+                  _.flatMap { warc =>
+                    for {
+                      url <- warc.url
+                      timestamp <- warc.timestamp
+                      digest <- warc.payloadDigest
+                      http <- warc.http if http.status == 200
+                      html <- Try(HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
+                        .getOrElse(None)
+                      bodyText <- Try(
+                        HtmlProcessor
+                          .tagsWithText(html, Set("body"))
+                          .next
+                          ._2
+                          .take(MaxInputTextLength)).toOption
+                    } yield WANE.get(url, timestamp, digest, bodyText)
                   }.filter(e =>
-                      e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
+                    e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
                     .map(_.toJsonString))
-                  (outFile, json)
+                (outFile, json)
               },
             conf.sample) { rdd =>
             val outPath = conf.outputPath + relativeOutPath + resultDir

@@ -35,10 +35,9 @@ class WasapiController extends BaseController {
               val count = instance.outFiles
                 .grouped(WasapiController.FixedPageSize)
                 .zipWithIndex
-                .map {
-                  case (pageItems, idx) =>
-                    if (idx == page - 1) files = pageItems
-                    pageItems.toIterator.size
+                .map { case (pageItems, idx) =>
+                  if (idx == page - 1) files = pageItems
+                  pageItems.toIterator.size
                 }
                 .sum
               val pages = (count.toDouble / WasapiController.FixedPageSize).ceil.toInt
@@ -63,10 +62,11 @@ class WasapiController extends BaseController {
                                      .asJson
                                  else Json.Null),
                   "files" -> files.map { file =>
-                    val locationUrl = ArchConf.baseUrl + "/files/download/" + collection.id + "/" + instance.job.id + "/" + file.filename + (if (instance.conf.isSample)
-                                                                                                                                               "?sample=true&access="
-                                                                                                                                             else
-                                                                                                                                               "?access=") + file.accessToken
+                    val locationUrl =
+                      ArchConf.baseUrl + "/files/download/" + collection.id + "/" + instance.job.id + "/" + file.filename + (if (instance.conf.isSample)
+                                                                                                                               "?sample=true&access="
+                                                                                                                             else
+                                                                                                                               "?access=") + file.accessToken
                     ListMap(
                       "collection" -> collection.id.asJson,
                       "filename" -> file.filename.asJson,

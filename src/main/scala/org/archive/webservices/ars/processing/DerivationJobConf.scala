@@ -31,17 +31,16 @@ object DerivationJobConf {
   def jobOutPath(collection: ArchCollection, global: Boolean = false): String = {
     collection.userSpecificId
       .filter(_ => !global)
-      .map {
-        case (userId, sourceId) =>
-          ArchConf.jobOutPath + "/" + IOHelper.escapePath(userId + "/" + sourceId)
+      .map { case (userId, sourceId) =>
+        ArchConf.jobOutPath + "/" + IOHelper.escapePath(userId + "/" + sourceId)
       }
       .getOrElse(ArchConf.globalJobOutPath + "/" + IOHelper.escapePath(collection.sourceId))
   }
 
   def jobInPath(
       specifics: CollectionSpecifics,
-      params: DerivationJobParameters = DerivationJobParameters.Empty)(
-      implicit context: RequestContext): String = {
+      params: DerivationJobParameters = DerivationJobParameters.Empty)(implicit
+      context: RequestContext): String = {
     if (specifics.id.startsWith(UnionCollectionSpecifics.Prefix)) {
       UnionCollectionSpecifics.collections(params).map(_.id).mkString(",")
     } else specifics.inputPath
@@ -86,9 +85,11 @@ object DerivationJobConf {
         jobInPath(collection.specifics, params),
         outPath,
         if (sample) SampleSize else -1,
-        params = params.set("location", if (collection.id.startsWith(CustomCollectionSpecifics.Prefix)) {
-          CustomCollectionSpecifics.location(collection.id).getOrElse(collection.sourceId)
-        } else collection.sourceId))
+        params = params.set(
+          "location",
+          if (collection.id.startsWith(CustomCollectionSpecifics.Prefix)) {
+            CustomCollectionSpecifics.location(collection.id).getOrElse(collection.sourceId)
+          } else collection.sourceId))
     }
   }
 

@@ -21,8 +21,8 @@ case class Dataset(
     extends ApiResponseObject[Dataset]
 
 object Dataset {
-  def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(
-      implicit context: RequestContext): Dataset = {
+  def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(implicit
+      context: RequestContext): Dataset = {
     Dataset(
       id = DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance.job),
       collectionId = collection.userUrlId(context.user.id),

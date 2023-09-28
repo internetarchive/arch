@@ -10,5 +10,7 @@ object FuturesUtil {
     futures.map(_.map { Success(_) }.recover { case t => Failure(t) })
 
   def waitAll[T](futures: Seq[Future[T]]) =
-    Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
+    Future.sequence(
+      lift(futures)
+    ) // having neutralized exception completions through the lifting, .sequence can now be used
 }

@@ -8,8 +8,9 @@ object AutLoader {
   def session: SparkSession = SparkSession.builder.getOrCreate
 
   private def df(rows: RDD[Row], fields: (String, DataType)*): DataFrame = {
-    val schema = new StructType(
-      fields.map { case (n, t) => StructField(n, t, nullable = true) }.toArray)
+    val schema = new StructType(fields.map { case (n, t) =>
+      StructField(n, t, nullable = true)
+    }.toArray)
     session.createDataFrame(rows, schema)
   }
 

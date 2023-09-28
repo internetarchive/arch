@@ -26,8 +26,8 @@ object RequestContext {
       user: ArchUser): RequestContext = {
     new RequestContext(request, loggedIn, user)
   }
-  def apply(loggedIn: ArchUser, user: ArchUser)(
-      implicit request: HttpServletRequest): RequestContext = {
+  def apply(loggedIn: ArchUser, user: ArchUser)(implicit
+      request: HttpServletRequest): RequestContext = {
     RequestContext(Some(request), loggedIn, user)
   }
   def apply(user: ArchUser)(implicit request: HttpServletRequest): RequestContext = {

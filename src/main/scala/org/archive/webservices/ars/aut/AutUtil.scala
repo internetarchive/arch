@@ -101,12 +101,11 @@ object AutUtil {
       func: (String, String) => Seq[(String, String, String)],
       url: String,
       body: String): Seq[(String, String, String)] = {
-    func(url, body).flatMap {
-      case (s, t, a) =>
-        for {
-          source <- Option(s).map(_.trim).filter(_.nonEmpty)
-          target <- Option(t).map(_.trim).filter(_.nonEmpty)
-        } yield (source, target, Option(a).map(_.trim).getOrElse(""))
+    func(url, body).flatMap { case (s, t, a) =>
+      for {
+        source <- Option(s).map(_.trim).filter(_.nonEmpty)
+        target <- Option(t).map(_.trim).filter(_.nonEmpty)
+      } yield (source, target, Option(a).map(_.trim).getOrElse(""))
     }
   }
 }

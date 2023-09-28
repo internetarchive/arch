@@ -21,8 +21,8 @@ class FilesController extends BaseController {
   private val NotebooksTemplatesDir = "templates/notebooks"
   private val GistIdPrefix = "ARCH_Colab_Notebook"
 
-  private def sendFile(file: DerivativeOutput)(
-      implicit request: HttpServletRequest): ActionResult = {
+  private def sendFile(file: DerivativeOutput)(implicit
+      request: HttpServletRequest): ActionResult = {
     val size = file.size
     val rangeStrOpt = request
       .header("Range")
@@ -42,8 +42,8 @@ class FilesController extends BaseController {
           (from.max(0L), to.min(size - 1))
         }
       }
-      .filter {
-        case (from, to) => from >= 0 && to < size && to >= from && (to - from + 1) < size
+      .filter { case (from, to) =>
+        from >= 0 && to < size && to >= from && (to - from + 1) < size
       }
     val (offset, length, status) =
       range.map { case (from, to) => (from, to - from + 1, 206) }.getOrElse((0L, size, 200))
@@ -59,9 +59,8 @@ class FilesController extends BaseController {
         "Content-Type" -> file.mimeType,
         "Accept-Ranges" -> "bytes",
         "Content-Disposition" -> ("attachment; filename=" + file.filename),
-        "Content-Length" -> length.toString) ++ range.map {
-        case (from, to) =>
-          "Content-Range" -> s"bytes $from-$to/$size"
+        "Content-Length" -> length.toString) ++ range.map { case (from, to) =>
+        "Content-Range" -> s"bytes $from-$to/$size"
       })
   }
 
@@ -176,10 +175,10 @@ class FilesController extends BaseController {
     for (cursor <- gistApiRequest()) {
       for (gist <- cursor.values.toIterator.flatten.map(_.hcursor)) {
         if (gist
-              .get[String]("description")
-              .toOption
-              .filter(_.startsWith(GistIdPrefix))
-              .exists(!_.startsWith(currentIdPrefix))) {
+            .get[String]("description")
+            .toOption
+            .filter(_.startsWith(GistIdPrefix))
+            .exists(!_.startsWith(currentIdPrefix))) {
           for (id <- gist.get[String]("id").toOption) gistApiRequest(delete = Some(id))
         }
       }
@@ -201,17 +200,18 @@ class FilesController extends BaseController {
             case Some(file) =>
               if (file.accessToken == accessToken) {
                 val notebookFile = StringUtil.prefixBySeparator(filename, ".") + ".ipynb"
-                val notebookFilename = StringUtil.prefixBySeparator(filename, ".") + "-" + collectionId + ".ipynb"
+                val notebookFilename =
+                  StringUtil.prefixBySeparator(filename, ".") + "-" + collectionId + ".ipynb"
                 val notebookTemplate = new File(NotebooksTemplatesDir + "/" + notebookFile)
                 if (notebookTemplate.exists) {
                   val source = Source.fromFile(notebookTemplate)
                   val contentTemplate =
                     try source.mkString
                     finally source.close()
-                  val waybackUrl = ArchConf.waybackBaseUrl + "/" + collectionId.replace(
-                    "ARCHIVEIT-",
-                    "")
-                  val fileUrl = ArchConf.baseUrl + s"/files/download/$collectionId/$jobId/$filename?access=" + file.accessToken
+                  val waybackUrl =
+                    ArchConf.waybackBaseUrl + "/" + collectionId.replace("ARCHIVEIT-", "")
+                  val fileUrl =
+                    ArchConf.baseUrl + s"/files/download/$collectionId/$jobId/$filename?access=" + file.accessToken
                   val notebookFileUrl = contentTemplate.replace("ARCHDATASETURL", fileUrl)
                   val content = notebookFileUrl.replace("ARCHCOLLECTIONIDURL", waybackUrl)
                   val nowStr = java.time.Instant.now.toString
@@ -226,14 +226,15 @@ class FilesController extends BaseController {
                   val postBody = Map(
                     "description" -> gistId.asJson,
                     "public" -> false.asJson,
-                    "files" -> Map(notebookFilename -> Map("content" -> content)).asJson).asJson
-                    .noSpaces
+                    "files" -> Map(
+                      notebookFilename -> Map("content" -> content)).asJson).asJson.noSpaces
                   (for {
                     cursor <- gistApiRequest(Some(postBody))
                     id <- cursor.get[String]("id").toOption
                     owner <- cursor.downField("owner").get[String]("login").toOption
                   } yield {
-                    val colabUrl = "http://colab.research.google.com/gist/" + owner + "/" + id + "/" + notebookFilename
+                    val colabUrl =
+                      "http://colab.research.google.com/gist/" + owner + "/" + id + "/" + notebookFilename
                     Found(colabUrl)
                   }).getOrElse(InternalServerError())
                 } else NotFound("No notebook for this file found!")

@@ -1,7 +1,7 @@
 package org.archive.webservices.ars
 
-import org.scalatra.test.scalatest._
 import org.scalamock.scalatest.MockFactory
+import org.scalatra.test.scalatest._
 
 /* Common Base Test Class */
 abstract class UnitSpec extends ScalatraFunSuite with MockFactory {
@@ -9,7 +9,8 @@ abstract class UnitSpec extends ScalatraFunSuite with MockFactory {
   def setEnv(key: String, value: String) = {
     val field = System.getenv().getClass.getDeclaredField("m")
     field.setAccessible(true)
-    val map = field.get(System.getenv()).asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
+    val map =
+      field.get(System.getenv()).asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
     map.put(key, value)
   }
 }

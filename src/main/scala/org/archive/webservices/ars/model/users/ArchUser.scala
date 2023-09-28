@@ -1,13 +1,13 @@
 package org.archive.webservices.ars.model.users
 
-import io.circe.{HCursor, Json, JsonObject, parser}
 import io.circe.syntax._
-import requests._
+import io.circe.{HCursor, Json, JsonObject, parser}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
+import requests._
 
 import java.util.Base64
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
@@ -97,8 +97,8 @@ object ArchUser {
           cursor.get[Boolean]("admin").getOrElse(false))
       }
 
-  def login(username: String, password: String)(
-      implicit request: HttpServletRequest,
+  def login(username: String, password: String)(implicit
+      request: HttpServletRequest,
       response: HttpServletResponse): Option[String] = {
     val (prefix, name) =
       if (username.contains(":"))
@@ -126,8 +126,7 @@ object ArchUser {
           val r: Response = requests.post(
             keystoneBaseUrl + "/private/api/proxy_login",
             data = Map("username" -> username, "password" -> password).asJson.noSpaces,
-            headers = Map("X-API-Key" -> ArchConf.keystonePrivateApiKey.get),
-          )
+            headers = Map("X-API-Key" -> ArchConf.keystonePrivateApiKey.get))
           if (r.statusCode != 200) {
             Some("Wrong username or password")
           } else {
@@ -141,13 +140,12 @@ object ArchUser {
                   userName = cursor.get[String]("username").toOption.get,
                   fullName = cursor.get[String]("fullname").toOption.get,
                   email = cursor.get[String]("email").toOption,
-                  isAdmin = cursor.get[Boolean]("is_staff").toOption.get,
-                )
+                  isAdmin = cursor.get[Boolean]("is_staff").toOption.get)
                 request.getSession.setAttribute(UserSessionAttribute, user)
                 scala.None
             }
           }
-      }
+        }
       case _ =>
         Some("User not found.")
     }
@@ -183,8 +181,8 @@ object ArchUser {
       }
   }
 
-  def get(id: String)(
-      implicit context: RequestContext = RequestContext.None): Option[ArchUser] = {
+  def get(id: String)(implicit
+      context: RequestContext = RequestContext.None): Option[ArchUser] = {
     val (prefix, suffix) =
       if (id.contains(":"))
         (StringUtil.prefixBySeparator(id, ":"), StringUtil.stripPrefixBySeparator(id, ":"))

@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.processing.SparkJobManager.removePriority
 import org.archive.webservices.sparkling.Sparkling.executionContext
 
 import java.time.Instant
@@ -8,9 +7,9 @@ import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.concurrent.Future
 
 class JobManagerBase(
-  val name: String,
-  val slots: Int = 5,
-  val timeoutSecondsMinMax: Option[(Int, Int)] = None) {
+    val name: String,
+    val slots: Int = 5,
+    val timeoutSecondsMinMax: Option[(Int, Int)] = None) {
   private val mainQueue = new JobQueue(name + " Queue")
   private val sampleQueue = new JobQueue(name + " Example Queue")
   private val queues = Seq(mainQueue, sampleQueue)
@@ -75,7 +74,8 @@ class JobManagerBase(
       val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
       val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax
       val startTimes = priorityRunning.map(running)
-      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold)) onTimeout(priorityRunning)
+      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold))
+        onTimeout(priorityRunning)
     }
   }
 
@@ -87,7 +87,9 @@ class JobManagerBase(
     val isPriority = this.isPriority
     val freeSlots = this.freeSlots
     val next = (queues.drop(nextQueueIdx).toIterator ++ queues.take(nextQueueIdx).toIterator)
-      .find(_.items.exists(instance => instance.slots <= freeSlots && (!isPriority || !depriotitizedSources.contains(instance.collection.sourceId))))
+      .find(_.items.exists(instance =>
+        instance.slots <= freeSlots && (!isPriority || !depriotitizedSources.contains(
+          instance.collection.sourceId))))
     if (next.isDefined) nextQueueIdx = (nextQueueIdx + 1) % queues.size
     next
   }
@@ -99,7 +101,10 @@ class JobManagerBase(
       nextQueue.nonEmpty
     }) {
       for (queue <- nextQueue) {
-        for (instance <- queue.dequeue(freeSlots, if (isPriority) depriotitizedSources else Set.empty, recentUsers)) {
+        for (instance <- queue.dequeue(
+            freeSlots,
+            if (isPriority) depriotitizedSources else Set.empty,
+            recentUsers)) {
           for (user <- instance.user) {
             recentUsers.dequeueFirst(_ == user.id)
             recentUsers.enqueue(user.id)

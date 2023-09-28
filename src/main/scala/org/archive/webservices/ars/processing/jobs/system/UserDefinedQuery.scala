@@ -85,13 +85,16 @@ object UserDefinedQuery extends SparkJob {
       collection: ArchCollection,
       conf: DerivationJobConf): Option[String] =
     super.validateParams(collection, conf).orElse {
-      validateFields[String](conf.params, Seq("surtPrefix", "surtPrefixes"), addOperators = true) {
-        v =>
-          if (v.contains(")")) SurtUtil.validateHost(v) match {
-            case Some(_) => None
-            case None => Some("Invalid host in " + v)
-          } else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
-          else None
+      validateFields[String](
+        conf.params,
+        Seq("surtPrefix", "surtPrefixes"),
+        addOperators = true) { v =>
+        if (v.contains(")")) SurtUtil.validateHost(v) match {
+          case Some(_) => None
+          case None => Some("Invalid host in " + v)
+        }
+        else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
+        else None
       }.orElse {
         validateFields[String](conf.params, Seq("timestampFrom", "timestampTo")) { v =>
           Time14Util.validate(v) match {

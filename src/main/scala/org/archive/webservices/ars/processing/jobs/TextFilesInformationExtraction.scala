@@ -52,15 +52,15 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
       "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1,content")
 
   override def checkSparkState(outPath: String): Option[Int] = {
-    if (TextTypes.forall {
-          case (prefix, _) => HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile)
-        }) Some {
-      if (TextTypes.forall {
-            case (prefix, _) =>
-              HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile + "/_SUCCESS")
-          }) ProcessingState.Finished
+    if (TextTypes.forall { case (prefix, _) =>
+        HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile)
+      }) Some {
+      if (TextTypes.forall { case (prefix, _) =>
+          HdfsIO.exists(outPath + "/_" + prefix + "-" + targetFile + "/_SUCCESS")
+        }) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
   }.map { state =>
     if (HdfsIO.exists(outPath + "/_" + MimeTypeCountFile + "/" + Sparkling.CompleteFlagFile))
       state
@@ -165,8 +165,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         HdfsIO.exists(outFile)
       }
     }
-    TextTypes.forall {
-      case (prefix, _) => HdfsIO.exists(outPath + "/" + prefix + "-" + targetFile)
+    TextTypes.forall { case (prefix, _) =>
+      HdfsIO.exists(outPath + "/" + prefix + "-" + targetFile)
     }
   }
 
@@ -174,16 +174,16 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
     if (HdfsIO.exists(outPath + "/" + MimeTypeCountFile)) Some {
       if (HdfsIO.files(outPath + "/_*-" + targetFile).isEmpty) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
 
   override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
-    TextTypes.keys.iterator.map(
-      p =>
-        DerivativeOutput(
-          p + "-" + targetFile,
-          conf.outputPath + relativeOutPath,
-          "csv",
-          "application/gzip"))
+    TextTypes.keys.iterator.map(p =>
+      DerivativeOutput(
+        p + "-" + targetFile,
+        conf.outputPath + relativeOutPath,
+        "csv",
+        "application/gzip"))
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
     super.templateVariables(conf) ++ Seq("showPreview" -> false)

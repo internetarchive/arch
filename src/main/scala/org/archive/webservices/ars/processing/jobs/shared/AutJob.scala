@@ -42,7 +42,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     if (HdfsIO.exists(outPath + "/_" + targetFile)) Some {
       if (HdfsIO.exists(outPath + "/_" + targetFile + "/_SUCCESS")) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
   }
 
   def prepareOutputStream(out: OutputStream): Unit =
@@ -69,7 +70,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     if (HdfsIO.exists(outPath + "/" + targetFile)) Some {
       if (!HdfsIO.exists(outPath + "/_" + targetFile)) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {

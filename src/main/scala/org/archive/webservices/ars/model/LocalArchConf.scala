@@ -116,7 +116,8 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val baseUrl: String =
     confStrValue("ARCH_BASE_URL", "baseUrl").getOrElse({
-      val nonStdPort = (proto == "http" && externalPort != 80) || (proto == "https" && externalPort != 443)
+      val nonStdPort =
+        (proto == "http" && externalPort != 80) || (proto == "https" && externalPort != 443)
       proto + "://" + host + (if (nonStdPort) (":" + externalPort) else "") + basePath
     })
 
@@ -137,10 +138,9 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val isDev: Boolean = deploymentEnvironment == "DEV"
 
-  /** python:
-   * import requests, base64
-   * base64.b64encode("user:pass".encode())
-   * */
+  /**
+   * python: import requests, base64 base64.b64encode("user:pass".encode())
+   */
   val foreignAitAuthHeader: Option[String] =
     confValueMap("ARCH_AIT_AUTH_HEADER", "foreignAitAuthHeader", identity)("Basic " + _)
 

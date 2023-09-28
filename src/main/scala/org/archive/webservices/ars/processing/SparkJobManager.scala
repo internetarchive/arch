@@ -2,17 +2,17 @@ package org.archive.webservices.ars.processing
 
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
-import org.archive.webservices.sparkling._
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.{Sparkling, _}
 import org.archive.webservices.sparkling.util.SparkUtil
 
 import java.io.File
 import scala.concurrent.Future
 
-object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
+object SparkJobManager
+    extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
   val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128

@@ -24,13 +24,18 @@ class AdminController extends BaseController {
       if (context.isAdmin) {
         for (u <- params.get("masquerade-user")) masqueradeUser(u)
         Ok(
-          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath(""), "masqueradeUser" -> masqueradeUser.getOrElse("")),
+          ssp(
+            "admin",
+            "user" -> context.loggedIn,
+            "baseUrl" -> relativePath(""),
+            "masqueradeUser" -> masqueradeUser.getOrElse("")),
           Map("Content-Type" -> "text/html"))
       } else Forbidden()
     }
   }
 
-  private def renderEdit(user: ArchUser, message: Option[String] = None)(implicit context: RequestContext): ActionResult = {
+  private def renderEdit(user: ArchUser, message: Option[String] = None)(implicit
+      context: RequestContext): ActionResult = {
     Ok(
       ssp(
         "admin-edit",
@@ -122,7 +127,9 @@ class AdminController extends BaseController {
               val in = new FileInputStream(logFile)
               try {
                 IOUtil.skip(in, skip)
-                val source = Source.fromInputStream(new BoundedInputStream(in, MaxLogLength), JobStateManager.Charset)
+                val source = Source.fromInputStream(
+                  new BoundedInputStream(in, MaxLogLength),
+                  JobStateManager.Charset)
                 try {
                   source.mkString
                 } finally {

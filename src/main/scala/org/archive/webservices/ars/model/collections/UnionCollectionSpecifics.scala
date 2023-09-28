@@ -18,8 +18,8 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def inputPath: String = ""
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     Some(
       ArchCollection(
         id,
@@ -82,8 +82,8 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics {
 object UnionCollectionSpecifics {
   val Prefix = "UNION-"
 
-  def collections(params: DerivationJobParameters)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+  def collections(params: DerivationJobParameters)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     params
       .get[Array[String]]("input")
       .toSeq

@@ -70,7 +70,8 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
           val crawlDate = AutUtil.timestamp(r)
           if (crawlDate.nonEmpty) Some {
             row(url, http, body, tikaMime, crawlDate, lastModifiedDate)
-          } else None
+          }
+          else None
         } else None
       }
     }

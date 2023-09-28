@@ -36,14 +36,12 @@ object CollectionLoader {
   def loadCdxFromWarcGzStreams(
       rdd: RDD[(String, InputStream)],
       sourceId: String): RDD[CdxRecord] = {
-    rdd.flatMap {
-      case (file, in) =>
-        CdxUtil.fromWarcGzStream(file, in).map { r =>
-          val Seq(offsetStr, filename) = r.additionalFields
-          r.copy(
-            additionalFields =
-              Seq(offsetStr, sourceId + CdxCollectionLocationSeparator + filename))
-        }
+    rdd.flatMap { case (file, in) =>
+      CdxUtil.fromWarcGzStream(file, in).map { r =>
+        val Seq(offsetStr, filename) = r.additionalFields
+        r.copy(additionalFields =
+          Seq(offsetStr, sourceId + CdxCollectionLocationSeparator + filename))
+      }
     }
   }
 
@@ -53,15 +51,13 @@ object CollectionLoader {
       case Some(specifics) =>
         val sourceId = specifics.sourceId
         specifics.loadWarcFiles(inputPath)(rdd =>
-          action(rdd.map {
-            case (file, in) =>
-              (CollectionSourcePointer(sourceId, file), in)
+          action(rdd.map { case (file, in) =>
+            (CollectionSourcePointer(sourceId, file), in)
           }))
       case None =>
         loadWarcFiles(inputPath)(rdd =>
-          action(rdd.map {
-            case (file, in) =>
-              (CollectionSourcePointer(collectionId, file), in)
+          action(rdd.map { case (file, in) =>
+            (CollectionSourcePointer(collectionId, file), in)
           }))
     }
   }
@@ -69,16 +65,19 @@ object CollectionLoader {
   def loadWarcsWithSource[R](collectionId: String, inputPath: String)(
       action: RDD[(CollectionSourcePointer, CleanupIterator[WarcRecord])] => R): R = {
     loadWarcFiles(collectionId, inputPath)(rdd =>
-      action(rdd.map {
-        case (p, in) =>
-          val warcs = WarcLoader
-            .load(in)
-            .filter(r => r.isResponse || r.isRevisit)
-          (p, IteratorUtil.cleanup(IteratorUtil.whileDefined {
-            Try {
-              if (warcs.hasNext) Try(warcs.next).toOption else None
-            }.toOption.flatten
-          }, in.close))
+      action(rdd.map { case (p, in) =>
+        val warcs = WarcLoader
+          .load(in)
+          .filter(r => r.isResponse || r.isRevisit)
+        (
+          p,
+          IteratorUtil.cleanup(
+            IteratorUtil.whileDefined {
+              Try {
+                if (warcs.hasNext) Try(warcs.next).toOption else None
+              }.toOption.flatten
+            },
+            in.close))
       }))
   }
 
@@ -104,11 +103,10 @@ object CollectionLoader {
           .map(p => (p, HdfsIO.open(p, decompress = false)))
     }).mapPartitions { partition =>
       var prev: Option[InputStream] = None
-      partition.map {
-        case (p, in) =>
-          for (s <- prev) s.close()
-          prev = Some(in)
-          (p, prev.get)
+      partition.map { case (p, in) =>
+        for (s <- prev) s.close()
+        prev = Some(in)
+        (p, prev.get)
       } ++ IteratorUtil.noop {
         for (s <- prev) s.close()
       }
@@ -120,7 +118,8 @@ object CollectionLoader {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
-      val wasapiUrl = ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
+      val wasapiUrl =
+        ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       while (apiFileCount < 0) {
         Ait
@@ -189,51 +188,49 @@ object CollectionLoader {
                     .map { case (host, port) => HdfsIO(host, port) }
                     .getOrElse(HdfsIO)
                   partition
-                    .flatMap {
-                      case (file, location) =>
-                        val inputFilePath = inputPath + "/" + file
-                        if (hdfsIO.exists(inputFilePath))
-                          Some((inputFilePath, inputFilePath, true))
+                    .flatMap { case (file, location) =>
+                      val inputFilePath = inputPath + "/" + file
+                      if (hdfsIO.exists(inputFilePath))
+                        Some((inputFilePath, inputFilePath, true))
+                      else {
+                        val cacheFilePath = cachePath + "/" + file
+                        if (HdfsIO.exists(cacheFilePath))
+                          Some((inputFilePath, cacheFilePath, false))
                         else {
-                          val cacheFilePath = cachePath + "/" + file
-                          if (HdfsIO.exists(cacheFilePath))
-                            Some((inputFilePath, cacheFilePath, false))
-                          else {
-                            IOHelper.syncHdfs(cacheFilePath + "_caching") {
-                              if (HdfsIO.exists(cacheFilePath))
-                                Some((inputFilePath, cacheFilePath, false))
-                              else {
-                                Ait
-                                  .getWithAuth(
-                                    location,
-                                    contentType = "*/*",
-                                    basicAuth = basicAuth) { in =>
-                                    val out =
-                                      HdfsIO.out(
-                                        cacheFilePath,
-                                        compress = false,
-                                        overwrite = true,
-                                        useWriter = false)
-                                    try {
-                                      IOUtil.copy(in, out)
-                                    } finally {
-                                      out.close()
-                                    }
-                                    while (!HdfsIO.exists(cacheFilePath)) Thread.`yield`()
-                                    Some((inputFilePath, cacheFilePath, false))
+                          IOHelper.syncHdfs(cacheFilePath + "_caching") {
+                            if (HdfsIO.exists(cacheFilePath))
+                              Some((inputFilePath, cacheFilePath, false))
+                            else {
+                              Ait
+                                .getWithAuth(
+                                  location,
+                                  contentType = "*/*",
+                                  basicAuth = basicAuth) { in =>
+                                  val out =
+                                    HdfsIO.out(
+                                      cacheFilePath,
+                                      compress = false,
+                                      overwrite = true,
+                                      useWriter = false)
+                                  try {
+                                    IOUtil.copy(in, out)
+                                  } finally {
+                                    out.close()
                                   }
-                                  .toOption
-                              }
+                                  while (!HdfsIO.exists(cacheFilePath)) Thread.`yield`()
+                                  Some((inputFilePath, cacheFilePath, false))
+                                }
+                                .toOption
                             }
                           }
                         }
+                      }
                     }
-                    .map {
-                      case (originalPath, path, ait) =>
-                        for (s <- prev) s.close()
-                        val in = (if (ait) hdfsIO else HdfsIO).open(path, decompress = false)
-                        prev = Some(in)
-                        (originalPath, in)
+                    .map { case (originalPath, path, ait) =>
+                      for (s <- prev) s.close()
+                      val in = (if (ait) hdfsIO else HdfsIO).open(path, decompress = false)
+                      prev = Some(in)
+                      (originalPath, in)
                     } ++ IteratorUtil.noop {
                     for (s <- prev) s.close()
                   }
@@ -247,50 +244,48 @@ object CollectionLoader {
   }
 
   private def loadWarcFilesViaCdx(cdxPath: String)(
-      in: Iterator[((CollectionSourcePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
+      in: Iterator[
+        ((CollectionSourcePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
         InputStream]): RDD[(String, InputStream)] = {
     val inputPath = s"$cdxPath/*.cdx.gz"
     val numFiles = HdfsIO.files(inputPath, recursive = false).size
     RddUtil
       .loadTextFiles(inputPath)
-      .mapPartitions(_.map {
-        case (file, lines) =>
-          val pointers = lines.flatMap(CdxRecord.fromString).flatMap { cdx =>
-            Try {
-              val length = cdx.compressedSize
-              val (path, offset) = cdx.locationFromAdditionalFields
-              (cdx, path, offset, length)
-            }.toOption
+      .mapPartitions(_.map { case (file, lines) =>
+        val pointers = lines.flatMap(CdxRecord.fromString).flatMap { cdx =>
+          Try {
+            val length = cdx.compressedSize
+            val (path, offset) = cdx.locationFromAdditionalFields
+            (cdx, path, offset, length)
+          }.toOption
+        }
+        var prevGroup: Option[(String, Long, (String, Long))] = None
+        val groups = IteratorUtil
+          .groupSortedBy(pointers) { case (_, path, offset, _) =>
+            val group = prevGroup
+              .filter { case (p, o, _) =>
+                p == path && offset > o && offset <= o + CdxSkipDistance
+              }
+              .map(_._3)
+              .getOrElse {
+                (path, offset)
+              }
+            prevGroup = Some((path, offset, group))
+            group
           }
-          var prevGroup: Option[(String, Long, (String, Long))] = None
-          val groups = IteratorUtil
-            .groupSortedBy(pointers) {
-              case (_, path, offset, _) =>
-                val group = prevGroup
-                  .filter {
-                    case (p, o, _) => p == path && offset > o && offset <= o + CdxSkipDistance
-                  }
-                  .map(_._3)
-                  .getOrElse {
-                    (path, offset)
-                  }
-                prevGroup = Some((path, offset, group))
-                group
-            }
-            .map {
-              case ((file, initialOffset), group) =>
-                val locationSeparatorIdx = file.lastIndexOf(CdxCollectionLocationSeparator)
-                val pointer =
-                  if (locationSeparatorIdx < 0) CollectionSourcePointer("", file)
-                  else
-                    CollectionSourcePointer(
-                      file.take(locationSeparatorIdx),
-                      file.drop(locationSeparatorIdx + 1))
-                ((pointer, initialOffset), group.map { case (r, _, o, l) => (r, o, l) })
-            }
-          (
-            file.split('/').last,
-            new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream])
+          .map { case ((file, initialOffset), group) =>
+            val locationSeparatorIdx = file.lastIndexOf(CdxCollectionLocationSeparator)
+            val pointer =
+              if (locationSeparatorIdx < 0) CollectionSourcePointer("", file)
+              else
+                CollectionSourcePointer(
+                  file.take(locationSeparatorIdx),
+                  file.drop(locationSeparatorIdx + 1))
+            ((pointer, initialOffset), group.map { case (r, _, o, l) => (r, o, l) })
+          }
+        (
+          file.split('/').last,
+          new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream])
       })
       .coalesce(numFiles / WarcFilesPerPartition + 1)
   }
@@ -302,17 +297,15 @@ object CollectionLoader {
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
       CollectionSpecifics.get(collectionId).toIterator.flatMap { specifics =>
-        partition.map {
-          case ((pointer, initialOffset), positions) =>
-            specifics.randomAccess(
-              accessContext,
-              specifics.inputPath,
-              pointer,
-              initialOffset,
-              positions.map {
-                case (_, offset, length) =>
-                  (offset - initialOffset, length)
-              })
+        partition.map { case ((pointer, initialOffset), positions) =>
+          specifics.randomAccess(
+            accessContext,
+            specifics.inputPath,
+            pointer,
+            initialOffset,
+            positions.map { case (_, offset, length) =>
+              (offset - initialOffset, length)
+            })
         }
       }
     }
@@ -336,11 +329,13 @@ object CollectionLoader {
     val accessContext = CollectionAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
-      partition.map {
-        case ((pointer, initialOffset), positions) =>
-          randomAccessPetabox(accessContext, pointer.filename, initialOffset, positions.map {
-            case (_, offset, length) =>
-              (offset - initialOffset, length)
+      partition.map { case ((pointer, initialOffset), positions) =>
+        randomAccessPetabox(
+          accessContext,
+          pointer.filename,
+          initialOffset,
+          positions.map { case (_, offset, length) =>
+            (offset - initialOffset, length)
           })
       }
     }
@@ -366,16 +361,14 @@ object CollectionLoader {
     val accessContext = CollectionAccessContext.fromLocalArchConf(alwaysAitHdfsIO = aitHdfs)
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
-      partition.map {
-        case ((pointer, initialOffset), positions) =>
-          randomAccessHdfs(
-            accessContext,
-            warcPath + "/" + pointer.filename,
-            initialOffset,
-            positions.map {
-              case (_, offset, length) =>
-                (offset - initialOffset, length)
-            })
+      partition.map { case ((pointer, initialOffset), positions) =>
+        randomAccessHdfs(
+          accessContext,
+          warcPath + "/" + pointer.filename,
+          initialOffset,
+          positions.map { case (_, offset, length) =>
+            (offset - initialOffset, length)
+          })
       }
     }
   }

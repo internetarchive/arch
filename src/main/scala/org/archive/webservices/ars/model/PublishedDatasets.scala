@@ -51,11 +51,11 @@ object PublishedDatasets {
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
     while (sync.contains(f) || synchronized {
-             sync.contains(f) || {
-               sync += f
-               false
-             }
-           }) {}
+        sync.contains(f) || {
+          sync += f
+          false
+        }
+      }) {}
     try {
       action
     } finally {
@@ -192,13 +192,14 @@ object PublishedDatasets {
         } else if (responseCode / 100 >= 4) {
           // Report the request error.
           val source = Source.fromInputStream(connection.getErrorStream, "utf-8")
-          try Arch.reportError(
-            "PublishedDatasets Petabox Response Error",
-            source.mkString,
-            Map(
-              "status_code" -> responseCode.toString,
-              "path" -> path,
-              "method" -> connection.getRequestMethod))
+          try
+            Arch.reportError(
+              "PublishedDatasets Petabox Response Error",
+              source.mkString,
+              Map(
+                "status_code" -> responseCode.toString,
+                "path" -> path,
+                "method" -> connection.getRequestMethod))
           finally source.close()
           None
         } else None
@@ -269,7 +270,8 @@ object PublishedDatasets {
           Seq(itemInfo.toJson(includeItem = true).spaces4),
           overwrite = true)
         itemInfo
-      } else {
+      }
+      else {
         val itemInfoOpt = jobItem(jobFilePath)
         for (info <- itemInfoOpt) updateItem(info.item, metadata)
         itemInfoOpt
@@ -298,16 +300,15 @@ object PublishedDatasets {
           isSample <- cursor.get[Boolean]("sample").toOption
           time <- cursor.get[String]("time").toOption.map(Instant.parse)
           complete <- cursor.get[Boolean]("complete").toOption
-        } yield
-          ItemInfo(
-            item,
-            collectionId,
-            sourceId,
-            jobId,
-            isSample,
-            time,
-            complete,
-            cursor.get[String]("ark").toOption)
+        } yield ItemInfo(
+          item,
+          collectionId,
+          sourceId,
+          jobId,
+          isSample,
+          time,
+          complete,
+          cursor.get[String]("ark").toOption)
       }
     } else None
   }
@@ -365,10 +366,15 @@ object PublishedDatasets {
             ListMap(
               "cmd" -> "make_undark.php".asJson,
               "identifier" -> name.asJson,
-              "args" -> Map("comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
+              "args" -> Map(
+                "comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
           }).isDefined && {
           {
-            Common.retryWhile(isDark(name).getOrElse(true), sleepMs = 500, maxTimes = 12, _ * 2) && {
+            Common.retryWhile(
+              isDark(name).getOrElse(true),
+              sleepMs = 500,
+              maxTimes = 12,
+              _ * 2) && {
               request(name, s3 = true, update = true, metadata = metadata).isDefined
             }
           } || {
@@ -401,7 +407,8 @@ object PublishedDatasets {
         ListMap(
           "cmd" -> "make_dark.php".asJson,
           "identifier" -> name.asJson,
-          "args" -> Map("comment" -> s"$DeleteCommentPrefix Delete published item").asJson).asJson.noSpaces
+          "args" -> Map(
+            "comment" -> s"$DeleteCommentPrefix Delete published item").asJson).asJson.noSpaces
       }).isDefined
   }
 
