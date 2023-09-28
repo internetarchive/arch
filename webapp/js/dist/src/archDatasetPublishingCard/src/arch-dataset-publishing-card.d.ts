@@ -33,7 +33,6 @@ export declare class ArchDatasetPublishingCard extends LitElement {
     private _fetchInitialData;
     private _pollItemMetadata;
     private _fetchPubInfo;
-    private _publishInProgress;
     private _fetchItemMetadata;
     private _publishButtonClickHandler;
     private _publish;
