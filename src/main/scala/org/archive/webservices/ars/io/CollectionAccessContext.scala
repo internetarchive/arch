@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.io
 
+import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.{ArchConf, LocalArchConf}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -17,6 +18,7 @@ class CollectionAccessContext(
   def init(): Unit = if (!initialized) {
     initialized = true
     ArchConf.set(conf)
+    Arch.initSentry()
   }
 }
 
