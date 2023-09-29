@@ -64,10 +64,11 @@ object DatasetPublication extends SparkJob {
             .foreachPartition { partition =>
               accessContext.init()
               val fileList = fileListBc.value
-              for ((f, p) <- partition if !fileList.contains(f)) {
-                if (!PublishedDatasets.upload(itemName, f, p)) {
-                  throw new RuntimeException(s"Uploading $f to Petabox item $itemName failed.")
-                }
+              for {
+                (f, p) <- partition if !fileList.contains(f)
+                error <- PublishedDatasets.upload(itemName, f, p)
+              } {
+                  throw new RuntimeException(s"Uploading $f to Petabox item $itemName failed. - $error")
               }
             }
           PublishedDatasets.complete(collection, dataset, itemName)

@@ -15,6 +15,7 @@ import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import scala.annotation.tailrec
 import scala.collection.immutable.{ListMap, Map}
 import scala.io.Source
 import scala.util.Try
@@ -138,8 +139,7 @@ object PublishedDatasets {
       update: Boolean = false,
       metadata: Map[String, Seq[String]] = Map.empty,
       put: Option[(InputStream, Long)] = None,
-      post: Option[String] = None): Option[String] = ArchConf.iaAuthHeader.flatMap {
-    iaAuthHeader =>
+      post: Option[String] = None): Either[(Int, String), String] = ArchConf.iaAuthHeader.map { iaAuthHeader =>
       val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
       val connection = new URL(url).openConnection.asInstanceOf[HttpURLConnection]
@@ -187,26 +187,28 @@ object PublishedDatasets {
         val responseCode = connection.getResponseCode
         if (responseCode / 100 == 2) {
           val source = Source.fromInputStream(connection.getInputStream, "utf-8")
-          try Some(source.mkString)
+          try Right(source.mkString)
           finally source.close()
         } else if (responseCode / 100 >= 4) {
           // Report the request error.
           val source = Source.fromInputStream(connection.getErrorStream, "utf-8")
-          try
+          try {
+            val error = source.mkString
             Arch.reportError(
               "PublishedDatasets Petabox Response Error",
-              source.mkString,
+              error,
               Map(
                 "status_code" -> responseCode.toString,
                 "path" -> path,
                 "method" -> connection.getRequestMethod))
+            Left(responseCode, error)
+          }
           finally source.close()
-          None
-        } else None
+        } else Left(-1, "")
       } finally {
         Try(connection.disconnect())
       }
-  }
+  }.getOrElse(Left(-1, ""))
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
     val connection =
@@ -339,7 +341,7 @@ object PublishedDatasets {
   }
 
   private def isDark(name: String): Option[Boolean] = {
-    request("services/tasks.php?history=1&identifier=" + name).map { tasks =>
+    request("services/tasks.php?history=1&identifier=" + name).toOption.map { tasks =>
       parse(tasks).toOption
         .map(_.hcursor)
         .flatMap { cursor =>
@@ -358,7 +360,7 @@ object PublishedDatasets {
   }
 
   def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
-    request(name, s3 = true, metadata = metadata).isDefined || {
+    request(name, s3 = true, metadata = metadata).isRight || {
       isDark(name).contains(true) && {
         request(
           "/services/tasks.php",
@@ -368,14 +370,14 @@ object PublishedDatasets {
               "identifier" -> name.asJson,
               "args" -> Map(
                 "comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
-          }).isDefined && {
+          }).isRight && {
           {
             Common.retryWhile(
               isDark(name).getOrElse(true),
               sleepMs = 500,
               maxTimes = 12,
               _ * 2) && {
-              request(name, s3 = true, update = true, metadata = metadata).isDefined
+              request(name, s3 = true, update = true, metadata = metadata).isRight
             }
           } || {
             if (!Common.retryWhile(!deleteItem(name), sleepMs = 100, maxTimes = 10, _ * 2)) {
@@ -395,7 +397,7 @@ object PublishedDatasets {
     this
       .metadata(name, all = true)
       .flatMap { existingMetadata =>
-        request(name, s3 = true, update = true, metadata = existingMetadata ++ metadata)
+        request(name, s3 = true, update = true, metadata = existingMetadata ++ metadata).toOption
       }
       .isDefined
   }
@@ -409,7 +411,7 @@ object PublishedDatasets {
           "identifier" -> name.asJson,
           "args" -> Map(
             "comment" -> s"$DeleteCommentPrefix Delete published item").asJson).asJson.noSpaces
-      }).isDefined
+      }).isRight
   }
 
   def deletePublished(collection: ArchCollection, itemName: String): Boolean = {
@@ -437,7 +439,7 @@ object PublishedDatasets {
   }
 
   def files(itemName: String): Set[String] = {
-    request(s"metadata/$itemName/files")
+    request(s"metadata/$itemName/files").toOption
       .flatMap(parse(_).toOption.map(_.hcursor))
       .toSeq
       .flatMap { cursor =>
@@ -449,7 +451,7 @@ object PublishedDatasets {
   }
 
   def metadata(itemName: String, all: Boolean = false): Option[Map[String, Seq[String]]] = {
-    request(s"metadata/$itemName/metadata")
+    request(s"metadata/$itemName/metadata").toOption
       .flatMap(parse(_).toOption)
       .flatMap(_.hcursor.downField("result").focus)
       .map { json =>
@@ -458,10 +460,18 @@ object PublishedDatasets {
       }
   }
 
-  def upload(itemName: String, filename: String, hdfsPath: String): Boolean = {
+  @tailrec
+  def upload(itemName: String, filename: String, hdfsPath: String): Option[String] = {
     val fileSize = HdfsIO.length(hdfsPath)
     HdfsIO.access(hdfsPath, decompress = false) { in =>
-      request(itemName + "/" + filename, s3 = true, put = Some((in, fileSize))).isDefined
+      request(itemName + "/" + filename, s3 = true, put = Some((in, fileSize)))
+    } match {
+      case Right(_) => None
+      case Left((responseCode, error)) =>
+        if (responseCode == 503) {
+          Thread.sleep(1000 * 60) // wait a minute
+          upload(itemName, filename, hdfsPath)
+        } else Some(s"$responseCode ($error)")
     }
   }
 
