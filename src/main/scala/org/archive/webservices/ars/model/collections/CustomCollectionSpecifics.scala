@@ -7,6 +7,7 @@ import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
+import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.StringUtil
@@ -91,11 +92,13 @@ object CustomCollectionSpecifics {
   val CdxDir = "index.cdx.gz"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
-    val infoPath = path + s"/$InfoFile"
-    if (HdfsIO.exists(infoPath)) {
-      val str = HdfsIO.lines(infoPath).mkString
-      Try(parser.parse(str).right.get.hcursor).toOption
-    } else None
+    CacheUtil.cache[Option[HCursor]](s"CustomCollectionSpecifics:collectionInfo:$path") {
+      val infoPath = path + s"/$InfoFile"
+      if (HdfsIO.exists(infoPath)) {
+        val str = HdfsIO.lines(infoPath).mkString
+        Try(parser.parse(str).right.get.hcursor).toOption
+      } else None
+    }
   }
 
   def location(id: String): Option[String] =
