@@ -66,16 +66,10 @@ object ArchCollection {
       .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(
       user) ++ CustomCollectionSpecifics
       .userCollections(user))
-      .map(c =>
-        if (!ArchConf.isDev) {
-          GuavaCache
-            .get[ArchCollection](cacheKey(c.id))
-            .getOrElse({
-              c.user = Some(user)
-              GuavaCache.put(cacheKey(c.id), c, None)
-              c
-            })
-        } else c)
+      .map(c => {
+        c.user = Some(user)
+        c
+      })
       .sortBy(_.name.toLowerCase)
   }
 

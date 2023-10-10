@@ -11,16 +11,23 @@ object CacheUtil {
 
   val RequestCacheDuration: Duration = 10.minutes
 
-  def cache[R](key: String, enabled: Boolean = true)(value: => R): R =
+  def cache[R](key: String, enabled: Boolean = true, ttl: Option[Duration] = None)(value: => R): R =
     if (enabled) {
       GuavaCache.get[R](key) match {
         case Some(cached) => cached
         case None =>
           val v = value
-          GuavaCache.put(key, v, None)
+          GuavaCache.put(key, v, ttl)
           v
       }
     } else value
+
+  def put[R](key: String, value: R, enabled: Boolean = true, ttl: Option[Duration] = None): R = {
+    GuavaCache.put(key, value, ttl)
+    value
+  }
+
+  def get[R](key: String): Option[R] = GuavaCache.get[R](key)
 
   def cacheRequest(
       request: HttpServletRequest,
