@@ -27,6 +27,8 @@ import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 object TextFilesInformationExtraction extends BinaryInformationAutJob {
+  import BinaryInformationAutJob._
+
   val MimeTypeColumnIndex: Int = 4
 
   override val category: ArchJobCategory = ArchJobCategories.Text
@@ -80,12 +82,13 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.textFiles(rdd)
 
   override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
-    val cachedRdd = rdd.persist(StorageLevel.DISK_ONLY)
-    val targetData = df(cachedRdd)
+    val dataset = AutLoader.saveAndLoad(
+      df(rdd).filter(TextTypes.values.map(col(MimeTypeColumn).contains).reduce(_.or(_))),
+      outPath + "/_" + targetFile)
 
     for ((jobPrefix, mimeTypePattern) <- TextTypes) {
       val data = AutLoader.saveAndLoad(
-        targetData.filter(col("mime_type_web_server").contains(mimeTypePattern)),
+        dataset.filter(col(MimeTypeColumn).contains(mimeTypePattern)),
         outPath + "/_" + jobPrefix + "-" + targetFile)
 
       HdfsIO.writeLines(
@@ -94,9 +97,9 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         overwrite = true)
     }
 
-    computeMimeTypeCounts(targetData, outPath)
+    computeMimeTypeCounts(dataset, outPath)
 
-    cachedRdd.unpersist(true)
+    HdfsIO.delete(outPath + "/_" + targetFile)
   }
 
   override def prepareRecord(r: WarcRecord): Option[Row] =
