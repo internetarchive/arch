@@ -38,9 +38,10 @@ case class ArchJobInstanceInfo private (started: Long = -1, finished: Long = -1)
 object ArchJobInstanceInfo {
   val Charset = "utf-8"
   val CachePrefix = "job-instance-info#"
+  val InfoFile = "info.json"
 
   def infoFile(jobOutPath: String): String =
-    jobOutPath + "/info.json"
+    jobOutPath + s"/$InfoFile"
 
   def get(jobOutPath: String): ArchJobInstanceInfo = {
     val file = infoFile(jobOutPath)

@@ -14,6 +14,7 @@ import org.scalatra._
 
 import scala.collection.immutable.{ListMap, Set}
 import scala.util.Try
+import scala.util.matching.Regex
 
 class ApiController extends BaseController {
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
@@ -345,25 +346,38 @@ class ApiController extends BaseController {
   get("/datasets") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
-      val datasets =
-        ArchCollection
-          .userCollections(user)
-          // Get (collection, [sample]userConf, [sample]globalConf) tuples
-          .flatMap(col =>
-            Set(true, false).map(sample =>
-              (
-                col,
-                DerivationJobConf.collection(col, sample = sample, global = false),
-                DerivationJobConf.collection(col, sample = sample, global = true))))
-          // Get (collection, jobInstance)
-          .flatMap { case (col, userConf, globalConf) =>
-            JobManager.userJobs
-              .map(job => {
-                (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
-              })
+      val pathUserId = user.id.replace(
+        ArchCollection.UserIdSeparator,
+        ArchCollection.PathUserEscape
+      )
+      val jobPathRegex = new Regex(
+        s"[^/]${ArchConf.jobOutPath}/[^/]*/([^/].*)/(out|samples)/([^/]*)/${ArchJobInstanceInfo.InfoFile}",
+        "collectionId", "outOrSamples", "jobId"
+      )
+      val datasets = HdfsIO.files(
+        s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
+        recursive = false)
+        .flatMap(jobPathRegex.findFirstMatchIn)
+        .flatMap(m =>
+          for {
+            collection <- ArchCollection.get(
+              ArchCollection.userCollectionId(m.group("collectionId"), user)
+            )
+          } yield {
+            Dataset(
+              collection,
+              JobManager.getInstance(
+                m.group("jobId"),
+                DerivationJobConf.collection(
+                  collection,
+                  sample = m.group("outOrSamples") == "samples",
+                  global = false
+                ),
+              ).get
+            )
           }
-          .map { case (collection, jobInstance) => Dataset(collection, jobInstance) }
-      Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
+        )
+      Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
     }
   }
 
