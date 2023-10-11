@@ -4,7 +4,13 @@ import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model._
-import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
+import org.archive.webservices.ars.model.api.{
+  ApiFieldType,
+  ApiResponseObject,
+  ApiResponseType,
+  Collection,
+  Dataset
+}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
@@ -346,37 +352,34 @@ class ApiController extends BaseController {
   get("/datasets") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
-      val pathUserId = user.id.replace(
-        ArchCollection.UserIdSeparator,
-        ArchCollection.PathUserEscape
-      )
+      val pathUserId =
+        user.id.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
       val jobPathRegex = new Regex(
         s"[^/]${ArchConf.jobOutPath}/[^/]*/([^/].*)/(out|samples)/([^/]*)/${ArchJobInstanceInfo.InfoFile}",
-        "collectionId", "outOrSamples", "jobId"
-      )
-      val datasets = HdfsIO.files(
-        s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
-        recursive = false)
+        "collectionId",
+        "outOrSamples",
+        "jobId")
+      val datasets = HdfsIO
+        .files(
+          s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
+          recursive = false)
         .flatMap(jobPathRegex.findFirstMatchIn)
         .flatMap(m =>
           for {
             collection <- ArchCollection.get(
-              ArchCollection.userCollectionId(m.group("collectionId"), user)
-            )
+              ArchCollection.userCollectionId(m.group("collectionId"), user))
           } yield {
             Dataset(
               collection,
-              JobManager.getInstance(
-                m.group("jobId"),
-                DerivationJobConf.collection(
-                  collection,
-                  sample = m.group("outOrSamples") == "samples",
-                  global = false
-                ),
-              ).get
-            )
-          }
-        )
+              JobManager
+                .getInstance(
+                  m.group("jobId"),
+                  DerivationJobConf.collection(
+                    collection,
+                    sample = m.group("outOrSamples") == "samples",
+                    global = false))
+                .get)
+          })
       Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
     }
   }
