@@ -354,31 +354,37 @@ class ApiController extends BaseController {
       val user = context.user
       val pathUserId =
         user.id.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+      val userFiles = HdfsIO.files(
+        s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
+        recursive = false)
+      val globalFiles = HdfsIO.files(
+        s"${ArchConf.globalJobOutPath}/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
+        recursive = false)
       val jobPathRegex = new Regex(
-        s"[^/]${ArchConf.jobOutPath}/[^/]*/([^/].*)/(out|samples)/([^/]*)/${ArchJobInstanceInfo.InfoFile}",
+        s"^.+/[^/]*/([^/].*)/(out|samples)/([^/]*)/${ArchJobInstanceInfo.InfoFile}$$",
         "collectionId",
         "outOrSamples",
         "jobId")
-      val datasets = HdfsIO
-        .files(
-          s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
-          recursive = false)
+      val userIdCollectionMap = ArchCollection.userCollections(user).map(c => (c.id, c)).toMap
+      val datasets = (userFiles ++ globalFiles)
         .flatMap(jobPathRegex.findFirstMatchIn)
-        .flatMap(m =>
+        .map(m => (m.group("collectionId"), m.group("outOrSamples"), m.group("jobId")))
+        .toSet
+        .flatMap((t: (String, String, String)) => t match { case (collectionId, outOrSamples, jobId) =>
           for {
-            collection <- ArchCollection.get(
-              ArchCollection.userCollectionId(m.group("collectionId"), user))
+            collection <- userIdCollectionMap.get(ArchCollection.userCollectionId(collectionId, user))
           } yield {
-            val sample = m.group("outOrSamples") == "samples"
+            val sample = outOrSamples == "samples"
             Dataset(
               collection,
               JobManager
                 .getInstanceOrGlobal(
-                  m.group("jobId"),
+                  jobId,
                   DerivationJobConf.collection(collection, sample = sample, global = false),
                   DerivationJobConf.collection(collection, sample = sample, global = true))
                 .get)
-          })
+          }
+        })
       Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
     }
   }
