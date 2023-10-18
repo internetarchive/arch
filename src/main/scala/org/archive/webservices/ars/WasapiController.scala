@@ -21,10 +21,13 @@ class WasapiController extends BaseController {
       params.get("collection").flatMap(ArchCollection.get) match {
         case Some(collection) =>
           val jobId = params("jobid")
-          JobManager.getInstance(
+          val sample = params.get("sample").contains("true")
+          JobManager.getInstanceOrGlobal(
             jobId,
             DerivationJobConf
-              .collection(collection, params.get("sample").contains("true"))) match {
+              .collection(collection, sample = sample, global = false),
+            DerivationJobConf
+              .collection(collection, sample = sample, global = true)) match {
             case Some(instance) =>
               val page = params
                 .get("page")
