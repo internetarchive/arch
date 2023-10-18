@@ -4,7 +4,13 @@ import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model._
-import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
+import org.archive.webservices.ars.model.api.{
+  ApiFieldType,
+  ApiResponseObject,
+  ApiResponseType,
+  Collection,
+  Dataset
+}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
@@ -14,6 +20,7 @@ import org.scalatra._
 
 import scala.collection.immutable.{ListMap, Set}
 import scala.util.Try
+import scala.util.matching.Regex
 
 class ApiController extends BaseController {
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
@@ -345,25 +352,34 @@ class ApiController extends BaseController {
   get("/datasets") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
-      val datasets =
-        ArchCollection
-          .userCollections(user)
-          // Get (collection, [sample]userConf, [sample]globalConf) tuples
-          .flatMap(col =>
-            Set(true, false).map(sample =>
-              (
-                col,
-                DerivationJobConf.collection(col, sample = sample, global = false),
-                DerivationJobConf.collection(col, sample = sample, global = true))))
-          // Get (collection, jobInstance)
-          .flatMap { case (col, userConf, globalConf) =>
-            JobManager.userJobs
-              .map(job => {
-                (col, JobManager.getInstanceOrGlobal(job.id, userConf, globalConf).get)
-              })
-          }
-          .map { case (collection, jobInstance) => Dataset(collection, jobInstance) }
-      Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
+      val pathUserId =
+        user.id.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+      val jobPathRegex = new Regex(
+        s"[^/]${ArchConf.jobOutPath}/[^/]*/([^/].*)/(out|samples)/([^/]*)/${ArchJobInstanceInfo.InfoFile}",
+        "collectionId",
+        "outOrSamples",
+        "jobId")
+      val datasets = HdfsIO
+        .files(
+          s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
+          recursive = false)
+        .flatMap(jobPathRegex.findFirstMatchIn)
+        .flatMap(m =>
+          for {
+            collection <- ArchCollection.get(
+              ArchCollection.userCollectionId(m.group("collectionId"), user))
+          } yield {
+            val sample = m.group("outOrSamples") == "samples"
+            Dataset(
+              collection,
+              JobManager
+                .getInstanceOrGlobal(
+                  m.group("jobId"),
+                  DerivationJobConf.collection(collection, sample = sample, global = false),
+                  DerivationJobConf.collection(collection, sample = sample, global = true))
+                .get)
+          })
+      Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
     }
   }
 
