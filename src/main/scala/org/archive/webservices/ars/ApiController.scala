@@ -369,15 +369,14 @@ class ApiController extends BaseController {
             collection <- ArchCollection.get(
               ArchCollection.userCollectionId(m.group("collectionId"), user))
           } yield {
+            val sample = m.group("outOrSamples") == "samples"
             Dataset(
               collection,
               JobManager
-                .getInstance(
+                .getInstanceOrGlobal(
                   m.group("jobId"),
-                  DerivationJobConf.collection(
-                    collection,
-                    sample = m.group("outOrSamples") == "samples",
-                    global = false))
+                  DerivationJobConf.collection(collection, sample = sample, global = false),
+                  DerivationJobConf.collection(collection, sample = sample, global = true))
                 .get)
           })
       Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
