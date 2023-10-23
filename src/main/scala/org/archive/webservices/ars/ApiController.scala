@@ -369,8 +369,8 @@ class ApiController extends BaseController {
       val datasets = (userFiles ++ globalFiles)
         .flatMap(jobPathRegex.findFirstMatchIn)
         .map(m => (m.group("collectionId"), m.group("outOrSamples"), m.group("jobId")))
-        .toSet
-        .flatMap((t: (String, String, String)) => t match { case (collectionId, outOrSamples, jobId) =>
+        .toSeq.distinct
+        .flatMap { case (collectionId, outOrSamples, jobId) =>
           for {
             collection <- userIdCollectionMap.get(ArchCollection.userCollectionId(collectionId, user))
           } yield {
@@ -384,8 +384,8 @@ class ApiController extends BaseController {
                   DerivationJobConf.collection(collection, sample = sample, global = true))
                 .get)
           }
-        })
-      Ok(filterAndSerialize(datasets.toSeq), Map("Content-Type" -> "application/json"))
+        }
+      Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
     }
   }
 
