@@ -1,4 +1,4 @@
-import{g as t,j as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-bfd25595.js";import{t as c}from"./chunk-state-97ec0d61.js";import{a as n}from"./chunk-arch-alert-77120ba7.js";import{P as r}from"./chunk-helpers-96c47aea.js";import"./chunk-arch-card-408fc5f7.js";import{a as d}from"./chunk-arch-loading-indicator-418d50f9.js";import"./arch-sub-collection-builder-bd3f0ed5.js";import"./chunk-arch-generate-dataset-form-da670fee.js";import"./chunk-query-all-fe6f60e4.js";import"./chunk-scale-large-1a48103b.js";var h,u=[t,o,e`
+import{g as t,j as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-bfd25595.js";import{t as c}from"./chunk-state-97ec0d61.js";import{a as n}from"./chunk-arch-alert-77120ba7.js";import{P as r}from"./chunk-helpers-ecdb04c9.js";import"./chunk-arch-card-408fc5f7.js";import{a as d}from"./chunk-arch-loading-indicator-418d50f9.js";import"./arch-sub-collection-builder-ce5e481e.js";import"./chunk-arch-generate-dataset-form-da670fee.js";import"./chunk-query-all-fe6f60e4.js";import"./chunk-scale-large-1a48103b.js";var h,u=[t,o,e`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -98,4 +98,4 @@ import{g as t,j as o,i as e,_ as s,b as a,y as i,a as l}from"./chunk-styles-bfd2
         </div>
       </arch-card>
     `}async initCollections(){const t=await n.collections.get([["sort","=","-lastJobTime"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.results}async initCollectionDatasetCounts(){var t;const o=await n.datasets.get([["state","=","Finished"]]),{results:e}=o,s={};for(const o of e){const{collectionId:e}=o;s[e]=(null!==(t=s[e])&&void 0!==t?t:0)+1}this.collectionDatasetCounts=s}};m.maxDisplayedCollections=10,m.styles=u,s([c()],m.prototype,"numTotalCollections",void 0),s([c()],m.prototype,"collections",void 0),s([c()],m.prototype,"collectionDatasetCounts",void 0),m=h=s([l("arch-collections-card")],m);export{m as ArchCollectionsCard};
-//# sourceMappingURL=arch-collections-card-90b322bf.js.map
+//# sourceMappingURL=arch-collections-card-0b2219f0.js.map

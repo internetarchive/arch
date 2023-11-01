@@ -149,8 +149,8 @@ import{g as e,i as n,_ as d,c as o,b as t,y as a,a as s}from"./chunk-styles-bfd2
             >HTTP status code/s</a
           >.
           <br />
-          Separate multiple SURTs with a <code>|</code> character and no space
-          in-between.
+          Separate multiple HTTP Status values with a <code>|</code> character
+          and no space in-between.
         </em>
         <input
           type="text"
@@ -170,7 +170,7 @@ import{g as e,i as n,_ as d,c as o,b as t,y as a,a as s}from"./chunk-styles-bfd2
             >MIME type/s</a
           >.
           <br />
-          Separate multiple SURTs with a <code>|</code> character and no space
+          Separate multiple MIMEs with a <code>|</code> character and no space
           in-between.
         </em>
         <input
@@ -190,4 +190,4 @@ import{g as e,i as n,_ as d,c as o,b as t,y as a,a as s}from"./chunk-styles-bfd2
         </button>
       </form>
     `}inputHandler(e){e.target.setCustomValidity("")}async initCollections(){const e=await c.collections.get();this.collections=e.results}setSourceCollectionIdsUrlParam(e){const{urlCollectionsParamName:n}=v,d=new URL(window.location.href);d.searchParams.delete(n),e.forEach((e=>d.searchParams.append(n,e))),history.replaceState(null,"",d.toString())}sourceCollectionsChangeHandler(e){const n=Array.from(e.target.selectedOptions).map((e=>e.value));this.sourceCollectionIds=new Set(n),this.setSourceCollectionIdsUrlParam(n)}static decodeFormDataValue(e,n){let d=n;const o=v.fieldValueParserMap[e];void 0!==o&&(d=o(d));const t=v.fieldValueValidatorMessagePairMap[e];if(void 0!==t){const[e,n]=t,o=(Array.isArray(d)?d:[d]).filter((n=>!e(n)));o.length>0&&(d=new Error(`${n}: ${o.join(", ")}`))}return d}static validateDecodedFormData(e){return"string"==typeof e.timestampFrom&&"string"==typeof e.timestampTo&&e.timestampFrom>=e.timestampTo&&(e.timestampTo=new Error("Crawl Date (end) must be later than Crawl Date (start)")),e}get formData(){const e=new FormData(this.form);let n=Object.fromEntries(Array.from(new Set(e.keys()).values()).map((n=>[n,"sources"===n?e.getAll(n):e.get(n)])).map((([e,n])=>[e,"sources"===e?n:v.decodeFormDataValue(e,n)])).filter((([,e])=>e instanceof Error||e.length>0)));return n=v.validateDecodedFormData(n),n}setFormInputValidity(e){for(const[n,d]of Object.entries(e))"sources"!==n&&this.form.querySelector(`input[name="${n}"]`).setCustomValidity(d instanceof Error?d.message:"")}async doPost(e,n){return fetch(`/api/runjob/UserDefinedQuery/${e}`,{method:"POST",body:JSON.stringify(n),headers:{"content-type":"application/json"}})}async createSubCollection(e){e.preventDefault();const n=e.target;n.disabled=!0;const d=this.formData;this.setFormInputValidity(d);const{form:o}=this;if(!o.checkValidity())return o.reportValidity(),void(n.disabled=!1);const t=d.sources,a=Object.assign({},d);let s;delete a.sources,1===t.length?s=t[0]:(s="UNION-UDQ",a.input=t);(await this.doPost(s,a)).ok?window.location.href="/collections":(window.alert("Could not create Sub-Collection"),n.disabled=!1)}};g.styles=p,g.urlCollectionsParamName="cid[]",g.fieldValueParserMap={mimesOR:x,statusPrefixesOR:x,surtPrefixesOR:x,timestampFrom:u,timestampTo:u},g.fieldValueValidatorMessagePairMap={statusPrefixesOR:[e=>l.test(e),"Please correct the invalid status code(s)"],surtPrefixesOR:[e=>i.test(e),"Please correct the invalid SURT(s)"],mimesOR:[e=>{var n;const d=e.split("/");return 2===d.length&&(null===(n=f[d[0]])||void 0===n?void 0:n.includes(d[1]))},"Please correct the invalid MIME(s)"]},d([m()],g.prototype,"collections",void 0),d([m()],g.prototype,"sourceCollectionIds",void 0),d([o("form")],g.prototype,"form",void 0),d([o("select#source")],g.prototype,"sourceSelect",void 0),g=v=d([s("arch-sub-collection-builder")],g);export{g as ArchSubCollectionBuilder};
-//# sourceMappingURL=arch-sub-collection-builder-bd3f0ed5.js.map
+//# sourceMappingURL=arch-sub-collection-builder-ce5e481e.js.map
