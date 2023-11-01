@@ -211,7 +211,7 @@ class FilesController extends BaseController {
                   val waybackUrl =
                     ArchConf.waybackBaseUrl + "/" + collectionId.replace("ARCHIVEIT-", "")
                   val fileUrl =
-                    ArchConf.baseUrl + s"/files/download/$collectionId/$jobId/$filename?access=" + file.accessToken
+                     s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${file.accessToken}"
                   val notebookFileUrl = contentTemplate.replace("ARCHDATASETURL", fileUrl)
                   val content = notebookFileUrl.replace("ARCHCOLLECTIONIDURL", waybackUrl)
                   val nowStr = java.time.Instant.now.toString
