@@ -58,9 +58,9 @@
         <p class="card-text" style="font-weight: bold;">
           $ <code style="font-weight: normal;">
             <% if (wasapiPages > 1) { %>
-              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r .files[].locations[0]; done &gt; url.list
+              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r '.files[].locations[0]'; done &gt; url.list
               <% } else { %>
-              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r .files[].locations[0] &gt; url.list
+              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r '.files[].locations[0]' &gt; url.list
             <% } %>
           </code>
           <br />
