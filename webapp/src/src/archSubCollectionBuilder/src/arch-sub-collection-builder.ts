@@ -187,8 +187,8 @@ export class ArchSubCollectionBuilder extends LitElement {
             >HTTP status code/s</a
           >.
           <br />
-          Separate multiple SURTs with a <code>|</code> character and no space
-          in-between.
+          Separate multiple HTTP Status values with a <code>|</code> character
+          and no space in-between.
         </em>
         <input
           type="text"
@@ -208,7 +208,7 @@ export class ArchSubCollectionBuilder extends LitElement {
             >MIME type/s</a
           >.
           <br />
-          Separate multiple SURTs with a <code>|</code> character and no space
+          Separate multiple MIMEs with a <code>|</code> character and no space
           in-between.
         </em>
         <input
