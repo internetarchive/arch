@@ -1,4 +1,4 @@
-import{g as t,j as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-bfd25595.js";import{t as l}from"./chunk-state-97ec0d61.js";import{a as o}from"./chunk-arch-alert-77120ba7.js";import{P as c}from"./chunk-helpers-96c47aea.js";import{i as n}from"./chunk-arch-loading-indicator-418d50f9.js";import"./chunk-arch-card-408fc5f7.js";import"./arch-sub-collection-builder-bd3f0ed5.js";import"./chunk-arch-generate-dataset-form-da670fee.js";import"./chunk-query-all-fe6f60e4.js";import"./chunk-scale-large-1a48103b.js";var h,m=[t,a,e`
+import{g as t,j as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-bfd25595.js";import{t as l}from"./chunk-state-97ec0d61.js";import{a as o}from"./chunk-arch-alert-77120ba7.js";import{P as c}from"./chunk-helpers-ecdb04c9.js";import{i as n}from"./chunk-arch-loading-indicator-418d50f9.js";import"./chunk-arch-card-408fc5f7.js";import"./arch-sub-collection-builder-ce5e481e.js";import"./chunk-arch-generate-dataset-form-da670fee.js";import"./chunk-query-all-fe6f60e4.js";import"./chunk-scale-large-1a48103b.js";var h,m=[t,a,e`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -72,4 +72,4 @@ import{g as t,j as a,i as e,_ as s,b as r,y as i,a as d}from"./chunk-styles-bfd2
         </div>
       </arch-card>
     `}async initDatasets(){const t=await o.datasets.get([["state","=","Finished"],["sort","=","-startTime"],["limit","=",h.maxDisplayedDatasets]]);this.numTotalDatasets=t.count,this.datasets=t.results}};p.maxDisplayedDatasets=10,p.styles=m,s([l()],p.prototype,"numTotalDatasets",void 0),s([l()],p.prototype,"datasets",void 0),p=h=s([d("arch-recent-datasets-card")],p);export{p as ArchRecentDatasetsCard};
-//# sourceMappingURL=arch-recent-datasets-card-157d4378.js.map
+//# sourceMappingURL=arch-recent-datasets-card-398b9cde.js.map
