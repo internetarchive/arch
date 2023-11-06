@@ -45,7 +45,12 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       context: RequestContext = RequestContext.None): ArchCollectionStats =
     collection
       .map(AitCollectionSpecifics.getAitId)
-      .flatMap(cid => AitCollectionSpecifics.getCollectionStatsPair(cid).map(_._2))
+      .flatMap(cid =>
+        AitCollectionSpecifics
+          .getCollectionStatsPair(
+            cid,
+            if (context.user != ArchUser.None) Some(context.user) else None)
+          .map(_._2))
       .getOrElse(ArchCollectionStats.Empty)
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
@@ -81,8 +86,10 @@ object AitCollectionSpecifics {
   private def userCollectionIdsCacheKey(aitUserId: Int): String =
     s"AitCollectionSpecifics:ucids:${aitUserId}"
 
-  private def collectionStatsCacheKey(collectionId: Int): String =
-    s"AitCollectionSpecifics:cs:${collectionId}"
+  private def collectionStatsCacheKey(collectionId: Int, user: Option[ArchUser]): String =
+    user
+      .map(u => s"AitCollectionSpecifics:cs:${u.id}:${collectionId}")
+      .getOrElse(s"AitCollectionSpecifics:cs:${collectionId}")
 
   private def putUserCollectionIds(
       aitUserId: Int,
@@ -97,12 +104,18 @@ object AitCollectionSpecifics {
 
   private def putCollectionStatsPair(
       collectionId: Int,
+      user: Option[ArchUser],
       pair: CollectionStatsPair): CollectionStatsPair =
     CacheUtil
-      .put[CollectionStatsPair](collectionStatsCacheKey(collectionId), pair, ttl = Some(cacheTTL))
+      .put[CollectionStatsPair](
+        collectionStatsCacheKey(collectionId, user),
+        pair,
+        ttl = Some(cacheTTL))
 
-  private def getCollectionStatsPair(collectionId: Int): Option[CollectionStatsPair] =
-    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(collectionId))
+  private def getCollectionStatsPair(
+      collectionId: Int,
+      user: Option[ArchUser]): Option[CollectionStatsPair] =
+    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(collectionId, user))
 
   private var _foreignCollectionsCursor: Option[HCursor] = None
   private def foreignCollectionsCursor: HCursor = _foreignCollectionsCursor.getOrElse {
@@ -172,7 +185,7 @@ object AitCollectionSpecifics {
       useForeignAccess: Boolean = false): Seq[ArchCollection] =
     synchronized {
       val cachedCollections =
-        aitIds.flatMap(aitId => getCollectionStatsPair(aitId).map(_._1))
+        aitIds.flatMap(aitId => getCollectionStatsPair(aitId, user).map(_._1))
       val uncachedIds = aitIds.toSet.diff(cachedCollections.map(getAitId).toSet)
       cachedCollections ++ {
         if (uncachedIds.isEmpty) Seq.empty
@@ -185,7 +198,7 @@ object AitCollectionSpecifics {
             .getOrElse(Seq.empty)
             // Cache these collections and stats and return the collections.
             .map(p => {
-              putCollectionStatsPair(getAitId(p._1), p)
+              putCollectionStatsPair(getAitId(p._1), user, p)
               p._1
             })
         }
