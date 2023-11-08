@@ -29,7 +29,6 @@ trait ArchUser {
 object ArchUser {
   val AitPrefix = "ait"
   val ArchPrefix = "arch"
-  val KeystonePrefix = "ks"
 
   val UserSessionAttribute = "arch-user"
 
@@ -117,34 +116,13 @@ object ArchUser {
         }
       case AitPrefix =>
         Ait.login(name, password, response).left.toOption
-      case KeystonePrefix =>
-        // TODO: extract Keystone login into client class
-        if (ArchConf.keystoneBaseUrl.isEmpty | ArchConf.keystonePrivateApiKey.isEmpty) {
-          Some("User not found.")
-        } else {
-          val keystoneBaseUrl = ArchConf.keystoneBaseUrl.get
-          val r: Response = requests.post(
-            keystoneBaseUrl + "/private/api/proxy_login",
-            data = Map("username" -> username, "password" -> password).asJson.noSpaces,
-            headers = Map("X-API-Key" -> ArchConf.keystonePrivateApiKey.get))
-          if (r.statusCode != 200) {
-            Some("Wrong username or password")
-          } else {
-            parser.parse(r.text) match {
-              case Left(error) =>
-                Some("Wrong username or password")
-              case Right(json) =>
-                val cursor = json.hcursor
-                val user = DefaultArchUser(
-                  id = KeystonePrefix + ":" + cursor.get[String]("username").toOption.get,
-                  userName = cursor.get[String]("username").toOption.get,
-                  fullName = cursor.get[String]("fullname").toOption.get,
-                  email = cursor.get[String]("email").toOption,
-                  isAdmin = cursor.get[Boolean]("is_staff").toOption.get)
-                request.getSession.setAttribute(UserSessionAttribute, user)
-                scala.None
-            }
+      case KeystoneUser.prefix =>
+        KeystoneUser.login(username, password) match {
+          case Some(user) => {
+            request.getSession.setAttribute(UserSessionAttribute, user)
+            scala.None
           }
+          case scala.None => Some("Wrong username or password")
         }
       case _ =>
         Some("User not found.")
@@ -192,6 +170,7 @@ object ArchUser {
         archUser(suffix)
       case AitPrefix =>
         Try(suffix.toInt).toOption.flatMap(Ait.user(_)).map(AitArchUser(_))
+      case KeystoneUser.prefix => KeystoneUser.get(suffix)
       case _ =>
         scala.None
     }
