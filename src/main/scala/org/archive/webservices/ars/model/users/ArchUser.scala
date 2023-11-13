@@ -105,7 +105,7 @@ object ArchUser {
           StringUtil.prefixBySeparator(username, ":"),
           StringUtil.stripPrefixBySeparator(username, ":"))
       else (ArchPrefix, username)
-    prefix match {
+    (if (ArchConf.forceKeystoneLogin) KeystoneUser.prefix else prefix) match {
       case ArchPrefix =>
         archUser(name, Some(password)) match {
           case Some(user) =>
@@ -117,7 +117,7 @@ object ArchUser {
       case AitPrefix =>
         Ait.login(name, password, response).left.toOption
       case KeystoneUser.prefix =>
-        KeystoneUser.login(username, password) match {
+        KeystoneUser.login(name, password) match {
           case Some(user) => {
             request.getSession.setAttribute(UserSessionAttribute, user)
             scala.None
@@ -143,7 +143,6 @@ object ArchUser {
   def get(useSession: Boolean)(implicit request: HttpServletRequest): Option[ArchUser] = {
     Option(request.getSession.getAttribute(UserSessionAttribute))
       .map(_.asInstanceOf[ArchUser])
-      .orElse(Ait.user(useSession).filter(u => aitUserIds.contains(u.id)).map(AitArchUser(_)))
       .orElse {
         request
           .header("Authorization")
