@@ -105,8 +105,18 @@ object ArchUser {
           StringUtil.prefixBySeparator(username, ":"),
           StringUtil.stripPrefixBySeparator(username, ":"))
       else (ArchPrefix, username)
-    prefix match {
-      case AitPrefix | ArchPrefix | KeystoneUser.prefix =>
+    (if (ArchConf.forceKeystoneLogin) KeystoneUser.prefix else prefix) match {
+      case ArchPrefix =>
+        archUser(name, Some(password)) match {
+          case Some(user) =>
+            request.getSession.setAttribute(UserSessionAttribute, user)
+            scala.None
+          case scala.None =>
+            Some("Wrong username or password")
+        }
+      case AitPrefix =>
+        Ait.login(name, password, response).left.toOption
+      case KeystoneUser.prefix =>
         KeystoneUser.login(name, password) match {
           case Some(user) => {
             request.getSession.setAttribute(UserSessionAttribute, user)

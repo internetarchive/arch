@@ -168,4 +168,10 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val version: Option[String] =
     confStrValue(envKey = "ARCH_VERSION", configKey = "version")
+
+  val forceKeystoneLogin: Boolean =
+    confBoolValue(
+      envKey = "ARCH_FORCE_KEYSTONE_LOGIN",
+      configKey = "forceKeystoneLogin",
+      default = false)
 }

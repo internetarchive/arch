@@ -41,6 +41,7 @@ trait ArchConf {
   def sentryDsn: String
   def deploymentEnvironment: String
   def isDev: Boolean
+  def forceKeystoneLogin: Boolean
 }
 
 object ArchConf extends ArchConf {
@@ -85,4 +86,5 @@ object ArchConf extends ArchConf {
   def sentryDsn: String = conf.sentryDsn
   def deploymentEnvironment: String = conf.deploymentEnvironment
   def isDev: Boolean = conf.isDev
+  def forceKeystoneLogin: Boolean = conf.forceKeystoneLogin
 }
