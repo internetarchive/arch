@@ -1,11 +1,18 @@
 {
-    "system" : {
-        "name" : "ARCH Admin",
-        "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN",
-        "admin" : true
-    },
-    "test" : {
-        "name" : "ARCH Test",
-        "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN"
-    }
+  "ks:test" : {
+    "name" : "ks:test",
+    "admin" : false,
+    "apiKey" : "$pbkdf2-sha512$120000$O9bl29/TgMiJDgdemcVCLvOFDeiVe7gr$GVu7hoJBruS2ErObHpxgrzGszgnWwRtlOJaaFXNslio"
+  },
+  "system" : {
+    "name" : "ARCH Admin",
+    "admin" : true,
+    "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN",
+    "apiKey" : "$pbkdf2-sha512$120000$FqQDeQj/k.rC42VNgSj5RwUcos8io7.T$4ZkK9UYSxcgYpq1cPkCUFi2oJtHUWmVxBJ85O6bDGR4"
+  },
+  "test" : {
+    "name" : "ARCH Test",
+    "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN",
+    "apiKey" : "$pbkdf2-sha512$120000$d7cX0Xs4gU0Xpd7AGLbXM6u26DRSo9rq$/17dE8VvIZRnFh2OhaarOM/TM87V9N6/xsrel0kPhlc"
+  }
 }

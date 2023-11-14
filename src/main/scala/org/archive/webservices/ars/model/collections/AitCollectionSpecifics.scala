@@ -129,7 +129,7 @@ object AitCollectionSpecifics {
 
   private def foreignCollectionIds(user: ArchUser): Seq[Int] = {
     foreignCollectionsCursor
-      .downField(user.id)
+      .downField(user.datafileKey)
       .values
       .toSeq
       .flatten

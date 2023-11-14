@@ -5,7 +5,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.storage.StorageLevel
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
+import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState, SampleVizData}
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{CollectionUtil, SurtUtil}
@@ -115,25 +115,34 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
 
   override val templateName: Option[String] = Some("jobs/NetworkExtraction")
 
-  override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    val edges = HdfsIO
-      .lines(
-        conf.outputPath + relativeOutPath + "/" + sampleGraphFile,
-        n = SampleTopNEdges + SampleTopNNodes)
-      .map(_.split('\t'))
-      .filter(_.length == 2)
-      .map { case Array(src, dst) =>
-        (src, dst)
+  override def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] =
+    checkFinishedState(conf.outputPath + relativeOutPath) match {
+      case Some(ProcessingState.Finished) => {
+        val edges = HdfsIO
+          .lines(
+            conf.outputPath + relativeOutPath + "/" + sampleGraphFile,
+            n = SampleTopNEdges + SampleTopNNodes)
+          .map(_.split('\t'))
+          .filter(_.length == 2)
+          .map { case Array(src, dst) =>
+            (src, dst)
+          }
+
+        val nodes =
+          edges.flatMap { case (src, dst) => Iterator(src, dst) }.distinct.sorted.zipWithIndex
+        val nodeMap = nodes.toMap
+
+        Some(SampleVizData(
+          nodes.map { case (node, id) =>
+            (node.split(',').reverse.mkString("."), id.toString)
+          },
+          Some(edges.map { case (src, dst) => (nodeMap(src).toString, nodeMap(dst).toString) })
+        ))
       }
+      case _ => None
+    }
 
-    val nodes =
-      edges.flatMap { case (src, dst) => Iterator(src, dst) }.distinct.sorted.zipWithIndex
-    val nodeMap = nodes.toMap
-
-    super.templateVariables(conf) ++ Seq(
-      "nodes" -> nodes.map { case (node, id) =>
-        (node.split(',').reverse.mkString("."), id)
-      },
-      "edges" -> edges.map { case (src, dst) => (nodeMap(src), nodeMap(dst)) })
-  }
+  override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
+    super.templateVariables(conf) ++ sampleVizData(conf).map(
+      x => Seq(("nodes", x.nodes), ("edges", x.edges.get))).getOrElse(Seq.empty)
 }

@@ -8,6 +8,7 @@ import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
+import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
@@ -27,7 +28,7 @@ object PublishedDatasets {
     Set("creator", "description", "licenseurl", "subject", "title")
   val DeleteCommentPrefix = "ARCH:"
 
-  val ProhibitedJobs: Set[DerivationJob] = Set(WebPagesExtraction)
+  val ProhibitedJobs: Set[DerivationJob] = Set(DatasetPublication, UserDefinedQuery, WebPagesExtraction)
 
   private var sync = Set.empty[String]
 

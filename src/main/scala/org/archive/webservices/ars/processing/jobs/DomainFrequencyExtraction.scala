@@ -5,7 +5,7 @@ import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState, SampleVizData}
 import org.archive.webservices.ars.processing.jobs.shared.AutJob
 import org.archive.webservices.ars.util.{Common, PublicSuffixUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -48,20 +48,30 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
 
   override val templateName: Option[String] = Some("jobs/DomainFrequencyExtraction")
 
+  override def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] =
+    checkFinishedState(conf.outputPath + relativeOutPath) match {
+      case Some(ProcessingState.Finished) => Some(
+        SampleVizData(
+          HdfsIO
+            .lines(conf.outputPath + relativeOutPath + "/" + targetFile, 11)
+            .drop(1)
+            .flatMap { line =>
+              val comma = line.lastIndexOf(',')
+              if (comma < 0) None
+              else
+                Some {
+                  val (domain, freq) =
+                    (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
+                  (domain, freq)
+                }
+            }
+        )
+      )
+      case _ => None
+    }
+
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    val topDomains = HdfsIO
-      .lines(conf.outputPath + relativeOutPath + "/" + targetFile, 11)
-      .drop(1)
-      .flatMap { line =>
-        val comma = line.lastIndexOf(',')
-        if (comma < 0) None
-        else
-          Some {
-            val (domain, freq) =
-              (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
-            (domain, freq.toInt)
-          }
-      }
-    super.templateVariables(conf) ++ Seq("topDomains" -> topDomains)
+    super.templateVariables(conf) ++ Seq("topDomains" ->
+      sampleVizData(conf).map(_.nodes).getOrElse(Seq.empty))
   }
 }

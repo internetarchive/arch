@@ -133,6 +133,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   }
 
   def stateStr: String = ProcessingState.Strings(state)
+  def sampleVizData: Option[SampleVizData] = job.sampleVizData(conf)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
   def outFiles: Iterator[DerivativeOutput] = job.outFiles(conf)
 

@@ -60,7 +60,8 @@ object JobManager {
     job.uuid -> job
   }.toMap
 
-  def get(id: String): Option[DerivationJob] = jobs.get(id)
+  def get(idOrUuid: String): Option[DerivationJob] =
+    jobs.get(uuidLookup.get(idOrUuid).map(_.id).getOrElse(idOrUuid))
 
   def getCollectionInstances(collectionId: String): Set[DerivationJobInstance] = {
     collectionInstances.get(collectionId).map(_.toSet).getOrElse(Set.empty)
@@ -154,17 +155,20 @@ object JobManager {
     }
   }
 
-  def getInstance(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
+  def getInstance(jobIdOrUuid: String, conf: DerivationJobConf): Option[DerivationJobInstance] = {
+    val jobId = uuidIdMap.get(jobIdOrUuid).getOrElse(jobIdOrUuid)
     getRegistered(jobId, conf).orElse {
       jobs.get(jobId).map { job =>
         job.history(conf)
       }
     }
+  }
 
   def getInstanceOrGlobal(
-      jobId: String,
+      jobIdOrUuid: String,
       conf: DerivationJobConf,
       globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
+    val jobId = uuidLookup.get(jobIdOrUuid).map(_.id).getOrElse(jobIdOrUuid)
     val instance = JobManager.getInstance(jobId, conf)
     if (instance.isEmpty || instance.exists(_.state == ProcessingState.NotStarted)) {
       val global = globalConf.filter(_.outputPath != conf.outputPath).flatMap { conf =>

@@ -9,8 +9,6 @@ import org.scalatra.scalate.ScalateSupport
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 class BaseController extends ScalatraServlet with ScalateSupport {
-  val MasqueradeUserIdSessionAttribute = "masquerade-user"
-
   // Report and rethrow any Exceptions.
   error {
     case e: Exception => {
@@ -19,62 +17,15 @@ class BaseController extends ScalatraServlet with ScalateSupport {
     }
   }
 
-  def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
-
-  def ensureLogin(action: RequestContext => ActionResult): ActionResult = ensureLogin()(action)
-
-  def clearMasqueradeUser(): Unit =
-    request.getSession.removeAttribute(MasqueradeUserIdSessionAttribute)
-
-  def masqueradeUser(userId: String): Unit = {
-    if (userId.trim.isEmpty) clearMasqueradeUser()
-    else request.getSession.setAttribute(MasqueradeUserIdSessionAttribute, userId)
-  }
-
-  def masqueradeUser: Option[String] =
-    Option(request.getSession.getAttribute(MasqueradeUserIdSessionAttribute))
-      .map(_.toString.trim)
-      .filter(_.nonEmpty)
-
-  def ensureLogin(
-      requiresLogin: Boolean = true,
-      redirect: Boolean = true,
-      useSession: Boolean = false,
-      validateCollection: Option[String] = None)(
-      action: RequestContext => ActionResult): ActionResult = {
-    val context = ArchUser.get(useSession) match {
-      case Some(loggedIn) =>
-        val user = masqueradeUser
-          .flatMap(ArchUser.get)
-          .filter(u => loggedIn.isAdmin || loggedIn.id == u.id)
-          .getOrElse(loggedIn)
-        RequestContext(loggedIn, user)
-      case None => RequestContext(ArchUser.None)
-    }
-    if (requiresLogin) {
-      if (context.isUser && (validateCollection.isEmpty || ArchCollection
-          .get(validateCollection.get)(context)
-          .isDefined)) {
-        action(context)
-      } else {
-        if (redirect) login(request.uri.toString) else Forbidden()
+  def ensureAuth(action: RequestContext => ActionResult): ActionResult = {
+    for {
+      apiUser <- request.headers.get("X-API-USER")
+      apiKey <- request.headers.get("X-API-KEY")
+    } yield {
+      ArchUser.get(apiUser, Some(apiKey)) match {
+        case Some(user) => action(RequestContext(user))
+        case None => Forbidden()
       }
-    } else action(context)
-  }
-
-  def ssp(path: String, attributes: (String, Any)*)(implicit
-      request: HttpServletRequest,
-      response: HttpServletResponse,
-      context: RequestContext = RequestContext(request)): String = {
-    super.ssp(path, attributes ++ Seq("requestContext" -> context): _*)
-  }
-}
-
-object BaseController {
-  def relativePath(path: String): String =
-    ArchConf.baseUrl + "/" + path.stripPrefix("/")
-
-  def staticPath(path: String): String = {
-    ArchConf.baseUrl + "/" + path.stripPrefix("/")
-  }
+    }
+  }.getOrElse(Forbidden())
 }

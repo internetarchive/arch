@@ -2,7 +2,9 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
@@ -23,21 +25,26 @@ object Keystone {
       return
     }
 
-    // TODO: remove extra backslashes from params output
-    val params = Map(
-      "instance_hashcode" -> instance.hashCode.abs.toString,
-      "attempt" -> instance.attempt.toString,
-      "conf" -> instance.conf.serialize).asJson.noSpaces
-
     val inputMetadata = Map(
       "id" -> instance.uuid,
       "job_type_id" -> instance.job.uuid,
+      // Remove any user ID from the collection ID.
+      "collection_id" ->
+        instance.collection.userSpecificId
+          .map(_._2)
+          .getOrElse(instance.collection.id),
       "username" -> instance.user.map(_.userName).getOrElse("").toString,
       "input_bytes" -> instance.inputSize.toString,
       "sample" -> instance.conf.isSample.toString,
       "created_at" -> Instant.now.toString,
-      "parameters" -> params,
-      "commit_hash" -> ArchConf.version.getOrElse("")).asJson.noSpaces
+      "commit_hash" -> ArchConf.version.getOrElse("")).asJson
+      .deepMerge(
+        Map(
+          "parameters" -> Map(
+            "instance_hashcode" -> instance.hashCode.abs.toString,
+            "attempt" -> instance.attempt.toString).asJson
+            .deepMerge(Map("conf" -> instance.conf.toJson).asJson)).asJson)
+      .noSpaces
 
     val result = retryHttpRequest(jobStartEndpoint, inputMetadata, maxRetries)
     printHttpRequestOutput(result)
@@ -61,7 +68,12 @@ object Keystone {
     val outputMetadata = Map(
       "job_start_id" -> instance.uuid.asJson,
       "output_bytes" -> instance.outputSize.asJson,
-      "created_at" -> Instant.now.toString.asJson).asJson.noSpaces
+      "created_at" -> Instant.now.toString.asJson,
+      "files" -> instance.outFiles
+        .map(DatasetFile.apply)
+        .map(_.toJson)
+        .toSeq
+        .asJson).asJson.noSpaces
 
     val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
     printHttpRequestOutput(result)
@@ -87,7 +99,8 @@ object Keystone {
       }
 
       val responseCode = connection.getResponseCode
-      if (responseCode == HttpURLConnection.HTTP_OK) {
+      if (responseCode == HttpURLConnection.HTTP_OK
+        || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         val inputStream = connection.getInputStream
         val response = Source.fromInputStream(inputStream).mkString
 

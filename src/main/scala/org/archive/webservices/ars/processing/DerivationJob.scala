@@ -46,6 +46,8 @@ trait DerivationJob {
     }
   }
 
+  def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] = None
+
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
   def datasetGlobMime(conf: DerivationJobConf): Option[(String, String)] = None
@@ -58,6 +60,8 @@ trait DerivationJob {
       }
     }
   }
+
+  def outputCollection(conf: DerivationJobConf): Option[ArchCollection] = None
 
   def reset(conf: DerivationJobConf): Unit = {}
 

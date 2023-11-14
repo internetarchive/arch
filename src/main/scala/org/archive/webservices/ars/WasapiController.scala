@@ -83,7 +83,7 @@ object WasapiController {
 class WasapiController extends BaseController {
   // implementing WASAPI's result endpoint (see https://github.com/WASAPI-Community/data-transfer-apis/tree/master/ait-specification#checking-the-result-of-a-complete-job)
   get("/v1/jobs/:jobid/result") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       params.get("collection").flatMap(ArchCollection.get) match {
         case Some(collection) =>
           val jobId = params("jobid")
