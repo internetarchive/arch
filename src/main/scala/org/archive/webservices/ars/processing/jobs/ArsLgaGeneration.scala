@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.spark.storage.StorageLevel
 import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
@@ -23,12 +22,26 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
     "All links between URLs in the collection over time. Output: one compressed TGZ file containing two compressed GZ files with data in JSON format representing, 1) a unique ID and SURT for each URL, and 2) the source URL ID, target URL ID, and timestamp for each link."
 
   val relativeOutPath = s"/$id"
+  val ParsedCacheFile = "parsed.gz"
   val MapFile = "id.map.gz"
   val GraphFile = "id.graph.gz"
 
-  val MaxPartitions = 500
+  val MaxPartitions = 100
 
   override def children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
+
+  implicit val parsedInOut = TypedInOut.toStringInOut[Option[((LGA.LgaLabel, String), Iterator[LGA.LgaLabel])]]({
+    case Some(((src, ts), dsts)) =>
+      (Seq(src.surt, src.url, ts) ++ dsts.flatMap { dst => Iterator(dst.surt, dst.url)}).mkString("\t")
+    case None => ""
+  }, { str =>
+    val split = str.split("\t")
+    if (split.length > 3) Some {
+      ((LGA.LgaLabel(split(0), split(1)), split(2)), split.drop(3).grouped(2).filter(_.length == 2).map { dst =>
+        LGA.LgaLabel(dst(0), dst(1))
+      })
+    } else None
+  })
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
@@ -48,19 +61,22 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
                 },
                 conf.sample) { parsed =>
                 val outPath = conf.outputPath + relativeOutPath
-                val cached = parsed.coalesce(MaxPartitions).persist(StorageLevel.DISK_ONLY)
-                val processed = LGA.parsedToGraph(parsed) { mapRdd =>
-                  val path = outPath + "/_" + MapFile
-                  val strings = mapRdd.map(_.toJsonString)
-                  RddUtil.saveAsTextFile(strings, path)
-                  RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
-                } { graphRdd =>
-                  val path = outPath + "/_" + GraphFile
-                  val strings = graphRdd.map(_.toJsonString)
-                  RddUtil.saveAsTextFile(strings, path)
+                val cachePath = outPath + "/" + ParsedCacheFile
+                RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
+                try {
+                  val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
+                  LGA.parsedToBigGraph(cached) { mapRdd =>
+                    val path = outPath + "/_" + MapFile
+                    RddUtil.saveAsTextFile(mapRdd.map(_.toJsonString), path)
+                    RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
+                  } { graphRdd =>
+                    val path = outPath + "/_" + GraphFile
+                    val strings = graphRdd.map(_.toJsonString)
+                    RddUtil.saveAsTextFile(strings, path) >= 0
+                  }
+                } finally {
+                  HdfsIO.delete(cachePath)
                 }
-                cached.unpersist(true)
-                processed >= 0
               }
           }
       }

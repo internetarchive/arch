@@ -5,7 +5,7 @@ import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
 import org.archive.webservices.ars.BaseController.relativePath
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, FileCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.ars.processing.JobStateManager.Charset
@@ -106,6 +106,7 @@ class AdminController extends BaseController {
               ArchUser.invalidateData()
               AitCollectionSpecifics.invalidateData()
               SpecialCollectionSpecifics.invalidateData()
+              FileCollectionSpecifics.invalidateData()
               renderEdit(context.loggedIn)
           }
         }

@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.processing.jobs._
+import org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntitiesExtraction
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 
 import scala.collection.immutable.ListMap
@@ -17,6 +18,7 @@ object JobManager {
     mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
   val userJobs: Set[DerivationJob] = Set(
+    ArchiveSparkEntitiesExtraction,
     ArsLgaGeneration,
     ArsWaneGeneration,
     ArsWatGeneration,

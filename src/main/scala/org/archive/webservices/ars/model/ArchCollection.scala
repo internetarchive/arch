@@ -65,7 +65,7 @@ object ArchCollection {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
       .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(
       user) ++ CustomCollectionSpecifics
-      .userCollections(user))
+      .userCollections(user) ++ FileCollectionSpecifics.userCollections(user))
       .map(c => {
         c.user = Some(user)
         c
@@ -149,6 +149,8 @@ object ArchCollection {
       Some(CustomCollectionSpecifics.Prefix)
     } else if (id.startsWith(UnionCollectionSpecifics.Prefix)) {
       Some(UnionCollectionSpecifics.Prefix)
+    } else if (id.startsWith(FileCollectionSpecifics.Prefix)) {
+      Some(FileCollectionSpecifics.Prefix)
     } else None
   }
 }

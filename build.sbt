@@ -22,6 +22,8 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
+  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
+  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
@@ -39,7 +41,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",
-  "io.circe" %% "circe-parser").map(_ % "0.10.0")
+  "io.circe" %% "circe-parser").map(_ % "0.13.0")
 
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),

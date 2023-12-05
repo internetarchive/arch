@@ -69,7 +69,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
         val url = AutUtil.url(r)
         val body = http.body
         val lastModifiedDate =
-          AutUtil.rfc1123toTime14(http.headerMap.get("last-modified").getOrElse(""))
+          AutUtil.rfc1123toTime14(http.headerMap.getOrElse("last-modified", ""))
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
           val crawlDate = AutUtil.timestamp(r)
