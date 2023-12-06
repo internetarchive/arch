@@ -34,7 +34,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1")
+      "crawl_date, last_modified_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
 
   def checkMime(url: String, server: String, tika: String): Boolean
 

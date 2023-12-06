@@ -22,7 +22,7 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
   val srcDstFields: (String, String) = ("src_domain", "dest_domain")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,target,count")
+    out.println("crawl_date, source, target, count")
 
   override def df(rdd: RDD[((String, String, String), Long)]): Dataset[Row] = {
     val rows =

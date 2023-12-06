@@ -51,7 +51,7 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1,content")
+      "crawl_date, last_modified_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1, content")
 
   override def checkSparkState(outPath: String): Option[Int] = {
     if (TextTypes.forall { case (prefix, _) =>

@@ -22,7 +22,7 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
 
   val targetFile: String = "domain-frequency.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit = out.println("domain,count")
+  override def printToOutputStream(out: PrintStream): Unit = out.println("domain, count")
 
   override def df(rdd: RDD[(String, Long)]): Dataset[Row] = {
     val rows = rdd

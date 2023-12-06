@@ -25,7 +25,7 @@ object WebPagesExtraction extends BinaryInformationAutJob {
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,domain,url,mime_type_web_server,mime_type_tika,language,content")
+      "crawl_date, last_modified_date, domain,url, mime_type_web_server, mime_type_tika, language, content")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     AutUtil.checkPageMime(url, server)

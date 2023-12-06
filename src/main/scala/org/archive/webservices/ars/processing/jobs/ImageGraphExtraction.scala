@@ -21,7 +21,7 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
   val srcDstFields: (String, String) = ("src", "image_url")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,url,alt_text")
+    out.println("crawl_date, source, url, alt_text")
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.imageGraph(rdd)
 

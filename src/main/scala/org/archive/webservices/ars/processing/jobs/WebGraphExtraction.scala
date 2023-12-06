@@ -21,7 +21,7 @@ object WebGraphExtraction extends NetworkAutJob[Row] {
   val srcDstFields: (String, String) = ("src", "dest")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,target,anchor_text")
+    out.println("crawl_date, source, target, anchor_text")
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webGraph(rdd)
 

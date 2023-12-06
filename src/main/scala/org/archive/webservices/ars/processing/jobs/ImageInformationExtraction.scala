@@ -29,7 +29,7 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,width,height,md5,sha1")
+      "crawl_date, last_modified_date, url, filename, extension, mime_type_web_server, mime_type_tika, width, height, md5, sha1")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     tika.startsWith("image/")
