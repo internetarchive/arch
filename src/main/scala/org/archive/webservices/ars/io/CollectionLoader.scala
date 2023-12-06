@@ -131,22 +131,22 @@ object CollectionLoader {
             if (status / 100 != 5) Thread.sleep(RetrySleepMillis) else apiFileCount = 0
         }
       }
-      val hdfsFileCount = hdfsHostPort
-        .map { case (host, port) => HdfsIO(host, port) }
-        .getOrElse(HdfsIO)
-        .files(inputPath + "/*arc.gz", recursive = false)
-        .size
+      val hdfsFileCount = hdfsHostPort.map { case (host, port) =>
+        HdfsIO(host, port).files(inputPath + "/*arc.gz", recursive = false).size
+      }.getOrElse(0)
       if (hdfsFileCount == apiFileCount) {
         loadWarcFiles(inputPath, hdfsHostPort)(action)
       } else {
         CollectionCache.cache(cacheId) { cachePath =>
           val cacheFileCount = HdfsIO.files(cachePath + "/*arc.gz", recursive = false).size
           if (hdfsFileCount + cacheFileCount == apiFileCount) {
-            loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
-              loadWarcFiles(cachePath) { cachedRdd =>
-                action(rdd.union(cachedRdd))
+            if (hdfsHostPort.isDefined) {
+              loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
+                loadWarcFiles(cachePath) { cachedRdd =>
+                  action(rdd.union(cachedRdd))
+                }
               }
-            }
+            } else loadWarcFiles(cachePath)(action)
           } else
             action {
               RddUtil
@@ -184,19 +184,17 @@ object CollectionLoader {
                 .repartition(apiFileCount / WarcFilesPerPartition + 1)
                 .mapPartitions { partition =>
                   var prev: Option[InputStream] = None
-                  val hdfsIO = hdfsHostPort
-                    .map { case (host, port) => HdfsIO(host, port) }
-                    .getOrElse(HdfsIO)
+                  val aitHdfsIO = hdfsHostPort.map { case (host, port) => HdfsIO(host, port) }
                   partition
                     .flatMap { case (file, location) =>
                       val inputFilePath = inputPath + "/" + file
-                      if (hdfsIO.exists(inputFilePath))
+                      if (aitHdfsIO.exists(_.exists(inputFilePath))) {
                         Some((inputFilePath, inputFilePath, true))
-                      else {
+                      } else {
                         val cacheFilePath = cachePath + "/" + file
-                        if (HdfsIO.exists(cacheFilePath))
+                        if (HdfsIO.exists(cacheFilePath)) {
                           Some((inputFilePath, cacheFilePath, false))
-                        else {
+                        } else {
                           IOHelper.syncHdfs(cacheFilePath + "_caching") {
                             if (HdfsIO.exists(cacheFilePath))
                               Some((inputFilePath, cacheFilePath, false))
@@ -228,7 +226,7 @@ object CollectionLoader {
                     }
                     .map { case (originalPath, path, ait) =>
                       for (s <- prev) s.close()
-                      val in = (if (ait) hdfsIO else HdfsIO).open(path, decompress = false)
+                      val in = (if (ait) aitHdfsIO.get else HdfsIO).open(path, decompress = false)
                       prev = Some(in)
                       (originalPath, in)
                     } ++ IteratorUtil.noop {
@@ -379,8 +377,8 @@ object CollectionLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    if (context.aitHdfsIO.exists(filePath)) {
-      val in = context.aitHdfsIO.open(
+    if (context.aitHdfsIO.exists(_.exists(filePath))) {
+      val in = context.aitHdfsIO.get.open(
         filePath,
         offset = offset,
         decompress = false,
