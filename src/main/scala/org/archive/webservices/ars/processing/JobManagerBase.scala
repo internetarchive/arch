@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.sparkling.Sparkling.executionContext
 
 import java.time.Instant
@@ -21,7 +22,7 @@ class JobManagerBase(
   private var priorityRunning = collection.mutable.Queue.empty[DerivationJobInstance]
   private var priorities = Map(_currentPriority -> priorityRunning)
   private val recentUsers = collection.mutable.Queue.empty[String]
-  private var depriotitizedSources = Set.empty[String]
+  private var depriotitizedSources = Set.empty[InputSpec.Identifier]
 
   private val timeoutExecutor = {
     val timeoutCheckPeriodSeconds: Int = 60 * 5
@@ -43,7 +44,7 @@ class JobManagerBase(
       _isPriority = priority
       priorityRunning = collection.mutable.Queue.empty[DerivationJobInstance]
       priorities += priority -> priorityRunning
-      depriotitizedSources = running.map(_._1.collection.sourceId).toSet
+      depriotitizedSources ++= running.map(_._1.conf.inputSpec).map(InputSpec.toIdentifier).toSet
       processQueues()
     }
   }
@@ -89,7 +90,7 @@ class JobManagerBase(
     val next = (queues.drop(nextQueueIdx).toIterator ++ queues.take(nextQueueIdx).toIterator)
       .find(_.items.exists(instance =>
         instance.slots <= freeSlots && (!isPriority || !depriotitizedSources.contains(
-          instance.collection.sourceId))))
+          instance.conf.inputSpec))))
     if (next.isDefined) nextQueueIdx = (nextQueueIdx + 1) % queues.size
     next
   }

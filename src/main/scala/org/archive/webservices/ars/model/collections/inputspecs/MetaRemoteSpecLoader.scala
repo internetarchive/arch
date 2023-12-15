@@ -1,17 +1,16 @@
-package org.archive.webservices.ars.model.collections.filespecs
-import io.circe.HCursor
+package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionAccessContext
 import org.apache.spark.sql.SparkSession
+import org.archive.webservices.ars.io.CollectionAccessContext
 import org.archive.webservices.sparkling.Sparkling
 
-object MetaRemoteSpec extends FileSpec {
-  override def load(spec: HCursor): RDD[FileRecord] = {
+object MetaRemoteSpecLoader extends InputSpecLoader {
+  override def load(spec: InputSpec): RDD[FileRecord] = {
     val recordFactory = FileRecordFactory[Map[String, Any]](spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
-      filenameKey <- spec.get[String]("meta-filename-key").toOption
-      mimeKey <- spec.get[String]("meta-mime-key").toOption
+      filenameKey <- spec.str("meta-filename-key")
+      mimeKey <- spec.str("meta-mime-key")
     } yield {
       val accessContext = CollectionAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
@@ -32,8 +31,8 @@ object MetaRemoteSpec extends FileSpec {
     throw new RuntimeException("No meta filename and/or mime key specified.")
   }
 
-  def loadMeta(spec: HCursor): RDD[Map[String, Any]] = {
-    spec.get[String]("meta-source").toOption.flatMap {
+  def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
+    spec.str("meta-source").flatMap {
       case "hdfs" => Some(loadMetaHdfs(spec))
       case _ => None
     }.getOrElse {
@@ -41,8 +40,8 @@ object MetaRemoteSpec extends FileSpec {
     }
   }
 
-  def loadMetaHdfs(spec: HCursor): RDD[Map[String, Any]] = {
-    spec.get[String]("meta-location").toOption.map {
+  def loadMetaHdfs(spec: InputSpec): RDD[Map[String, Any]] = {
+    spec.str("meta-location").map {
       case location if location.endsWith(".parquet") =>
         val dataFrame = SparkSession.builder.getOrCreate.read.parquet(location)
         val schema = Sparkling.sc.broadcast(dataFrame.schema)

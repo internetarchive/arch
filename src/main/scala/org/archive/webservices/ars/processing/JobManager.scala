@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntitiesExtraction
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
@@ -12,8 +13,9 @@ object JobManager {
   var MaxSlots = 3
 
   private val instances =
-    mutable.Map.empty[DerivationJobConf, mutable.Map[String, DerivationJobInstance]]
+    mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
 
+  // to be removed when ARCH becomes pure IO job processor
   private val collectionInstances =
     mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
@@ -59,9 +61,9 @@ object JobManager {
     val confJobs = instances.getOrElseUpdate(conf, mutable.Map.empty)
     if (!confJobs.contains(instance.job.id)) {
       confJobs.update(instance.job.id, instance)
-      if (instance.job.partialOf.isEmpty) {
+      if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
         val collectionJobs =
-          collectionInstances.getOrElseUpdate(conf.collectionId, mutable.Set.empty)
+          collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
         collectionJobs.add(instance)
       }
       instance.registered = true
@@ -76,10 +78,10 @@ object JobManager {
     val removed = confJobs.flatMap(_.remove(instance.job.id))
     if (removed.isDefined) {
       if (confJobs.get.isEmpty) instances.remove(conf)
-      if (removed.get.job.partialOf.isEmpty) {
-        for (collectionJobs <- collectionInstances.get(conf.collectionId)) {
+      if (removed.get.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
+        for (collectionJobs <- collectionInstances.get(conf.inputSpec.collectionId)) {
           collectionJobs.remove(removed.get)
-          if (collectionJobs.isEmpty) collectionInstances.remove(conf.collectionId)
+          if (collectionJobs.isEmpty) collectionInstances.remove(conf.inputSpec.collectionId)
         }
       }
       instance.registered = false
@@ -91,7 +93,7 @@ object JobManager {
           instance.conf,
           { newInstance =>
             newInstance.user = instance.user
-            newInstance.collection = instance.collection
+            newInstance.conf.inputSpec.collection = instance.conf.inputSpec.collection
             newInstance.attempt = instance.attempt + 1
             if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
           })

@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.model.collections.filespecs
+package org.archive.webservices.ars.model.collections.inputspecs
 
 import io.circe.HCursor
 import org.archive.webservices.ars.io.CollectionAccessContext
@@ -63,9 +63,9 @@ class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean) exten
 }
 
 object S3FileRecordFactory {
-  def apply(spec: HCursor): S3FileRecordFactory = {
-    spec.get[String]("remote-location").toOption.map { location =>
-      val longestPrefixMapping = spec.get[String]("remote-path-mapping").toOption.contains("longest-prefix")
+  def apply(spec: InputSpec): S3FileRecordFactory = {
+    spec.str("remote-location").map { location =>
+      val longestPrefixMapping = spec.str("remote-path-mapping").contains("longest-prefix")
       new S3FileRecordFactory(location, longestPrefixMapping)
     }.getOrElse {
       throw new RuntimeException("No location URL specified.")

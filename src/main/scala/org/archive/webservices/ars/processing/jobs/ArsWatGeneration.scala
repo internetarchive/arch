@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs
 
 import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -33,11 +33,11 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWatGeneration, conf)
-      CollectionLoader.loadWarcFiles(conf.collectionId, conf.inputPath) { rdd =>
+      WebArchiveLoader.loadWarcFiles(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, InputStream, Boolean](
-            rdd.map { case (pointer, in) =>
-              val file = new Path(pointer.filename).getName
+            rdd.map { case (filename, in) =>
+              val file = new Path(filename).getName
               val outFile = StringUtil.stripSuffix(file, Sparkling.GzipExt) + ".wat.gz"
               val watIn = WAT.fromWarcStream(
                 in,

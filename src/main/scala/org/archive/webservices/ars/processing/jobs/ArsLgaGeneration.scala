@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -47,38 +47,36 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
         SparkJobManager.initThread(sc, ArsLgaGeneration, conf)
-        CollectionLoader
-          .loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
-            IOHelper
-              .sample(
-                {
-                  val warcs = rdd
-                    .filter(_.http.exists(http =>
-                      http.mime.contains("text/html") && http.status == 200))
-                  LGA
-                    .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
-                    .filter(_._2.hasNext)
-                },
-                conf.sample) { parsed =>
-                val outPath = conf.outputPath + relativeOutPath
-                val cachePath = outPath + "/" + ParsedCacheFile
-                RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
-                try {
-                  val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
-                  LGA.parsedToBigGraph(cached) { mapRdd =>
-                    val path = outPath + "/_" + MapFile
-                    RddUtil.saveAsTextFile(mapRdd.map(_.toJsonString), path)
-                    RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
-                  } { graphRdd =>
-                    val path = outPath + "/_" + GraphFile
-                    val strings = graphRdd.map(_.toJsonString)
-                    RddUtil.saveAsTextFile(strings, path) >= 0
-                  }
-                } finally {
-                  HdfsIO.delete(cachePath)
-                }
+        WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
+          IOHelper.sample(
+            {
+              val warcs = rdd
+                .filter(_.http.exists(http =>
+                  http.mime.contains("text/html") && http.status == 200))
+              LGA
+                .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
+                .filter(_._2.hasNext)
+            },
+            conf.sample) { parsed =>
+            val outPath = conf.outputPath + relativeOutPath
+            val cachePath = outPath + "/" + ParsedCacheFile
+            RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
+            try {
+              val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
+              LGA.parsedToBigGraph(cached) { mapRdd =>
+                val path = outPath + "/_" + MapFile
+                RddUtil.saveAsTextFile(mapRdd.map(_.toJsonString), path)
+                RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
+              } { graphRdd =>
+                val path = outPath + "/_" + GraphFile
+                val strings = graphRdd.map(_.toJsonString)
+                RddUtil.saveAsTextFile(strings, path) >= 0
               }
+            } finally {
+              HdfsIO.delete(cachePath)
+            }
           }
+        }
       }
     }
 

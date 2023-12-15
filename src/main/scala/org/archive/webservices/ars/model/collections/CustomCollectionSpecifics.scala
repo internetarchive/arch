@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
@@ -32,7 +32,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
     else None
   }
 
-  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+  override def stats: ArchCollectionStats = {
     var stats = ArchCollectionStats.Empty
     val size = CustomCollectionSpecifics
       .collectionInfo(customId)
@@ -51,11 +51,11 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
           .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
         locationId match {
           case "petabox" =>
-            CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
+            WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
           case "hdfs" | "ait-hdfs" =>
             val warcPath = StringUtil
               .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionLoader
+            WebArchiveLoader
               .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
           case "arch" | _ =>
             val parentCollectionId =
@@ -63,7 +63,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
                 StringUtil
                   .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
               else location
-            CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
+            WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
       case None =>
         throw new MethodNotSupportedException("Unknown location for collection " + id)
@@ -74,11 +74,11 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
     val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
     val locationPrefix = CustomCollectionSpecifics
       .location(customId)
-      .map(_ + CollectionLoader.CdxCollectionLocationSeparator)
+      .map(_ + WebArchiveLoader.CdxCollectionLocationSeparator)
       .getOrElse("")
     val cdx = CdxLoader.load(s"$cdxPath/*.cdx.gz").map { r =>
       val Seq(offsetStr, filename) = r.additionalFields
-      if (filename.contains(CollectionLoader.CdxCollectionLocationSeparator)) r
+      if (filename.contains(WebArchiveLoader.CdxCollectionLocationSeparator)) r
       else r.copy(additionalFields = Seq(offsetStr, locationPrefix + filename))
     }
     action(cdx)

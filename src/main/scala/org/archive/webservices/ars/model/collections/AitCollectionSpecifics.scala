@@ -5,7 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.{
   CollectionAccessContext,
-  CollectionLoader,
+  WebArchiveLoader,
   CollectionSourcePointer
 }
 import org.archive.webservices.ars.model.app.RequestContext
@@ -41,20 +41,16 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .fetchCollections(Seq(aitId), userId.flatMap(ArchUser.get(_)), foreignAccess)
       .headOption
 
-  override def stats(implicit
-      context: RequestContext = RequestContext.None): ArchCollectionStats =
-    collection
-      .map(AitCollectionSpecifics.getAitId)
-      .flatMap(cid =>
-        AitCollectionSpecifics
-          .getCollectionStatsPair(
-            cid,
-            if (context.user != ArchUser.None) Some(context.user) else None)
-          .map(_._2))
-      .getOrElse(ArchCollectionStats.Empty)
+  private var _stats: Option[ArchCollectionStats] = None
+  override def stats: ArchCollectionStats = _stats.getOrElse {
+    _stats = Some(AitCollectionSpecifics.getCollectionStatsPair(aitId).map(_._2).getOrElse {
+      ArchCollectionStats.Empty
+    })
+    _stats.get
+  }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
-    CollectionLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
+    WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
 
   def randomAccess(
       context: CollectionAccessContext,
@@ -62,7 +58,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       pointer: CollectionSourcePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    CollectionLoader.randomAccessAit(
+    WebArchiveLoader.randomAccessAit(
       context,
       sourceId,
       inputPath + "/" + pointer.filename,
@@ -86,10 +82,8 @@ object AitCollectionSpecifics {
   private def userCollectionIdsCacheKey(aitUserId: Int): String =
     s"AitCollectionSpecifics:ucids:${aitUserId}"
 
-  private def collectionStatsCacheKey(collectionId: Int, user: Option[ArchUser]): String =
-    user
-      .map(u => s"AitCollectionSpecifics:cs:${u.id}:${collectionId}")
-      .getOrElse(s"AitCollectionSpecifics:cs:${collectionId}")
+  private def collectionStatsCacheKey(aitId: Int): String =
+    s"AitCollectionSpecifics:cs:${aitId}"
 
   private def putUserCollectionIds(
       aitUserId: Int,
@@ -103,19 +97,17 @@ object AitCollectionSpecifics {
     CacheUtil.get[UserCollectionIds](userCollectionIdsCacheKey(aitUserId))
 
   private def putCollectionStatsPair(
-      collectionId: Int,
-      user: Option[ArchUser],
+      aitId: Int,
       pair: CollectionStatsPair): CollectionStatsPair =
     CacheUtil
       .put[CollectionStatsPair](
-        collectionStatsCacheKey(collectionId, user),
+        collectionStatsCacheKey(aitId),
         pair,
         ttl = Some(cacheTTL))
 
-  private def getCollectionStatsPair(
-      collectionId: Int,
-      user: Option[ArchUser]): Option[CollectionStatsPair] =
-    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(collectionId, user))
+  private def getCollectionStatsPair(aitId: Int): Option[CollectionStatsPair] = {
+    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(aitId))
+  }
 
   private var _foreignCollectionsCursor: Option[HCursor] = None
   private def foreignCollectionsCursor: HCursor = _foreignCollectionsCursor.getOrElse {
@@ -184,8 +176,7 @@ object AitCollectionSpecifics {
       user: Option[ArchUser],
       useForeignAccess: Boolean = false): Seq[ArchCollection] =
     synchronized {
-      val cachedCollections =
-        aitIds.flatMap(aitId => getCollectionStatsPair(aitId, user).map(_._1))
+      val cachedCollections = aitIds.flatMap(getCollectionStatsPair).map(_._1)
       val uncachedIds = aitIds.toSet.diff(cachedCollections.map(getAitId).toSet)
       cachedCollections ++ {
         if (uncachedIds.isEmpty) Seq.empty
@@ -198,7 +189,7 @@ object AitCollectionSpecifics {
             .getOrElse(Seq.empty)
             // Cache these collections and stats and return the collections.
             .map(p => {
-              putCollectionStatsPair(getAitId(p._1), user, p)
+              putCollectionStatsPair(getAitId(p._1), p)
               p._1
             })
         }

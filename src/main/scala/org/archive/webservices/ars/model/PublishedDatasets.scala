@@ -5,6 +5,7 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.util.Common
@@ -21,8 +22,7 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
-  val MetadataFields: Set[String] =
-    Set("creator", "description", "licenseurl", "subject", "title")
+  val MetadataFields: Set[String] = Set("creator", "description", "licenseurl", "subject", "title")
   val DeleteCommentPrefix = "ARCH:"
 
   val ProhibitedJobs: Set[DerivationJob] = Set(WebPagesExtraction)
@@ -36,12 +36,12 @@ object PublishedDatasets {
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
   val MaxCollectionIdLength = 25
-  def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
+  def itemName(instance: DerivationJobInstance): String = {
     val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
-    val sourceId = collection.sourceId
+    val id = instance.conf.inputSpec.id
     val collectionId =
-      if (sourceId.length <= MaxCollectionIdLength) sourceId
-      else ArchCollection.prefix(sourceId).getOrElse("") + DigestUtil.md5Hex(sourceId).take(16)
+      if (id.length <= MaxCollectionIdLength) id
+      else ArchCollection.prefix(id).getOrElse("") + DigestUtil.md5Hex(id).take(16)
     val timestamp = instance.info.startTime
       .getOrElse(Instant.now)
       .truncatedTo(ChronoUnit.SECONDS)
@@ -65,18 +65,16 @@ object PublishedDatasets {
   }
 
   case class ItemInfo(
-      item: String,
-      collection: String,
-      source: String,
-      job: String,
-      sample: Boolean,
-      time: Instant,
-      complete: Boolean,
-      ark: Option[String]) {
+    item: String,
+    inputId: String,
+    job: String,
+    sample: Boolean,
+    time: Instant,
+    complete: Boolean,
+    ark: Option[String]) {
     def toJson(includeItem: Boolean): Json = {
       (if (includeItem) ListMap("item" -> item.asJson) else ListMap.empty) ++ Map(
-        "collection" -> collection.asJson,
-        "source" -> source.asJson,
+        "inputId" -> inputId.asJson,
         "job" -> job.asJson,
         "sample" -> sample.asJson,
         "time" -> time.toString.asJson,
@@ -86,12 +84,10 @@ object PublishedDatasets {
 
   def newItemInfo(
       itemName: String,
-      collection: ArchCollection,
       instance: DerivationJobInstance): ItemInfo = {
     ItemInfo(
       itemName,
-      collection.id,
-      collection.sourceId,
+      instance.conf.inputSpec.id,
       instance.job.id,
       instance.conf.isSample,
       Instant.now,
@@ -245,8 +241,16 @@ object PublishedDatasets {
 
   def dataset(
       jobId: String,
-      collection: ArchCollection,
-      sample: Boolean): Option[DerivationJobInstance] = {
+      conf: DerivationJobConf): Option[DerivationJobInstance] = {
+    DerivationJobConf
+      .collectionInstance(jobId, conf)
+      .filter(_.state == ProcessingState.Finished)
+  }
+
+  def dataset(
+     jobId: String,
+     collection: ArchCollection,
+     sample: Boolean): Option[DerivationJobInstance] = {
     DerivationJobConf
       .collectionInstance(jobId, collection, sample)
       .filter(_.state == ProcessingState.Finished)
@@ -254,19 +258,18 @@ object PublishedDatasets {
 
   def publish(
       jobId: String,
-      collection: ArchCollection,
-      sample: Boolean,
+      conf: DerivationJobConf,
       metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
-    for (instance <- dataset(jobId, collection, sample)) yield {
+    for (instance <- dataset(jobId, conf)) yield {
       val jobFilePath = jobFile(instance)
       if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
-        val item = itemName(collection, instance)
-        val itemInfo = newItemInfo(item, collection, instance)
+        val item = itemName(instance)
+        val itemInfo = newItemInfo(item, instance)
         if (!createItem(item, datasetMetadata(instance, itemInfo) ++ metadata)) {
           HdfsIO.delete(jobFilePath)
           throw new RuntimeException(s"Creating new Petabox item $item failed.")
         }
-        appendCollectionFile(DerivationJobConf.jobOutPath(collection), itemInfo)
+        appendCollectionFile(conf.outputPath, itemInfo)
         HdfsIO.writeLines(
           jobFilePath,
           Seq(itemInfo.toJson(includeItem = true).spaces4),
@@ -297,7 +300,6 @@ object PublishedDatasets {
         for {
           item <- cursor.get[String]("item").toOption
           collectionId <- cursor.get[String]("collection").toOption
-          sourceId <- cursor.get[String]("source").toOption
           jobId <- cursor.get[String]("job").toOption
           isSample <- cursor.get[Boolean]("sample").toOption
           time <- cursor.get[String]("time").toOption.map(Instant.parse)
@@ -305,7 +307,6 @@ object PublishedDatasets {
         } yield ItemInfo(
           item,
           collectionId,
-          sourceId,
           jobId,
           isSample,
           time,
@@ -316,7 +317,6 @@ object PublishedDatasets {
   }
 
   def complete(
-      collection: ArchCollection,
       instance: DerivationJobInstance,
       itemName: String): Boolean = {
     val jobFilePath = jobFile(instance)
@@ -326,7 +326,7 @@ object PublishedDatasets {
           jobFilePath,
           Seq(itemInfo.copy(complete = true).toJson(includeItem = true).spaces4),
           overwrite = true)
-        val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+        val collectionFilePath = collectionFile(instance.conf.outputPath)
         syncCollectionFile(collectionFilePath) {
           val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
             .flatMap(_.as[Map[String, Json]].toOption)

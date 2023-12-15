@@ -17,40 +17,35 @@ object DatasetPublication extends SparkJob {
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to publish a dataset on archive.org (internal system job)"
 
-  override def validateParams(
-      collection: ArchCollection,
-      conf: DerivationJobConf): Option[String] =
-    super
-      .validateParams(collection, conf)
-      .orElse {
-        conf.params.get[String]("dataset") match {
-          case Some(jobId) =>
-            PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
-              case Some(_) => Some("Derivation job " + jobId + " prohibited to be published.")
-              case None =>
-                PublishedDatasets.dataset(jobId, collection, conf.isSample) match {
-                  case Some(_) => None
-                  case None => Some("Derivation job " + jobId + " not found.")
-                }
-            }
-          case None => Some("No dataset specified.")
-        }
+  override def validateParams(conf: DerivationJobConf): Option[String] = {
+    super.validateParams(conf).orElse {
+      conf.params.get[String]("dataset") match {
+        case Some(jobId) =>
+          PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
+            case Some(_) => Some("Derivation job " + jobId + " prohibited to be published.")
+            case None =>
+              PublishedDatasets.dataset(jobId, conf) match {
+                case Some(_) => None
+                case None => Some("Derivation job " + jobId + " not found.")
+              }
+          }
+        case None => Some("No dataset specified.")
       }
-      .orElse {
-        conf.params.values.get("metadata") match {
-          case Some(json) =>
-            PublishedDatasets.validateMetadata(PublishedDatasets.parseJsonMetadata(json))
-          case None => Some("No metadata specified.")
-        }
+    }.orElse {
+      conf.params.values.get("metadata") match {
+        case Some(json) =>
+          PublishedDatasets.validateMetadata(PublishedDatasets.parseJsonMetadata(json))
+        case None => Some("No metadata specified.")
       }
+    }
+  }
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     for {
       jobId <- conf.params.get[String]("dataset")
-      collection <- ArchCollection.get(conf.collectionId)
-      dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
+      dataset <- PublishedDatasets.dataset(jobId, conf)
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
-      itemInfo <- PublishedDatasets.publish(jobId, collection, conf.isSample, metadata)
+      itemInfo <- PublishedDatasets.publish(jobId, conf, metadata)
     } yield {
       if (itemInfo.complete) Future(true)
       else {
@@ -71,7 +66,7 @@ object DatasetPublication extends SparkJob {
                   throw new RuntimeException(s"Uploading $f to Petabox item $itemName failed. - $error")
               }
             }
-          PublishedDatasets.complete(collection, dataset, itemName)
+          PublishedDatasets.complete(dataset, itemName)
         }
       }
     }
@@ -81,8 +76,7 @@ object DatasetPublication extends SparkJob {
     val instance = super.history(conf)
     for {
       jobId <- conf.params.get[String]("dataset")
-      collection <- ArchCollection.get(conf.collectionId)
-      dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
+      dataset <- PublishedDatasets.dataset(jobId, conf)
     } {
       val jobFilePath = PublishedDatasets.jobFile(dataset)
       for (info <- PublishedDatasets.jobItem(jobFilePath)) {

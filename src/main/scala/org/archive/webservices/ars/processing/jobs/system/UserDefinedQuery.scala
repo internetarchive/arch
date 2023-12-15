@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.system
 
-import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
@@ -81,10 +81,8 @@ object UserDefinedQuery extends SparkJob {
     }
   }
 
-  override def validateParams(
-      collection: ArchCollection,
-      conf: DerivationJobConf): Option[String] =
-    super.validateParams(collection, conf).orElse {
+  override def validateParams(conf: DerivationJobConf): Option[String] = {
+    super.validateParams(conf).orElse {
       validateFields[String](
         conf.params,
         Seq("surtPrefix", "surtPrefixes"),
@@ -104,11 +102,12 @@ object UserDefinedQuery extends SparkJob {
         }
       }
     }
+  }
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, UserDefinedQuery, conf)
-      CollectionLoader.loadCdx(conf.collectionId, conf.inputPath) { rdd =>
+      WebArchiveLoader.loadCdx(conf.inputSpec) { rdd =>
         val paramsBc = sc.broadcast(conf.params)
         val filtered = rdd
           .mapPartitions { partition =>

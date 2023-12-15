@@ -4,14 +4,9 @@ import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model._
-import org.archive.webservices.ars.model.api.{
-  ApiFieldType,
-  ApiResponseObject,
-  ApiResponseType,
-  Collection,
-  Dataset
-}
+import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.FormatUtil
@@ -138,8 +133,7 @@ class ApiController extends BaseController {
             .getOrElse(params),
           sample)
       case _ =>
-        val conf = DerivationJobConf.collection(collection, sample)
-        Some(if (params.isEmpty) conf else conf.copy(params = params))
+        Some(DerivationJobConf.collection(collection, params, sample))
     }
   }
 
@@ -155,7 +149,7 @@ class ApiController extends BaseController {
       job <- JobManager.get(jobId)
       conf <- conf(job, collection, sample, params)
     } yield {
-      job.validateParams(collection, conf).map(e => BadRequest(e)).getOrElse {
+      job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
         if (rerun) job.reset(conf)
         val history = job.history(conf)
         val queued =
@@ -164,7 +158,6 @@ class ApiController extends BaseController {
               conf,
               { instance =>
                 instance.user = context.userOpt
-                instance.collection = collection
               })
           } else None
         queued match {
@@ -197,6 +190,36 @@ class ApiController extends BaseController {
             params = p)
         case None =>
           BadRequest("Invalid POST body, not a valid JSON job parameters object.")
+      }
+    }
+  }
+
+  post("/runjob/:jobid") {
+    ensureLogin(redirect = false, useSession = true) { implicit context =>
+      parse(request.body).right.toOption.map(_.hcursor) match {
+        case Some(cursor) => {
+          val rerun = params.get("rerun").contains("true")
+          val sample = params.get("sample").contains("true")
+          val user = cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
+          for {
+            job <- JobManager.get(params("jobid"))
+            conf <- DerivationJobConf.fromJson(cursor, sample)
+          } yield {
+            job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
+              if (rerun) job.reset(conf)
+              val history = job.history(conf)
+              val queued = if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
+                job.enqueue(conf, _.user = user)
+              } else None
+              queued match {
+                case Some(instance) => jobStateResponse(instance)
+                case None => jobStateResponse(history)
+              }
+            }
+          }
+        }.getOrElse(NotFound())
+        case None =>
+          BadRequest("Invalid POST body, no valid JSON object.")
       }
     }
   }

@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.model.collections.filespecs
+package org.archive.webservices.ars.model.collections.inputspecs
 import java.io.InputStream
 
 class SimpleFileRecord (

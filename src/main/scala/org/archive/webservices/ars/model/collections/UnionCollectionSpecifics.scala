@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
-import org.archive.webservices.ars.processing.{DerivationJobInstance, DerivationJobParameters}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, DerivationJobParameters}
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.RddUtil
@@ -29,13 +29,12 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics with 
         sourceId))
   }
 
-  override def stats(implicit context: RequestContext): ArchCollectionStats =
-    ArchCollectionStats.Empty
+  override def stats: ArchCollectionStats = ArchCollectionStats.Empty
 
-  override def inputSize(instance: DerivationJobInstance): Long = {
+  override def inputSize(conf: DerivationJobConf): Long = {
     UnionCollectionSpecifics
-      .collections(instance.conf.params)
-      .map(_.specifics.inputSize(instance))
+      .collections(conf.params)
+      .map(_.specifics.inputSize(conf))
       .filter(_ > -1)
       .sum
   }

@@ -1,11 +1,11 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.filespecs.{FileRecord, SimpleFileRecord}
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, SimpleFileRecord}
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
-import org.archive.webservices.ars.processing.DerivationJobInstance
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
@@ -17,13 +17,13 @@ abstract class CollectionSpecifics {
   def sourceId: String = id
 
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
-  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats
-  def inputSize(instance: DerivationJobInstance): Long = instance.collection.stats.size
+  def stats: ArchCollectionStats
+  def inputSize(conf: DerivationJobConf): Long = conf.inputSpec.collection.stats.size
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
 
   def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) {
     rdd =>
-      action(CollectionLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
+      action(WebArchiveLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
   }
 
   def randomAccess(

@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs
 
 import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -31,13 +31,13 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWaneGeneration, conf)
-      CollectionLoader.loadWarcsWithSource(conf.collectionId, conf.inputPath) { rdd =>
+      WebArchiveLoader.loadWarcsWithSource(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](
             rdd
-              .map { case (pointer, records) =>
+              .map { case (filename, records) =>
                 (
-                  new Path(pointer.filename).getName,
+                  new Path(filename).getName,
                   records.chain(_.filter(_.http.exists(http =>
                     http.mime.contains("text/html") && http.status == 200))))
               }

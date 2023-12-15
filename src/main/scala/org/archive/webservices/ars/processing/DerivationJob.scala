@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
@@ -51,5 +53,11 @@ trait DerivationJob {
 
   def logJobInfo: Boolean = true
 
-  def validateParams(collection: ArchCollection, conf: DerivationJobConf): Option[String] = None
+  def validateParams(conf: DerivationJobConf): Option[String] = None
+
+  def inputSize(conf: DerivationJobConf): Long = {
+    if (InputSpec.isCollectionBased(conf.inputSpec)) {
+      conf.inputSpec.collection.specifics.inputSize(conf)
+    } else conf.inputSpec.size
+  }
 }

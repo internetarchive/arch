@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec.isCollectionBased
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
 import org.archive.webservices.ars.util.UUID
@@ -14,20 +15,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   var user: Option[ArchUser] = None
 
-  private var _collection: Option[ArchCollection] = None
-  def collection: ArchCollection =
-    _collection.orElse {
-      _collection = ArchCollection.get(conf.collectionId)
-      _collection
-    } match {
-      case Some(collection) => collection
-      case None =>
-        throw new RuntimeException(
-          s"Collection ${conf.collectionId} of job ${uuid} (${job.id}, $conf) not found.")
-    }
-  def collection_=(c: ArchCollection): Unit = _collection = Some(c)
-
-  lazy val inputSize: Long = collection.specifics.inputSize(this)
+  lazy val inputSize: Long = job.inputSize(conf)
 
   var attempt: Int = 1
   var slots: Int = 1
@@ -89,7 +77,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
           case ProcessingState.Finished =>
             info = info.setFinishedTime(now)
             if (job.logCollectionInfo) {
-              for (info <- ArchCollectionInfo.get(conf.collectionId)) {
+              for (info <- ArchCollectionInfo.get(conf.inputSpec.collectionId)) {
                 info
                   .setLastJob(job.id, conf.isSample, now)
                   .save()

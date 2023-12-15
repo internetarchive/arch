@@ -4,6 +4,8 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
@@ -14,23 +16,39 @@ import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 import java.io.{BufferedInputStream, InputStream}
 import scala.util.Try
 
-object CollectionLoader {
+object WebArchiveLoader {
   val WasapiPageSize = 100
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
   val CdxSkipDistance: Long = 10.mb
   val CdxCollectionLocationSeparator = ":"
 
-  def loadCdx[R](collectionId: String, inputPath: String)(action: RDD[CdxRecord] => R): R = {
-    CollectionSpecifics.get(collectionId) match {
-      case Some(specifics) => specifics.loadCdx(inputPath)(action)
-      case None => loadCdxFromWarcFiles(inputPath, collectionId)(action)
-    }
+  def loadCdx[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = {
+    if (InputSpec.isCollectionBased(spec)) {
+      val (collectionId, inputPath) = (spec.collectionId, spec.inputPath)
+      CollectionSpecifics.get(collectionId) match {
+        case Some(specifics) => specifics.loadCdx(inputPath)(action)
+        case None => loadCdxFromWarcFiles(inputPath, collectionId)(action)
+      }
+    } else loadCdxFromWarcFiles(spec)(action)
   }
+
+  def loadCdxFromWarcFiles[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R =
+    loadCdxFromWarcFileRecords(filterWarcFiles(spec))(action)
 
   def loadCdxFromWarcFiles[R](inputPath: String, sourceId: String)(
       action: RDD[CdxRecord] => R): R = {
     loadWarcFiles(inputPath)(rdd => action(loadCdxFromWarcGzStreams(rdd, sourceId)))
+  }
+
+  def loadCdxFromWarcFileRecords[R](rdd: RDD[FileRecord])(action: RDD[CdxRecord] => R): R = {
+    action(rdd.flatMap { record =>
+      CdxUtil.fromWarcGzStream(record.filename, record.access).map { r =>
+        val Seq(offsetStr, filename) = r.additionalFields
+        r.copy(additionalFields =
+          Seq(offsetStr, record.path + "/" + filename))
+      }
+    })
   }
 
   def loadCdxFromWarcGzStreams(
@@ -45,30 +63,34 @@ object CollectionLoader {
     }
   }
 
-  def loadWarcFiles[R](collectionId: String, inputPath: String)(
-      action: RDD[(CollectionSourcePointer, InputStream)] => R): R = {
-    CollectionSpecifics.get(collectionId) match {
-      case Some(specifics) =>
-        val sourceId = specifics.sourceId
-        specifics.loadWarcFiles(inputPath)(rdd =>
-          action(rdd.map { case (file, in) =>
-            (CollectionSourcePointer(sourceId, file), in)
-          }))
-      case None =>
-        loadWarcFiles(inputPath)(rdd =>
-          action(rdd.map { case (file, in) =>
-            (CollectionSourcePointer(collectionId, file), in)
-          }))
+  def filterWarcFiles(spec: InputSpec): RDD[FileRecord] = {
+    spec.loader.load(spec).filter { record =>
+      val withoutGz = record.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
+      withoutGz.endsWith(Sparkling.WarcExt) || withoutGz.endsWith(Sparkling.ArcExt)
     }
   }
 
-  def loadWarcsWithSource[R](collectionId: String, inputPath: String)(
-      action: RDD[(CollectionSourcePointer, CleanupIterator[WarcRecord])] => R): R = {
-    loadWarcFiles(collectionId, inputPath)(rdd =>
+  def loadWarcFiles[R](spec: InputSpec)(action: RDD[(String, InputStream)] => R): R = {
+    if (InputSpec.isCollectionBased(spec)) {
+      val (collectionId, inputPath) = (spec.collectionId, spec.inputPath)
+      CollectionSpecifics.get(collectionId) match {
+        case Some(specifics) =>
+          specifics.loadWarcFiles(inputPath)(action)
+        case None =>
+          loadWarcFiles(inputPath)(action)
+      }
+    } else {
+      action(filterWarcFiles(spec).map { record =>
+        (record.filename, record.access)
+      })
+    }
+  }
+
+  def loadWarcsWithSource[R](inputSpec: InputSpec)(
+      action: RDD[(String, CleanupIterator[WarcRecord])] => R): R = {
+    loadWarcFiles(inputSpec)(rdd =>
       action(rdd.map { case (p, in) =>
-        val warcs = WarcLoader
-          .load(in)
-          .filter(r => r.isResponse || r.isRevisit)
+        val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
         (
           p,
           IteratorUtil.cleanup(
@@ -81,8 +103,8 @@ object CollectionLoader {
       }))
   }
 
-  def loadWarcs[R](id: String, inputPath: String)(action: RDD[WarcRecord] => R): R =
-    loadWarcsWithSource(id, inputPath)(rdd => action(rdd.mapPartitions(_.flatMap(_._2))))
+  def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R =
+    loadWarcsWithSource(spec)(rdd => action(rdd.mapPartitions(_.flatMap(_._2))))
 
   def loadWarcFiles[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
       action: RDD[(String, InputStream)] => R): R = action {

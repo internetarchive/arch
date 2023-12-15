@@ -6,7 +6,7 @@ import org.archive.webservices.archivespark.model.EnrichRootCompanion
 import org.archive.webservices.archivespark.model.dataloads.{ByteLoad, DataLoad, TextLoad}
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.util.Json.json
-import org.archive.webservices.ars.model.collections.filespecs.FileRecord
+import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 
 import scala.collection.immutable.ListMap
 import scala.util.Try

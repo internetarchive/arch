@@ -3,7 +3,7 @@ package org.archive.webservices.ars.processing.jobs.archivespark
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.dataspecs.DataSpec
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
-import org.archive.webservices.ars.model.collections.filespecs.FileRecord
+import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 abstract class ArchiveSparkTextLoadJob extends ArchiveSparkEnrichJob[ArchEnrichRoot[_] with PlainTextLoad.Root] {

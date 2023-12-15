@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
@@ -31,12 +31,12 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
     else None
   }
 
-  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+  override def stats: ArchCollectionStats = {
     ArchCollectionStats(HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength)
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
-    CollectionLoader.loadWarcFiles(inputPath)(action)
+    WebArchiveLoader.loadWarcFiles(inputPath)(action)
 
   def randomAccess(
       context: CollectionAccessContext,
@@ -44,7 +44,7 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       pointer: CollectionSourcePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    CollectionLoader.randomAccessHdfs(
+    WebArchiveLoader.randomAccessHdfs(
       context,
       inputPath + "/" + pointer.filename,
       offset,

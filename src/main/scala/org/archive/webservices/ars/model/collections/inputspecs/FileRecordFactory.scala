@@ -1,6 +1,5 @@
-package org.archive.webservices.ars.model.collections.filespecs
+package org.archive.webservices.ars.model.collections.inputspecs
 
-import io.circe.HCursor
 import org.archive.webservices.ars.io.CollectionAccessContext
 
 import java.io.InputStream
@@ -12,7 +11,7 @@ trait FileRecordFactory[Meta] extends Serializable {
 }
 
 object FileRecordFactory {
-  def apply[Meta](spec: HCursor): FileRecordFactory[Meta] = spec.get[String]("remote-source").toOption.flatMap {
+  def apply[Meta](spec: InputSpec): FileRecordFactory[Meta] = spec.str("remote-source").flatMap {
     case "s3" => Some(S3FileRecordFactory(spec))
     case _ => None
   }.map(_.asInstanceOf[FileRecordFactory[Meta]]).getOrElse {

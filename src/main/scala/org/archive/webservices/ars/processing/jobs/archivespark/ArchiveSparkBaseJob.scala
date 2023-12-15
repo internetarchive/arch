@@ -4,9 +4,9 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.ArchiveSpark
 import org.archive.webservices.archivespark.dataspecs.DataSpec
 import org.archive.webservices.archivespark.model.EnrichRoot
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.DerivativeOutput
-import org.archive.webservices.ars.model.collections.filespecs.FileRecord
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, FileCollectionSpecifics}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
@@ -38,24 +38,25 @@ abstract class ArchiveSparkBaseJob[Root <: EnrichRoot : ClassTag] extends SparkJ
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, this, conf)
-      if (conf.collectionId.startsWith(FileCollectionSpecifics.Prefix)) {
-        CollectionSpecifics.get(conf.collectionId).map { specifics =>
-          specifics.loadFiles(conf.inputPath) { rdd =>
-            IOHelper.sample(rdd, conf.sample) { rdd =>
+      conf.inputSpec.inputType match {
+        case InputSpec.InputType.Files =>
+          InputSpecLoader.get(conf.inputSpec).map { loader =>
+            IOHelper.sample(loader.load(conf.inputSpec), conf.sample) { rdd =>
               loadFilterEnrichSave(fileSpec(rdd), conf)
               true
             }
+          }.getOrElse {
+            throw new UnsupportedOperationException()
           }
-        }.getOrElse {
+        case InputSpec.InputType.WARC =>
+          WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
+            IOHelper.sample(rdd, conf.sample) { rdd =>
+              loadFilterEnrichSave(warcSpec(rdd), conf)
+              true
+            }
+          }
+        case _ =>
           throw new UnsupportedOperationException()
-        }
-      } else {
-        CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
-          IOHelper.sample(rdd, conf.sample) { rdd =>
-            loadFilterEnrichSave(warcSpec(rdd), conf)
-            true
-          }
-        }
       }
     }
   }

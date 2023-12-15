@@ -5,6 +5,7 @@ import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil, MailUtil}
 import org.archive.webservices.ars.{Arch, Keystone, ViewPathPatterns}
@@ -253,26 +254,28 @@ object JobStateManager {
     if (!subJob) {
       unregisterRunning(instance)
       Try(Keystone.registerJobEvent(instance.uuid, "FINISHED"))
-      for {
-        u <- instance.user
-        email <- u.email
-      } {
-        for (template <- instance.job.finishedNotificationTemplate) {
-          val collection = instance.collection
-          MailUtil.sendTemplate(
-            template,
-            Map(
-              "to" -> email,
-              "collectionsUrl" -> ViewPathPatterns.reverseAbs(ViewPathPatterns.Collections),
-              "datasetUrl" -> ViewPathPatterns.reverseAbs(
-                ViewPathPatterns.Dataset,
-                Map(
-                  "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
-                  "sample" -> instance.conf.isSample.toString)),
-              "jobName" -> instance.job.name,
-              "collectionName" -> collection.name,
-              "userName" -> u.fullName,
-              "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")))
+      if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+        for {
+          u <- instance.user
+          email <- u.email
+        } {
+          for (template <- instance.job.finishedNotificationTemplate) {
+            val collection = instance.conf.inputSpec.collection
+            MailUtil.sendTemplate(
+              template,
+              Map(
+                "to" -> email,
+                "collectionsUrl" -> ViewPathPatterns.reverseAbs(ViewPathPatterns.Collections),
+                "datasetUrl" -> ViewPathPatterns.reverseAbs(
+                  ViewPathPatterns.Dataset,
+                  Map(
+                    "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
+                    "sample" -> instance.conf.isSample.toString)),
+                "jobName" -> instance.job.name,
+                "collectionName" -> collection.name,
+                "userName" -> u.fullName,
+                "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")))
+          }
         }
       }
     }
@@ -284,16 +287,20 @@ object JobStateManager {
       if (!subJob) {
         registerFailed(instance)
         Try(Keystone.registerJobEvent(instance.uuid, "FAILED"))
-        if (!Arch.debugging && instance.attempt >= JobManager.MaxAttempts) {
-          for (template <- instance.job.failedNotificationTemplate)
-            MailUtil.sendTemplate(
-              template,
-              Map(
-                "jobName" -> instance.job.name,
-                "jobId" -> instance.job.id,
-                "collectionName" -> instance.collection.name,
-                "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-                "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+        if (InputSpec.isCollectionBased(instance.conf.inputSpec) && {
+          !Arch.debugging && instance.attempt >= JobManager.MaxAttempts
+        }) {
+            for (template <- instance.job.failedNotificationTemplate) {
+              val collection = instance.conf.inputSpec.collection
+              MailUtil.sendTemplate(
+                template,
+                Map(
+                  "jobName" -> instance.job.name,
+                  "jobId" -> instance.job.id,
+                  "collectionName" -> collection.name,
+                  "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+                  "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+            }
         }
       }
       println("Failed: " + str(instance))

@@ -4,7 +4,7 @@ import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.filespecs.{FileRecord, FileRecordFactory, MetaRemoteSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, FileRecordFactory, InputSpec, InputSpecLoader, MetaRemoteSpecLoader}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -31,7 +31,7 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
     else None
   }
 
-  override def stats(implicit context: RequestContext): ArchCollectionStats = {
+  override def stats: ArchCollectionStats = {
     ArchCollectionStats(FileCollectionSpecifics
       .collectionInfo(collectionId)
       .flatMap(_.get[Long]("size").toOption)
@@ -55,22 +55,19 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
     if (pointer.sourceId != sourceId) return super.randomAccess(context, inputPath, pointer, offset, positions)
-    val cursor = parser.parse(inputPath).right.get.hcursor
-    val factory = factories.getOrElseUpdate(inputPath, FileRecordFactory(cursor))
+    val spec = InputSpec(inputPath)
+    val factory = factories.getOrElseUpdate(inputPath, FileRecordFactory(spec))
     val in = factory.accessFile(pointer.filename, accessContext = context)
     IOUtil.skip(in, offset)
     IOHelper.splitMergeInputStreams(in, positions)
   }
 
   override def loadFiles[R](inputPath: String)(action: RDD[FileRecord] => R): R = {
-    val cursor = parser.parse(inputPath).right.get.hcursor
-    val spec = cursor.get[String]("type").toOption.flatMap {
-      case "meta-remote" => Some(MetaRemoteSpec)
-      case _ => None
-    }.getOrElse {
+    val spec = InputSpec(inputPath)
+    val loader = InputSpecLoader.get(spec).getOrElse {
       throw new UnsupportedOperationException()
     }
-    action(spec.load(cursor))
+    action(loader.load(spec))
   }
 
   override def sourceId: String = FileCollectionSpecifics.Prefix + collectionId

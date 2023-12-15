@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+
 class JobQueue(val name: String) {
   private var _pos = 0
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
@@ -25,7 +27,7 @@ class JobQueue(val name: String) {
 
   def dequeue(
       freeSlots: Int,
-      excludeSources: Set[String] = Set.empty,
+      excludeSources: Set[InputSpec.Identifier] = Set.empty,
       recentUsers: Seq[String]): Option[DerivationJobInstance] = synchronized {
     val idxs = recentUsers.zipWithIndex.map { case (user, idx) => user -> (idx + 1) }.toMap
     var minIdx = 0
@@ -33,7 +35,7 @@ class JobQueue(val name: String) {
     queue
       .dequeueFirst { instance =>
         instance.slots <= freeSlots && !excludeSources.contains(
-          instance.collection.sourceId) && instance.user.map(_.id).forall { id =>
+          instance.conf.inputSpec) && instance.user.map(_.id).forall { id =>
           idxs.get(id) match {
             case Some(idx) =>
               if (minIdx == 0 || idx < minIdx) {
