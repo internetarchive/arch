@@ -34,44 +34,42 @@ object ArsWatGeneration extends SparkJob with ArsJob {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWatGeneration, conf)
       WebArchiveLoader.loadWarcFiles(conf.inputSpec) { rdd =>
-        IOHelper
-          .sampleGrouped[String, InputStream, Boolean](
-            rdd.map { case (filename, in) =>
-              val file = new Path(filename).getName
-              val outFile = StringUtil.stripSuffix(file, Sparkling.GzipExt) + ".wat.gz"
-              val watIn = WAT.fromWarcStream(
-                in,
-                file,
-                Some(outFile),
-                maxHtmlContentLength = HttpUtil.MaxContentLength.toInt,
-                bubbleClose = true)
-              (file, IteratorUtil.cleanup(Gzip.decompressConcatenated(watIn), watIn.close))
+        IOHelper.sampleGrouped[String, InputStream, Boolean](
+          rdd.map { file =>
+            val outFile = StringUtil.stripSuffix(file.filename, Sparkling.GzipExt) + ".wat.gz"
+            val watIn = WAT.fromWarcStream(
+              file.access,
+              file.filename,
+              Some(outFile),
+              maxHtmlContentLength = HttpUtil.MaxContentLength.toInt,
+              bubbleClose = true)
+            (file.filename, IteratorUtil.cleanup(Gzip.decompressConcatenated(watIn), watIn.close))
+          },
+          conf.sample) { rdd =>
+          val outPath = conf.outputPath + relativeOutPath + resultDir
+          val processed = RddUtil.saveGroupedAsNamedFiles(
+            rdd.map { case (f, in) =>
+              val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
+              (
+                outFile,
+                IteratorUtil.whileDefined {
+                  Try(if (in.hasNext) Some {
+                    new CatchingInputStream(in.next)
+                  }
+                  else None).getOrElse {
+                    in.clear(false)
+                    None
+                  }
+                })
             },
-            conf.sample) { rdd =>
-            val outPath = conf.outputPath + relativeOutPath + resultDir
-            val processed = RddUtil.saveGroupedAsNamedFiles(
-              rdd.map { case (f, in) =>
-                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
-                (
-                  outFile,
-                  IteratorUtil.whileDefined {
-                    Try(if (in.hasNext) Some {
-                      new CatchingInputStream(in.next)
-                    }
-                    else None).getOrElse {
-                      in.clear(false)
-                      None
-                    }
-                  })
-              },
-              outPath,
-              compress = true,
-              skipIfExists = true)
-            RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
-              for (file <- files) DerivativeOutput.hashFileHdfs(file)
-            }
-            processed >= 0
+            outPath,
+            compress = true,
+            skipIfExists = true)
+          RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
+            for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
+          processed >= 0
+        }
       }
     }
   }

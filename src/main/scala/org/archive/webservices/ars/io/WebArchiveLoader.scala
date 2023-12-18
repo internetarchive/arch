@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
-import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, InputSpec}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
@@ -21,90 +21,59 @@ object WebArchiveLoader {
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
   val CdxSkipDistance: Long = 10.mb
-  val CdxCollectionLocationSeparator = ":"
 
-  def loadCdx[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = {
-    if (InputSpec.isCollectionBased(spec)) {
-      val (collectionId, inputPath) = (spec.collectionId, spec.inputPath)
-      CollectionSpecifics.get(collectionId) match {
-        case Some(specifics) => specifics.loadCdx(inputPath)(action)
-        case None => loadCdxFromWarcFiles(inputPath, collectionId)(action)
-      }
-    } else loadCdxFromWarcFiles(spec)(action)
-  }
+  def loadCdx[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = loadCdxFromWarcFiles(spec)(action)
 
-  def loadCdxFromWarcFiles[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R =
-    loadCdxFromWarcFileRecords(filterWarcFiles(spec))(action)
-
-  def loadCdxFromWarcFiles[R](inputPath: String, sourceId: String)(
-      action: RDD[CdxRecord] => R): R = {
-    loadWarcFiles(inputPath)(rdd => action(loadCdxFromWarcGzStreams(rdd, sourceId)))
+  def loadCdxFromWarcFiles[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = {
+    loadWarcFiles(spec)(loadCdxFromWarcFileRecords(_)(action))
   }
 
   def loadCdxFromWarcFileRecords[R](rdd: RDD[FileRecord])(action: RDD[CdxRecord] => R): R = {
     action(rdd.flatMap { record =>
       CdxUtil.fromWarcGzStream(record.filename, record.access).map { r =>
-        val Seq(offsetStr, filename) = r.additionalFields
-        r.copy(additionalFields =
-          Seq(offsetStr, record.path + "/" + filename))
+        val Seq(offsetStr, _) = r.additionalFields
+        r.copy(additionalFields = Seq(offsetStr, record.pointer.url))
       }
     })
   }
 
-  def loadCdxFromWarcGzStreams(
-      rdd: RDD[(String, InputStream)],
-      sourceId: String): RDD[CdxRecord] = {
+  def loadCdxFromWarcGzStreams(rdd: RDD[(FilePointer, InputStream)]): RDD[CdxRecord] = {
     rdd.flatMap { case (file, in) =>
-      CdxUtil.fromWarcGzStream(file, in).map { r =>
-        val Seq(offsetStr, filename) = r.additionalFields
-        r.copy(additionalFields =
-          Seq(offsetStr, sourceId + CdxCollectionLocationSeparator + filename))
+      CdxUtil.fromWarcGzStream(file.filename, in).map { r =>
+        val Seq(offsetStr, _) = r.additionalFields
+        r.copy(additionalFields = Seq(offsetStr, file.url))
       }
     }
   }
 
-  def filterWarcFiles(spec: InputSpec): RDD[FileRecord] = {
-    spec.loader.load(spec).filter { record =>
-      val withoutGz = record.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
-      withoutGz.endsWith(Sparkling.WarcExt) || withoutGz.endsWith(Sparkling.ArcExt)
-    }
-  }
-
-  def loadWarcFiles[R](spec: InputSpec)(action: RDD[(String, InputStream)] => R): R = {
-    if (InputSpec.isCollectionBased(spec)) {
-      val (collectionId, inputPath) = (spec.collectionId, spec.inputPath)
-      CollectionSpecifics.get(collectionId) match {
-        case Some(specifics) =>
-          specifics.loadWarcFiles(inputPath)(action)
-        case None =>
-          loadWarcFiles(inputPath)(action)
-      }
-    } else {
-      action(filterWarcFiles(spec).map { record =>
-        (record.filename, record.access)
+  def loadWarcFiles[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+    spec.loader.load(spec) { rdd =>
+      action(rdd.filter { record =>
+        val withoutGz = record.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
+        withoutGz.endsWith(Sparkling.WarcExt) || withoutGz.endsWith(Sparkling.ArcExt)
       })
     }
   }
 
-  def loadWarcsWithSource[R](inputSpec: InputSpec)(
-      action: RDD[(String, CleanupIterator[WarcRecord])] => R): R = {
-    loadWarcFiles(inputSpec)(rdd =>
-      action(rdd.map { case (p, in) =>
+  def loadWarcsRecords[R](inputSpec: InputSpec)(action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
+    loadWarcFiles(inputSpec) { rdd =>
+      action(rdd.map { file =>
+        val in = file.access
         val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
-        (
-          p,
-          IteratorUtil.cleanup(
-            IteratorUtil.whileDefined {
-              Try {
-                if (warcs.hasNext) Try(warcs.next).toOption else None
-              }.toOption.flatten
-            },
-            in.close))
-      }))
+        (file.pointer, IteratorUtil.cleanup(
+          IteratorUtil.whileDefined {
+            Try {
+              if (warcs.hasNext) Try(warcs.next).toOption else None
+            }.toOption.flatten
+          },
+          in.close))
+      })
+    }
   }
 
-  def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R =
-    loadWarcsWithSource(spec)(rdd => action(rdd.mapPartitions(_.flatMap(_._2))))
+  def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R = {
+    loadWarcsRecords(spec)(rdd => action(rdd.mapPartitions(_.flatMap(_._2))))
+  }
 
   def loadWarcFiles[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
       action: RDD[(String, InputStream)] => R): R = action {
@@ -135,8 +104,7 @@ object WebArchiveLoader {
     }
   }
 
-  def loadAitWarcFiles[R](aitId: Int, inputPath: String, cacheId: String)(
-      action: RDD[(String, InputStream)] => R): R = {
+  def loadAitWarcFiles[R](aitId: Int, inputPath: String, cacheId: String)(action: RDD[(String, InputStream)] => R): R = {
     val basicAuth = ArchConf.foreignAitAuthHeader
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
@@ -265,7 +233,7 @@ object WebArchiveLoader {
 
   private def loadWarcFilesViaCdx(cdxPath: String)(
       in: Iterator[
-        ((CollectionSourcePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
+        ((FilePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
         InputStream]): RDD[(String, InputStream)] = {
     val inputPath = s"$cdxPath/*.cdx.gz"
     val numFiles = HdfsIO.files(inputPath, recursive = false).size
@@ -294,14 +262,7 @@ object WebArchiveLoader {
             group
           }
           .map { case ((file, initialOffset), group) =>
-            val locationSeparatorIdx = file.lastIndexOf(CdxCollectionLocationSeparator)
-            val pointer =
-              if (locationSeparatorIdx < 0) CollectionSourcePointer("", file)
-              else
-                CollectionSourcePointer(
-                  file.take(locationSeparatorIdx),
-                  file.drop(locationSeparatorIdx + 1))
-            ((pointer, initialOffset), group.map { case (r, _, o, l) => (r, o, l) })
+            ((FilePointer.fromUrl(file), initialOffset), group.map { case (r, _, o, l) => (r, o, l) })
           }
         (
           file.split('/').last,

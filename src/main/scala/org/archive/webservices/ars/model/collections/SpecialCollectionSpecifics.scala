@@ -3,8 +3,9 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -35,13 +36,16 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
     ArchCollectionStats(HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength)
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
-    WebArchiveLoader.loadWarcFiles(inputPath)(action)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    WebArchiveLoader.loadWarcFiles(inputPath) { rdd =>
+      action(rdd.map{case (filename, in) => (pointer(filename), in)})
+    }
+  }
 
   def randomAccess(
       context: CollectionAccessContext,
       inputPath: String,
-      pointer: CollectionSourcePointer,
+      pointer: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
     WebArchiveLoader.randomAccessHdfs(

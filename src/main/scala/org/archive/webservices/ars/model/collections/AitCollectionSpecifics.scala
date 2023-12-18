@@ -5,10 +5,10 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.io.{
   CollectionAccessContext,
-  WebArchiveLoader,
-  CollectionSourcePointer
+  WebArchiveLoader
 }
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.ars.util.CacheUtil
@@ -49,15 +49,18 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
     _stats.get
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
-    WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId)(action)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId) { rdd =>
+      action(rdd.map{case (filename, in) => (pointer(filename), in)})
+    }
+  }
 
   def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
+                    context: CollectionAccessContext,
+                    inputPath: String,
+                    pointer: FilePointer,
+                    offset: Long,
+                    positions: Iterator[(Long, Long)]): InputStream = {
     WebArchiveLoader.randomAccessAit(
       context,
       sourceId,

@@ -26,15 +26,15 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor) extends InputS
   override lazy val size: Long = cursor.get[Long]("size").getOrElse(-1)
 }
 
-class CollectionBasedInputSpec(val collectionId: String, val inputPath: String) extends InputSpec {
+class CollectionBasedInputSpec(val collectionId: String, val inputPath: String, specOpt: Option[HCursor] = None) extends InputSpec {
   override val id: String = collectionId
   override val specType: String = CollectionBasedInputSpec.SpecType
   override val inputType: String = InputSpec.InputType.WARC
-  override lazy val cursor: HCursor = Map(
+  override lazy val cursor: HCursor = specOpt.getOrElse(Map(
     "type" -> specType,
     "collectionId" -> collectionId,
     "inputPath" -> inputPath,
-  ).asJson.hcursor
+  ).asJson.hcursor)
   override def size: Long = ArchCollection.get(collectionId).map(_.stats.size).getOrElse(-1)
   private var _collection: Option[ArchCollection] = None
   def collection: ArchCollection = _collection.orElse {
@@ -75,7 +75,7 @@ object InputSpec {
         collectionId <- cursor.get[String]("collectionId").toOption
         inputPath <- cursor.get[String]("inputPath").toOption
       } yield {
-        new CollectionBasedInputSpec(collectionId, inputPath)
+        new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
       }
     }.getOrElse {
       new DefaultInputSpec(specType.get, cursor)

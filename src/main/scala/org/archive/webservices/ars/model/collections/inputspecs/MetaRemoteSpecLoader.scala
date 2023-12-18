@@ -5,7 +5,7 @@ import org.archive.webservices.ars.io.CollectionAccessContext
 import org.archive.webservices.sparkling.Sparkling
 
 object MetaRemoteSpecLoader extends InputSpecLoader {
-  override def load(spec: InputSpec): RDD[FileRecord] = {
+  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory[Map[String, Any]](spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
@@ -29,7 +29,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
     }
   }.getOrElse {
     throw new RuntimeException("No meta filename and/or mime key specified.")
-  }
+  })
 
   def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
     spec.str("meta-source").flatMap {

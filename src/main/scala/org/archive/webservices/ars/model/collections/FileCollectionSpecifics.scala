@@ -2,9 +2,9 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer, IOHelper}
+import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, FileRecordFactory, InputSpec, InputSpecLoader, MetaRemoteSpecLoader}
+import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, FileRecordFactory, InputSpec, InputSpecLoader, MetaRemoteSpecLoader}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -38,36 +38,28 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
       .getOrElse(-1))
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = {
-    action(loadFiles(inputPath) { rdd =>
-      rdd.filter { file =>
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    InputSpecLoader.load(InputSpec(inputPath)) { rdd =>
+      action(rdd.filter { file =>
         val filename = file.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
         filename.endsWith(Sparkling.ArcExt) || filename.endsWith(Sparkling.WarcExt)
-      }.map(f => (f.filename, f.access))
-    })
+      }.map(f => (f.pointer, f.access)))
+    }
   }
 
   private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory[_]]
   override def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    if (pointer.sourceId != sourceId) return super.randomAccess(context, inputPath, pointer, offset, positions)
+                             context: CollectionAccessContext,
+                             inputPath: String,
+                             pointer: FilePointer,
+                             offset: Long,
+                             positions: Iterator[(Long, Long)]): InputStream = {
+    if (pointer.source != sourceId) return super.randomAccess(context, inputPath, pointer, offset, positions)
     val spec = InputSpec(inputPath)
     val factory = factories.getOrElseUpdate(inputPath, FileRecordFactory(spec))
     val in = factory.accessFile(pointer.filename, accessContext = context)
     IOUtil.skip(in, offset)
     IOHelper.splitMergeInputStreams(in, positions)
-  }
-
-  override def loadFiles[R](inputPath: String)(action: RDD[FileRecord] => R): R = {
-    val spec = InputSpec(inputPath)
-    val loader = InputSpecLoader.get(spec).getOrElse {
-      throw new UnsupportedOperationException()
-    }
-    action(loader.load(spec))
   }
 
   override def sourceId: String = FileCollectionSpecifics.Prefix + collectionId

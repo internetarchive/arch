@@ -31,13 +31,13 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWaneGeneration, conf)
-      WebArchiveLoader.loadWarcsWithSource(conf.inputSpec) { rdd =>
+      WebArchiveLoader.loadWarcsRecords(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](
             rdd
-              .map { case (filename, records) =>
+              .map { case (pointer, records) =>
                 (
-                  new Path(filename).getName,
+                  pointer.filename,
                   records.chain(_.filter(_.http.exists(http =>
                     http.mime.contains("text/html") && http.status == 200))))
               }

@@ -8,4 +8,5 @@ trait FileRecord {
   def path: String
   def access: InputStream
   def meta[A](key: String): Option[A] = None
+  def pointer: FilePointer = FilePointer(path + "/" + filename, filename)
 }

@@ -3,8 +3,9 @@ package org.archive.webservices.ars.model.collections
 import io.circe._
 import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.ars.util.CacheUtil
@@ -43,7 +44,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
     stats
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = action {
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = action({
     CustomCollectionSpecifics.location(customId) match {
       case Some(location) =>
         val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
@@ -68,17 +69,17 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
       case None =>
         throw new MethodNotSupportedException("Unknown location for collection " + id)
     }
-  }
+  }.map{case (filename, in) => (pointer(filename), in)})
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
     val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
     val locationPrefix = CustomCollectionSpecifics
       .location(customId)
-      .map(_ + WebArchiveLoader.CdxCollectionLocationSeparator)
+      .map(_ + FilePointer.SourceSeparator)
       .getOrElse("")
     val cdx = CdxLoader.load(s"$cdxPath/*.cdx.gz").map { r =>
       val Seq(offsetStr, filename) = r.additionalFields
-      if (filename.contains(WebArchiveLoader.CdxCollectionLocationSeparator)) r
+      if (filename.contains(FilePointer.SourceSeparator)) r
       else r.copy(additionalFields = Seq(offsetStr, locationPrefix + filename))
     }
     action(cdx)

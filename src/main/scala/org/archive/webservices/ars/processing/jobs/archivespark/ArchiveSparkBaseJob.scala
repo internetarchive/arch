@@ -40,18 +40,16 @@ abstract class ArchiveSparkBaseJob[Root <: EnrichRoot : ClassTag] extends SparkJ
       SparkJobManager.initThread(sc, this, conf)
       conf.inputSpec.inputType match {
         case InputSpec.InputType.Files =>
-          InputSpecLoader.get(conf.inputSpec).map { loader =>
-            IOHelper.sample(loader.load(conf.inputSpec), conf.sample) { rdd =>
-              loadFilterEnrichSave(fileSpec(rdd), conf)
+          InputSpecLoader.load(conf.inputSpec) { rdd =>
+            IOHelper.sample(rdd, conf.sample) { sample =>
+              loadFilterEnrichSave(fileSpec(sample), conf)
               true
             }
-          }.getOrElse {
-            throw new UnsupportedOperationException()
           }
         case InputSpec.InputType.WARC =>
           WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
-            IOHelper.sample(rdd, conf.sample) { rdd =>
-              loadFilterEnrichSave(warcSpec(rdd), conf)
+            IOHelper.sample(rdd, conf.sample) { sample =>
+              loadFilterEnrichSave(warcSpec(sample), conf)
               true
             }
           }

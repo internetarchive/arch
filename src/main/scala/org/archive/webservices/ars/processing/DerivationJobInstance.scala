@@ -1,5 +1,6 @@
 package org.archive.webservices.ars.processing
 
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec.isCollectionBased
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
@@ -76,11 +77,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             JobStateManager.logFailed(this)
           case ProcessingState.Finished =>
             info = info.setFinishedTime(now)
-            if (job.logCollectionInfo) {
+            if (job.logCollectionInfo && InputSpec.isCollectionBased(conf.inputSpec)) {
               for (info <- ArchCollectionInfo.get(conf.inputSpec.collectionId)) {
-                info
-                  .setLastJob(job.id, conf.isSample, now)
-                  .save()
+                info.setLastJob(job.id, conf.isSample, now).save()
               }
             }
             JobStateManager.logFinished(this)

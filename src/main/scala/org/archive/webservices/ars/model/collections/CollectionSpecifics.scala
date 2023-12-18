@@ -1,9 +1,9 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, SimpleFileRecord}
+import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, SimpleFileRecord}
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
 import org.archive.webservices.sparkling.cdx.CdxRecord
@@ -19,32 +19,21 @@ abstract class CollectionSpecifics {
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
   def stats: ArchCollectionStats
   def inputSize(conf: DerivationJobConf): Long = conf.inputSpec.collection.stats.size
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R
 
   def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) {
     rdd =>
-      action(WebArchiveLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
+      action(WebArchiveLoader.loadCdxFromWarcGzStreams(rdd))
   }
 
   def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream
+                    context: CollectionAccessContext,
+                    inputPath: String,
+                    pointer: FilePointer,
+                    offset: Long,
+                    positions: Iterator[(Long, Long)]): InputStream
 
-  def loadFiles[R](inputPath: String)(action: RDD[FileRecord] => R): R = {
-    loadWarcFiles(inputPath)(rdd => action(rdd.flatMap { case (filename, in) =>
-      WarcLoader.load(in).flatMap { warc =>
-        for {
-          http <- warc.http
-          mime <- http.mime
-        } yield {
-          new SimpleFileRecord(filename, mime, inputPath, http.payload)
-        }
-      }
-    }))
-  }
+  def pointer(filename: String): FilePointer = FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
 }
 
 object CollectionSpecifics {

@@ -1,6 +1,5 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import io.circe.HCursor
 import org.archive.webservices.ars.io.CollectionAccessContext
 
 import java.io.{FileNotFoundException, InputStream}

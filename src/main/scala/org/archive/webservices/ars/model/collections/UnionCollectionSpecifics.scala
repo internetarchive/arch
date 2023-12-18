@@ -1,8 +1,9 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionSourcePointer}
+import org.archive.webservices.ars.io.CollectionAccessContext
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, DerivationJobParameters}
 import org.archive.webservices.sparkling.cdx.CdxRecord
@@ -53,8 +54,8 @@ class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics with 
     union(RddUtil.emptyRDD[A], sourceIds.flatMap(CollectionSpecifics.get), 0)
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = {
-    loadUnion[(String, InputStream), R](inputPath, s => s.loadWarcFiles(s.inputPath))(action)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    loadUnion[(FilePointer, InputStream), R](inputPath, s => s.loadWarcFiles(s.inputPath))(action)
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
