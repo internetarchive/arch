@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.sparkling.util.RddUtil
 
-object UnionSpecLoader extends InputSpecLoader {
+object MultiSpecLoader extends InputSpecLoader {
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     val specs = spec.cursor.downField("specs").values.toIterator.flatten.map(json => InputSpec(json.hcursor))
     var union = RddUtil.emptyRDD[FileRecord]
