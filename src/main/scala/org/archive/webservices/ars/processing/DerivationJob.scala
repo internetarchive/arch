@@ -1,8 +1,7 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -15,6 +14,8 @@ trait DerivationJob {
   def name: String
 
   def uuid: String
+
+  def relativeOutPath: String
 
   val stage = "Processing"
 
@@ -34,10 +35,11 @@ trait DerivationJob {
     Some(instance)
   }
 
-  def history(conf: DerivationJobConf): DerivationJobInstance =
+  def history(conf: DerivationJobConf): DerivationJobInstance = {
     JobManager.getRegistered(id, conf).getOrElse {
       DerivationJobInstance(this, conf)
     }
+  }
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
@@ -50,8 +52,6 @@ trait DerivationJob {
   def finishedNotificationTemplate: Option[String] = Some("finished")
 
   def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
-
-  def logJobInfo: Boolean = true
 
   def validateParams(conf: DerivationJobConf): Option[String] = None
 

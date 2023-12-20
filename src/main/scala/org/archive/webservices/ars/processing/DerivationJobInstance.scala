@@ -1,15 +1,20 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec.isCollectionBased
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
 import org.archive.webservices.ars.util.UUID
 
 import java.time.Instant
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
-  val uuid: String = UUID.uuid7str
+  var predefUuid: Option[String] = None
+
+  lazy val uuid: String = {
+    val uuid = predefUuid.orElse(info.uuid).getOrElse(UUID.uuid7str)
+    info.uuid = Some(uuid)
+    uuid
+  }
 
   var registered = false
   var state: Int = ProcessingState.NotStarted
@@ -37,12 +42,11 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def queue: Option[JobQueue] = _queue
 
-  def queueIndex: Int =
-    _queue
-      .map { q =>
-        if (queuePos >= q.pos) queuePos - q.pos else queuePos + (Int.MaxValue - q.pos)
-      }
-      .getOrElse(-1)
+  def queueIndex: Int = {
+    _queue.map { q =>
+      if (queuePos >= q.pos) queuePos - q.pos else queuePos + (Int.MaxValue - q.pos)
+    }.getOrElse(-1)
+  }
 
   private var activeStage: Option[DerivationJobInstance] = None
 
@@ -55,7 +59,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def active: DerivationJobInstance = activeStage.getOrElse(this)
 
-  def info: ArchJobInstanceInfo = ArchJobInstanceInfo.get(conf.outputPath + "/" + job.id)
+  def outPath: String = conf.outputPath + job.relativeOutPath
+
+  def info: ArchJobInstanceInfo = ArchJobInstanceInfo(outPath)
 
   def updateState(value: Int): Unit = {
     val prevState = state
@@ -63,9 +69,8 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
     if (registered) {
       if (job.partialOf.isEmpty) {
         val now = Instant.now
-        var info = this.info
         if (prevState == ProcessingState.NotStarted) {
-          info = info.setStartTime(now)
+          info.started = Some(now)
         }
         state match {
           case ProcessingState.Queued =>
@@ -73,10 +78,10 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
           case ProcessingState.Running =>
             JobStateManager.logRunning(this)
           case ProcessingState.Failed =>
-            info = info.setFinishedTime(now)
+            info.finished = Some(now)
             JobStateManager.logFailed(this)
           case ProcessingState.Finished =>
-            info = info.setFinishedTime(now)
+            info.finished = Some(now)
             if (job.logCollectionInfo && InputSpec.isCollectionBased(conf.inputSpec)) {
               for (info <- ArchCollectionInfo.get(conf.inputSpec.collectionId)) {
                 info.setLastJob(job.id, conf.isSample, now).save()
@@ -84,7 +89,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             }
             JobStateManager.logFinished(this)
         }
-        if (job.logJobInfo) info.save(conf.outputPath + "/" + job.id)
+        info.save(outPath)
       } else {
         state match {
           case ProcessingState.Queued =>

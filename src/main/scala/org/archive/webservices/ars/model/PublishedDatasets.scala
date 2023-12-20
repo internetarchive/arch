@@ -42,7 +42,7 @@ object PublishedDatasets {
     val collectionId =
       if (id.length <= MaxCollectionIdLength) id
       else ArchCollection.prefix(id).getOrElse("") + DigestUtil.md5Hex(id).take(16)
-    val timestamp = instance.info.startTime
+    val timestamp = instance.info.started
       .getOrElse(Instant.now)
       .truncatedTo(ChronoUnit.SECONDS)
       .toString

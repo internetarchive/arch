@@ -110,19 +110,10 @@ object JobStateManager {
       job.enqueue(
         conf,
         { instance =>
-          instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
-          instance.attempt = meta
-            .downField("attempt")
-            .focus
-            .flatMap(_.asNumber)
-            .flatMap(_.toInt)
-            .getOrElse(1) + 1
-          instance.slots = meta
-            .downField("slots")
-            .focus
-            .flatMap(_.asNumber)
-            .flatMap(_.toInt)
-            .getOrElse(1)
+          instance.predefUuid = meta.get[String]("uuid").toOption
+          instance.user = meta.get[String]("user").toOption.flatMap(ArchUser.get)
+          instance.attempt = meta.get[Int]("attempt").getOrElse(1) + 1
+          instance.slots = meta.get[Int]("slots").getOrElse(1)
           if (instance.slots < JobManager.MaxSlots) instance.slots += 1
         })
     }
@@ -178,6 +169,7 @@ object JobStateManager {
           job.enqueue(
             conf,
             { instance =>
+              instance.predefUuid = values.get("uuid").flatMap(_.asString)
               instance.user = values
                 .get("user")
                 .flatMap(_.asString)

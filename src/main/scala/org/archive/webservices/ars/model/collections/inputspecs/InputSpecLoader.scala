@@ -10,6 +10,7 @@ object InputSpecLoader {
   def get(spec: InputSpec): Option[InputSpecLoader] = spec.specType match {
     case "collection" => Some(ArchCollectionSpecLoader)
     case "meta-remote" => Some(MetaRemoteSpecLoader)
+    case "union" => Some(UnionSpecLoader)
     case _ => None
   }
 

@@ -28,40 +28,6 @@ class DerivationJobConf private (
   def serialize: String = toJson.noSpaces
 }
 
-//trait DerivationJobConf extends Serializable {
-//  def inputSpec: InputSpec
-//  def outputPath: String
-//  def sample: Int
-//  def params: DerivationJobParameters
-//  def isSample: Boolean = sample >= 0
-//  def toJson: Json
-//  def serialize: String = toJson.noSpaces
-//}
-//
-//case class SpecBasedDerivationJobConf private (
-//  inputSpec: InputSpec,
-//  outputPath: String,
-//  sample: Int = -1,
-//  params: DerivationJobParameters = DerivationJobParameters.Empty) extends DerivationJobConf {
-//  def toJson: Json = ListMap (
-//    "spec" -> inputSpec.cursor.focus.get,
-//    "outputPath" -> outputPath.asJson,
-//    "sample" -> sample.asJson,
-//    "params" -> params.toJson
-//  ).asJson
-//}
-//
-//case class CollectionBasedDerivationJobConf private (
-//  inputSpec: CollectionBasedInputSpec,
-//  outputPath: String,
-//  sample: Int = -1,
-//  params: DerivationJobParameters = DerivationJobParameters.Empty) extends DerivationJobConf {
-//  def toJson: Json = {
-//    if (params.isEmpty) (inputSpec.collectionId, inputSpec.inputPath, outputPath, sample).asJson
-//    else (inputSpec.collectionId, inputSpec.inputPath, outputPath, sample, params.toJson).asJson
-//  }
-//}
-
 object DerivationJobConf {
   val SampleSize = 100
 

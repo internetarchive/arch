@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -22,8 +21,7 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   val name = "Named entities"
   val uuid = "01895065-8f59-7a8a-b432-79e20d749f4a"
   val category: ArchJobCategory = ArchJobCategories.Text
-  def description =
-    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
+  def description = "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"

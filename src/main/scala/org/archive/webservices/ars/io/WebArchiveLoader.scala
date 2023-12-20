@@ -3,7 +3,7 @@ package org.archive.webservices.ars.io
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
 import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, InputSpec}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling._
@@ -14,6 +14,8 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, Rd
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
+import java.net.URL
+import scala.collection.mutable
 import scala.util.Try
 
 object WebArchiveLoader {
@@ -269,6 +271,32 @@ object WebArchiveLoader {
           new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream])
       })
       .coalesce(numFiles / WarcFilesPerPartition + 1)
+  }
+
+
+  def loadWarcFilesViaCdxFiles(cdxPath: String): RDD[(String, InputStream)] = {
+    val accessContext = CollectionAccessContext.fromLocalArchConf
+    loadWarcFilesViaCdx(cdxPath) { partition =>
+      accessContext.init()
+      val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
+      partition.map { case ((pointer, initialOffset), positions) =>
+        val offsetPositions = positions.map { case (_, offset, length) =>
+          (offset - initialOffset, length)
+        }
+        if (pointer.isHttpSource) {
+          val in = new URL(pointer.url).openStream
+          IOUtil.skip(in, initialOffset)
+          IOHelper.splitMergeInputStreams(in, offsetPositions, buffered = false)
+        } else if (pointer.isCollectionSource) {
+          GenericRandomAccess.randomAccess(
+            accessContext,
+            pointer,
+            initialOffset,
+            offsetPositions,
+            collectionSpecificsCache)
+        } else throw new UnsupportedOperationException()
+      }
+    }
   }
 
   def loadWarcFilesViaCdxFromCollections(

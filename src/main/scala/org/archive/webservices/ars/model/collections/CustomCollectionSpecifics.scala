@@ -1,16 +1,15 @@
 package org.archive.webservices.ars.model.collections
 
 import io.circe._
-import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
+import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
-import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
@@ -45,9 +44,9 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = action({
+    val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
     CustomCollectionSpecifics.location(customId) match {
       case Some(location) =>
-        val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
         val locationId = StringUtil
           .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
         locationId match {
@@ -66,8 +65,7 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
               else location
             WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
         }
-      case None =>
-        throw new MethodNotSupportedException("Unknown location for collection " + id)
+      case None => WebArchiveLoader.loadWarcFilesViaCdxFiles(cdxPath)
     }
   }.map{case (filename, in) => (pointer(filename), in)})
 

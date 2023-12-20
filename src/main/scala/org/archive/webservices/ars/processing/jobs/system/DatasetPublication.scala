@@ -17,6 +17,8 @@ object DatasetPublication extends SparkJob {
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to publish a dataset on archive.org (internal system job)"
 
+  override def relativeOutPath: String = id
+
   override def validateParams(conf: DerivationJobConf): Option[String] = {
     super.validateParams(conf).orElse {
       conf.params.get[String]("dataset") match {
@@ -93,6 +95,4 @@ object DatasetPublication extends SparkJob {
   override def reset(conf: DerivationJobConf): Unit = {}
 
   override val finishedNotificationTemplate: Option[String] = None
-
-  override val logJobInfo: Boolean = true
 }

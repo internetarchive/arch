@@ -34,7 +34,7 @@ object Dataset {
       sample = jobInstance.conf.sample,
       state = jobInstance.stateStr,
       numFiles = jobInstance.outFiles.size,
-      startTime = jobInstance.info.startTime.map(FormatUtil.instantTimeString),
-      finishedTime = jobInstance.info.finishedTime.map(FormatUtil.instantTimeString))
+      startTime = jobInstance.info.started.map(FormatUtil.instantTimeString),
+      finishedTime = jobInstance.info.finished.map(FormatUtil.instantTimeString))
   }
 }

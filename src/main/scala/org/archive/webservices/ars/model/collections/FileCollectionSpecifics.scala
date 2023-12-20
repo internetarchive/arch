@@ -59,7 +59,7 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
     val factory = factories.getOrElseUpdate(inputPath, FileRecordFactory(spec))
     val in = factory.accessFile(pointer.filename, accessContext = context)
     IOUtil.skip(in, offset)
-    IOHelper.splitMergeInputStreams(in, positions)
+    IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }
 
   override def sourceId: String = FileCollectionSpecifics.Prefix + collectionId

@@ -105,8 +105,9 @@ class ApiController extends BaseController {
       }
     } ++ {
       val info = instance.info
-      info.startTime.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++
-        info.finishedTime.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
+      info.started.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++ {
+        info.finished.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
+      }
     }
   }.asJson
 
@@ -201,6 +202,7 @@ class ApiController extends BaseController {
           val rerun = params.get("rerun").contains("true")
           val sample = params.get("sample").contains("true")
           val user = cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
+          val uuid = cursor.get[String]("uuid").toOption
           for {
             job <- JobManager.get(params("jobid"))
             conf <- DerivationJobConf.fromJson(cursor, sample)
@@ -209,7 +211,10 @@ class ApiController extends BaseController {
               if (rerun) job.reset(conf)
               val history = job.history(conf)
               val queued = if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
-                job.enqueue(conf, _.user = user)
+                job.enqueue(conf, { instance =>
+                  instance.predefUuid = uuid
+                  instance.user = user
+                })
               } else None
               queued match {
                 case Some(instance) => jobStateResponse(instance)
