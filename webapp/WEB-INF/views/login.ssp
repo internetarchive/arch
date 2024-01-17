@@ -17,6 +17,6 @@
     <input type="password" id="pass" name="password" ng-model="password" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
     <input type="hidden" name="next" value="<%=unescape(next)%>">
     <button class="padding-top padding-bottom half small">Log In</button>
-    <a href="<%=unescape(ArchConf.aitBaseUrl)%>/forgot_password" class="smaller right margin-top one">Forgot Password?</a>
+    <a href="<%=unescape(ArchConf.keystoneBaseUrl)%>/accounts/password_reset/" class="smaller right margin-top one">Forgot Password?</a>
 </form>
 </div>
