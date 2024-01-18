@@ -163,6 +163,8 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val keystoneBaseUrl: Option[String] =
     confStrValue(envKey = "ARCH_KEYSTONE_BASE_URL", configKey = "keystoneBaseUrl")
+  val keystonePublicBaseUrl: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_PUBLIC_BASE_URL", configKey = "keystonePublicBaseUrl")
   val keystonePrivateApiKey: Option[String] =
     confStrValue(envKey = "ARCH_KEYSTONE_PRIVATE_API_KEY", configKey = "keystonePrivateApiKey")
 
