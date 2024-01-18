@@ -11,7 +11,7 @@ trait FileRecordFactory extends Serializable {
 }
 
 object FileRecordFactory {
-  def apply(spec: InputSpec): FileRecordFactory = spec.str("remote-source").flatMap {
+  def apply(spec: InputSpec): FileRecordFactory = spec.str("data-source").flatMap {
     case "s3" => Some(S3FileRecordFactory(spec))
     case "hdfs" => Some(HdfsFileRecordFactory(spec))
     case _ => None

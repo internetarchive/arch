@@ -5,7 +5,7 @@ import io.circe.HCursor
 import scala.reflect.{ClassTag, classTag}
 import scala.util.Try
 
-trait FileMeta {
+trait FileMeta extends Serializable {
   def str(key: String): Option[String] = get[String](key).orElse(strs(key).headOption)
   def strs(key: String): Seq[String] = gets(key)
   def int(key: String): Option[Int] = get[Int](key)

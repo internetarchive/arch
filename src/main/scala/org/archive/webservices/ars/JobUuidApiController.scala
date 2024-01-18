@@ -6,7 +6,7 @@ import org.scalatra.{ActionResult, Forbidden, NotFound}
 
 class JobUuidApiController extends BaseController {
   val UuidParam = "uuid"
-  val UuidPattern = s"/$UuidParam/"
+  val UuidPattern = s"/:$UuidParam/"
 
   def response(action: DerivationJobInstance => ActionResult): ActionResult = {
     ensureLogin(redirect = false, useSession = true) { implicit context =>

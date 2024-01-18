@@ -13,6 +13,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
     for {
       mimeKey <- spec.str("meta-mime-key")
     } yield {
+      val mapFile = pathMapping(spec)
       val accessContext = CollectionAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
         accessContext.init()
@@ -21,7 +22,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
         partition.flatMap { case (filename, meta) =>
           for {
             mime <- meta.str(mimeKey)
-          } yield recordFactory.get(mapFile(filename, spec), mime, meta)
+          } yield recordFactory.get(mapFile(filename), mime, meta)
         }
       }
     }
@@ -29,15 +30,14 @@ object MetaFilesSpecLoader extends InputSpecLoader {
     throw new RuntimeException("No meta filename and/or mime key specified.")
   })
 
-  def mapFile(metafile: String, spec: InputSpec): String = {
-    spec.str("remote-path-mapping").map {
+  def pathMapping(spec: InputSpec): String => String = {
+    spec.str("data-path-mapping").map {
       case "same-prefix" =>
-        val prefix = spec.str("meta-suffix").map { suffix =>
-          metafile.stripSuffix(suffix)
+        spec.str("meta-suffix").map { suffix =>
+          (_: String).stripSuffix(suffix) + "*"
         }.getOrElse {
           throw new RuntimeException("No meta filename suffix specified.")
         }
-        prefix + "*"
     }.getOrElse {
       throw new UnsupportedOperationException()
     }

@@ -61,8 +61,8 @@ class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean) exten
 
 object S3FileRecordFactory {
   def apply(spec: InputSpec): S3FileRecordFactory = {
-    spec.str("remote-location").map { location =>
-      val longestPrefixMapping = spec.str("remote-path-mapping").contains("longest-prefix")
+    spec.str("data-location").map { location =>
+      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
       new S3FileRecordFactory(location, longestPrefixMapping)
     }.getOrElse {
       throw new RuntimeException("No location URL specified.")

@@ -216,20 +216,22 @@ object JobStateManager {
     }
   }
 
+  def ks(action: => Unit): Unit = for (_ <- ArchConf.keystoneBaseUrl) Try(action)
+
   def logRegister(instance: DerivationJobInstance): Unit = {
     println("Registered: " + str(instance))
-    Try(Keystone.registerJobStart(instance))
+    ks(Keystone.registerJobStart(instance))
   }
 
   def logUnregister(instance: DerivationJobInstance): Unit = {
     println("Unregistered: " + str(instance))
-    Try(Keystone.registerJobComplete(instance))
+    ks(Keystone.registerJobComplete(instance))
   }
 
   def logQueued(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      Try(Keystone.registerJobEvent(instance.uuid, "QUEUED"))
+      ks(Keystone.registerJobEvent(instance.uuid, "QUEUED"))
     }
     println("Queued: " + str(instance))
   }
@@ -237,7 +239,7 @@ object JobStateManager {
   def logRunning(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      Try(Keystone.registerJobEvent(instance.uuid, "RUNNING"))
+      ks(Keystone.registerJobEvent(instance.uuid, "RUNNING"))
     }
     println("Running: " + str(instance))
   }
@@ -245,7 +247,7 @@ object JobStateManager {
   def logFinished(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       unregisterRunning(instance)
-      Try(Keystone.registerJobEvent(instance.uuid, "FINISHED"))
+      ks(Keystone.registerJobEvent(instance.uuid, "FINISHED"))
       if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
         for {
           u <- instance.user
@@ -278,7 +280,7 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
-        Try(Keystone.registerJobEvent(instance.uuid, "FAILED"))
+        ks(Keystone.registerJobEvent(instance.uuid, "FAILED"))
         if (InputSpec.isCollectionBased(instance.conf.inputSpec) && {
           !Arch.debugging && instance.attempt >= JobManager.MaxAttempts
         }) {

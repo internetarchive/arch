@@ -21,6 +21,7 @@ object ApiController {
   def jobStateJson(instance: DerivationJobInstance): Json = {
     ListMap(
       "id" -> instance.job.id.asJson,
+      "uuid" -> instance.uuid.asJson,
       "name" -> instance.job.name.asJson,
       "sample" -> instance.conf.sample.asJson,
       "state" -> instance.stateStr.asJson,
