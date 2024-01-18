@@ -2,25 +2,30 @@ package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing.jobs._
-import org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntitiesExtraction
+import org.archive.webservices.ars.processing.jobs.archivespark._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
+import _root_.io.circe.parser._
+import _root_.io.circe.syntax._
+import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.sparkling.io.HdfsIO
 
 object JobManager {
   var MaxAttempts = 3
   var MaxSlots = 3
+  val InstanceUuidFileSuffix = ".uuid.json"
 
-  private val instances =
-    mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
-
+  private val confInstances = mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
+  private val uuidInstances = mutable.Map.empty[String, DerivationJobInstance]
   // to be removed when ARCH becomes pure IO job processor
-  private val collectionInstances =
-    mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
+  private val collectionInstances = mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
   val userJobs: Set[DerivationJob] = Set(
-    ArchiveSparkEntitiesExtraction,
+    ArchiveSparkEntityExtraction,
+    ArchiveSparkEntityExtractionChinese,
     ArsLgaGeneration,
     ArsWaneGeneration,
     ArsWatGeneration,
@@ -49,21 +54,59 @@ object JobManager {
     job.name -> job
   }.toMap
 
+  val uuidLookup: Map[String, DerivationJob] = jobs.values.map { job =>
+    job.uuid -> job
+  }.toMap
+
   def get(id: String): Option[DerivationJob] = jobs.get(id)
 
-  def getByCollection(id: String): Set[DerivationJobInstance] =
-    collectionInstances.get(id).map(_.toSet).getOrElse(Set.empty)
+  def getCollectionInstances(collectionId: String): Set[DerivationJobInstance] = {
+    collectionInstances.get(collectionId).map(_.toSet).getOrElse(Set.empty)
+  }
+
+  private def registerUuid(instance: DerivationJobInstance): Unit = {
+    uuidInstances(instance.uuid) = instance
+    val uuidPath = instance.conf + "/" + instance.uuid + InstanceUuidFileSuffix
+    HdfsIO.writeLines(
+      uuidPath,
+      Seq((ListMap(
+        "jobUuid" -> instance.job.uuid.asJson,
+        "conf" -> instance.conf.toJson
+      ) ++ {
+        instance.user.map("user" -> _.id.asJson)
+      }).asJson.spaces4),
+      overwrite = true)
+  }
+
+  def getInstance(uuid: String): Option[DerivationJobInstance] = {
+    uuidInstances.get(uuid).orElse {
+      ArchConf.uuidJobOutPath.map(_ + "/" + uuid).map { uuidPath =>
+        uuidPath + "/" + uuid + InstanceUuidFileSuffix
+      }.flatMap { uuidFilePath =>
+        parse(HdfsIO.lines(uuidFilePath).mkString).toOption.map(_.hcursor).flatMap { cursor =>
+          for {
+            job <- cursor.get[String]("jobUuid").toOption.flatMap(uuidLookup.get)
+            conf <- cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
+          } yield {
+            val instance = job.history(conf)
+            instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get(_))
+            instance
+          }
+        }
+      }
+    }
+  }
 
   def registered: Set[DerivationJobInstance] = collectionInstances.values.flatten.toSet
 
-  def register(instance: DerivationJobInstance): Boolean = instances.synchronized {
+  def register(instance: DerivationJobInstance): Boolean = confInstances.synchronized {
     val conf = instance.conf
-    val confJobs = instances.getOrElseUpdate(conf, mutable.Map.empty)
+    val confJobs = confInstances.getOrElseUpdate(conf, mutable.Map.empty)
     if (!confJobs.contains(instance.job.id)) {
       confJobs.update(instance.job.id, instance)
+      registerUuid(instance)
       if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
-        val collectionJobs =
-          collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
+        val collectionJobs = collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
         collectionJobs.add(instance)
       }
       instance.registered = true
@@ -72,34 +115,34 @@ object JobManager {
     } else false
   }
 
-  def unregister(instance: DerivationJobInstance): Boolean = instances.synchronized {
+  def unregister(instance: DerivationJobInstance): Unit = confInstances.synchronized {
     val conf = instance.conf
-    val confJobs = instances.get(conf)
-    val removed = confJobs.flatMap(_.remove(instance.job.id))
-    if (removed.isDefined) {
-      if (confJobs.get.isEmpty) instances.remove(conf)
-      if (removed.get.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
-        for (collectionJobs <- collectionInstances.get(conf.inputSpec.collectionId)) {
-          collectionJobs.remove(removed.get)
-          if (collectionJobs.isEmpty) collectionInstances.remove(conf.inputSpec.collectionId)
-        }
+    val confJobs = confInstances.get(conf)
+    for (jobs <- confJobs) {
+      jobs.remove(instance.job.id)
+      if (jobs.isEmpty) confInstances.remove(conf)
+    }
+    uuidInstances.remove(instance.uuid)
+    if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
+      for (collectionJobs <- collectionInstances.get(conf.inputSpec.collectionId)) {
+        collectionJobs.remove(instance)
+        if (collectionJobs.isEmpty) collectionInstances.remove(conf.inputSpec.collectionId)
       }
-      instance.registered = false
-      JobStateManager.logUnregister(instance)
-      instance.unregistered()
-      if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
-        instance.job.reset(instance.conf)
-        instance.job.enqueue(
-          instance.conf,
-          { newInstance =>
-            newInstance.user = instance.user
-            newInstance.conf.inputSpec.collection = instance.conf.inputSpec.collection
-            newInstance.attempt = instance.attempt + 1
-            if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
-          })
-      }
-      true
-    } else false
+    }
+    instance.registered = false
+    JobStateManager.logUnregister(instance)
+    instance.unregistered()
+    if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
+      instance.job.reset(instance.conf)
+      instance.job.enqueue(
+        instance.conf,
+        { newInstance =>
+          newInstance.predefUuid = Some(instance.uuid)
+          newInstance.user = instance.user
+          newInstance.attempt = instance.attempt + 1
+          if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
+        })
+    }
   }
 
   def getInstance(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
@@ -123,8 +166,8 @@ object JobManager {
   }
 
   def getRegistered(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] =
-    instances.get(conf).flatMap(_.get(jobId))
+    confInstances.get(conf).flatMap(_.get(jobId))
 
   def registered(conf: DerivationJobConf): Seq[DerivationJobInstance] =
-    instances.get(conf).toSeq.flatMap(_.values)
+    confInstances.get(conf).toSeq.flatMap(_.values)
 }

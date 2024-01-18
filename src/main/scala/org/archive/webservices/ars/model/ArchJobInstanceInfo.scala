@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model
 import _root_.io.circe.syntax._
 import io.circe.Json
 import io.circe.parser.parse
-import org.archive.webservices.ars.processing.DerivationJobInstance
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
 
@@ -12,6 +12,7 @@ import scala.collection.immutable.ListMap
 
 class ArchJobInstanceInfo private () {
   var uuid: Option[String] = None
+  var conf: Option[DerivationJobConf] = None
   var started: Option[Instant] = None
   var finished: Option[Instant] = None
 
@@ -21,6 +22,8 @@ class ArchJobInstanceInfo private () {
     HdfsIO.writeLines(
       file,
       Seq((ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
+        conf.map("conf" -> _.toJson)
+      } ++ {
         started.map("started" -> _.toEpochMilli.asJson)
       } ++ {
         finished.map("finished" -> _.toEpochMilli.asJson)
@@ -44,6 +47,7 @@ object ArchJobInstanceInfo {
           case Some(cursor) =>
             val info = new ArchJobInstanceInfo()
             info.uuid = cursor.get[String]("uuid").toOption
+            info.conf = cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
             info.started = cursor.get[Long]("started").toOption.map(Instant.ofEpochSecond)
             info.finished = cursor.get[Long]("finished").toOption.map(Instant.ofEpochSecond)
             info

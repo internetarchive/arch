@@ -1,10 +1,10 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import io.circe.Json
 import org.archive.webservices.archivespark.functions.{HtmlText, StringContent}
+import org.archive.webservices.archivespark.model.EnrichRootCompanion
 import org.archive.webservices.archivespark.model.dataloads.{ByteLoad, DataLoad, TextLoad}
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
-import org.archive.webservices.archivespark.model.{EnrichRootCompanion, TypedEnrichRoot}
 import org.archive.webservices.archivespark.util.Json.json
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.warc.WarcRecord

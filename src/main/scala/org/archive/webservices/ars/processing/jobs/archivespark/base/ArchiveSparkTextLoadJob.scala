@@ -1,13 +1,14 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.dataspecs.DataSpec
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 abstract class ArchiveSparkTextLoadJob extends ArchiveSparkEnrichJob[ArchEnrichRoot[_] with PlainTextLoad.Root] {
-  override def filter(rdd: RDD[ArchEnrichRoot[_] with PlainTextLoad.Root]): RDD[ArchEnrichRoot[_] with PlainTextLoad.Root] = {
+  override def filter(rdd: RDD[ArchEnrichRoot[_] with PlainTextLoad.Root], conf: DerivationJobConf): RDD[ArchEnrichRoot[_] with PlainTextLoad.Root] = {
     rdd.filter(_.mime.startsWith("text/"))
   }
 

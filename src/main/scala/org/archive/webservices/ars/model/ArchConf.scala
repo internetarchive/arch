@@ -15,6 +15,7 @@ trait ArchConf {
   def collectionCachePath: String
   def globalJobOutPath: String
   def jobOutPath: String
+  def uuidJobOutPath: Option[String]
   def jobLoggingPath: String
   def customCollectionPath: String
   def localTempPath: String
@@ -61,6 +62,7 @@ object ArchConf extends ArchConf {
   def collectionCachePath: String = conf.collectionCachePath
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
+  def uuidJobOutPath: Option[String] = conf.uuidJobOutPath
   def jobLoggingPath: String = conf.jobLoggingPath
   def customCollectionPath: String = conf.customCollectionPath
   def localTempPath: String = conf.localTempPath

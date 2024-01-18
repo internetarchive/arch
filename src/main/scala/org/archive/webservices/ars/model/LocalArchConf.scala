@@ -84,6 +84,8 @@ class LocalArchConf extends ArchConf with Serializable {
   val jobOutPath: String =
     confStrValue("ARCH_JOB_OUTPUT_PATH", "jobOutPath").getOrElse(globalJobOutPath + "-users")
 
+  def uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
+
   val jobLoggingPath: String =
     confStrValue("ARCH_JOB_LOGGING_PATH", "jobLoggingPath").getOrElse("/var/log/arch")
 

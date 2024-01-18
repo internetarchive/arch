@@ -1,10 +1,9 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.dataspecs.DataSpec
 import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
-import org.archive.webservices.sparkling.warc.WarcRecord
 
 class ArchFileSpec(@transient val rdd: RDD[FileRecord]) extends DataSpec[FileRecord, ArchFileRecord] {
   override def load(sc: SparkContext, minPartitions: Int): RDD[FileRecord] = rdd

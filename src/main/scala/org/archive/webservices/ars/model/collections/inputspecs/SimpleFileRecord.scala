@@ -6,4 +6,6 @@ class SimpleFileRecord (
   val mime: String,
   val path: String,
   val access: InputStream
-) extends FileRecord
+) extends FileRecord {
+  override def meta: FileMeta = FileMeta.empty
+}

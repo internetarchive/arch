@@ -1,17 +1,31 @@
 package org.archive.webservices.ars.processing
 
+import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollectionInfo, ArchConf, ArchJobInstanceInfo, DerivativeOutput}
 import org.archive.webservices.ars.util.UUID
+import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.time.Instant
+
+object DerivationJobInstance {
+  def uuid: String = {
+    var uuid = UUID.uuid7str
+    for (path <- ArchConf.uuidJobOutPath) {
+      val uuidPath = new Path(path + "/" + uuid)
+      while (HdfsIO.fs.exists(uuidPath)) uuid = UUID.uuid7str
+      HdfsIO.fs.mkdirs(uuidPath)
+    }
+    uuid
+  }
+}
 
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var predefUuid: Option[String] = None
 
   lazy val uuid: String = {
-    val uuid = predefUuid.orElse(info.uuid).getOrElse(UUID.uuid7str)
+    val uuid = predefUuid.orElse(info.uuid).getOrElse(DerivationJobInstance.uuid)
     info.uuid = Some(uuid)
     uuid
   }
@@ -61,7 +75,11 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def outPath: String = conf.outputPath + job.relativeOutPath
 
-  def info: ArchJobInstanceInfo = ArchJobInstanceInfo(outPath)
+  def info: ArchJobInstanceInfo = {
+    val info = ArchJobInstanceInfo(outPath)
+    info.conf = Some(conf)
+    info
+  }
 
   def updateState(value: Int): Unit = {
     val prevState = state

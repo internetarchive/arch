@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, TypedEnrichable}

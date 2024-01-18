@@ -75,7 +75,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
 object AitCollectionSpecifics {
   val Prefix = "ARCHIVEIT-"
 
-  private def getAitId(c: ArchCollection): Int = c.sourceId.stripPrefix(Prefix).toInt
+  def getAitId(c: ArchCollection): Int = c.sourceId.stripPrefix(Prefix).toInt
 
   private val cacheTTL: Duration = 10.minutes
 

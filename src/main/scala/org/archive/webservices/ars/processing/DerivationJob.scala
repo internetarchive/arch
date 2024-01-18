@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchConf, ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -33,6 +33,10 @@ trait DerivationJob {
     val instance = DerivationJobInstance(this, conf)
     get(instance)
     Some(instance)
+  }
+
+  def history(uuid: String, conf: DerivationJobConf): DerivationJobInstance = {
+    JobManager.getInstance(uuid).getOrElse(history(conf))
   }
 
   def history(conf: DerivationJobConf): DerivationJobInstance = {

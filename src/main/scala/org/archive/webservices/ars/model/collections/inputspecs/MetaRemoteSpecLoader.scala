@@ -6,7 +6,7 @@ import org.archive.webservices.sparkling.Sparkling
 
 object MetaRemoteSpecLoader extends InputSpecLoader {
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
-    val recordFactory = FileRecordFactory[Map[String, Any]](spec)
+    val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
       filenameKey <- spec.str("meta-filename-key")
@@ -21,9 +21,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
           for {
             filename <- meta.get(filenameKey).filter(_ != null).map(_.toString)
             mime <- meta.get(mimeKey).filter(_ != null).map(_.toString)
-          } yield {
-            recordFactory.get(filename, mime, meta)
-          }
+          } yield recordFactory.get(filename, mime, FileMeta(meta))
         }
       }
     }

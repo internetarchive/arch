@@ -36,14 +36,13 @@ class CollectionBasedInputSpec(val collectionId: String, val inputPath: String, 
     "inputPath" -> inputPath,
   ).asJson.hcursor)
   override def size: Long = ArchCollection.get(collectionId).map(_.stats.size).getOrElse(-1)
-  private var _collection: Option[ArchCollection] = None
+  private[inputspecs] var _collection: Option[ArchCollection] = None
   def collection: ArchCollection = _collection.orElse {
     _collection = ArchCollection.get(collectionId)
     _collection
   }.getOrElse {
       throw new RuntimeException(s"Collection ${collectionId} not found.")
   }
-  def collection_=(c: ArchCollection): Unit = _collection = Some(c)
 }
 
 object CollectionBasedInputSpec {
@@ -84,7 +83,7 @@ object InputSpec {
 
   def apply(collection: ArchCollection, inputPath: String): InputSpec = {
     val spec = apply(collection.id, inputPath)
-    spec.collection = collection
+    spec._collection = Some(collection)
     spec
   }
 

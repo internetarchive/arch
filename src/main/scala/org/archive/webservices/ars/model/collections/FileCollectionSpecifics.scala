@@ -47,7 +47,7 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
     }
   }
 
-  private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory[_]]
+  private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory]
   override def randomAccess(
                              context: CollectionAccessContext,
                              inputPath: String,

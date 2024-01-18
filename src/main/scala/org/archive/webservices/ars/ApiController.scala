@@ -17,6 +17,37 @@ import scala.collection.immutable.{ListMap, Set}
 import scala.util.Try
 import scala.util.matching.Regex
 
+object ApiController {
+  def jobStateJson(instance: DerivationJobInstance): Json = {
+    ListMap(
+      "id" -> instance.job.id.asJson,
+      "name" -> instance.job.name.asJson,
+      "sample" -> instance.conf.sample.asJson,
+      "state" -> instance.stateStr.asJson,
+      "started" -> (instance.state != ProcessingState.NotStarted).asJson,
+      "finished" -> (instance.state == ProcessingState.Finished).asJson,
+      "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
+      val active = instance.active
+      Seq("activeStage" -> active.job.stage.asJson, "activeState" -> active.stateStr.asJson) ++ {
+        active.queue match {
+          case Some(queue) =>
+            Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)
+          case None => Seq.empty
+        }
+      }
+    } ++ {
+      val info = instance.info
+      info.started.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++ {
+        info.finished.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
+      }
+    }
+  }.asJson
+
+  def jobStateResponse(instance: DerivationJobInstance): ActionResult = {
+    Ok(jobStateJson(instance).spaces4, Map("Content-Type" -> "application/json"))
+  }
+}
+
 class ApiController extends BaseController {
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
 
@@ -86,35 +117,6 @@ class ApiController extends BaseController {
     }
   }
 
-  private def jobStateJson(instance: DerivationJobInstance): Json = {
-    ListMap(
-      "id" -> instance.job.id.asJson,
-      "name" -> instance.job.name.asJson,
-      "sample" -> instance.conf.sample.asJson,
-      "state" -> instance.stateStr.asJson,
-      "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-      "finished" -> (instance.state == ProcessingState.Finished).asJson,
-      "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
-      val active = instance.active
-      Seq("activeStage" -> active.job.stage.asJson, "activeState" -> active.stateStr.asJson) ++ {
-        active.queue match {
-          case Some(queue) =>
-            Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)
-          case None => Seq.empty
-        }
-      }
-    } ++ {
-      val info = instance.info
-      info.started.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++ {
-        info.finished.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
-      }
-    }
-  }.asJson
-
-  private def jobStateResponse(instance: DerivationJobInstance): ActionResult = {
-    Ok(jobStateJson(instance).spaces4, Map("Content-Type" -> "application/json"))
-  }
-
   private def conf(
       job: DerivationJob,
       collection: ArchCollection,
@@ -162,8 +164,8 @@ class ApiController extends BaseController {
               })
           } else None
         queued match {
-          case Some(instance) => jobStateResponse(instance)
-          case None => jobStateResponse(history)
+          case Some(instance) => ApiController.jobStateResponse(instance)
+          case None => ApiController.jobStateResponse(history)
         }
       }
     }
@@ -202,23 +204,23 @@ class ApiController extends BaseController {
           val rerun = params.get("rerun").contains("true")
           val sample = params.get("sample").contains("true")
           val user = cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
-          val uuid = cursor.get[String]("uuid").toOption
+          val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid)
           for {
             job <- JobManager.get(params("jobid"))
-            conf <- DerivationJobConf.fromJson(cursor, sample)
+            conf <- DerivationJobConf.fromJson(cursor, sample, ArchConf.uuidJobOutPath.map(_ + "/" + uuid))
           } yield {
             job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
               if (rerun) job.reset(conf)
-              val history = job.history(conf)
+              val history = job.history(uuid, conf)
               val queued = if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
                 job.enqueue(conf, { instance =>
-                  instance.predefUuid = uuid
+                  instance.predefUuid = Some(uuid)
                   instance.user = user
                 })
               } else None
               queued match {
-                case Some(instance) => jobStateResponse(instance)
-                case None => jobStateResponse(history)
+                case Some(instance) => ApiController.jobStateResponse(instance)
+                case None => ApiController.jobStateResponse(history)
               }
             }
           }
@@ -263,7 +265,7 @@ class ApiController extends BaseController {
         .flatMap { collection =>
           val jobId = params("jobid")
           val sample = params.get("sample").contains("true")
-          DerivationJobConf.collectionInstance(jobId, collection, sample).map(jobStateResponse)
+          DerivationJobConf.collectionInstance(jobId, collection, sample).map(ApiController.jobStateResponse)
         }
         .getOrElse(NotFound())
     }
@@ -327,7 +329,7 @@ class ApiController extends BaseController {
       ArchCollection
         .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .map { collection =>
-          val active = JobManager.getByCollection(collection.id)
+          val active = JobManager.getCollectionInstances(collection.id)
           val instances = if (params.get("all").contains("true")) {
             active ++ Seq(false, true).flatMap { sample =>
               val conf = DerivationJobConf.collection(collection, sample = sample)
@@ -351,7 +353,7 @@ class ApiController extends BaseController {
           } else active
           val states = instances.toSeq
             .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
-            .map(jobStateJson)
+            .map(ApiController.jobStateJson)
           Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
         }
         .getOrElse(NotFound())
@@ -363,7 +365,7 @@ class ApiController extends BaseController {
       if (context.isAdmin) {
         val states = JobManager.registered.toSeq
           .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
-          .map(jobStateJson)
+          .map(ApiController.jobStateJson)
         Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
       } else Forbidden()
     }

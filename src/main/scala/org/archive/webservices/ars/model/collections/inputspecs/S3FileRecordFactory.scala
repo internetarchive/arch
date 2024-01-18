@@ -5,16 +5,14 @@ import org.archive.webservices.ars.io.CollectionAccessContext
 import java.io.{FileNotFoundException, InputStream}
 import java.net.URL
 import scala.io.Source
-import scala.util.Try
 
-class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean) extends FileRecordFactory[Map[String, Any]] {
-  class S3FileRecord private[S3FileRecordFactory] (val filename: String, val mime: String, meta: Map[String, Any]) extends FileRecord {
+class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean) extends FileRecordFactory {
+  class S3FileRecord private[S3FileRecordFactory] (val filename: String, val mime: String, val meta: FileMeta) extends FileRecord {
     override lazy val path: String = locateFile(filename)
     override def access: InputStream = accessFile(filename, resolve = false)
-    override def meta[A](key: String): Option[A] = meta.get(key).flatMap(v => Try(v.asInstanceOf[A]).toOption)
   }
 
-  override def get(filename: String, mime: String, meta: Map[String, Any]): FileRecord = new S3FileRecord(filename, mime, meta)
+  override def get(filename: String, mime: String, meta: FileMeta): FileRecord = new S3FileRecord(filename, mime, meta)
 
   def accessFile(filename: String, resolve: Boolean = true, accessContext: CollectionAccessContext): InputStream = {
     val url = if (resolve) locateFile(filename) + "/" + filename else filename

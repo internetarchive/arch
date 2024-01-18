@@ -14,13 +14,13 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 
 class DerivationJobConf private (
-  val inputSpec: InputSpec,
-  val outputPath: String,
-  val sample: Int = -1,
-  val params: DerivationJobParameters = DerivationJobParameters.Empty) extends Serializable {
+    val inputSpec: InputSpec,
+    val outputPath: String,
+    val sample: Int = -1,
+    val params: DerivationJobParameters = DerivationJobParameters.Empty) extends Serializable {
   def isSample: Boolean = sample >= 0
   def toJson: Json = ListMap (
-    "spec" -> inputSpec.cursor.focus.get,
+    "inputSpec" -> inputSpec.cursor.focus.get,
     "outputPath" -> outputPath.asJson,
     "sample" -> sample.asJson,
     "params" -> params.toJson
@@ -106,10 +106,10 @@ object DerivationJobConf {
     }
   }
 
-  def fromJson(cursor: HCursor, sample: Boolean = false): Option[DerivationJobConf] = {
+  def fromJson(cursor: HCursor, sample: Boolean = false, outPath: Option[String] = None): Option[DerivationJobConf] = {
     for {
-      outputPath <- cursor.get[String]("outputPath").toOption
-      spec <- cursor.downField("spec").success.map(InputSpec(_))
+      outputPath <- cursor.get[String]("outputPath").toOption.orElse(outPath)
+      spec <- cursor.downField("inputSpec").success.map(InputSpec(_))
     } yield {
       val sampleSize = cursor.get[Int]("sample").getOrElse(if (sample) SampleSize else -1)
       val params = cursor.downField("params").focus
@@ -119,26 +119,23 @@ object DerivationJobConf {
     }
   }
 
-  def fromJson(json: Json): Option[DerivationJobConf] = {
-    if (json.isArray) {
-      json.asArray.map(_.toIterator.buffered).flatMap { values =>
-        for {
-          collectionId <- values.next.asString
-          inputPath <- values.next.asString
-          outputPath <- values.next.asString
-          sample <- values.next.asNumber.flatMap(_.toInt)
-        } yield {
-          val params = values.headOption
-            .flatMap(DerivationJobParameters.fromJson)
-            .getOrElse(DerivationJobParameters.Empty)
-          new DerivationJobConf(InputSpec(collectionId, inputPath), outputPath, sample, params)
-        }
+  def fromJson(json: Json): Option[DerivationJobConf] = if (json.isArray) {
+    json.asArray.map(_.toIterator.buffered).flatMap { values =>
+      for {
+        collectionId <- values.next.asString
+        inputPath <- values.next.asString
+        outputPath <- values.next.asString
+        sample <- values.next.asNumber.flatMap(_.toInt)
+      } yield {
+        val params = values.headOption
+          .flatMap(DerivationJobParameters.fromJson)
+          .getOrElse(DerivationJobParameters.Empty)
+        new DerivationJobConf(InputSpec(collectionId, inputPath), outputPath, sample, params)
       }
-    } else {
-      fromJson(json.hcursor)
     }
+  } else {
+    fromJson(json.hcursor)
   }
 
-  def deserialize(conf: String): Option[DerivationJobConf] =
-    parse(conf).right.toOption.flatMap(fromJson)
+  def deserialize(conf: String): Option[DerivationJobConf] = parse(conf).right.toOption.flatMap(fromJson)
 }

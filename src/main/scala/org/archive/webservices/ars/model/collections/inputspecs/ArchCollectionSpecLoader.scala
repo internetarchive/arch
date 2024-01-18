@@ -20,6 +20,8 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
         in
       } else throw new UnsupportedOperationException("InputStream can only be accessed once.")
     }
+
+    override def meta: FileMeta = FileMeta.empty
   }
 
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {

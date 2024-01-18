@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD

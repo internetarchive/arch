@@ -49,7 +49,6 @@ abstract class ChainedJob extends DerivationJob {
             child => {
               child.slots = instance.slots
               child.user = instance.user
-              child.conf.inputSpec.collection = instance.conf.inputSpec.collection
               child.onStateChanged {
                 if (child.state > ProcessingState.Running)
                   onChildComplete(instance, idx + 1, child.state == ProcessingState.Finished)
@@ -82,7 +81,6 @@ abstract class ChainedJob extends DerivationJob {
               child => {
                 child.slots = instance.slots
                 child.user = instance.user
-                child.conf.inputSpec.collection = instance.conf.inputSpec.collection
                 child.onStateChanged {
                   if (child.state > ProcessingState.Running)
                     onChildComplete(instance, 0, child.state == ProcessingState.Finished)

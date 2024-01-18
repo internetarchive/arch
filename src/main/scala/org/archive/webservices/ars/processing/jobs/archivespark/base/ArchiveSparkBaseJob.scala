@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.processing.jobs.archivespark
+package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.ArchiveSpark
@@ -7,7 +7,6 @@ import org.archive.webservices.archivespark.model.EnrichRoot
 import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.model.collections.{CollectionSpecifics, FileCollectionSpecifics}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -21,10 +20,10 @@ abstract class ArchiveSparkBaseJob[Root <: EnrichRoot : ClassTag] extends SparkJ
   val relativeOutPath = s"/$id"
   val resultDir = "/out.json.gz"
 
-  def filterEnrich(rdd: RDD[Root]): RDD[Root]
+  def filterEnrich(rdd: RDD[Root], conf: DerivationJobConf): RDD[Root]
 
   def filterEnrichSave(rdd: RDD[Root], conf: DerivationJobConf): Unit = {
-    filterEnrich(rdd).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
+    filterEnrich(rdd, conf).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
   }
 
   def loadFilterEnrichSave(spec: DataSpec[_, Root], conf: DerivationJobConf): Unit = {
