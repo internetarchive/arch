@@ -32,8 +32,6 @@ abstract class CollectionSpecifics {
                     pointer: FilePointer,
                     offset: Long,
                     positions: Iterator[(Long, Long)]): InputStream
-
-  def pointer(filename: String): FilePointer = FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
 }
 
 object CollectionSpecifics {
@@ -46,4 +44,6 @@ object CollectionSpecifics {
       case FileCollectionSpecifics.Prefix => new FileCollectionSpecifics(id)
     }
   }
+
+  def pointer(sourceId: String, filename: String): FilePointer = FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
 }

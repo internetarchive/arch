@@ -50,8 +50,9 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    val sourceId = this.sourceId
     WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId) { rdd =>
-      action(rdd.map{case (filename, in) => (pointer(filename), in)})
+      action(rdd.map{case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in)})
     }
   }
 

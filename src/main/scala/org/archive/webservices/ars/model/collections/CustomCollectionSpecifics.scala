@@ -43,31 +43,34 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
     stats
   }
 
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = action({
-    val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
-    CustomCollectionSpecifics.location(customId) match {
-      case Some(location) =>
-        val locationId = StringUtil
-          .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
-        locationId match {
-          case "petabox" =>
-            WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
-          case "hdfs" | "ait-hdfs" =>
-            val warcPath = StringUtil
-              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
-            WebArchiveLoader
-              .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
-          case "arch" | _ =>
-            val parentCollectionId =
-              if (locationId == "arch")
-                StringUtil
-                  .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
-              else location
-            WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
-        }
-      case None => WebArchiveLoader.loadWarcFilesViaCdxFiles(cdxPath)
-    }
-  }.map{case (filename, in) => (pointer(filename), in)})
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    val sourceId = this.sourceId
+    action({
+      val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+      CustomCollectionSpecifics.location(customId) match {
+        case Some(location) =>
+          val locationId = StringUtil
+            .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
+          locationId match {
+            case "petabox" =>
+              WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
+            case "hdfs" | "ait-hdfs" =>
+              val warcPath = StringUtil
+                .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+              WebArchiveLoader
+                .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
+            case "arch" | _ =>
+              val parentCollectionId =
+                if (locationId == "arch")
+                  StringUtil
+                    .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+                else location
+              WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
+          }
+        case None => WebArchiveLoader.loadWarcFilesViaCdxFiles(cdxPath)
+      }
+    }.map{case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in)})
+  }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
     val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir

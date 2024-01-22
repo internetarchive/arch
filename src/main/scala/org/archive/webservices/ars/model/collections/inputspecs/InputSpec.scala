@@ -4,6 +4,7 @@ import io.circe.HCursor
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.model.collections.FileCollectionSpecifics
 
 import scala.util.Try
 
@@ -83,12 +84,13 @@ object InputSpec {
 
   def apply(collection: ArchCollection, inputPath: String): InputSpec = {
     val spec = apply(collection.id, inputPath)
-    spec._collection = Some(collection)
+    if (isCollectionBased(spec)) spec._collection = Some(collection)
     spec
   }
 
   def apply(collectionId: String, inputPath: String): InputSpec = {
-    new CollectionBasedInputSpec(collectionId, inputPath)
+    if (collectionId.startsWith(FileCollectionSpecifics.Prefix)) apply(inputPath)
+    else new CollectionBasedInputSpec(collectionId, inputPath)
   }
 
   def isCollectionBased(spec: InputSpec): Boolean = spec.isInstanceOf[CollectionBasedInputSpec]

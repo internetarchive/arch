@@ -4,6 +4,7 @@ import io.circe.parser._
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.CollectionAccessContext
 import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.RddUtil
 
 object MetaFilesSpecLoader extends InputSpecLoader {
@@ -54,8 +55,11 @@ object MetaFilesSpecLoader extends InputSpecLoader {
 
   def loadMetaHdfs(spec: InputSpec): RDD[(String, FileMeta)] = {
     spec.str("meta-glob").map { glob =>
-      parseMeta(spec, RddUtil.loadTextFiles(glob).map { case (file, lines) =>
-        (file, lines.mkString("\n"))
+      val files = RddUtil.loadFilesLocality(glob)
+      val excludePrefix = spec.str("meta-exclude-prefix")
+      val filtered = if (excludePrefix.isEmpty) files else files.filter(!_.split('/').last.startsWith(excludePrefix.get))
+      parseMeta(spec, filtered.map { file =>
+        (file, HdfsIO.lines(file).mkString("\n"))
       })
     }.getOrElse {
       throw new RuntimeException("No meta location specified")

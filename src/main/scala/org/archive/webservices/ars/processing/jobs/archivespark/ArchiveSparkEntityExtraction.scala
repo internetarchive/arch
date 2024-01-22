@@ -31,11 +31,11 @@ abstract class ArchiveSparkEntityExtraction extends ArchiveSparkTextLoadJob {
 }
 
 object ArchiveSparkEntityExtraction extends ArchiveSparkEntityExtraction {
-  override def uuid: String = "018d114d-3426-730e-94a1-b56ca73fc1ad"
+  override val uuid: String = "018d114d-3426-730e-94a1-b56ca73fc1ad"
 }
 
 object ArchiveSparkEntityExtractionChinese extends ArchiveSparkEntityExtraction {
-  override def uuid: String = "018d1151-3a3a-7184-b6ed-8ec176ee750e"
+  override val uuid: String = "018d1151-3a3a-7184-b6ed-8ec176ee750e"
 
   override def properties(lang: String): Properties = super.properties("chinese")
 }

@@ -99,7 +99,7 @@ object WebArchiveLoader {
       partition.map { case (p, in) =>
         for (s <- prev) s.close()
         prev = Some(in)
-        (p, prev.get)
+        (p.split('/').last, prev.get)
       } ++ IteratorUtil.noop {
         for (s <- prev) s.close()
       }

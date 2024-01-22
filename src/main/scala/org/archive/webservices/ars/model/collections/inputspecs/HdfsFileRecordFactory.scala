@@ -8,7 +8,7 @@ import java.net.URL
 import scala.io.Source
 import scala.util.Try
 
-class HdfsFileRecordFactory extends FileRecordFactory {
+class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFactory {
   class HdfsFileRecord private[HdfsFileRecordFactory] (filePath: String, val mime: String, val meta: FileMeta) extends FileRecord {
     private lazy val resolvedPath = locateFile(filePath)
 
@@ -31,12 +31,13 @@ class HdfsFileRecordFactory extends FileRecordFactory {
   def locateFile(filePath: String): String = {
     if (filePath.contains("*")) {
       val files = HdfsIO.files(filePath, recursive = false)
-      if (files.isEmpty) throw new FileNotFoundException()
-      files.next.split('/').last
+      val filtered = if (excludeSuffix.isEmpty) files else files.filter(!_.endsWith(excludeSuffix.get))
+      if (filtered.isEmpty) throw new FileNotFoundException()
+      filtered.next
     } else filePath
   }
 }
 
 object HdfsFileRecordFactory {
-  def apply(spec: InputSpec): HdfsFileRecordFactory = new HdfsFileRecordFactory
+  def apply(spec: InputSpec): HdfsFileRecordFactory = new HdfsFileRecordFactory(spec.str("meta-suffix"))
 }

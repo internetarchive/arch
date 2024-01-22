@@ -24,6 +24,7 @@ object JobManager {
   private val collectionInstances = mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
   val userJobs: Set[DerivationJob] = Set(
+    ArchiveSparkNoop,
     ArchiveSparkEntityExtraction,
     ArchiveSparkEntityExtractionChinese,
     ArsLgaGeneration,
@@ -66,11 +67,12 @@ object JobManager {
 
   private def registerUuid(instance: DerivationJobInstance): Unit = {
     uuidInstances(instance.uuid) = instance
-    val uuidPath = instance.conf + "/" + instance.uuid + InstanceUuidFileSuffix
+    val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
     HdfsIO.writeLines(
       uuidPath,
       Seq((ListMap(
         "jobUuid" -> instance.job.uuid.asJson,
+        "jobId" -> instance.job.id.asJson,
         "conf" -> instance.conf.toJson
       ) ++ {
         instance.user.map("user" -> _.id.asJson)
@@ -82,7 +84,7 @@ object JobManager {
     uuidInstances.get(uuid).orElse {
       ArchConf.uuidJobOutPath.map(_ + "/" + uuid).map { uuidPath =>
         uuidPath + "/" + uuid + InstanceUuidFileSuffix
-      }.flatMap { uuidFilePath =>
+      }.filter(HdfsIO.exists).flatMap { uuidFilePath =>
         parse(HdfsIO.lines(uuidFilePath).mkString).toOption.map(_.hcursor).flatMap { cursor =>
           for {
             job <- cursor.get[String]("jobUuid").toOption.flatMap(uuidLookup.get)

@@ -7,7 +7,7 @@ import scala.util.Try
 
 trait FileMeta extends Serializable {
   def str(key: String): Option[String] = get[String](key).orElse(strs(key).headOption)
-  def strs(key: String): Seq[String] = gets(key)
+  def strs(key: String): Seq[String] = gets[String](key)
   def int(key: String): Option[Int] = get[Int](key)
   def get[A : ClassTag](key: String): Option[A]
   def gets[A: ClassTag](key: String): Seq[A]
@@ -30,7 +30,7 @@ class FileMetaJson(cursor: HCursor) extends FileMeta {
       case t if t == classTag[String] => cursor.get[String](key).toOption
       case t if t == classTag[Int] => cursor.get[Int](key).toOption
       case t if t == classTag[Long] => cursor.get[Long](key).toOption
-      case _ => throw new UnsupportedOperationException()
+      case t => throw new UnsupportedOperationException(t.toString)
     }
   }.map(_.asInstanceOf[A])
 
@@ -39,7 +39,7 @@ class FileMetaJson(cursor: HCursor) extends FileMeta {
       case t if t == classTag[String] => cursor.get[Array[String]](key).toOption
       case t if t == classTag[Int] => cursor.get[Array[Int]](key).toOption
       case t if t == classTag[Long] => cursor.get[Array[Long]](key).toOption
-      case _ => throw new UnsupportedOperationException()
+      case t => throw new UnsupportedOperationException(t.toString)
     }
   }.map(_.map(_.asInstanceOf[A])).toSeq.flatten
 }
