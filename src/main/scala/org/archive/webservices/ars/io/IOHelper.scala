@@ -252,7 +252,10 @@ object IOHelper {
     }
   }
 
-  def splitMergeInputStreams(in: InputStream, positions: Iterator[(Long, Long)], buffered: Boolean = true): InputStream = {
+  def splitMergeInputStreams(
+      in: InputStream,
+      positions: Iterator[(Long, Long)],
+      buffered: Boolean = true): InputStream = {
     val split = IOUtil.splitStream(in, positions)
     val merged = new ChainedInputStream(split, nextOnError = true)
     if (buffered) {

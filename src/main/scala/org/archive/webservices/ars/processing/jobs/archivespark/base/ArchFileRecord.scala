@@ -11,25 +11,30 @@ import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 import scala.collection.immutable.ListMap
 import scala.util.Try
 
-class ArchFileRecord(record: FileRecord) extends ArchEnrichRoot[FileRecord] with ByteLoad.Root with TextLoad.Root with PlainTextLoad.Root {
+class ArchFileRecord(record: FileRecord)
+    extends ArchEnrichRoot[FileRecord]
+    with ByteLoad.Root
+    with TextLoad.Root
+    with PlainTextLoad.Root {
   override def companion: EnrichRootCompanion[ArchFileRecord] = ArchFileRecord
   override def get: FileRecord = record
 
   override def metaToJson: Json = {
-    json(ListMap[String, Any](
-      "filename" -> record.filename,
-      "mime" -> Try(record.mime).fold("Error: " + _.getMessage, identity),
-      "path" -> Try(record.path).fold("Error: " + _.getMessage, identity)
-    ))
+    json(
+      ListMap[String, Any](
+        "filename" -> record.filename,
+        "mime" -> Try(record.mime).fold("Error: " + _.getMessage, identity),
+        "path" -> Try(record.path).fold("Error: " + _.getMessage, identity)))
   }
 
   def mime: String = record.mime
 }
 
 object ArchFileRecord extends EnrichRootCompanion[ArchFileRecord] {
-  override def dataLoad[T](load: DataLoad[T]): Option[FieldPointer[ArchFileRecord, T]] = (load match {
-    case ByteLoad => Some(ArchFileBytes)
-    case TextLoad | PlainTextLoad => Some(StringContent)
-    case _ => None
-  }).map(_.asInstanceOf[FieldPointer[ArchFileRecord, T]])
+  override def dataLoad[T](load: DataLoad[T]): Option[FieldPointer[ArchFileRecord, T]] =
+    (load match {
+      case ByteLoad => Some(ArchFileBytes)
+      case TextLoad | PlainTextLoad => Some(StringContent)
+      case _ => None
+    }).map(_.asInstanceOf[FieldPointer[ArchFileRecord, T]])
 }

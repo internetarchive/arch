@@ -263,7 +263,9 @@ object JobStateManager {
                 "datasetUrl" -> ViewPathPatterns.reverseAbs(
                   ViewPathPatterns.Dataset,
                   Map(
-                    "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
+                    "dataset_id" -> DatasetUtil.formatId(
+                      collection.userUrlId(u.id),
+                      instance.job),
                     "sample" -> instance.conf.isSample.toString)),
                 "jobName" -> instance.job.name,
                 "collectionName" -> collection.name,
@@ -282,19 +284,19 @@ object JobStateManager {
         registerFailed(instance)
         ks(Keystone.registerJobEvent(instance.uuid, "FAILED"))
         if (InputSpec.isCollectionBased(instance.conf.inputSpec) && {
-          !Arch.debugging && instance.attempt >= JobManager.MaxAttempts
-        }) {
-            for (template <- instance.job.failedNotificationTemplate) {
-              val collection = instance.conf.inputSpec.collection
-              MailUtil.sendTemplate(
-                template,
-                Map(
-                  "jobName" -> instance.job.name,
-                  "jobId" -> instance.job.id,
-                  "collectionName" -> collection.name,
-                  "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
-                  "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
-            }
+            !Arch.debugging && instance.attempt >= JobManager.MaxAttempts
+          }) {
+          for (template <- instance.job.failedNotificationTemplate) {
+            val collection = instance.conf.inputSpec.collection
+            MailUtil.sendTemplate(
+              template,
+              Map(
+                "jobName" -> instance.job.name,
+                "jobId" -> instance.job.id,
+                "collectionName" -> collection.name,
+                "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
+                "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+          }
         }
       }
       println("Failed: " + str(instance))

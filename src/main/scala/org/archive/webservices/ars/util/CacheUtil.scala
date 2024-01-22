@@ -11,7 +11,8 @@ object CacheUtil {
 
   val RequestCacheDuration: Duration = 10.minutes
 
-  def cache[R](key: String, enabled: Boolean = true, ttl: Option[Duration] = None)(value: => R): R =
+  def cache[R](key: String, enabled: Boolean = true, ttl: Option[Duration] = None)(
+      value: => R): R =
     if (enabled) {
       GuavaCache.get[R](key) match {
         case Some(cached) => cached

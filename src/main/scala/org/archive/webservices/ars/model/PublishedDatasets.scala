@@ -5,7 +5,6 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.util.Common
@@ -22,7 +21,8 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
-  val MetadataFields: Set[String] = Set("creator", "description", "licenseurl", "subject", "title")
+  val MetadataFields: Set[String] =
+    Set("creator", "description", "licenseurl", "subject", "title")
   val DeleteCommentPrefix = "ARCH:"
 
   val ProhibitedJobs: Set[DerivationJob] = Set(WebPagesExtraction)
@@ -65,13 +65,13 @@ object PublishedDatasets {
   }
 
   case class ItemInfo(
-    item: String,
-    inputId: String,
-    job: String,
-    sample: Boolean,
-    time: Instant,
-    complete: Boolean,
-    ark: Option[String]) {
+      item: String,
+      inputId: String,
+      job: String,
+      sample: Boolean,
+      time: Instant,
+      complete: Boolean,
+      ark: Option[String]) {
     def toJson(includeItem: Boolean): Json = {
       (if (includeItem) ListMap("item" -> item.asJson) else ListMap.empty) ++ Map(
         "inputId" -> inputId.asJson,
@@ -82,9 +82,7 @@ object PublishedDatasets {
     }.asJson
   }
 
-  def newItemInfo(
-      itemName: String,
-      instance: DerivationJobInstance): ItemInfo = {
+  def newItemInfo(itemName: String, instance: DerivationJobInstance): ItemInfo = {
     ItemInfo(
       itemName,
       instance.conf.inputSpec.id,
@@ -135,7 +133,8 @@ object PublishedDatasets {
       update: Boolean = false,
       metadata: Map[String, Seq[String]] = Map.empty,
       put: Option[(InputStream, Long)] = None,
-      post: Option[String] = None): Either[(Int, String), String] = ArchConf.iaAuthHeader.map { iaAuthHeader =>
+      post: Option[String] = None): Either[(Int, String), String] = ArchConf.iaAuthHeader
+    .map { iaAuthHeader =>
       val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
       val connection = new URL(url).openConnection.asInstanceOf[HttpURLConnection]
@@ -198,13 +197,13 @@ object PublishedDatasets {
                 "path" -> path,
                 "method" -> connection.getRequestMethod))
             Left(responseCode, error)
-          }
-          finally source.close()
+          } finally source.close()
         } else Left(-1, "")
       } finally {
         Try(connection.disconnect())
       }
-  }.getOrElse(Left(-1, ""))
+    }
+    .getOrElse(Left(-1, ""))
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
     val connection =
@@ -239,18 +238,16 @@ object PublishedDatasets {
     }
   }
 
-  def dataset(
-      jobId: String,
-      conf: DerivationJobConf): Option[DerivationJobInstance] = {
+  def dataset(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] = {
     DerivationJobConf
       .collectionInstance(jobId, conf)
       .filter(_.state == ProcessingState.Finished)
   }
 
   def dataset(
-     jobId: String,
-     collection: ArchCollection,
-     sample: Boolean): Option[DerivationJobInstance] = {
+      jobId: String,
+      collection: ArchCollection,
+      sample: Boolean): Option[DerivationJobInstance] = {
     DerivationJobConf
       .collectionInstance(jobId, collection, sample)
       .filter(_.state == ProcessingState.Finished)
@@ -316,9 +313,7 @@ object PublishedDatasets {
     } else None
   }
 
-  def complete(
-      instance: DerivationJobInstance,
-      itemName: String): Boolean = {
+  def complete(instance: DerivationJobInstance, itemName: String): Boolean = {
     val jobFilePath = jobFile(instance)
     jobItem(jobFilePath).filter(_.item == itemName) match {
       case Some(itemInfo) =>

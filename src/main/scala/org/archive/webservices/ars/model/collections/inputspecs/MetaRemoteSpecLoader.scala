@@ -30,25 +30,31 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
   })
 
   def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
-    spec.str("meta-source").flatMap {
-      case "hdfs" => Some(loadMetaHdfs(spec))
-      case _ => None
-    }.getOrElse {
-      throw new UnsupportedOperationException()
-    }
+    spec
+      .str("meta-source")
+      .flatMap {
+        case "hdfs" => Some(loadMetaHdfs(spec))
+        case _ => None
+      }
+      .getOrElse {
+        throw new UnsupportedOperationException()
+      }
   }
 
   def loadMetaHdfs(spec: InputSpec): RDD[Map[String, Any]] = {
-    spec.str("meta-location").map {
-      case location if location.endsWith(".parquet") =>
-        val dataFrame = SparkSession.builder.getOrCreate.read.parquet(location)
-        val schema = Sparkling.sc.broadcast(dataFrame.schema)
-        dataFrame.rdd.map {
-          _.getValuesMap[Any](schema.value.fieldNames)
-        }
-      case _ => throw new UnsupportedOperationException()
-    }.getOrElse {
-      throw new RuntimeException("No meta location specified")
-    }
+    spec
+      .str("meta-location")
+      .map {
+        case location if location.endsWith(".parquet") =>
+          val dataFrame = SparkSession.builder.getOrCreate.read.parquet(location)
+          val schema = Sparkling.sc.broadcast(dataFrame.schema)
+          dataFrame.rdd.map {
+            _.getValuesMap[Any](schema.value.fieldNames)
+          }
+        case _ => throw new UnsupportedOperationException()
+      }
+      .getOrElse {
+        throw new RuntimeException("No meta location specified")
+      }
   }
 }

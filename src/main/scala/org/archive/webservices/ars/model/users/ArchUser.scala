@@ -1,13 +1,11 @@
 package org.archive.webservices.ars.model.users
 
-import io.circe.syntax._
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
-import requests._
 
 import java.util.Base64
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}

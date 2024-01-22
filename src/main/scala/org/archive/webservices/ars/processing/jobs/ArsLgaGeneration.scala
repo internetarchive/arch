@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -30,18 +30,25 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
   override def children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
 
-  implicit val parsedInOut = TypedInOut.toStringInOut[Option[((LGA.LgaLabel, String), Iterator[LGA.LgaLabel])]]({
-    case Some(((src, ts), dsts)) =>
-      (Seq(src.surt, src.url, ts) ++ dsts.flatMap { dst => Iterator(dst.surt, dst.url)}).mkString("\t")
-    case None => ""
-  }, { str =>
-    val split = str.split("\t")
-    if (split.length > 3) Some {
-      ((LGA.LgaLabel(split(0), split(1)), split(2)), split.drop(3).grouped(2).filter(_.length == 2).map { dst =>
-        LGA.LgaLabel(dst(0), dst(1))
+  implicit val parsedInOut =
+    TypedInOut.toStringInOut[Option[((LGA.LgaLabel, String), Iterator[LGA.LgaLabel])]](
+      {
+        case Some(((src, ts), dsts)) =>
+          (Seq(src.surt, src.url, ts) ++ dsts.flatMap { dst => Iterator(dst.surt, dst.url) })
+            .mkString("\t")
+        case None => ""
+      },
+      { str =>
+        val split = str.split("\t")
+        if (split.length > 3) Some {
+          (
+            (LGA.LgaLabel(split(0), split(1)), split(2)),
+            split.drop(3).grouped(2).filter(_.length == 2).map { dst =>
+              LGA.LgaLabel(dst(0), dst(1))
+            })
+        }
+        else None
       })
-    } else None
-  })
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
@@ -51,8 +58,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
           IOHelper.sample(
             {
               val warcs = rdd
-                .filter(_.http.exists(http =>
-                  http.mime.contains("text/html") && http.status == 200))
+                .filter(
+                  _.http.exists(http => http.mime.contains("text/html") && http.status == 200))
               LGA
                 .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
                 .filter(_._2.hasNext)

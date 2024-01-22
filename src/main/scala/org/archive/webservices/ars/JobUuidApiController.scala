@@ -28,7 +28,11 @@ class JobUuidApiController extends BaseController {
 
   get(UuidPattern + "files") {
     response { instance =>
-      WasapiController.files(instance, ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download", params, addSample = false)
+      WasapiController.files(
+        instance,
+        ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download",
+        params,
+        addSample = false)
     }
   }
 
@@ -72,7 +76,8 @@ class JobUuidApiController extends BaseController {
       case Some(accessToken) =>
         response { instance =>
           val filename = params("file")
-          val fileUrl = ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename
+          val fileUrl =
+            ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename
           FilesController.colab(instance, filename, fileUrl, accessToken)
         }
       case None => Forbidden()

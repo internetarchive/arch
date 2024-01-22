@@ -1,9 +1,8 @@
 package org.archive.webservices.ars.model
 
 import _root_.io.circe.syntax._
-import io.circe.Json
 import io.circe.parser.parse
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
 

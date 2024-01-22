@@ -201,31 +201,39 @@ class ApiController extends BaseController {
   post("/runjob/:jobid") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       parse(request.body).right.toOption.map(_.hcursor) match {
-        case Some(cursor) => {
-          val rerun = params.get("rerun").contains("true")
-          val sample = params.get("sample").contains("true")
-          val user = cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
-          val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid)
-          for {
-            job <- JobManager.get(params("jobid"))
-            conf <- DerivationJobConf.fromJson(cursor, sample, ArchConf.uuidJobOutPath.map(_ + "/" + uuid))
-          } yield {
-            job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
-              if (rerun) job.reset(conf)
-              val history = job.history(uuid, conf)
-              val queued = if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
-                job.enqueue(conf, { instance =>
-                  instance.predefUuid = Some(uuid)
-                  instance.user = user
-                })
-              } else None
-              queued match {
-                case Some(instance) => ApiController.jobStateResponse(instance)
-                case None => ApiController.jobStateResponse(history)
+        case Some(cursor) =>
+          {
+            val rerun = params.get("rerun").contains("true")
+            val sample = params.get("sample").contains("true")
+            val user =
+              cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
+            val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid)
+            for {
+              job <- JobManager.get(params("jobid"))
+              conf <- DerivationJobConf.fromJson(
+                cursor,
+                sample,
+                ArchConf.uuidJobOutPath.map(_ + "/" + uuid))
+            } yield {
+              job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
+                if (rerun) job.reset(conf)
+                val history = job.history(uuid, conf)
+                val queued =
+                  if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
+                    job.enqueue(
+                      conf,
+                      { instance =>
+                        instance.predefUuid = Some(uuid)
+                        instance.user = user
+                      })
+                  } else None
+                queued match {
+                  case Some(instance) => ApiController.jobStateResponse(instance)
+                  case None => ApiController.jobStateResponse(history)
+                }
               }
             }
-          }
-        }.getOrElse(NotFound())
+          }.getOrElse(NotFound())
         case None =>
           BadRequest("Invalid POST body, no valid JSON object.")
       }
@@ -266,7 +274,9 @@ class ApiController extends BaseController {
         .flatMap { collection =>
           val jobId = params("jobid")
           val sample = params.get("sample").contains("true")
-          DerivationJobConf.collectionInstance(jobId, collection, sample).map(ApiController.jobStateResponse)
+          DerivationJobConf
+            .collectionInstance(jobId, collection, sample)
+            .map(ApiController.jobStateResponse)
         }
         .getOrElse(NotFound())
     }
@@ -400,10 +410,12 @@ class ApiController extends BaseController {
       val datasets = (userFiles ++ globalFiles)
         .flatMap(jobPathRegex.findFirstMatchIn)
         .map(m => (m.group("collectionId"), m.group("outOrSamples"), m.group("jobId")))
-        .toSeq.distinct
+        .toSeq
+        .distinct
         .flatMap { case (collectionId, outOrSamples, jobId) =>
           for {
-            collection <- userIdCollectionMap.get(ArchCollection.userCollectionId(collectionId, user))
+            collection <- userIdCollectionMap.get(
+              ArchCollection.userCollectionId(collectionId, user))
           } yield {
             val sample = outOrSamples == "samples"
             Dataset(

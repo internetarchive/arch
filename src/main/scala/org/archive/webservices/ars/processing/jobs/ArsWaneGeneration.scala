@@ -21,7 +21,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   val name = "Named entities"
   val uuid = "01895065-8f59-7a8a-b432-79e20d749f4a"
   val category: ArchJobCategory = ArchJobCategories.Text
-  def description = "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
+  def description =
+    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"

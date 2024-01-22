@@ -17,5 +17,7 @@ object ArchiveSparkNoop extends ArchiveSparkBaseJob[ArchEnrichRoot[_]] {
   override def warcSpec(rdd: RDD[WarcRecord]): DataSpec[_, ArchEnrichRoot[_]] = ArchWarcSpec(rdd)
   override def fileSpec(rdd: RDD[FileRecord]): DataSpec[_, ArchEnrichRoot[_]] = ArchFileSpec(rdd)
 
-  override def filterEnrich(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = rdd
+  override def filterEnrich(
+      rdd: RDD[ArchEnrichRoot[_]],
+      conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = rdd
 }

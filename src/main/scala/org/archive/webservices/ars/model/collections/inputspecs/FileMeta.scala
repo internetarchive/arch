@@ -9,7 +9,7 @@ trait FileMeta extends Serializable {
   def str(key: String): Option[String] = get[String](key).orElse(strs(key).headOption)
   def strs(key: String): Seq[String] = gets[String](key)
   def int(key: String): Option[Int] = get[Int](key)
-  def get[A : ClassTag](key: String): Option[A]
+  def get[A: ClassTag](key: String): Option[A]
   def gets[A: ClassTag](key: String): Seq[A]
 }
 
@@ -20,12 +20,13 @@ object FileMeta {
 }
 
 class FileMetaMap(map: Map[String, Any]) extends FileMeta {
-  override def get[A : ClassTag](key: String): Option[A] = map.get(key).flatMap(v => Try(v.asInstanceOf[A]).toOption)
+  override def get[A: ClassTag](key: String): Option[A] =
+    map.get(key).flatMap(v => Try(v.asInstanceOf[A]).toOption)
   override def gets[A: ClassTag](key: String): Seq[A] = get[Array[A]](key).toSeq.flatten
 }
 
 class FileMetaJson(cursor: HCursor) extends FileMeta {
-  override def get[A : ClassTag](key: String): Option[A] = {
+  override def get[A: ClassTag](key: String): Option[A] = {
     classTag[A] match {
       case t if t == classTag[String] => cursor.get[String](key).toOption
       case t if t == classTag[Int] => cursor.get[Int](key).toOption

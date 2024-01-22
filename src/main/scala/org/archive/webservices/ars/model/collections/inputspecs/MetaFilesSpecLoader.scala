@@ -32,38 +32,53 @@ object MetaFilesSpecLoader extends InputSpecLoader {
   })
 
   def pathMapping(spec: InputSpec): String => String = {
-    spec.str("data-path-mapping").map {
-      case "same-prefix" =>
-        spec.str("meta-suffix").map { suffix =>
-          (_: String).stripSuffix(suffix) + "*"
-        }.getOrElse {
-          throw new RuntimeException("No meta filename suffix specified.")
-        }
-    }.getOrElse {
-      throw new UnsupportedOperationException()
-    }
+    spec
+      .str("data-path-mapping")
+      .map { case "same-prefix" =>
+        spec
+          .str("meta-suffix")
+          .map { suffix =>
+            (_: String).stripSuffix(suffix) + "*"
+          }
+          .getOrElse {
+            throw new RuntimeException("No meta filename suffix specified.")
+          }
+      }
+      .getOrElse {
+        throw new UnsupportedOperationException()
+      }
   }
 
   def loadMeta(spec: InputSpec): RDD[(String, FileMeta)] = {
-    spec.str("meta-source").flatMap {
-      case "hdfs" => Some(loadMetaHdfs(spec))
-      case _ => None
-    }.getOrElse {
-      throw new UnsupportedOperationException()
-    }
+    spec
+      .str("meta-source")
+      .flatMap {
+        case "hdfs" => Some(loadMetaHdfs(spec))
+        case _ => None
+      }
+      .getOrElse {
+        throw new UnsupportedOperationException()
+      }
   }
 
   def loadMetaHdfs(spec: InputSpec): RDD[(String, FileMeta)] = {
-    spec.str("meta-glob").map { glob =>
-      val files = RddUtil.loadFilesLocality(glob)
-      val excludePrefix = spec.str("meta-exclude-prefix")
-      val filtered = if (excludePrefix.isEmpty) files else files.filter(!_.split('/').last.startsWith(excludePrefix.get))
-      parseMeta(spec, filtered.map { file =>
-        (file, HdfsIO.lines(file).mkString("\n"))
-      })
-    }.getOrElse {
-      throw new RuntimeException("No meta location specified")
-    }
+    spec
+      .str("meta-glob")
+      .map { glob =>
+        val files = RddUtil.loadFilesLocality(glob)
+        val excludePrefix = spec.str("meta-exclude-prefix")
+        val filtered =
+          if (excludePrefix.isEmpty) files
+          else files.filter(!_.split('/').last.startsWith(excludePrefix.get))
+        parseMeta(
+          spec,
+          filtered.map { file =>
+            (file, HdfsIO.lines(file).mkString("\n"))
+          })
+      }
+      .getOrElse {
+        throw new RuntimeException("No meta location specified")
+      }
   }
 
   def parseMeta(spec: InputSpec, rdd: RDD[(String, String)]): RDD[(String, FileMeta)] = {
@@ -71,34 +86,46 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       case Some(format) if format.startsWith("json") =>
         parseJson(rdd: RDD[(String, String)], format.endsWith("-fuzzy"))
       case Some("key-value") =>
-        spec.str("meta-kv-separator").map { separator =>
-          val parsed = rdd.map { case (file, lines) =>
-            (file, lines.split('\n').flatMap { line =>
-              val separatorIdx = line.indexOf(separator)
-              if (separatorIdx < 0) None else Some {
-                val (key, value) = (line.take(separatorIdx), line.drop(separatorIdx + 1))
-                key -> value
-              }
-            }.toMap)
+        spec
+          .str("meta-kv-separator")
+          .map { separator =>
+            val parsed = rdd.map { case (file, lines) =>
+              (
+                file,
+                lines
+                  .split('\n')
+                  .flatMap { line =>
+                    val separatorIdx = line.indexOf(separator)
+                    if (separatorIdx < 0) None
+                    else
+                      Some {
+                        val (key, value) = (line.take(separatorIdx), line.drop(separatorIdx + 1))
+                        key -> value
+                      }
+                  }
+                  .toMap)
+            }
+            spec.str("meta-value-format") match {
+              case Some("json") =>
+                val jsonRdd = parsed.map { case (file, map) =>
+                  val jsonBody = map
+                    .map { case (key, value) =>
+                      s""""$key":$value"""
+                    }
+                    .mkString(",")
+                  file -> ("{" + jsonBody + "}")
+                }
+                parseJson(jsonRdd, fuzzy = false)
+              case Some(_) => throw new UnsupportedOperationException()
+              case None =>
+                parsed.map { case (file, map) =>
+                  file -> FileMeta(map)
+                }
+            }
           }
-          spec.str("meta-value-format") match {
-            case Some("json") =>
-              val jsonRdd = parsed.map { case (file, map) =>
-                val jsonBody = map.map { case (key, value) =>
-                  s""""$key":$value"""
-                }.mkString(",")
-                file -> ("{" + jsonBody + "}")
-              }
-              parseJson(jsonRdd, fuzzy = false)
-            case Some(_) => throw new UnsupportedOperationException()
-            case None =>
-              parsed.map { case (file, map) =>
-                file -> FileMeta(map)
-              }
+          .getOrElse {
+            throw new RuntimeException("No meta key-value separator specified")
           }
-        }.getOrElse {
-          throw new RuntimeException("No meta key-value separator specified")
-        }
       case None => throw new UnsupportedOperationException()
     }
   }
@@ -108,21 +135,24 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       rdd.map { case (filename, content) =>
         var missingComma = false
         var inJson = false
-        var json = content.trim.split('\n').map { line =>
-          var fixedLine = line.trim
-          val quoted = fixedLine.startsWith("\"")
-          val propertyLine = quoted || fixedLine.matches("^[^ ]+\\:.+")
-          if (propertyLine) {
-            inJson = true
-            if (!quoted) {
-              val colonIdx = fixedLine.indexOf(":")
-              fixedLine = "\"" + fixedLine.take(colonIdx) + "\"" + fixedLine.drop(colonIdx)
+        var json = content.trim
+          .split('\n')
+          .map { line =>
+            var fixedLine = line.trim
+            val quoted = fixedLine.startsWith("\"")
+            val propertyLine = quoted || fixedLine.matches("^[^ ]+\\:.+")
+            if (propertyLine) {
+              inJson = true
+              if (!quoted) {
+                val colonIdx = fixedLine.indexOf(":")
+                fixedLine = "\"" + fixedLine.take(colonIdx) + "\"" + fixedLine.drop(colonIdx)
+              }
+              if (missingComma) fixedLine = "," + fixedLine
             }
-            if (missingComma) fixedLine = "," + fixedLine
+            missingComma = inJson && !fixedLine.endsWith(",")
+            fixedLine
           }
-          missingComma = inJson && !fixedLine.endsWith(",")
-          fixedLine
-        }.mkString("\n")
+          .mkString("\n")
         if (!json.startsWith("{")) json = "{" + json
         if (!json.endsWith("{")) json = json + "}"
         filename -> json

@@ -10,7 +10,8 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
   class WarcFileRecord(file: FilePointer, in: InputStream) extends FileRecord {
     override def filename: String = file.filename
     override def mime: String = WarcMime
-    override def path: String = file.url.stripSuffix(file.filename).stripSuffix(FilePointer.SourceSeparator)
+    override def path: String =
+      file.url.stripSuffix(file.filename).stripSuffix(FilePointer.SourceSeparator)
     override def pointer: FilePointer = file
 
     private var accessed = false

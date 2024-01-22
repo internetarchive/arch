@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.{ArchConf, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 

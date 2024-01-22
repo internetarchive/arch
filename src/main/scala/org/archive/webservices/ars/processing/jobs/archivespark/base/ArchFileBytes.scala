@@ -10,7 +10,8 @@ import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil}
 object ArchFileBytes extends EnrichFunc[ArchFileRecord, FileRecord, Array[Byte]] {
   val MaxContentLength: Long = 1.mb
 
-  val source: FieldPointer[ArchFileRecord, FileRecord] = FieldPointer.root[ArchFileRecord, FileRecord]
+  val source: FieldPointer[ArchFileRecord, FileRecord] =
+    FieldPointer.root[ArchFileRecord, FileRecord]
   val fields: Seq[String] = Seq("bytes")
   override val defaultField: String = "bytes"
   override def derive(source: TypedEnrichable[FileRecord], derivatives: Derivatives): Unit = {

@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.processing.jobs.archivespark
 
+import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import org.archive.webservices.archivespark.functions.{Entities, EntitiesConstants}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchiveSparkTextLoadJob
 

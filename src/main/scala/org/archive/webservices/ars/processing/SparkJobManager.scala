@@ -5,8 +5,8 @@ import org.apache.spark.sql.SparkSession
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.{Sparkling, _}
 import org.archive.webservices.sparkling.util.SparkUtil
+import org.archive.webservices.sparkling.{Sparkling, _}
 
 import java.io.File
 import scala.concurrent.Future

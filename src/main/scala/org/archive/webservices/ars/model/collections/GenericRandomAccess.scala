@@ -3,10 +3,10 @@ package org.archive.webservices.ars.model.collections
 import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
 import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.sparkling.io.IOUtil
-import scala.collection.mutable
 
 import java.io.InputStream
 import java.net.URL
+import scala.collection.mutable
 
 trait GenericRandomAccess {
   private val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
@@ -17,7 +17,12 @@ trait GenericRandomAccess {
       pointer: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    GenericRandomAccess.randomAccess(context, pointer, offset, positions, collectionSpecificsCache)
+    GenericRandomAccess.randomAccess(
+      context,
+      pointer,
+      offset,
+      positions,
+      collectionSpecificsCache)
   }
 }
 
@@ -27,7 +32,8 @@ object GenericRandomAccess {
       pointer: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)],
-      collectionSpecificsCache :mutable.Map[String, Option[CollectionSpecifics]] = mutable.Map.empty): InputStream = {
+      collectionSpecificsCache: mutable.Map[String, Option[CollectionSpecifics]] =
+        mutable.Map.empty): InputStream = {
     if (pointer.isHttpSource) {
       val in = new URL(pointer.url).openStream
       IOUtil.skip(in, offset)

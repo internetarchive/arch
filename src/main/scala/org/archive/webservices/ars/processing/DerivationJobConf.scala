@@ -6,7 +6,7 @@ import io.circe.{HCursor, Json}
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{CollectionBasedInputSpec, InputSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics, UnionCollectionSpecifics}
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 
@@ -17,14 +17,14 @@ class DerivationJobConf private (
     val inputSpec: InputSpec,
     val outputPath: String,
     val sample: Int = -1,
-    val params: DerivationJobParameters = DerivationJobParameters.Empty) extends Serializable {
+    val params: DerivationJobParameters = DerivationJobParameters.Empty)
+    extends Serializable {
   def isSample: Boolean = sample >= 0
-  def toJson: Json = ListMap (
+  def toJson: Json = ListMap(
     "inputSpec" -> inputSpec.cursor.focus.get,
     "outputPath" -> outputPath.asJson,
     "sample" -> sample.asJson,
-    "params" -> params.toJson
-  ).asJson
+    "params" -> params.toJson).asJson
   def serialize: String = toJson.noSpaces
 }
 
@@ -59,7 +59,10 @@ object DerivationJobConf {
     JobManager.getInstanceOrGlobal(
       jobId,
       conf,
-      DerivationJobConf.collection(conf.inputSpec.collection, sample = conf.isSample, global = true))
+      DerivationJobConf.collection(
+        conf.inputSpec.collection,
+        sample = conf.isSample,
+        global = true))
   }
 
   def collectionInstance(
@@ -79,7 +82,8 @@ object DerivationJobConf {
     new DerivationJobConf(
       InputSpec.apply(collection, collection.specifics.inputPath),
       jobOutPath(collection, global) + (if (sample) "/samples" else "/out"),
-      if (sample) SampleSize else -1, params)
+      if (sample) SampleSize else -1,
+      params)
   }
 
   def userDefinedQuery(
@@ -106,13 +110,18 @@ object DerivationJobConf {
     }
   }
 
-  def fromJson(cursor: HCursor, sample: Boolean = false, outPath: Option[String] = None): Option[DerivationJobConf] = {
+  def fromJson(
+      cursor: HCursor,
+      sample: Boolean = false,
+      outPath: Option[String] = None): Option[DerivationJobConf] = {
     for {
       outputPath <- cursor.get[String]("outputPath").toOption.orElse(outPath)
       spec <- cursor.downField("inputSpec").success.map(InputSpec(_))
     } yield {
       val sampleSize = cursor.get[Int]("sample").getOrElse(if (sample) SampleSize else -1)
-      val params = cursor.downField("params").focus
+      val params = cursor
+        .downField("params")
+        .focus
         .flatMap(DerivationJobParameters.fromJson)
         .getOrElse(DerivationJobParameters.Empty)
       new DerivationJobConf(spec, outputPath, sampleSize, params)
@@ -137,5 +146,6 @@ object DerivationJobConf {
     fromJson(json.hcursor)
   }
 
-  def deserialize(conf: String): Option[DerivationJobConf] = parse(conf).right.toOption.flatMap(fromJson)
+  def deserialize(conf: String): Option[DerivationJobConf] =
+    parse(conf).right.toOption.flatMap(fromJson)
 }

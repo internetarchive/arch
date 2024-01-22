@@ -15,7 +15,9 @@ import org.archive.webservices.sparkling.util.StringUtil
 import java.io.InputStream
 import scala.util.Try
 
-class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with GenericRandomAccess {
+class CustomCollectionSpecifics(val id: String)
+    extends CollectionSpecifics
+    with GenericRandomAccess {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
   val Some((userId, collectionId)) = ArchCollection.splitIdUserCollectionOpt(customId)
 
@@ -50,7 +52,9 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
       CustomCollectionSpecifics.location(customId) match {
         case Some(location) =>
           val locationId = StringUtil
-            .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
+            .prefixBySeparator(
+              location.toLowerCase,
+              CustomCollectionSpecifics.LocationIdSeparator)
           locationId match {
             case "petabox" =>
               WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
@@ -58,18 +62,23 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics with
               val warcPath = StringUtil
                 .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
               WebArchiveLoader
-                .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
+                .loadWarcFilesViaCdxFromHdfs(
+                  cdxPath,
+                  warcPath,
+                  aitHdfs = locationId == "ait-hdfs")
             case "arch" | _ =>
               val parentCollectionId =
                 if (locationId == "arch")
                   StringUtil
-                    .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+                    .stripPrefixBySeparator(
+                      location,
+                      CustomCollectionSpecifics.LocationIdSeparator)
                 else location
               WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
           }
         case None => WebArchiveLoader.loadWarcFilesViaCdxFiles(cdxPath)
       }
-    }.map{case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in)})
+    }.map { case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in) })
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {

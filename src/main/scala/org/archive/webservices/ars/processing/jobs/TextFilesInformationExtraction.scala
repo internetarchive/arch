@@ -6,7 +6,6 @@ import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.storage.StorageLevel
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}

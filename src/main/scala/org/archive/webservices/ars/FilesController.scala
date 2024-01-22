@@ -126,17 +126,21 @@ object FilesController {
     for (cursor <- gistApiRequest()) {
       for (gist <- cursor.values.toIterator.flatten.map(_.hcursor)) {
         if (gist
-          .get[String]("description")
-          .toOption
-          .filter(_.startsWith(GistIdPrefix))
-          .exists(!_.startsWith(currentIdPrefix))) {
+            .get[String]("description")
+            .toOption
+            .filter(_.startsWith(GistIdPrefix))
+            .exists(!_.startsWith(currentIdPrefix))) {
           for (id <- gist.get[String]("id").toOption) gistApiRequest(delete = Some(id))
         }
       }
     }
   }
 
-  def colab(instance: DerivationJobInstance, filename: String, fileUrl: String, accessToken: String): ActionResult = {
+  def colab(
+      instance: DerivationJobInstance,
+      filename: String,
+      fileUrl: String,
+      accessToken: String): ActionResult = {
     instance.outFiles.find(_.filename == filename) match {
       case Some(file) =>
         if (file.accessToken == accessToken) {
@@ -151,19 +155,17 @@ object FilesController {
               finally source.close()
             var content = contentTemplate.replace("ARCHDATASETURL", fileUrl)
             val inputSpec = instance.conf.inputSpec
-            if (InputSpec.isCollectionBased(inputSpec) && inputSpec.collectionId.startsWith(AitCollectionSpecifics.Prefix)) {
-              val waybackUrl = ArchConf.waybackBaseUrl + "/" + AitCollectionSpecifics.getAitId(inputSpec.collection)
+            if (InputSpec.isCollectionBased(inputSpec) && inputSpec.collectionId.startsWith(
+                AitCollectionSpecifics.Prefix)) {
+              val waybackUrl = ArchConf.waybackBaseUrl + "/" + AitCollectionSpecifics.getAitId(
+                inputSpec.collection)
               content = content.replace("ARCHCOLLECTIONIDURL", waybackUrl)
             }
             val nowStr = java.time.Instant.now.toString
             val dateStr = StringUtil.prefixBySeparator(nowStr, "T")
             cleanGists(GistIdPrefix + " " + dateStr)
-            val gistId = Seq(
-              GistIdPrefix,
-              nowStr,
-              instance.uuid,
-              filename,
-              Random.nextString(10)).mkString(" ")
+            val gistId = Seq(GistIdPrefix, nowStr, instance.uuid, filename, Random.nextString(10))
+              .mkString(" ")
             val postBody = Map(
               "description" -> gistId.asJson,
               "public" -> false.asJson,
@@ -249,7 +251,8 @@ class FilesController extends BaseController {
           collection <- ArchCollection.get(collectionId)
           instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
         } yield {
-          val url = s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}"
+          val url =
+            s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}"
           FilesController.colab(instance, filename, url, accessToken)
         }).getOrElse(NotFound())
       case None =>

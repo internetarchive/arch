@@ -1,10 +1,9 @@
 package org.archive.webservices.ars.model.users
 
-import io.circe.syntax._
 import io.circe.parser
-import requests._
-
+import io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
+import requests._
 
 object KeystoneUser {
   val prefix = "ks"

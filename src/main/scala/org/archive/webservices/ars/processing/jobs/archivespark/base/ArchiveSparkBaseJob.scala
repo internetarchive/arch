@@ -16,7 +16,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-abstract class ArchiveSparkBaseJob[Root <: EnrichRoot : ClassTag] extends SparkJob {
+abstract class ArchiveSparkBaseJob[Root <: EnrichRoot: ClassTag] extends SparkJob {
   val relativeOutPath = s"/$id"
   val resultDir = "/out.json.gz"
 

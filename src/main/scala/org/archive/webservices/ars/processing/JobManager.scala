@@ -1,24 +1,25 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.processing.jobs._
-import org.archive.webservices.ars.processing.jobs.archivespark._
-import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
-
-import scala.collection.immutable.ListMap
-import scala.collection.mutable
 import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.processing.jobs._
+import org.archive.webservices.ars.processing.jobs.archivespark._
+import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 import org.archive.webservices.sparkling.io.HdfsIO
+
+import scala.collection.immutable.ListMap
+import scala.collection.mutable
 
 object JobManager {
   var MaxAttempts = 3
   var MaxSlots = 3
   val InstanceUuidFileSuffix = ".uuid.json"
 
-  private val confInstances = mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
+  private val confInstances =
+    mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
   private val uuidInstances = mutable.Map.empty[String, DerivationJobInstance]
   // to be removed when ARCH becomes pure IO job processor
   private val collectionInstances = mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
@@ -70,32 +71,36 @@ object JobManager {
     val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
     HdfsIO.writeLines(
       uuidPath,
-      Seq((ListMap(
-        "jobUuid" -> instance.job.uuid.asJson,
-        "jobId" -> instance.job.id.asJson,
-        "conf" -> instance.conf.toJson
-      ) ++ {
-        instance.user.map("user" -> _.id.asJson)
-      }).asJson.spaces4),
+      Seq(
+        (ListMap(
+          "jobUuid" -> instance.job.uuid.asJson,
+          "jobId" -> instance.job.id.asJson,
+          "conf" -> instance.conf.toJson) ++ {
+          instance.user.map("user" -> _.id.asJson)
+        }).asJson.spaces4),
       overwrite = true)
   }
 
   def getInstance(uuid: String): Option[DerivationJobInstance] = {
     uuidInstances.get(uuid).orElse {
-      ArchConf.uuidJobOutPath.map(_ + "/" + uuid).map { uuidPath =>
-        uuidPath + "/" + uuid + InstanceUuidFileSuffix
-      }.filter(HdfsIO.exists).flatMap { uuidFilePath =>
-        parse(HdfsIO.lines(uuidFilePath).mkString).toOption.map(_.hcursor).flatMap { cursor =>
-          for {
-            job <- cursor.get[String]("jobUuid").toOption.flatMap(uuidLookup.get)
-            conf <- cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
-          } yield {
-            val instance = job.history(conf)
-            instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get(_))
-            instance
+      ArchConf.uuidJobOutPath
+        .map(_ + "/" + uuid)
+        .map { uuidPath =>
+          uuidPath + "/" + uuid + InstanceUuidFileSuffix
+        }
+        .filter(HdfsIO.exists)
+        .flatMap { uuidFilePath =>
+          parse(HdfsIO.lines(uuidFilePath).mkString).toOption.map(_.hcursor).flatMap { cursor =>
+            for {
+              job <- cursor.get[String]("jobUuid").toOption.flatMap(uuidLookup.get)
+              conf <- cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
+            } yield {
+              val instance = job.history(conf)
+              instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get(_))
+              instance
+            }
           }
         }
-      }
     }
   }
 
@@ -108,7 +113,8 @@ object JobManager {
       confJobs.update(instance.job.id, instance)
       registerUuid(instance)
       if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
-        val collectionJobs = collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
+        val collectionJobs =
+          collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
         collectionJobs.add(instance)
       }
       instance.registered = true

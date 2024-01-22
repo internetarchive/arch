@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob

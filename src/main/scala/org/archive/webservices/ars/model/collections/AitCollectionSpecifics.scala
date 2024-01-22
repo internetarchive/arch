@@ -3,23 +3,18 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
-import org.archive.webservices.ars.io.{
-  CollectionAccessContext,
-  WebArchiveLoader
-}
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.ars.util.CacheUtil
-import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.Try
 
 class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   val (userId, collectionId) =
@@ -52,16 +47,18 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
     val sourceId = this.sourceId
     WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId) { rdd =>
-      action(rdd.map{case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in)})
+      action(rdd.map { case (filename, in) =>
+        (CollectionSpecifics.pointer(sourceId, filename), in)
+      })
     }
   }
 
   def randomAccess(
-                    context: CollectionAccessContext,
-                    inputPath: String,
-                    pointer: FilePointer,
-                    offset: Long,
-                    positions: Iterator[(Long, Long)]): InputStream = {
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     WebArchiveLoader.randomAccessAit(
       context,
       sourceId,
@@ -100,14 +97,9 @@ object AitCollectionSpecifics {
   private def getUserCollectionIds(aitUserId: Int): Option[UserCollectionIds] =
     CacheUtil.get[UserCollectionIds](userCollectionIdsCacheKey(aitUserId))
 
-  private def putCollectionStatsPair(
-      aitId: Int,
-      pair: CollectionStatsPair): CollectionStatsPair =
+  private def putCollectionStatsPair(aitId: Int, pair: CollectionStatsPair): CollectionStatsPair =
     CacheUtil
-      .put[CollectionStatsPair](
-        collectionStatsCacheKey(aitId),
-        pair,
-        ttl = Some(cacheTTL))
+      .put[CollectionStatsPair](collectionStatsCacheKey(aitId), pair, ttl = Some(cacheTTL))
 
   private def getCollectionStatsPair(aitId: Int): Option[CollectionStatsPair] = {
     CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(aitId))

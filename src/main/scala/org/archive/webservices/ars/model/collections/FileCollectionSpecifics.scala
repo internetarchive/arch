@@ -4,7 +4,7 @@ import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, FileRecordFactory, InputSpec, InputSpecLoader, MetaRemoteSpecLoader}
+import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecordFactory, InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -14,8 +14,11 @@ import java.io.InputStream
 import scala.io.Source
 import scala.util.Try
 
-class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with GenericRandomAccess {
-  val (userId, collectionId) = ArchCollection.splitIdUserCollection(id.stripPrefix(FileCollectionSpecifics.Prefix))
+class FileCollectionSpecifics(val id: String)
+    extends CollectionSpecifics
+    with GenericRandomAccess {
+  val (userId, collectionId) =
+    ArchCollection.splitIdUserCollection(id.stripPrefix(FileCollectionSpecifics.Prefix))
 
   def inputPath: String =
     FileCollectionSpecifics
@@ -32,29 +35,34 @@ class FileCollectionSpecifics(val id: String) extends CollectionSpecifics with G
   }
 
   override def stats: ArchCollectionStats = {
-    ArchCollectionStats(FileCollectionSpecifics
-      .collectionInfo(collectionId)
-      .flatMap(_.get[Long]("size").toOption)
-      .getOrElse(-1))
+    ArchCollectionStats(
+      FileCollectionSpecifics
+        .collectionInfo(collectionId)
+        .flatMap(_.get[Long]("size").toOption)
+        .getOrElse(-1))
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
     InputSpecLoader.load(InputSpec(inputPath)) { rdd =>
-      action(rdd.filter { file =>
-        val filename = file.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
-        filename.endsWith(Sparkling.ArcExt) || filename.endsWith(Sparkling.WarcExt)
-      }.map(f => (f.pointer, f.access)))
+      action(
+        rdd
+          .filter { file =>
+            val filename = file.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
+            filename.endsWith(Sparkling.ArcExt) || filename.endsWith(Sparkling.WarcExt)
+          }
+          .map(f => (f.pointer, f.access)))
     }
   }
 
   private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory]
   override def randomAccess(
-                             context: CollectionAccessContext,
-                             inputPath: String,
-                             pointer: FilePointer,
-                             offset: Long,
-                             positions: Iterator[(Long, Long)]): InputStream = {
-    if (pointer.source != sourceId) return super.randomAccess(context, inputPath, pointer, offset, positions)
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
+    if (pointer.source != sourceId)
+      return super.randomAccess(context, inputPath, pointer, offset, positions)
     val spec = InputSpec(inputPath)
     val factory = factories.getOrElseUpdate(inputPath, FileRecordFactory(spec))
     val in = factory.accessFile(pointer.filename, accessContext = context)

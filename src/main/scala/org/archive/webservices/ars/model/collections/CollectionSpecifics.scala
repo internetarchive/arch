@@ -3,11 +3,10 @@ package org.archive.webservices.ars.model.collections
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, SimpleFileRecord}
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.cdx.CdxRecord
-import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.InputStream
 
@@ -27,11 +26,11 @@ abstract class CollectionSpecifics {
   }
 
   def randomAccess(
-                    context: CollectionAccessContext,
-                    inputPath: String,
-                    pointer: FilePointer,
-                    offset: Long,
-                    positions: Iterator[(Long, Long)]): InputStream
+      context: CollectionAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream
 }
 
 object CollectionSpecifics {
@@ -45,5 +44,6 @@ object CollectionSpecifics {
     }
   }
 
-  def pointer(sourceId: String, filename: String): FilePointer = FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
+  def pointer(sourceId: String, filename: String): FilePointer =
+    FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
 }

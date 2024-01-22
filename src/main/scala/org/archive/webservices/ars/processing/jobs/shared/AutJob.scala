@@ -3,7 +3,7 @@ package org.archive.webservices.ars.processing.jobs.shared
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.AutLoader
-import org.archive.webservices.ars.io.{WebArchiveLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling.executionContext

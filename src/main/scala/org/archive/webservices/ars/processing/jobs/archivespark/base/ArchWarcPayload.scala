@@ -6,10 +6,12 @@ import org.archive.webservices.archivespark.specific.warc.functions._
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.warc.WarcRecord
 
-class ArchWarcPayload private (http: Boolean = true) extends EnrichFunc[ArchWarcRecord, WarcRecord, Array[Byte]] {
+class ArchWarcPayload private (http: Boolean = true)
+    extends EnrichFunc[ArchWarcRecord, WarcRecord, Array[Byte]] {
   import WarcPayloadFields._
 
-  val source: FieldPointer[ArchWarcRecord, WarcRecord] = FieldPointer.root[ArchWarcRecord, WarcRecord]
+  val source: FieldPointer[ArchWarcRecord, WarcRecord] =
+    FieldPointer.root[ArchWarcRecord, WarcRecord]
 
   val fields: Seq[String] = {
     if (http) Seq(RecordHeader, HttpStatusLine, HttpHeader, Payload)

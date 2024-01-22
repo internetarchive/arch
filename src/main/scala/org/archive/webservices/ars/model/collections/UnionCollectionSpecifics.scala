@@ -1,19 +1,19 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionAccessContext
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, DerivationJobParameters}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 import org.archive.webservices.sparkling.cdx.CdxRecord
-import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.RddUtil
 
 import java.io.InputStream
 import scala.reflect.ClassTag
 
-class UnionCollectionSpecifics(val id: String) extends CollectionSpecifics with GenericRandomAccess {
+class UnionCollectionSpecifics(val id: String)
+    extends CollectionSpecifics
+    with GenericRandomAccess {
   val (userId, collectionId) =
     ArchCollection.splitIdUserCollection(id.stripPrefix(UnionCollectionSpecifics.Prefix))
 
