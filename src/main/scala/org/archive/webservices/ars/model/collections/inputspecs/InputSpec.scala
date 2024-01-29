@@ -102,7 +102,7 @@ object InputSpec {
 
   def apply(collectionId: String, inputPath: String): InputSpec = {
     if (collectionId.startsWith(FileCollectionSpecifics.Prefix)) apply(inputPath)
-    else new CollectionBasedInputSpec(collectionId, inputPath)
+    else new CollectionBasedInputSpec(collectionId, Some(inputPath))
   }
 
   def isCollectionBased(spec: InputSpec): Boolean = spec.isInstanceOf[CollectionBasedInputSpec]
