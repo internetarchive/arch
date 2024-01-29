@@ -31,13 +31,14 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor) extends InputS
 
 class CollectionBasedInputSpec(
     val collectionId: String,
-    val inputPath: String,
-    specOpt: Option[HCursor] = None)
+    inputPathOpt: Option[String] = None,
+    cursorOpt: Option[HCursor] = None)
     extends InputSpec {
   override val id: String = collectionId
   override val specType: String = CollectionBasedInputSpec.SpecType
   override val inputType: String = InputSpec.InputType.WARC
-  override lazy val cursor: HCursor = specOpt.getOrElse(
+  lazy val inputPath: String = inputPathOpt.getOrElse(collection.specifics.inputPath)
+  override lazy val cursor: HCursor = cursorOpt.getOrElse(
     Map(
       "type" -> specType,
       "collectionId" -> collectionId,
@@ -83,8 +84,8 @@ object InputSpec {
       .flatMap { _ =>
         for {
           collectionId <- cursor.get[String]("collectionId").toOption
-          inputPath <- cursor.get[String]("inputPath").toOption
         } yield {
+          val inputPath = cursor.get[String]("inputPath").toOption
           new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
         }
       }
