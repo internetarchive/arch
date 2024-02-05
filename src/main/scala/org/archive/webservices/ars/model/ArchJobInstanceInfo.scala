@@ -23,9 +23,9 @@ class ArchJobInstanceInfo private () {
       Seq((ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
         conf.map("conf" -> _.toJson)
       } ++ {
-        started.map("started" -> _.toEpochMilli.asJson)
+        started.map("started" -> _.getEpochSecond.asJson)
       } ++ {
-        finished.map("finished" -> _.toEpochMilli.asJson)
+        finished.map("finished" -> _.getEpochSecond.asJson)
       }).asJson.spaces4),
       overwrite = true)
   }
