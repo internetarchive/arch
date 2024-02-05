@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing
 
 import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import scala.concurrent.Future

@@ -207,7 +207,7 @@ class ApiController extends BaseController {
   }
 
   post("/runjob/:jobid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       parse(request.body).right.toOption.map(_.hcursor) match {
         case Some(cursor) =>
           JobManager

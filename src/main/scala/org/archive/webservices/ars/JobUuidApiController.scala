@@ -11,7 +11,7 @@ class JobUuidApiController extends BaseController {
   val UuidPattern = s"/:$UuidParam/"
 
   def response(action: DerivationJobInstance => ActionResult): ActionResult = {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val uuid = params(UuidParam)
       JobManager.getInstance(uuid) match {
         case Some(instance) =>

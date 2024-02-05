@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.users
 
-import io.circe.{HCursor, Json, JsonObject, parser}
+import io.circe.HCursor
+import io.circe.syntax._
 import io.github.nremond.SecureHash
 import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.archive.webservices.ars.model.ArchConf

@@ -156,7 +156,7 @@ object JobManager {
   }
 
   def getInstance(jobIdOrUuid: String, conf: DerivationJobConf): Option[DerivationJobInstance] = {
-    val jobId = uuidIdMap.get(jobIdOrUuid).getOrElse(jobIdOrUuid)
+    val jobId = uuidLookup.get(jobIdOrUuid).map(_.id).getOrElse(jobIdOrUuid)
     getRegistered(jobId, conf).orElse {
       jobs.get(jobId).map { job =>
         job.history(conf)

@@ -32,7 +32,7 @@ object Dataset {
       name = jobInstance.job.name,
       sample = jobInstance.conf.sample,
       state = jobInstance.stateStr,
-      startTime = jobInstance.info.startTime.map(FormatUtil.instantTimeString),
-      finishedTime = jobInstance.info.finishedTime.map(FormatUtil.instantTimeString))
+      startTime = jobInstance.info.started.map(FormatUtil.instantTimeString),
+      finishedTime = jobInstance.info.finished.map(FormatUtil.instantTimeString))
   }
 }

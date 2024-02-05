@@ -25,25 +25,21 @@ object Keystone {
       return
     }
 
+    val collection = instance.conf.inputSpec.collection
     val inputMetadata = Map(
-      "id" -> instance.uuid,
-      "job_type_id" -> instance.job.uuid,
+      "id" -> instance.uuid.asJson,
+      "job_type_id" -> instance.job.uuid.asJson,
       // Remove any user ID from the collection ID.
-      "collection_id" ->
-        instance.collection.userSpecificId
-          .map(_._2)
-          .getOrElse(instance.collection.id),
-      "username" -> instance.user.map(_.userName).getOrElse("").toString,
-      "input_bytes" -> instance.inputSize.toString,
-      "sample" -> instance.conf.isSample.toString,
-      "created_at" -> Instant.now.toString,
-      "commit_hash" -> ArchConf.version.getOrElse("")).asJson
-      .deepMerge(
-        Map(
-          "parameters" -> Map(
-            "instance_hashcode" -> instance.hashCode.abs.toString,
-            "attempt" -> instance.attempt.toString).asJson
-            .deepMerge(Map("conf" -> instance.conf.toJson).asJson)).asJson)
+      "collection_id" -> collection.userSpecificId.map(_._2).getOrElse(collection.id).asJson,
+      "username" -> instance.user.map(_.userName).getOrElse("").toString.asJson,
+      "input_bytes" -> instance.inputSize.asJson,
+      "sample" -> instance.conf.isSample.asJson,
+      "parameters" -> Map(
+        "instance_hashcode" -> instance.hashCode.abs.toString.asJson,
+        "attempt" -> instance.attempt.asJson,
+        "conf" -> instance.conf.toJson).asJson,
+      "commit_hash" -> ArchConf.version.getOrElse("").asJson,
+      "created_at" -> Instant.now.toString.asJson).asJson
       .noSpaces
 
     val result = retryHttpRequest(jobStartEndpoint, inputMetadata, maxRetries)
