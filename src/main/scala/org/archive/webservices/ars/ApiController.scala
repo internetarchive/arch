@@ -413,20 +413,16 @@ class ApiController extends BaseController {
         .toSeq
         .distinct
         .flatMap { case (collectionId, outOrSamples, jobId) =>
+          val sample = outOrSamples == "samples"
           for {
             collection <- userIdCollectionMap.get(
               ArchCollection.userCollectionId(collectionId, user))
-          } yield {
-            val sample = outOrSamples == "samples"
-            Dataset(
-              collection,
-              JobManager
-                .getInstanceOrGlobal(
-                  jobId,
-                  DerivationJobConf.collection(collection, sample = sample, global = false),
-                  DerivationJobConf.collection(collection, sample = sample, global = true))
-                .get)
-          }
+            instance <- JobManager
+              .getInstanceOrGlobal(
+                jobId,
+                DerivationJobConf.collection(collection, sample = sample, global = false),
+                DerivationJobConf.collection(collection, sample = sample, global = true))
+          } yield Dataset(collection, instance)
         }
       Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
     }

@@ -9,6 +9,7 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, CustomCollectionSpecifics, UnionCollectionSpecifics}
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.processing.DerivationJobConf.toIdentifier
 
 import java.time.Instant
 import scala.collection.immutable.ListMap
@@ -26,6 +27,10 @@ class DerivationJobConf private (
     "sample" -> sample.asJson,
     "params" -> params.toJson).asJson
   def serialize: String = toJson.noSpaces
+
+  override def equals(obj: Any): Boolean =
+    toIdentifier(this) == toIdentifier(obj.asInstanceOf[DerivationJobConf])
+  override def hashCode: Int = toIdentifier(this).hashCode
 }
 
 object DerivationJobConf {
@@ -69,9 +74,7 @@ object DerivationJobConf {
       jobId: String,
       collection: ArchCollection,
       sample: Boolean): Option[DerivationJobInstance] = {
-    collectionInstance(
-      jobId,
-      DerivationJobConf.collection(collection, sample = sample, global = true))
+    collectionInstance(jobId, DerivationJobConf.collection(collection, sample = sample))
   }
 
   def collection(

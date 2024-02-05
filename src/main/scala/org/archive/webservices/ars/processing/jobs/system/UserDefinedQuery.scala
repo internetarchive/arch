@@ -21,7 +21,7 @@ object UserDefinedQuery extends SparkJob {
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to run a user-defined query (internal system job)"
 
-  val relativeOutPath = ""
+  val relativeOutPath = s"/$id"
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,

@@ -3,7 +3,7 @@ package org.archive.webservices.ars.io
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecord, InputSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FilePointer, FileRecord, InputSpec}
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
@@ -50,10 +50,7 @@ object WebArchiveLoader {
 
   def loadWarcFiles[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     spec.loader.load(spec) { rdd =>
-      action(rdd.filter { record =>
-        val withoutGz = record.filename.toLowerCase.stripSuffix(Sparkling.GzipExt)
-        withoutGz.endsWith(Sparkling.WarcExt) || withoutGz.endsWith(Sparkling.ArcExt)
-      })
+      action(rdd.filter(_.mime == ArchCollectionSpecLoader.WarcMime))
     }
   }
 
@@ -246,7 +243,7 @@ object WebArchiveLoader {
     val numFiles = HdfsIO.files(inputPath, recursive = false).size
     RddUtil
       .loadTextFiles(inputPath)
-      .mapPartitions(_.map { case (file, lines) =>
+      .map { case (file, lines) =>
         val pointers = lines.flatMap(CdxRecord.fromString).flatMap { cdx =>
           Try {
             val length = cdx.compressedSize
@@ -276,7 +273,7 @@ object WebArchiveLoader {
         (
           file.split('/').last,
           new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream])
-      })
+      }
       .coalesce(numFiles / WarcFilesPerPartition + 1)
   }
 

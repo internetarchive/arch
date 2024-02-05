@@ -5,7 +5,7 @@ abstract class PartialDerivationJob(parent: ChainedJob) extends DerivationJob {
   override val partialOf: Option[DerivationJob] = Some(parent)
   override lazy val id: String = parent.id + "_" + super.id
   val name: String = id
-  override lazy val uuid: String = uuid
+  override lazy val uuid: String = parent.uuid
   override def relativeOutPath: String = parent.relativeOutPath
   val category: ArchJobCategory = ArchJobCategories.None
   val description: String = id
