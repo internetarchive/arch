@@ -12,7 +12,8 @@ case class DatasetFile(
   lineCount: Long,
   fileType: String,
   creationTime: String,
-  md5Checksum: Option[String])
+  md5Checksum: Option[String],
+  accessToken: String)
   extends ApiResponseObject[DatasetFile]
 
 object DatasetFile {
@@ -24,5 +25,6 @@ object DatasetFile {
       mimeType = derivOut.mimeType,
       fileType = derivOut.fileType,
       creationTime = FormatUtil.instantTimeString(Instant.ofEpochMilli(derivOut.time)),
-      md5Checksum = derivOut.checksums.get("md5"))
+      md5Checksum = derivOut.checksums.get("md5"),
+      accessToken = derivOut.accessToken)
 }

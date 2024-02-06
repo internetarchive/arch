@@ -30,7 +30,7 @@ object Keystone {
       "id" -> instance.uuid.asJson,
       "job_type_id" -> instance.job.uuid.asJson,
       // Remove any user ID from the collection ID.
-      "collection_id" -> collection.userSpecificId.map(_._2).getOrElse(collection.id).asJson,
+      "collection_id" -> collection.id.asJson,
       "username" -> instance.user.map(_.userName).getOrElse("").toString.asJson,
       "input_bytes" -> instance.inputSize.asJson,
       "sample" -> instance.conf.isSample.asJson,

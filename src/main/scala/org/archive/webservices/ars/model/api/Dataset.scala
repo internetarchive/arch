@@ -23,8 +23,8 @@ object Dataset {
   def apply(collection: ArchCollection, jobInstance: DerivationJobInstance)(implicit
       context: RequestContext): Dataset = {
     Dataset(
-      id = DatasetUtil.formatId(collection.userUrlId(context.user.id), jobInstance),
-      collectionId = collection.userUrlId(context.user.id),
+      id = DatasetUtil.formatId(collection.id, jobInstance),
+      collectionId = collection.id,
       collectionName = collection.name,
       isSample = jobInstance.conf.isSample,
       jobId = jobInstance.job.uuid.toString,

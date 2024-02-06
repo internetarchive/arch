@@ -5,8 +5,8 @@ import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.{DerivationJobConf,DerivationJobInstance,JobManager}
 
 object DatasetUtil {
-  def formatId(collectionUserUrlId: String, job: DerivationJobInstance): String = {
-    s"${collectionUserUrlId}:${if (job.conf.isSample) "1" else "0" }:${job.job.id}"
+  def formatId(collectionId: String, job: DerivationJobInstance): String = {
+    s"${collectionId}:${if (job.conf.isSample) "1" else "0" }:${job.job.id}"
   }
 
   def parseId(datasetId: String, user: ArchUser): Option[(ArchCollection, DerivationJobInstance)] = {

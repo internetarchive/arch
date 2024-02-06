@@ -22,7 +22,7 @@ object Collection {
   def apply(collection: ArchCollection)(implicit context: RequestContext): Collection = {
     val info = ArchCollectionInfo.get(collection.id)
     Collection(
-      id = collection.userUrlId(context.user.id),
+      id = collection.id,
       name = collection.name,
       public = collection.public,
       size = FormatUtil.formatBytes(collection.stats.size),

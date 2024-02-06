@@ -13,10 +13,6 @@ case class ArchCollection(
     sourceId: String) {
   private var user: Option[ArchUser] = None
 
-  def userUrlId(implicit context: RequestContext): String = userUrlId(context.user.id)
-  def userUrlId(userId: String): String =
-    userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
-
   lazy val specifics: CollectionSpecifics = CollectionSpecifics.get(id) match {
     case Some(specifics) => specifics
     case None => throw new RuntimeException("No specifics found for collection " + id)
