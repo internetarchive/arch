@@ -19,6 +19,8 @@ object FileRecordFactory {
     .str("data-source")
     .flatMap {
       case "s3" => Some(S3FileRecordFactory(spec))
+      case "s3-http" => Some(S3HttpFileRecordFactory(spec))
+      case "http" => Some(HttpFileRecordFactory(spec))
       case "hdfs" => Some(HdfsFileRecordFactory(spec))
       case _ => None
     }

@@ -1,14 +1,14 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
-import java.io.{FileNotFoundException, InputStream}
-import java.net.URL
-import scala.io.Source
+import java.io.{BufferedInputStream, FileInputStream, InputStream}
+import scala.collection.convert.ImplicitConversions._
 
-class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean)
-    extends FileRecordFactory {
-  class S3FileRecord private[S3FileRecordFactory] (
+class S3FileRecordFactory(endpoint: String, accessKey: String, secretKey: String, bucket: String, longestPrefixMapping: Boolean)
+    extends FileRecordFactory with LongestPrefixProbing {
+  class S3FileRecord private[S3FileRecordFactory](
       val filename: String,
       val mime: String,
       val meta: FileMeta)
@@ -20,79 +20,50 @@ class S3FileRecordFactory(location: String, longestPrefixMapping: Boolean)
   override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
     new S3FileRecord(filename, mime, meta)
 
+  private def s3[R](action: S3Client => R): R = {
+    S3Client(endpoint, accessKey, secretKey).access(action)
+  }
+
   def accessFile(
       filename: String,
       resolve: Boolean = true,
       accessContext: CollectionAccessContext): InputStream = {
-    val url = if (resolve) locateFile(filename) + "/" + filename else filename
-    println(s"Reading $url...")
-    new URL(url).openStream
+    val path = if (resolve) locateFile(filename) + "/" + filename else filename
+    println(s"Reading $path...")
+    val tmpFile = IOUtil.tmpFile
+    try {
+      s3(_.transfers.download(bucket, path, tmpFile).waitForCompletion())
+    } catch {
+      case _: Exception => tmpFile.delete()
+    }
+    val in = new BufferedInputStream(new FileInputStream(tmpFile))
+    new CleanupInputStream(in, tmpFile.delete)
+  }
+
+  def locateFile(filename: String): String = {
+    if (longestPrefixMapping) locateLongestPrefix(filename) else ""
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
-  def locateFile(filename: String): String = {
-    if (longestPrefixMapping) {
-      var remaining = filename
-      var prefix = ""
-      var next = nextPrefixes(prefix)
-      while (next.nonEmpty) {
-        val keys =
-          next.map(p => (p, p.stripPrefix(prefix).stripSuffix("/"))).filter(_._2.nonEmpty)
-        val longest = keys
-          .filter { case (_, k) =>
-            remaining.startsWith(k)
-          }
-          .toSeq
-          .sortBy(-_._2.length)
-          .headOption
-          .orElse {
-            keys
-              .filter { case (_, k) =>
-                filename.startsWith(k)
-              }
-              .toSeq
-              .sortBy(-_._2.length)
-              .headOption
-          }
-        if (longest.isEmpty) throw new FileNotFoundException(filename + s" ($prefix)")
-        val (p, k) = longest.get
-        if (k == filename) return location + "/" + prefix.stripSuffix("/")
-        if (remaining.startsWith(k)) remaining = remaining.stripPrefix(k)
-        prefix = p
-        next = nextPrefixes(prefix)
-      }
-      throw new FileNotFoundException(filename + s" ($prefix)")
-    } else location
-  }
-
-  def nextPrefixes(prefix: String): Set[String] = prefixes.getOrElseUpdate(
-    prefix, {
-      val url = location + "?delimiter=/&prefix=" + prefix
-      val source = Source.fromURL(url)
-      try {
-        source.mkString
-          .split('<')
-          .filter(keyValue => keyValue.startsWith("Prefix>") || keyValue.startsWith("Key>"))
-          .map { keyValue =>
-            keyValue.split('>').last
-          }
-          .toSet
-      } finally {
-        source.close()
-      }
+  protected def nextPrefixes(prefix: String): Set[String] = {
+    prefixes.getOrElseUpdate(prefix, {
+      s3(_.s3.listObjects(bucket, prefix).getObjectSummaries).map(_.getKey).toSet
     })
+  }
 }
 
 object S3FileRecordFactory {
   def apply(spec: InputSpec): S3FileRecordFactory = {
-    spec
-      .str("data-location")
-      .map { location =>
-        val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
-        new S3FileRecordFactory(location, longestPrefixMapping)
-      }
-      .getOrElse {
-        throw new RuntimeException("No location URL specified.")
-      }
+    for {
+      endpoint <- spec.str("s3-endpoint")
+      accessKey <- spec.str("s3-accessKey")
+      secretKey <- spec.str("s3-secretKey")
+      bucket <- spec.str("s3-bucket")
+    } yield {
+      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+      new S3FileRecordFactory(endpoint, accessKey, secretKey, bucket, longestPrefixMapping)
+    }
+  }.getOrElse {
+    throw new RuntimeException("No location URL specified.")
   }
 }
