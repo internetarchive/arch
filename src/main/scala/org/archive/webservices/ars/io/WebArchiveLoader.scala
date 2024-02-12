@@ -6,7 +6,7 @@ import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FilePointer, FileRecord, InputSpec}
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
+import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
@@ -23,20 +23,25 @@ object WebArchiveLoader {
   val RetrySleepMillis = 5000
   val CdxSkipDistance: Long = 10.mb
 
-  def loadCdx[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R =
-    loadCdxFromWarcFiles(spec)(action)
-
-  def loadCdxFromWarcFiles[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = {
-    loadWarcFiles(spec)(loadCdxFromWarcFileRecords(_)(action))
-  }
-
-  def loadCdxFromWarcFileRecords[R](rdd: RDD[FileRecord])(action: RDD[CdxRecord] => R): R = {
-    action(rdd.flatMap { record =>
-      CdxUtil.fromWarcGzStream(record.filename, record.access).map { r =>
-        val Seq(offsetStr, _) = r.additionalFields
-        r.copy(additionalFields = Seq(offsetStr, record.pointer.url))
+  def loadCdx[R](spec: InputSpec)(action: RDD[CdxRecord] => R): R = {
+    if (InputSpec.isCollectionBased(spec)) {
+      spec.collection.specifics.loadCdx(spec.inputPath)(action)
+    } else {
+      spec.loader.load(spec) { rdd =>
+        action {
+          rdd.flatMap { record =>
+            if (record.mime == ArchCollectionSpecLoader.WarcMime) {
+              CdxUtil.fromWarcGzStream(record.filename, record.access).map { r =>
+                val Seq(offsetStr, _) = r.additionalFields
+                r.copy(additionalFields = Seq(offsetStr, record.pointer.url))
+              }
+            } else if (record.mime == ArchCollectionSpecLoader.CdxMime) {
+              IOUtil.lines(record.access).flatMap(CdxRecord.fromString)
+            } else Iterator.empty
+          }
+        }
       }
-    })
+    }
   }
 
   def loadCdxFromWarcGzStreams(rdd: RDD[(FilePointer, InputStream)]): RDD[CdxRecord] = {

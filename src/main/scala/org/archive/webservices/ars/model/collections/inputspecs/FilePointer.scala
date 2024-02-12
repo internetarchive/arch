@@ -5,8 +5,12 @@ import org.archive.webservices.ars.model.collections.inputspecs.FilePointer.Sour
 import org.archive.webservices.sparkling.util.StringUtil
 
 case class FilePointer(url: String, filename: String) {
-  lazy val source: String = StringUtil.prefixBySeparator(url, SourceSeparator)
-  lazy val path: String = StringUtil.stripPrefixBySeparator(url, SourceSeparator)
+  private lazy val sourcePathSplit = {
+    val splitAt = StringUtil.prefixBySeparator(url, "/").lastIndexOf(SourceSeparator)
+    if (splitAt < 0) ("", url) else (url.take(splitAt), url.drop(splitAt + 1))
+  }
+  def source: String = sourcePathSplit._1
+  def path: String = sourcePathSplit._2
 
   def isHttpSource = source.toLowerCase == "http" || source.toLowerCase == "https"
   def isCollectionSource = !isHttpSource && ArchCollection.prefix(source).isDefined

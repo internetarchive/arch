@@ -6,6 +6,7 @@ import java.io.InputStream
 
 object ArchCollectionSpecLoader extends InputSpecLoader {
   val WarcMime = "application/warc"
+  val CdxMime = "application/cdx"
 
   class WarcFileRecord(file: FilePointer, in: InputStream) extends FileRecord {
     override def filename: String = file.filename
