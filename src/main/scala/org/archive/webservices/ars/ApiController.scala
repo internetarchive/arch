@@ -207,7 +207,8 @@ class ApiController extends BaseController {
             val sample = params.get("sample").contains("true")
             val user =
               cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
-            val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid)
+            val customOutPath = cursor.keys.toSet.flatten.contains(DerivationJobConf.OutputPathConfKey)
+            val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid(reserve = !customOutPath))
             for {
               job <- JobManager.get(params("jobid"))
               conf <- DerivationJobConf.fromJson(

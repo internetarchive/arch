@@ -10,12 +10,14 @@ import org.archive.webservices.sparkling.io.HdfsIO
 import java.time.Instant
 
 object DerivationJobInstance {
-  def uuid: String = {
+  def uuid: String = uuid(false)
+
+  def uuid(reserve: Boolean): String = {
     var uuid = UUID.uuid7str
     for (path <- ArchConf.uuidJobOutPath) {
       val uuidPath = new Path(path + "/" + uuid)
       while (HdfsIO.fs.exists(uuidPath)) uuid = UUID.uuid7str
-      HdfsIO.fs.mkdirs(uuidPath)
+      if (reserve) HdfsIO.fs.mkdirs(uuidPath)
     }
     uuid
   }

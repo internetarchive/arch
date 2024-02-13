@@ -35,6 +35,7 @@ class DerivationJobConf private (
 
 object DerivationJobConf {
   val SampleSize = 100
+  val OutputPathConfKey = "outputPath"
 
   case class Identifier private (str: String)
 
@@ -118,7 +119,7 @@ object DerivationJobConf {
       sample: Boolean = false,
       outPath: Option[String] = None): Option[DerivationJobConf] = {
     for {
-      outputPath <- cursor.get[String]("outputPath").toOption.orElse(outPath)
+      outputPath <- cursor.get[String](OutputPathConfKey).toOption.orElse(outPath)
       spec <- cursor.downField("inputSpec").success.map(InputSpec(_))
     } yield {
       val sampleSize = cursor.get[Int]("sample").getOrElse(if (sample) SampleSize else -1)
