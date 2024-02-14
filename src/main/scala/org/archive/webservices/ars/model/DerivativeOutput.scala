@@ -31,11 +31,7 @@ case class DerivativeOutput(
 
   lazy val lineCount: Long = {
     val p = path + LineCountFileSuffix
-    if (HdfsIO.exists(p)) Try(
-      HdfsIO.access(p, decompress = false) { in =>
-        new String(in.readAllBytes, "utf-8").split("\n", 2).head.toLong
-      }
-    ).getOrElse(-1)
+    if (HdfsIO.exists(p)) Try(HdfsIO.lines(p).head.toLong).getOrElse(-1)
     else -1
   }
 
