@@ -163,10 +163,10 @@ object JobManager {
   def getInstanceOrGlobal(
       jobId: String,
       conf: DerivationJobConf,
-      globalConf: => DerivationJobConf): Option[DerivationJobInstance] = {
+      globalConf: => Option[DerivationJobConf]): Option[DerivationJobInstance] = {
     val instance = JobManager.getInstance(jobId, conf)
     if (instance.isEmpty || instance.exists(_.state == ProcessingState.NotStarted)) {
-      val global = Some(globalConf).filter(_.outputPath != conf.outputPath).flatMap { conf =>
+      val global = globalConf.filter(_.outputPath != conf.outputPath).flatMap { conf =>
         JobManager.getInstance(jobId, conf)
       }
       if (global.exists(_.state > ProcessingState.NotStarted)) global else instance

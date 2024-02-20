@@ -27,4 +27,8 @@ object FileRecordFactory {
     .getOrElse {
       throw new UnsupportedOperationException()
     }
+
+  def filePath(path: String, filename: String): String = {
+    if (path.trim.isEmpty) filename else path.trim.stripSuffix("/") + "/" + filename
+  }
 }

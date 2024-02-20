@@ -21,9 +21,10 @@ trait InputSpec {
   }
 }
 
-class DefaultInputSpec(val specType: String, val cursor: HCursor) extends InputSpec {
-  override lazy val id: String =
+class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[String] = None) extends InputSpec {
+  override lazy val id: String = idOpt.getOrElse {
     cursor.get[String]("id").getOrElse(specType + ":" + cursor.focus.get.noSpaces.hashCode)
+  }
   override lazy val inputType: String =
     cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
   override lazy val size: Long = cursor.get[Long]("size").getOrElse(-1)
@@ -71,11 +72,13 @@ object InputSpec {
 
   implicit def toIdentifier(spec: InputSpec): Identifier = Identifier(spec.id)
 
-  def apply(spec: String): InputSpec = apply(parse(spec).right.toOption.map(_.hcursor).getOrElse {
-    throw new RuntimeException("invalid input spec")
-  })
+  def apply(spec: String): InputSpec = apply(spec, None)
 
-  def apply(cursor: HCursor): InputSpec = {
+  def apply(spec: String, id: Option[String]): InputSpec = apply(parse(spec).right.toOption.map(_.hcursor).getOrElse {
+    throw new RuntimeException("invalid input spec")
+  }, id)
+
+  def apply(cursor: HCursor, id: Option[String] = None): InputSpec = {
     val specType = cursor.get[String]("type").toOption.orElse {
       throw new RuntimeException("invalid input spec: type missing")
     }
@@ -90,7 +93,7 @@ object InputSpec {
         }
       }
       .getOrElse {
-        new DefaultInputSpec(specType.get, cursor)
+        new DefaultInputSpec(specType.get, cursor, id)
       }
   }
 
@@ -101,7 +104,7 @@ object InputSpec {
   }
 
   def apply(collectionId: String, inputPath: String): InputSpec = {
-    if (collectionId.startsWith(FileCollectionSpecifics.Prefix)) apply(inputPath)
+    if (collectionId.startsWith(FileCollectionSpecifics.Prefix)) apply(inputPath, Some(collectionId))
     else new CollectionBasedInputSpec(collectionId, Some(inputPath))
   }
 

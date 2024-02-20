@@ -65,10 +65,12 @@ object DerivationJobConf {
     JobManager.getInstanceOrGlobal(
       jobId,
       conf,
-      DerivationJobConf.collection(
-        conf.inputSpec.collection,
-        sample = conf.isSample,
-        global = true))
+      if (InputSpec.isCollectionBased(conf.inputSpec)) Some {
+        DerivationJobConf.collection(
+          conf.inputSpec.collection,
+          sample = conf.isSample,
+          global = true)
+      } else None)
   }
 
   def collectionInstance(

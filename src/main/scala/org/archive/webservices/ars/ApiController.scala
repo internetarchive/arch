@@ -438,7 +438,7 @@ class ApiController extends BaseController {
               .getInstanceOrGlobal(
                 jobId,
                 DerivationJobConf.collection(collection, sample = sample, global = false),
-                DerivationJobConf.collection(collection, sample = sample, global = true))
+                Some(DerivationJobConf.collection(collection, sample = sample, global = true)))
           } yield Dataset(collection, instance)
         }
       Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))

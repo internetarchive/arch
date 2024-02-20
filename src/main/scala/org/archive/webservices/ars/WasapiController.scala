@@ -92,8 +92,8 @@ class WasapiController extends BaseController {
             jobId,
             DerivationJobConf
               .collection(collection, sample = sample, global = false),
-            DerivationJobConf
-              .collection(collection, sample = sample, global = true)) match {
+            Some(DerivationJobConf
+              .collection(collection, sample = sample, global = true))) match {
             case Some(instance) =>
               WasapiController.files(
                 instance,

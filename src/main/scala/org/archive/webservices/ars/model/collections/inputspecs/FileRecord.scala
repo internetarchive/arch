@@ -8,8 +8,6 @@ trait FileRecord {
   def path: String
   def access: InputStream
   def meta: FileMeta
-  def filePath: String = {
-    if (path.trim.isEmpty) filename else path.trim.stripSuffix("/") + "/" + filename
-  }
+  def filePath: String = FileRecordFactory.filePath(path, filename)
   def pointer: FilePointer = FilePointer(filePath, filename)
 }

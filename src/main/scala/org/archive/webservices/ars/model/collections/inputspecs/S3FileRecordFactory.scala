@@ -6,7 +6,7 @@ import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Clien
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import scala.collection.convert.ImplicitConversions._
 
-class S3FileRecordFactory(endpoint: String, accessKey: String, secretKey: String, bucket: String, longestPrefixMapping: Boolean)
+class S3FileRecordFactory(location: String, endpoint: String, accessKey: String, secretKey: String, bucket: String, longestPrefixMapping: Boolean)
     extends FileRecordFactory with LongestPrefixProbing {
   class S3FileRecord private[S3FileRecordFactory](
       val filename: String,
@@ -41,13 +41,13 @@ class S3FileRecordFactory(endpoint: String, accessKey: String, secretKey: String
   }
 
   def locateFile(filename: String): String = {
-    if (longestPrefixMapping) locateLongestPrefix(filename) else ""
+    if (longestPrefixMapping) location + "/" + locateLongestPrefix(filename) else location
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
   protected def nextPrefixes(prefix: String): Set[String] = {
     prefixes.getOrElseUpdate(prefix, {
-      s3(_.s3.listObjects(bucket, prefix).getObjectSummaries).map(_.getKey).toSet
+      s3(_.s3.listObjects(bucket, (location + "/" + prefix).stripSuffix("/")).getObjectSummaries).map(_.getKey).toSet
     })
   }
 }
@@ -59,9 +59,10 @@ object S3FileRecordFactory {
       accessKey <- spec.str("s3-accessKey")
       secretKey <- spec.str("s3-secretKey")
       bucket <- spec.str("s3-bucket")
+      location <- spec.str("data-location")
     } yield {
       val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
-      new S3FileRecordFactory(endpoint, accessKey, secretKey, bucket, longestPrefixMapping)
+      new S3FileRecordFactory(location, endpoint, accessKey, secretKey, bucket, longestPrefixMapping)
     }
   }.getOrElse {
     throw new RuntimeException("No location URL specified.")

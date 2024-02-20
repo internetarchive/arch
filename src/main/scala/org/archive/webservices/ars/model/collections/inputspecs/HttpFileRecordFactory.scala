@@ -13,17 +13,17 @@ class HttpFileRecordFactory(location: String)
       val meta: FileMeta)
       extends FileRecord {
     override lazy val path: String = locateFile(filename)
-    override def access: InputStream = accessFile(filename, resolve = false)
+    override def access: InputStream = accessFile(filePath, resolve = false)
   }
 
   override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
     new HttpFileRecord(filename, mime, meta)
 
   def accessFile(
-      filename: String,
+      filePath: String,
       resolve: Boolean = true,
       accessContext: CollectionAccessContext): InputStream = {
-    val url = if (resolve) locateFile(filename) + "/" + filename else filename
+    val url = if (resolve) FileRecordFactory.filePath(locateFile(filePath), filePath) else filePath
     println(s"Reading $url...")
     new URL(url).openStream
   }
