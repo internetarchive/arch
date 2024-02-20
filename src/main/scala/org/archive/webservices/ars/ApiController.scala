@@ -207,8 +207,13 @@ class ApiController extends BaseController {
             val sample = params.get("sample").contains("true")
             val user =
               cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
-            val customOutPath = cursor.keys.toSet.flatten.contains(DerivationJobConf.OutputPathConfKey)
-            val uuid = cursor.get[String]("uuid").toOption.getOrElse(DerivationJobInstance.uuid(reserve = !customOutPath))
+            val customOutPath =
+              cursor.keys.toSet.flatten.contains(DerivationJobConf.OutputPathConfKey)
+            var reservedOutPath = false
+            lazy val uuid = cursor.get[String]("uuid").toOption.getOrElse {
+              reservedOutPath = !customOutPath
+              DerivationJobInstance.uuid(reserve = reservedOutPath)
+            }
             for {
               job <- JobManager.get(params("jobid"))
               conf <- DerivationJobConf.fromJson(
@@ -216,23 +221,34 @@ class ApiController extends BaseController {
                 sample,
                 ArchConf.uuidJobOutPath.map(_ + "/" + uuid))
             } yield {
-              job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
-                if (rerun) job.reset(conf)
-                val history = job.history(uuid, conf)
-                val queued =
-                  if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
-                    job.enqueue(
-                      conf,
-                      { instance =>
-                        instance.predefUuid = Some(uuid)
-                        instance.user = user
-                      })
-                  } else None
-                queued match {
-                  case Some(instance) => ApiController.jobStateResponse(instance)
-                  case None => ApiController.jobStateResponse(history)
+              job
+                .validateParams(conf)
+                .map { e =>
+                  if (reservedOutPath) HdfsIO.delete(conf.outputPath)
+                  BadRequest(e)
                 }
-              }
+                .getOrElse {
+                  if (rerun) job.reset(conf)
+                  val history = job.history(uuid, conf)
+                  val queued =
+                    if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
+                      job.enqueue(
+                        conf,
+                        { instance =>
+                          instance.predefUuid = Some(uuid)
+                          instance.user = user
+                        })
+                    } else None
+                  queued match {
+                    case Some(instance) => ApiController.jobStateResponse(instance)
+                    case None => {
+                      if (reservedOutPath && history.conf.outputPath != conf.outputPath) {
+                        HdfsIO.delete(conf.outputPath)
+                      }
+                      ApiController.jobStateResponse(history)
+                    }
+                  }
+                }
             }
           }.getOrElse(NotFound())
         case None =>
