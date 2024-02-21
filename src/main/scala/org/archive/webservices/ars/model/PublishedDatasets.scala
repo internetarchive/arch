@@ -12,6 +12,7 @@ import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, U
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
+import org.archive.webservices.ars.model.collections.inputspecs.CollectionBasedInputSpec
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
