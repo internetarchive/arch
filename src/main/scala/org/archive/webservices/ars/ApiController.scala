@@ -439,23 +439,6 @@ class ApiController extends BaseController {
     }
   }
 
-  get("/datasets/:datasetid/sample_viz_data") {
-    ensureAuth { implicit context =>
-      val user = context.user
-      (for {
-        (_, job) <- DatasetUtil.parseId(params("datasetid"), user)
-      } yield {
-        job.sampleVizData match {
-          case Some(data: SampleVizData) =>
-            Ok(
-              data.asJson,
-              Map("Content-Type" -> "application/json"))
-          case _ => NotFound()
-        }
-      }).getOrElse(NotFound())
-    }
-  }
-
   get("/collection/:collectionid") {
     ensureAuth { implicit context =>
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)

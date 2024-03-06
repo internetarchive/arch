@@ -166,17 +166,6 @@ object UserDefinedQuery extends SparkJob {
     }
   }
 
-  override def outputCollection(conf: DerivationJobConf): Option[ArchCollection] = {
-    conf.outputPath.split("/").takeRight(2) match {
-      case Array(userName, collectionName) =>
-        ArchCollection.get(
-          CustomCollectionSpecifics.Prefix
-            ++ userName.replace(ArchCollection.PathUserEscape, ArchCollection.UserIdSeparator)
-            ++ ArchCollection.UserIdSeparator
-            ++ collectionName)
-    }
-  }
-
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
     val started = HdfsIO.exists(conf.outputPath + relativeOutPath)

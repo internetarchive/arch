@@ -19,7 +19,7 @@ object DatasetUtil {
           .getInstanceOrGlobal(
             jobId,
             DerivationJobConf.collection(collection, sample = sample, global = false),
-            DerivationJobConf.collection(collection, sample = sample, global = true))
+            Some(DerivationJobConf.collection(collection, sample = sample, global = true)))
       )
     } yield (collection, job)
   }

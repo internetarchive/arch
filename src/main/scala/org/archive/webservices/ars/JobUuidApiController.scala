@@ -3,7 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.scalatra._
 
 class JobUuidApiController extends BaseController {
@@ -32,7 +32,9 @@ class JobUuidApiController extends BaseController {
     response { instance =>
       WasapiController.files(
         instance,
-        ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download",
+        params.get("base_download_url").getOrElse(
+          ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download"
+        ),
         params,
         addSample = false)
     }
@@ -73,13 +75,25 @@ class JobUuidApiController extends BaseController {
     }
   }
 
+  get(UuidPattern + "sample_viz_data") {
+    response { instance =>
+      instance.sampleVizData match {
+        case Some(data: SampleVizData) =>
+          Ok(data.asJson, Map("Content-Type" -> "application/json"))
+        case _ => NotFound()
+      }
+    }
+  }
+
   get(UuidPattern + "colab/:file") {
     params.get("access") match {
       case Some(accessToken) =>
         response { instance =>
           val filename = params("file")
-          val fileUrl =
-            ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename
+          val fileUrl = params
+            .get("file_download_url")
+            .getOrElse(
+              ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename)
           FilesController.colab(instance, filename, fileUrl, accessToken)
         }
       case None => Forbidden()

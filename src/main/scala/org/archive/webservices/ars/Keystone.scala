@@ -24,13 +24,9 @@ object Keystone {
     if (!JobManager.jobs.contains(jobName)) {
       return
     }
-
-    val collection = instance.conf.inputSpec.collection
     val inputMetadata = Map(
       "id" -> instance.uuid.asJson,
       "job_type_id" -> instance.job.uuid.asJson,
-      // Remove any user ID from the collection ID.
-      "collection_id" -> collection.id.asJson,
       "username" -> instance.user.map(_.userName).getOrElse("").toString.asJson,
       "input_bytes" -> instance.inputSize.asJson,
       "sample" -> instance.conf.isSample.asJson,
@@ -41,7 +37,6 @@ object Keystone {
       "commit_hash" -> ArchConf.version.getOrElse("").asJson,
       "created_at" -> Instant.now.toString.asJson).asJson
       .noSpaces
-
     val result = retryHttpRequest(jobStartEndpoint, inputMetadata, maxRetries)
     printHttpRequestOutput(result)
   }
