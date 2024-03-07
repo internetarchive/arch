@@ -69,7 +69,7 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank" download="<%=unescape(file.filename)%>">
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
