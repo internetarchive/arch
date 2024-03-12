@@ -3,6 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
+import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
 import org.archive.webservices.ars.model.app.RequestContext
@@ -410,8 +411,7 @@ class ApiController extends BaseController {
   get("/datasets") {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       val user = context.user
-      val pathUserId =
-        user.id.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+      val pathUserId = IOHelper.escapePath(user.id)
       val userFiles = HdfsIO.files(
         s"${ArchConf.jobOutPath}/$pathUserId/*/{out,samples}/*/${ArchJobInstanceInfo.InfoFile}",
         recursive = false)

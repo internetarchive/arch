@@ -58,7 +58,7 @@ object FilesController {
       Map(
         "Content-Type" -> file.mimeType,
         "Accept-Ranges" -> "bytes",
-        "Content-Disposition" -> ("attachment; filename=" + file.filename),
+        "Content-Disposition" -> ("attachment; filename=" + file.downloadName),
         "Content-Length" -> length.toString) ++ range.map { case (from, to) =>
         "Content-Range" -> s"bytes $from-$to/$size"
       })
@@ -203,7 +203,7 @@ class FilesController extends BaseController {
           instance.outFiles.find(_.filename == filename) match {
             case Some(file) =>
               if (file.accessToken == accessToken) {
-                FilesController.sendFile(file)
+                FilesController.sendFile(file.prefixDownload(instance))
               } else Forbidden()
             case None =>
               NotFound()
@@ -218,7 +218,7 @@ class FilesController extends BaseController {
           } yield {
             instance.outFiles.find(_.filename == filename) match {
               case Some(file) =>
-                FilesController.sendFile(file)
+                FilesController.sendFile(file.prefixDownload(instance))
               case None =>
                 NotFound()
             }

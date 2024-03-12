@@ -2,7 +2,7 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe._
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.WebArchiveLoader
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
@@ -116,9 +116,7 @@ object CustomCollectionSpecifics {
     collectionInfo(id).flatMap(_.get[String]("location").toOption)
 
   def userPath(userId: String): String =
-    ArchConf.customCollectionPath + "/" + userId.replace(
-      ArchCollection.UserIdSeparator,
-      ArchCollection.PathUserEscape)
+    ArchConf.customCollectionPath + "/" + IOHelper.escapePath(userId)
 
   def path(user: ArchUser): String = userPath(user.id)
 

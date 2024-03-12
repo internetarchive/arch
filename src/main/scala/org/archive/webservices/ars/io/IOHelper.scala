@@ -5,6 +5,7 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
+import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -13,6 +14,7 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._
 import java.nio.file.Files
+import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
@@ -21,10 +23,13 @@ import scala.util.Try
 object IOHelper {
   val SamplingScaleUpFactor = 4 // see RDD#take (conf.getInt("spark.rdd.limit.scaleUpFactor", 4))
   val SamplingMaxReadPerPartitionFactor = 2
+  val SpecialCharEscape = "-"
 
   def escapePath(path: String): String = {
-    path.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+    path.replace(ArchCollection.UserIdSeparator, SpecialCharEscape).replace(ArchUser.PrefixNameSeparator, SpecialCharEscape)
   }
+
+  def pathTimestamp(timestamp: Instant): String = timestamp.toString.replaceAll("[^\\d]", "").take(14)
 
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)

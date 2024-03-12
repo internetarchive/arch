@@ -35,7 +35,6 @@ case class ArchCollection(
 
 object ArchCollection {
   val UserIdSeparator = ":"
-  val PathUserEscape = "-"
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 

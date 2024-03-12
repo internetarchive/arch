@@ -46,7 +46,7 @@ class JobUuidApiController extends BaseController {
             instance.outFiles.find(_.filename == filename) match {
               case Some(file) =>
                 if (file.accessToken == accessToken) {
-                  FilesController.sendFile(file)
+                  FilesController.sendFile(file.prefixDownload(instance))
                 } else Forbidden()
               case None =>
                 NotFound()
@@ -58,7 +58,7 @@ class JobUuidApiController extends BaseController {
         response { instance =>
           val filename = params("file")
           instance.outFiles.find(_.filename == filename) match {
-            case Some(file) => FilesController.sendFile(file)
+            case Some(file) => FilesController.sendFile(file.prefixDownload(instance))
             case None => NotFound()
           }
         }

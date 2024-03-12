@@ -127,7 +127,7 @@ class DefaultController extends BaseController {
               "user" -> context.user,
               "collection" -> collection,
               "job" -> instance,
-              "files" -> instance.outFiles,
+              "files" -> instance.outFiles.map(_.prefixDownload(instance)),
               "publishingEnabled" -> !PublishedDatasets.ProhibitedJobs.contains(
                 instance.job)) ++ instance.templateVariables
             Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
