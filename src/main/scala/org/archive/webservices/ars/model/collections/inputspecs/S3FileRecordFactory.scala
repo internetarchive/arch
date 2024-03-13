@@ -5,9 +5,16 @@ import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Clien
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
-class S3FileRecordFactory(location: String, endpoint: String, accessKey: String, secretKey: String, bucket: String, longestPrefixMapping: Boolean)
-    extends FileRecordFactory with LongestPrefixProbing {
-  class S3FileRecord private[S3FileRecordFactory](
+class S3FileRecordFactory(
+    location: String,
+    endpoint: String,
+    accessKey: String,
+    secretKey: String,
+    bucket: String,
+    longestPrefixMapping: Boolean)
+    extends FileRecordFactory
+    with LongestPrefixProbing {
+  class S3FileRecord private[S3FileRecordFactory] (
       val filename: String,
       val mime: String,
       val meta: FileMeta)
@@ -27,7 +34,8 @@ class S3FileRecordFactory(location: String, endpoint: String, accessKey: String,
       filePath: String,
       resolve: Boolean = true,
       accessContext: CollectionAccessContext): InputStream = {
-    val path = if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
+    val path =
+      if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
     println(s"Reading $path...")
     val tmpFile = IOUtil.tmpFile
     try {
@@ -40,16 +48,18 @@ class S3FileRecordFactory(location: String, endpoint: String, accessKey: String,
   }
 
   def locatePath(filename: String): String = {
-    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(filename)) else location
+    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(filename))
+    else location
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
   protected def nextPrefixes(prefix: String): Set[String] = {
-    prefixes.getOrElseUpdate(prefix, {
-      s3(_.list(bucket, IOHelper.concatPaths(location, prefix))).map { key =>
-        key.stripPrefix(location).stripPrefix("/")
-      }
-    })
+    prefixes.getOrElseUpdate(
+      prefix, {
+        s3(_.list(bucket, IOHelper.concatPaths(location, prefix))).map { key =>
+          key.stripPrefix(location).stripPrefix("/")
+        }
+      })
   }
 }
 
@@ -63,7 +73,13 @@ object S3FileRecordFactory {
       location <- spec.str("data-location")
     } yield {
       val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
-      new S3FileRecordFactory(location, endpoint, accessKey, secretKey, bucket, longestPrefixMapping)
+      new S3FileRecordFactory(
+        location,
+        endpoint,
+        accessKey,
+        secretKey,
+        bucket,
+        longestPrefixMapping)
     }
   }.getOrElse {
     throw new RuntimeException("No location URL specified.")

@@ -26,10 +26,13 @@ object IOHelper {
   val SpecialCharEscape = "-"
 
   def escapePath(path: String): String = {
-    path.replace(ArchCollection.UserIdSeparator, SpecialCharEscape).replace(ArchUser.PrefixNameSeparator, SpecialCharEscape)
+    path
+      .replace(ArchCollection.UserIdSeparator, SpecialCharEscape)
+      .replace(ArchUser.PrefixNameSeparator, SpecialCharEscape)
   }
 
-  def pathTimestamp(timestamp: Instant): String = timestamp.toString.replaceAll("[^\\d]", "").take(14)
+  def pathTimestamp(timestamp: Instant): String =
+    timestamp.toString.replaceAll("[^\\d]", "").take(14)
 
   def concatPaths(paths: String*): String = {
     paths.map(_.trim).filter(_.nonEmpty).mkString("/").replaceAll("/+", "/")

@@ -6,8 +6,8 @@ import org.archive.webservices.archivespark.dataspecs.DataSpec
 import org.archive.webservices.archivespark.model.EnrichRoot
 import org.archive.webservices.ars.WasapiController
 import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
-import org.archive.webservices.ars.model.{ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
+import org.archive.webservices.ars.model.{ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -83,19 +83,21 @@ abstract class ArchiveSparkBaseJob[Root <: EnrichRoot: ClassTag] extends SparkJo
     HdfsIO.delete(conf.outputPath + relativeOutPath)
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    super.templateVariables(conf) ++ JobManager.getInstance(this.id, conf).toSeq.flatMap { instance =>
-      val wasapiUrl = ArchConf.baseUrl + {
-        if (ArchConf.uuidJobOutPath.exists(instance.outPath.startsWith)) {
-          "/api/job/" + instance.uuid + "/files"
-        } else {
-          "/wasapi/v1/jobs/" + id + "/result?collection=" + conf.inputSpec.id + {
-            if (conf.isSample) "&sample=true" else ""
+    super.templateVariables(conf) ++ JobManager.getInstance(this.id, conf).toSeq.flatMap {
+      instance =>
+        val wasapiUrl = ArchConf.baseUrl + {
+          if (ArchConf.uuidJobOutPath.exists(instance.outPath.startsWith)) {
+            "/api/job/" + instance.uuid + "/files"
+          } else {
+            "/wasapi/v1/jobs/" + id + "/result?collection=" + conf.inputSpec.id + {
+              if (conf.isSample) "&sample=true" else ""
+            }
           }
         }
-      }
-      Seq(
-        "wasapiUrl" -> wasapiUrl,
-        "wasapiPages" -> (outFiles(conf).size.toDouble / WasapiController.FixedPageSize).ceil.toInt)
+        Seq(
+          "wasapiUrl" -> wasapiUrl,
+          "wasapiPages" -> (outFiles(
+            conf).size.toDouble / WasapiController.FixedPageSize).ceil.toInt)
     }
   }
 }

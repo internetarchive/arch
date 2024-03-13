@@ -5,9 +5,8 @@ import org.archive.webservices.ars.io.CollectionAccessContext
 import java.io.InputStream
 import java.net.URL
 
-class HttpFileRecordFactory(location: String)
-    extends FileRecordFactory {
-  class HttpFileRecord private[HttpFileRecordFactory](
+class HttpFileRecordFactory(location: String) extends FileRecordFactory {
+  class HttpFileRecord private[HttpFileRecordFactory] (
       val filename: String,
       val mime: String,
       val meta: FileMeta)
@@ -23,7 +22,8 @@ class HttpFileRecordFactory(location: String)
       filePath: String,
       resolve: Boolean = true,
       accessContext: CollectionAccessContext): InputStream = {
-    val url = if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
+    val url =
+      if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
     println(s"Reading $url...")
     new URL(url).openStream
   }

@@ -151,7 +151,9 @@ object ArchUser {
           .map(StringUtil.stripPrefixBySeparator(_, " "))
           .flatMap { base64 =>
             val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
-            val Array(user, password) = userPassword.stripPrefix(ArchPrefix + PrefixNameSeparator).split(PrefixNameSeparator, 2)
+            val Array(user, password) = userPassword
+              .stripPrefix(ArchPrefix + PrefixNameSeparator)
+              .split(PrefixNameSeparator, 2)
             archUser(user, Some(password))
           }
       }
@@ -161,7 +163,9 @@ object ArchUser {
       context: RequestContext = RequestContext.None): Option[ArchUser] = {
     val (prefix, suffix) =
       if (id.contains(PrefixNameSeparator))
-        (StringUtil.prefixBySeparator(id, PrefixNameSeparator), StringUtil.stripPrefixBySeparator(id, PrefixNameSeparator))
+        (
+          StringUtil.prefixBySeparator(id, PrefixNameSeparator),
+          StringUtil.stripPrefixBySeparator(id, PrefixNameSeparator))
       else (AitPrefix, id)
     prefix match {
       case ArchPrefix =>

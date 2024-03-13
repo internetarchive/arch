@@ -6,7 +6,7 @@ import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FilePointer, FileRecord, InputSpec}
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord, CdxUtil}
+import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}

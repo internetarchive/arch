@@ -38,7 +38,7 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.jsoup" % "jsoup" % "1.13.1",
   "com.fasterxml.uuid" % "java-uuid-generator" % "4.1.1",
   "io.sentry" % "sentry" % "6.28.0",
-  "com.amazonaws" % "aws-java-sdk" % "1.7.4" % "provided",
+  "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "edu.stanford.nlp" % "stanford-corenlp" % "4.3.1" % "provided") ++ guavaDependent.map(
   _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",

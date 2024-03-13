@@ -70,7 +70,8 @@ object DerivationJobConf {
           conf.inputSpec.collection,
           sample = conf.isSample,
           global = true)
-      } else None)
+      }
+      else None)
   }
 
   def collectionInstance(
