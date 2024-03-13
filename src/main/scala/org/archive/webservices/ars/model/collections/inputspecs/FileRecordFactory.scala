@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
 
 import java.io.InputStream
 
@@ -28,7 +28,5 @@ object FileRecordFactory {
       throw new UnsupportedOperationException()
     }
 
-  def filePath(path: String, filename: String): String = {
-    if (path.trim.isEmpty) filename else path.trim.stripSuffix("/") + "/" + filename
-  }
+  def filePath(path: String, filename: String): String = IOHelper.concatPaths(path, filename)
 }

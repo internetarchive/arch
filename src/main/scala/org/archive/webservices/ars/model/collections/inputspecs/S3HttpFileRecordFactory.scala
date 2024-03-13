@@ -4,9 +4,9 @@ import scala.io.Source
 
 class S3HttpFileRecordFactory(location: String, longestPrefixMapping: Boolean)
     extends HttpFileRecordFactory(location) with LongestPrefixProbing {
-  override def locateFile(filename: String): String = {
-    if (longestPrefixMapping) locateLongestPrefix(filename)
-    else super.locateFile(filename)
+  override def locatePath(filename: String): String = {
+    if (longestPrefixMapping) locateLongestPrefixPath(filename)
+    else super.locatePath(filename)
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]

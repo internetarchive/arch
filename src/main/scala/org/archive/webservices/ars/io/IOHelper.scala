@@ -31,6 +31,10 @@ object IOHelper {
 
   def pathTimestamp(timestamp: Instant): String = timestamp.toString.replaceAll("[^\\d]", "").take(14)
 
+  def concatPaths(paths: String*): String = {
+    paths.map(_.trim).filter(_.nonEmpty).mkString("/").replaceAll("/+", "/")
+  }
+
   def tempDir[R](action: String => R): R = {
     val tmpPath = new File(ArchConf.localTempPath)
     tmpPath.mkdirs()

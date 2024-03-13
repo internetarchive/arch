@@ -3,7 +3,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 import java.io.FileNotFoundException
 
 trait LongestPrefixProbing {
-  protected def locateLongestPrefix(filename: String): String = {
+  protected def locateLongestPrefixPath(filename: String): String = {
       var remaining = filename
       var prefix = ""
       var next = nextPrefixes(prefix)
