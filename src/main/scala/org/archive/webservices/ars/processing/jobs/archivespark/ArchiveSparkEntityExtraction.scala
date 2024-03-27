@@ -36,6 +36,10 @@ object ArchiveSparkEntityExtraction extends ArchiveSparkEntityExtraction {
 
 object ArchiveSparkEntityExtractionChinese extends ArchiveSparkEntityExtraction {
   override val uuid: String = "018d1151-3a3a-7184-b6ed-8ec176ee750e"
+  override val name: String = "Named entities (Chinese)"
+  override val description: String =
+    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
+  override val category: ArchJobCategory = ArchJobCategories.Text
 
   override def properties(lang: String): Properties = super.properties("chinese")
 }

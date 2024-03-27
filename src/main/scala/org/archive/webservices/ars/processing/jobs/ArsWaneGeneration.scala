@@ -18,7 +18,7 @@ import scala.util.Try
 object ArsWaneGeneration extends SparkJob with ArsJob {
   val MaxInputTextLength = 10000
 
-  val name = "Named entities"
+  val name = "Named entities (English)"
   val uuid = "01895065-8f59-7a8a-b432-79e20d749f4a"
   val category: ArchJobCategory = ArchJobCategories.Text
   def description =
