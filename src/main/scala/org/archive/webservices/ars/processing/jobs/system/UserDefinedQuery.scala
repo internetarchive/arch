@@ -157,7 +157,7 @@ object UserDefinedQuery extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath)
+    val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
     if (started) {
       val completed = HdfsIO.exists(conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile)
       instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
