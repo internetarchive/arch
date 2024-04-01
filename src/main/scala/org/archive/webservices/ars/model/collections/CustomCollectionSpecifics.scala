@@ -34,7 +34,8 @@ class CustomCollectionSpecifics(val id: String)
     else None
   }
 
-  override def stats: ArchCollectionStats = {
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats = {
     var stats = ArchCollectionStats.Empty
     val size = CustomCollectionSpecifics
       .collectionInfo(customId)

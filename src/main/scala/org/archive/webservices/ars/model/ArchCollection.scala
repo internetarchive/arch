@@ -23,7 +23,7 @@ case class ArchCollection(
   }
 
   private var _stats: Option[ArchCollectionStats] = None
-  def stats: ArchCollectionStats = {
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats = {
     _stats.orElse {
       synchronized {
         _stats = Some(specifics.stats)

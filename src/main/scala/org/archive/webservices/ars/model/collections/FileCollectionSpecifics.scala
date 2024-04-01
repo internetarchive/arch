@@ -4,7 +4,12 @@ import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{FilePointer, FileRecordFactory, InputSpec, InputSpecLoader}
+import org.archive.webservices.ars.model.collections.inputspecs.{
+  FilePointer,
+  FileRecordFactory,
+  InputSpec,
+  InputSpecLoader
+}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -34,7 +39,8 @@ class FileCollectionSpecifics(val id: String)
     else None
   }
 
-  override def stats: ArchCollectionStats = {
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats = {
     ArchCollectionStats(
       FileCollectionSpecifics
         .collectionInfo(collectionId)
