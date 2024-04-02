@@ -36,13 +36,17 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .fetchCollections(Seq(aitId), userId.flatMap(ArchUser.get(_)), foreignAccess)
       .headOption
 
-  private var _stats: Option[ArchCollectionStats] = None
-  override def stats: ArchCollectionStats = _stats.getOrElse {
-    _stats = Some(AitCollectionSpecifics.getCollectionStatsPair(aitId).map(_._2).getOrElse {
-      ArchCollectionStats.Empty
-    })
-    _stats.get
-  }
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats =
+    collection
+      .map(AitCollectionSpecifics.getAitId)
+      .flatMap(cid =>
+        AitCollectionSpecifics
+          .getCollectionStatsPair(
+            cid,
+            if (context.user != ArchUser.None) Some(context.user) else None)
+          .map(_._2))
+      .getOrElse(ArchCollectionStats.Empty)
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
     val sourceId = this.sourceId
@@ -83,8 +87,10 @@ object AitCollectionSpecifics {
   private def userCollectionIdsCacheKey(aitUserId: Int): String =
     s"AitCollectionSpecifics:ucids:${aitUserId}"
 
-  private def collectionStatsCacheKey(aitId: Int): String =
-    s"AitCollectionSpecifics:cs:${aitId}"
+  private def collectionStatsCacheKey(collectionId: Int, user: Option[ArchUser]): String =
+    user
+      .map(u => s"AitCollectionSpecifics:cs:${u.id}:${collectionId}")
+      .getOrElse(s"AitCollectionSpecifics:cs:${collectionId}")
 
   private def putUserCollectionIds(
       aitUserId: Int,
@@ -97,13 +103,17 @@ object AitCollectionSpecifics {
   private def getUserCollectionIds(aitUserId: Int): Option[UserCollectionIds] =
     CacheUtil.get[UserCollectionIds](userCollectionIdsCacheKey(aitUserId))
 
-  private def putCollectionStatsPair(aitId: Int, pair: CollectionStatsPair): CollectionStatsPair =
+  private def putCollectionStatsPair(
+      aitId: Int,
+      user: Option[ArchUser],
+      pair: CollectionStatsPair): CollectionStatsPair =
     CacheUtil
-      .put[CollectionStatsPair](collectionStatsCacheKey(aitId), pair, ttl = Some(cacheTTL))
+      .put[CollectionStatsPair](collectionStatsCacheKey(aitId, user), pair, ttl = Some(cacheTTL))
 
-  private def getCollectionStatsPair(aitId: Int): Option[CollectionStatsPair] = {
-    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(aitId))
-  }
+  private def getCollectionStatsPair(
+      aitId: Int,
+      user: Option[ArchUser]): Option[CollectionStatsPair] =
+    CacheUtil.get[CollectionStatsPair](collectionStatsCacheKey(aitId, user))
 
   private var _foreignCollectionsCursor: Option[HCursor] = None
   private def foreignCollectionsCursor: HCursor = _foreignCollectionsCursor.getOrElse {
@@ -172,7 +182,8 @@ object AitCollectionSpecifics {
       user: Option[ArchUser],
       useForeignAccess: Boolean = false): Seq[ArchCollection] =
     synchronized {
-      val cachedCollections = aitIds.flatMap(getCollectionStatsPair).map(_._1)
+      val cachedCollections =
+        aitIds.flatMap(aitId => getCollectionStatsPair(aitId, user).map(_._1))
       val uncachedIds = aitIds.toSet.diff(cachedCollections.map(getAitId).toSet)
       cachedCollections ++ {
         if (uncachedIds.isEmpty) Seq.empty
@@ -185,7 +196,7 @@ object AitCollectionSpecifics {
             .getOrElse(Seq.empty)
             // Cache these collections and stats and return the collections.
             .map(p => {
-              putCollectionStatsPair(getAitId(p._1), p)
+              putCollectionStatsPair(getAitId(p._1), user, p)
               p._1
             })
         }

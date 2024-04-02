@@ -16,7 +16,7 @@ abstract class CollectionSpecifics {
   def sourceId: String = id
 
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
-  def stats: ArchCollectionStats
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats
   def inputSize(conf: DerivationJobConf): Long = conf.inputSpec.collection.stats.size
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R
 

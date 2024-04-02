@@ -32,7 +32,8 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
     else None
   }
 
-  override def stats: ArchCollectionStats = {
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats = {
     ArchCollectionStats(HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength)
   }
 

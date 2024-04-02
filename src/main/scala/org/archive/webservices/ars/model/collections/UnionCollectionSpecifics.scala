@@ -30,7 +30,9 @@ class UnionCollectionSpecifics(val id: String)
         sourceId))
   }
 
-  override def stats: ArchCollectionStats = ArchCollectionStats.Empty
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats =
+    ArchCollectionStats.Empty
 
   override def inputSize(conf: DerivationJobConf): Long = {
     UnionCollectionSpecifics
