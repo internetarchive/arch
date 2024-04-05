@@ -1,7 +1,6 @@
-package org.archive.webservices.ars.model.collections.inputspecs
+package org.archive.webservices.ars.io
 
-import org.archive.webservices.ars.model.ArchCollection
-import org.archive.webservices.ars.model.collections.inputspecs.FilePointer.SourceSeparator
+import org.archive.webservices.ars.io.FilePointer.SourceSeparator
 import org.archive.webservices.sparkling.util.StringUtil
 
 case class FilePointer(url: String, filename: String) {
@@ -9,11 +8,9 @@ case class FilePointer(url: String, filename: String) {
     val splitAt = StringUtil.prefixBySeparator(url, "/").lastIndexOf(SourceSeparator)
     if (splitAt < 0) ("", url) else (url.take(splitAt), url.drop(splitAt + 1))
   }
+
   def source: String = sourcePathSplit._1
   def path: String = sourcePathSplit._2
-
-  def isHttpSource = source.toLowerCase == "http" || source.toLowerCase == "https"
-  def isCollectionSource = !isHttpSource && ArchCollection.prefix(source).isDefined
 }
 
 object FilePointer {

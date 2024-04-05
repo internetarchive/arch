@@ -2,9 +2,8 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe._
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
+import org.archive.webservices.ars.io.{FilePointer, IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
 import org.archive.webservices.ars.util.CacheUtil

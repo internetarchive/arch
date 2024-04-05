@@ -2,14 +2,9 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
+import org.archive.webservices.ars.io.{FileAccessContext, FilePointer, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{
-  FilePointer,
-  FileRecordFactory,
-  InputSpec,
-  InputSpecLoader
-}
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecordFactory, InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -62,11 +57,11 @@ class FileCollectionSpecifics(val id: String)
 
   private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory]
   override def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: FilePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
+                             context: FileAccessContext,
+                             inputPath: String,
+                             pointer: FilePointer,
+                             offset: Long,
+                             positions: Iterator[(Long, Long)]): InputStream = {
     if (pointer.source != sourceId)
       return super.randomAccess(context, inputPath, pointer, offset, positions)
     val spec = InputSpec(inputPath)

@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
+import org.archive.webservices.ars.io.{FileAccessContext, FileAccessKeyRing, FilePointer, IOHelper}
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -21,6 +21,9 @@ class S3FileRecordFactory(
       extends FileRecord {
     override lazy val path: String = locatePath(filename)
     override def access: InputStream = accessFile(filePath, resolve = false)
+    override def pointer: FilePointer = FilePointer(
+      IOHelper.concatPaths(endpoint, bucket, filePath),
+      filename)
   }
 
   override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
@@ -33,7 +36,7 @@ class S3FileRecordFactory(
   def accessFile(
       filePath: String,
       resolve: Boolean = true,
-      accessContext: CollectionAccessContext): InputStream = {
+      accessContext: FileAccessContext): InputStream = {
     val path =
       if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
     println(s"Reading $path...")
@@ -67,8 +70,15 @@ object S3FileRecordFactory {
   def apply(spec: InputSpec): S3FileRecordFactory = {
     for {
       endpoint <- spec.str("s3-endpoint")
-      accessKey <- spec.str("s3-accessKey")
-      secretKey <- spec.str("s3-secretKey")
+      (accessKey, secretKey) <- FileAccessKeyRing.forUrl(endpoint).flatMap {
+        case (FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey)) =>
+          Some((accessKey, secretKey))
+        case _ =>
+          for {
+            accessKey <- spec.str("s3-accessKey")
+            secretKey <- spec.str("s3-secretKey")
+          } yield (accessKey, secretKey)
+        }
       bucket <- spec.str("s3-bucket")
       location <- spec.str("data-location")
     } yield {

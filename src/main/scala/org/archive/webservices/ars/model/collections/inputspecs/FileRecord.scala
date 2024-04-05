@@ -1,5 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
+import org.archive.webservices.ars.io.FilePointer
+
 import java.io.InputStream
 
 trait FileRecord {

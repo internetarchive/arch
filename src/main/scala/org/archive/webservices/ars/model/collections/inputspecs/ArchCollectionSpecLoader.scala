@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.apache.spark.rdd.RDD
+import org.archive.webservices.ars.io.FilePointer
 
 import java.io.InputStream
 

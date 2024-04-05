@@ -2,7 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import io.circe.parser._
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.RddUtil
@@ -15,7 +15,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       mimeKey <- spec.str("meta-mime-key")
     } yield {
       val mapFile = pathMapping(spec)
-      val accessContext = CollectionAccessContext.fromLocalArchConf
+      val accessContext = FileAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
         accessContext.init()
         val recordFactory = recordFactoryBc.value

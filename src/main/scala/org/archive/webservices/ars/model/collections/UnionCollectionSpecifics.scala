@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
+import org.archive.webservices.ars.io.FilePointer
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 import org.archive.webservices.sparkling.cdx.CdxRecord

@@ -1,17 +1,17 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
+import org.archive.webservices.ars.io.{FileAccessContext, IOHelper}
 
 import java.io.InputStream
 
 trait FileRecordFactory extends Serializable {
-  @transient var accessContext: CollectionAccessContext =
-    CollectionAccessContext.fromLocalArchConf
+  @transient var accessContext: FileAccessContext =
+    FileAccessContext.fromLocalArchConf
   def get(filename: String, mime: String, meta: FileMeta): FileRecord
   def accessFile(
       filePath: String,
       resolve: Boolean = true,
-      accessContext: CollectionAccessContext = accessContext): InputStream
+      accessContext: FileAccessContext = accessContext): InputStream
 }
 
 object FileRecordFactory {

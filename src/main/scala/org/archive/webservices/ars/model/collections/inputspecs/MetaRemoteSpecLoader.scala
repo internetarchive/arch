@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.Sparkling
 
 object MetaRemoteSpecLoader extends InputSpecLoader {
@@ -12,7 +12,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
       filenameKey <- spec.str("meta-filename-key")
       mimeKey <- spec.str("meta-mime-key")
     } yield {
-      val accessContext = CollectionAccessContext.fromLocalArchConf
+      val accessContext = FileAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
         accessContext.init()
         val recordFactory = recordFactoryBc.value

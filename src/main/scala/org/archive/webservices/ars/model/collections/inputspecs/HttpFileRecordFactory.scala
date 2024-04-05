@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 
 import java.io.InputStream
 import java.net.URL
@@ -21,7 +21,7 @@ class HttpFileRecordFactory(location: String) extends FileRecordFactory {
   def accessFile(
       filePath: String,
       resolve: Boolean = true,
-      accessContext: CollectionAccessContext): InputStream = {
+      accessContext: FileAccessContext): InputStream = {
     val url =
       if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
     println(s"Reading $url...")

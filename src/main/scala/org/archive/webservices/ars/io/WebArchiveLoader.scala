@@ -3,7 +3,7 @@ package org.archive.webservices.ars.io
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FilePointer, FileRecord, InputSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FileRecord, InputSpec}
 import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
@@ -283,26 +283,14 @@ object WebArchiveLoader {
   }
 
   def loadWarcFilesViaCdxFiles(cdxPath: String): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromLocalArchConf
+    val accessContext = FileAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
-      val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
       partition.map { case ((pointer, initialOffset), positions) =>
         val offsetPositions = positions.map { case (_, offset, length) =>
           (offset - initialOffset, length)
         }
-        if (pointer.isHttpSource) {
-          val in = new URL(pointer.url).openStream
-          IOUtil.skip(in, initialOffset)
-          IOHelper.splitMergeInputStreams(in, offsetPositions, buffered = false)
-        } else if (pointer.isCollectionSource) {
-          GenericRandomAccess.randomAccess(
-            accessContext,
-            pointer,
-            initialOffset,
-            offsetPositions,
-            collectionSpecificsCache)
-        } else throw new UnsupportedOperationException()
+        RandomFileAccess.access(accessContext, pointer, initialOffset, offsetPositions)
       }
     }
   }
@@ -310,7 +298,7 @@ object WebArchiveLoader {
   def loadWarcFilesViaCdxFromCollections(
       cdxPath: String,
       collectionId: String): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromLocalArchConf
+    val accessContext = FileAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
       CollectionSpecifics.get(collectionId).toIterator.flatMap { specifics =>
@@ -329,10 +317,10 @@ object WebArchiveLoader {
   }
 
   def randomAccessPetabox(
-      context: CollectionAccessContext,
-      itemFilePath: String,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
+                           context: FileAccessContext,
+                           itemFilePath: String,
+                           offset: Long,
+                           positions: Iterator[(Long, Long)]): InputStream = {
     val url = ArchConf.iaBaseUrl + "/serve/" + itemFilePath
     HttpClient.rangeRequest(
       url,
@@ -343,7 +331,7 @@ object WebArchiveLoader {
   }
 
   def loadWarcFilesViaCdxFromPetabox(cdxPath: String): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromLocalArchConf
+    val accessContext = FileAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
       partition.map { case ((pointer, initialOffset), positions) =>
@@ -359,10 +347,10 @@ object WebArchiveLoader {
   }
 
   def randomAccessHdfs(
-      context: CollectionAccessContext,
-      filePath: String,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
+                        context: FileAccessContext,
+                        filePath: String,
+                        offset: Long,
+                        positions: Iterator[(Long, Long)]): InputStream = {
     val in = context.hdfsIO.open(
       filePath,
       offset = offset,
@@ -375,7 +363,7 @@ object WebArchiveLoader {
       cdxPath: String,
       warcPath: String,
       aitHdfs: Boolean = false): RDD[(String, InputStream)] = {
-    val accessContext = CollectionAccessContext.fromLocalArchConf(alwaysAitHdfsIO = aitHdfs)
+    val accessContext = FileAccessContext.fromLocalArchConf(alwaysAitHdfsIO = aitHdfs)
     loadWarcFilesViaCdx(cdxPath) { partition =>
       accessContext.init()
       partition.map { case ((pointer, initialOffset), positions) =>
@@ -391,11 +379,11 @@ object WebArchiveLoader {
   }
 
   def randomAccessAit(
-      context: CollectionAccessContext,
-      sourceId: String,
-      filePath: String,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
+                       context: FileAccessContext,
+                       sourceId: String,
+                       filePath: String,
+                       offset: Long,
+                       positions: Iterator[(Long, Long)]): InputStream = {
     if (context.aitHdfsIO.exists(_.exists(filePath))) {
       val in = context.aitHdfsIO.get.open(
         filePath,

@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.io.{FileNotFoundException, InputStream}
@@ -29,7 +29,7 @@ class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFac
   override def accessFile(
       filePath: String,
       resolve: Boolean,
-      accessContext: CollectionAccessContext = accessContext): InputStream = {
+      accessContext: FileAccessContext = accessContext): InputStream = {
     accessContext.hdfsIO.open(if (resolve) locateFile(filePath) else filePath)
   }
 

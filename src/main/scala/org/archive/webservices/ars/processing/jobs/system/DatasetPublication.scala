@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.system
 
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -57,7 +57,7 @@ object DatasetPublication extends SparkJob {
         val itemName = itemInfo.item
         SparkJobManager.context.map { sc =>
           SparkJobManager.initThread(sc, DatasetPublication, conf)
-          val accessContext = CollectionAccessContext.fromLocalArchConf
+          val accessContext = FileAccessContext.fromLocalArchConf
           val fileListBc = sc.broadcast(PublishedDatasets.files(itemName))
           RddUtil
             .parallelize(dataset.outFiles.map(f => (f.filename, f.path)).toList)
