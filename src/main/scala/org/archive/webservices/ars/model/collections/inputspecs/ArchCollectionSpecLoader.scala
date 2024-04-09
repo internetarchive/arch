@@ -1,17 +1,14 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.FilePointer
+import org.archive.webservices.ars.io.{FilePointer, WebArchiveLoader}
 
 import java.io.InputStream
 
 object ArchCollectionSpecLoader extends InputSpecLoader {
-  val WarcMime = "application/warc"
-  val CdxMime = "application/cdx"
-
   class WarcFileRecord(file: FilePointer, in: InputStream) extends FileRecord {
     override def filename: String = file.filename
-    override def mime: String = WarcMime
+    override def mime: String = WebArchiveLoader.WarcMime
     override def path: String =
       file.url.stripSuffix(file.filename).stripSuffix(FilePointer.SourceSeparator)
     override def pointer: FilePointer = file

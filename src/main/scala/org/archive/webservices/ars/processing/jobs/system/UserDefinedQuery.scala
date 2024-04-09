@@ -4,6 +4,7 @@ import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
+import org.archive.webservices.ars.processing.jobs.ArsLgaGeneration.id
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.cdx.CdxLoader
@@ -21,7 +22,7 @@ object UserDefinedQuery extends SparkJob {
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to run a user-defined query (internal system job)"
 
-  val relativeOutPath = s"/$id"
+  val relativeOutPath: String = s"/$id"
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,

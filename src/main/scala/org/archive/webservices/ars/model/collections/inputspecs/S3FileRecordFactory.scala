@@ -14,6 +14,8 @@ class S3FileRecordFactory(
     longestPrefixMapping: Boolean)
     extends FileRecordFactory
     with LongestPrefixProbing {
+  def companion = S3FileRecordFactory
+
   class S3FileRecord private[S3FileRecordFactory] (
       val filename: String,
       val mime: String,
@@ -66,7 +68,9 @@ class S3FileRecordFactory(
   }
 }
 
-object S3FileRecordFactory {
+object S3FileRecordFactory extends FileFactoryCompanion {
+  val dataSourceType: String = "s3"
+
   def apply(spec: InputSpec): S3FileRecordFactory = {
     for {
       endpoint <- spec.str("s3-endpoint")
@@ -80,7 +84,7 @@ object S3FileRecordFactory {
           } yield (accessKey, secretKey)
         }
       bucket <- spec.str("s3-bucket")
-      location <- spec.str("data-location")
+      location <- spec.str(InputSpec.DataLocationKey)
     } yield {
       val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
       new S3FileRecordFactory(

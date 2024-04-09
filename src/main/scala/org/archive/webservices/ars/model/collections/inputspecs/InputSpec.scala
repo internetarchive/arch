@@ -62,6 +62,8 @@ object CollectionBasedInputSpec {
 }
 
 object InputSpec {
+  val DataLocationKey = "data-location"
+
   object InputType {
     val Files = "files"
     val WARC = "warc"

@@ -6,6 +6,8 @@ import java.io.InputStream
 import java.net.URL
 
 class HttpFileRecordFactory(location: String) extends FileRecordFactory {
+  def companion: FileFactoryCompanion = HttpFileRecordFactory
+
   class HttpFileRecord private[HttpFileRecordFactory] (
       val filename: String,
       val mime: String,
@@ -15,8 +17,9 @@ class HttpFileRecordFactory(location: String) extends FileRecordFactory {
     override def access: InputStream = accessFile(filePath, resolve = false)
   }
 
-  override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(filename: String, mime: String, meta: FileMeta): FileRecord = {
     new HttpFileRecord(filename, mime, meta)
+  }
 
   def accessFile(
       filePath: String,
@@ -31,10 +34,12 @@ class HttpFileRecordFactory(location: String) extends FileRecordFactory {
   def locatePath(filename: String): String = location
 }
 
-object HttpFileRecordFactory {
+object HttpFileRecordFactory extends FileFactoryCompanion {
+  val dataSourceType: String = "http"
+
   def apply(spec: InputSpec): HttpFileRecordFactory = {
     spec
-      .str("data-location")
+      .str(InputSpec.DataLocationKey)
       .map(new HttpFileRecordFactory(_))
       .getOrElse {
         throw new RuntimeException("No location URL specified.")

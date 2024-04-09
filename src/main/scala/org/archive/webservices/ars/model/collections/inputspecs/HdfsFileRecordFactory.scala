@@ -6,6 +6,8 @@ import org.archive.webservices.sparkling.io.HdfsIO
 import java.io.{FileNotFoundException, InputStream}
 
 class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFactory {
+  def companion = HdfsFileRecordFactory
+
   class HdfsFileRecord private[HdfsFileRecordFactory] (
       filePath: String,
       val mime: String,
@@ -23,8 +25,9 @@ class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFac
     override def access: InputStream = accessFile(resolvedPath, resolve = false)
   }
 
-  override def get(path: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(path: String, mime: String, meta: FileMeta): FileRecord = {
     new HdfsFileRecord(path, mime, meta)
+  }
 
   override def accessFile(
       filePath: String,
@@ -44,7 +47,9 @@ class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFac
   }
 }
 
-object HdfsFileRecordFactory {
+object HdfsFileRecordFactory extends FileFactoryCompanion {
+  val dataSourceType: String = "hdfs"
+
   def apply(spec: InputSpec): HdfsFileRecordFactory = new HdfsFileRecordFactory(
     spec.str("meta-suffix"))
 }
