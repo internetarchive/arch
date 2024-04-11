@@ -55,7 +55,8 @@ trait DerivationJob {
 
   def finishedNotificationTemplate: Option[String] = Some("finished")
 
-  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
+  def generatesOuputput: Boolean = true
+  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOuputput
 
   def validateParams(conf: DerivationJobConf): Option[String] = None
 

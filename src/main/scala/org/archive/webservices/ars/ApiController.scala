@@ -203,7 +203,7 @@ class ApiController extends BaseController {
     ensureLogin(redirect = false, useSession = true) { implicit context =>
       parse(request.body).right.toOption.map(_.hcursor) match {
         case Some(cursor) =>
-          {
+          JobManager.get(params("jobid")).flatMap { job =>
             val rerun = params.get("rerun").contains("true")
             val sample = params.get("sample").contains("true")
             val user =
@@ -212,16 +212,13 @@ class ApiController extends BaseController {
               cursor.keys.toSet.flatten.contains(DerivationJobConf.OutputPathConfKey)
             var reservedOutPath = false
             lazy val uuid = cursor.get[String]("uuid").toOption.getOrElse {
-              reservedOutPath = !customOutPath
+              reservedOutPath = !customOutPath && job.generatesOuputput
               DerivationJobInstance.uuid(reserve = reservedOutPath)
             }
-            for {
-              job <- JobManager.get(params("jobid"))
-              conf <- DerivationJobConf.fromJson(
-                cursor,
-                sample,
-                ArchConf.uuidJobOutPath.map(_ + "/" + uuid))
-            } yield {
+            for (conf <- DerivationJobConf.fromJson(
+              cursor,
+              sample,
+              ArchConf.uuidJobOutPath.map(_ + "/" + uuid))) yield {
               job
                 .validateParams(conf)
                 .map { e =>
@@ -518,7 +515,7 @@ class ApiController extends BaseController {
               case Some(error) => BadRequest(error)
               case None =>
                 if (PublishedDatasets.updateItem(item, metadata)) {
-                  Ok()
+                  Ok("Success.")
                 } else InternalServerError("Updating metadata failed.")
             }
           }
@@ -541,11 +538,12 @@ class ApiController extends BaseController {
             .flatMap(_.hcursor.get[Boolean]("delete").toOption)
             .getOrElse(false)
           if (doDelete) {
-            if (PublishedDatasets.deletePublished(collection, item)) Ok()
+            if (PublishedDatasets.deletePublished(collection, item)) Ok("Success.")
             else InternalServerError("Deleting item failed.")
-          } else
+          } else {
             BadRequest(
               "In order to confirm the deletion, please send a JSON with boolean key 'delete' set to true.")
+          }
         }
         .getOrElse(NotFound())
     }

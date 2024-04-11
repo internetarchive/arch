@@ -1,8 +1,10 @@
 package org.archive.webservices.ars
 
-import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
-import org.scalatra.{ActionResult, Forbidden, NotFound}
+import org.scalatra.{ActionResult, BadRequest, Forbidden, InternalServerError, NotFound, Ok}
+import _root_.io.circe.syntax._
+import _root_.io.circe.parser.parse
 
 class JobUuidApiController extends BaseController {
   val UuidParam = "uuid"
@@ -81,6 +83,53 @@ class JobUuidApiController extends BaseController {
           FilesController.colab(instance, filename, fileUrl, accessToken)
         }
       case None => Forbidden()
+    }
+  }
+
+  get("/petabox/metadata") {
+    response { instance =>
+      PublishedDatasets.metadata(instance).map { metadata =>
+        Ok(metadata.asJson.spaces4, Map("Content-Type" -> "application/json"))
+      }.getOrElse(NotFound())
+    }
+  }
+
+  post("/petabox/metadata") {
+    response { instance =>
+      parse(request.body).toOption
+        .map(PublishedDatasets.parseJsonMetadata)
+        .map { metadata =>
+          PublishedDatasets.validateMetadata(metadata) match {
+            case Some(error) => BadRequest(error)
+            case None =>
+              if (PublishedDatasets.updateItem(instance, metadata)) {
+                Ok("Success.")
+              } else InternalServerError("Updating metadata failed.")
+          }
+        }.getOrElse(BadRequest("Invalid metadata JSON."))
+    }
+  }
+
+  post("/petabox/delete") {
+    val doDelete = parse(request.body).toOption
+      .flatMap(_.hcursor.get[Boolean]("delete").toOption)
+      .getOrElse(false)
+    if (doDelete) {
+      response { instance =>
+        if (PublishedDatasets.deletePublished(instance)) Ok("Success.")
+        else InternalServerError("Deleting item failed.")
+      }
+    } else {
+      BadRequest(
+        "In order to confirm the deletion, please send a JSON with boolean key 'delete' set to true.")
+    }
+  }
+
+  get("/published") {
+    response { instance =>
+      PublishedDatasets.jobItem(instance).map { info =>
+        Ok(info.toJson(includeItem = true).spaces4, Map("Content-Type" -> "application/json"))
+      }.getOrElse(NotFound())
     }
   }
 }

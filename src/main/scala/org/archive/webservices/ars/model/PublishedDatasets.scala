@@ -5,6 +5,7 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.util.Common
@@ -21,6 +22,7 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
+  val NAAN = 13960
   val MetadataFields: Set[String] =
     Set("creator", "description", "licenseurl", "subject", "title")
   val DeleteCommentPrefix = "ARCH:"
@@ -30,7 +32,7 @@ object PublishedDatasets {
   private var sync = Set.empty[String]
 
   def jobFile(instance: DerivationJobInstance): String = {
-    instance.conf.outputPath + "/" + instance.job.id + "/published.json"
+    instance.outPath + "/published.json"
   }
 
   def collectionFile(outPath: String): String = outPath + "/published.json"
@@ -218,7 +220,7 @@ object PublishedDatasets {
       try {
         out.println(
           Map(
-            "naan" -> 13960.asJson,
+            "naan" -> NAAN.asJson,
             "shoulder" -> "/a3".asJson,
             "url" -> (ArchConf.iaBaseUrl + "/details/" + itemName).asJson,
             "metadata" -> Map.empty[String, String].asJson,
@@ -244,6 +246,10 @@ object PublishedDatasets {
       .filter(_.state == ProcessingState.Finished)
   }
 
+  def dataset(uuid: String): Option[DerivationJobInstance] = {
+    JobManager.getInstance(uuid).filter(_.state == ProcessingState.Finished)
+  }
+
   def dataset(
       jobId: String,
       collection: ArchCollection,
@@ -257,29 +263,31 @@ object PublishedDatasets {
       jobId: String,
       conf: DerivationJobConf,
       metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
-    for (instance <- dataset(jobId, conf)) yield {
-      val jobFilePath = jobFile(instance)
-      if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
-        val item = itemName(instance)
-        val itemInfo = newItemInfo(item, instance)
-        if (!createItem(item, datasetMetadata(instance, itemInfo) ++ metadata)) {
-          HdfsIO.delete(jobFilePath)
-          throw new RuntimeException(s"Creating new Petabox item $item failed.")
-        }
-        appendCollectionFile(conf.outputPath, itemInfo)
-        HdfsIO.writeLines(
-          jobFilePath,
-          Seq(itemInfo.toJson(includeItem = true).spaces4),
-          overwrite = true)
-        itemInfo
-      }
-      else {
-        val itemInfoOpt = jobItem(jobFilePath)
-        for (info <- itemInfoOpt) updateItem(info.item, metadata)
-        itemInfoOpt
-      }
-    }
+    for (instance <- dataset(jobId, conf)) yield publish(instance, metadata)
   }.flatten
+
+  def publish(dataset: DerivationJobInstance, metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
+    val jobFilePath = jobFile(dataset)
+    if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
+      val item = itemName(dataset)
+      val itemInfo = newItemInfo(item, dataset)
+      if (!createItem(item, datasetMetadata(dataset, itemInfo) ++ metadata)) {
+        HdfsIO.delete(jobFilePath)
+        throw new RuntimeException(s"Creating new Petabox item $item failed.")
+      }
+      appendCollectionFile(dataset.conf.outputPath, itemInfo)
+      HdfsIO.writeLines(
+        jobFilePath,
+        Seq(itemInfo.toJson(includeItem = true).spaces4),
+        overwrite = true)
+      itemInfo
+    }
+    else {
+      val itemInfoOpt = jobItem(jobFilePath)
+      for (info <- itemInfoOpt) updateItem(info.item, metadata)
+      itemInfoOpt
+    }
+  }
 
   def datasetMetadata(
       instance: DerivationJobInstance,
@@ -388,6 +396,13 @@ object PublishedDatasets {
     }
   }
 
+  def updateItem(instance: DerivationJobInstance, metadata: Map[String, Seq[String]]): Boolean = {
+    val jobFilePath = jobFile(instance)
+    jobItem(jobFilePath).map { info =>
+      updateItem(info.item, metadata)
+    }.getOrElse(false)
+  }
+
   def updateItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
     this
       .metadata(name, all = true)
@@ -433,6 +448,19 @@ object PublishedDatasets {
     }.getOrElse(false)
   }
 
+  def deletePublished(instance: DerivationJobInstance): Boolean = {
+    val jobFilePath = jobFile(instance)
+    for (info <- jobItem(jobFilePath)) yield {
+      if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+        deletePublished(instance.conf.inputSpec.collection, info.item)
+      } else {
+        val success = deleteItem(info.item)
+        if (success) HdfsIO.delete(jobFilePath)
+        success
+      }
+    }
+  }.getOrElse(false)
+
   def files(itemName: String): Set[String] = {
     request(s"metadata/$itemName/files").toOption
       .flatMap(parse(_).toOption.map(_.hcursor))
@@ -445,7 +473,14 @@ object PublishedDatasets {
       .toSet
   }
 
-  def metadata(itemName: String, all: Boolean = false): Option[Map[String, Seq[String]]] = {
+  def metadata(instance: DerivationJobInstance, all: Boolean = false): Option[Map[String, Seq[String]]] = {
+    val jobFilePath = jobFile(instance)
+    jobItem(jobFilePath).flatMap(info => metadata(info.item, all))
+  }
+
+  def metadata(itemName: String): Option[Map[String, Seq[String]]] = metadata(itemName, all = false)
+
+  def metadata(itemName: String, all: Boolean): Option[Map[String, Seq[String]]] = {
     request(s"metadata/$itemName/metadata").toOption
       .flatMap(parse(_).toOption)
       .flatMap(_.hcursor.downField("result").focus)

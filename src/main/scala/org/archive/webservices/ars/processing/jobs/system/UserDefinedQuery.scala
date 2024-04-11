@@ -4,7 +4,6 @@ import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
-import org.archive.webservices.ars.processing.jobs.ArsLgaGeneration.id
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.cdx.CdxLoader
