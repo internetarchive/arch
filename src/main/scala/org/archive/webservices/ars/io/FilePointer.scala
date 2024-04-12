@@ -15,7 +15,8 @@ case class FilePointer(url: String, filename: String) {
   def relative(parent: FilePointer): FilePointer = {
     if (source.isEmpty) {
       val splitAt = parent.url.lastIndexOf('/')
-      if (splitAt < 0) this else {
+      if (splitAt < 0) this
+      else {
         FilePointer(IOHelper.concatPaths(parent.url.take(splitAt), url), filename)
       }
     } else this

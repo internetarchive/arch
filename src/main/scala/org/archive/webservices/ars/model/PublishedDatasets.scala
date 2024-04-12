@@ -267,7 +267,9 @@ object PublishedDatasets {
     for (instance <- dataset(jobId, conf)) yield publish(instance, metadata)
   }.flatten
 
-  def publish(dataset: DerivationJobInstance, metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
+  def publish(
+      dataset: DerivationJobInstance,
+      metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
     val jobFilePath = jobFile(dataset)
     if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
       val item = itemName(dataset)
@@ -405,9 +407,11 @@ object PublishedDatasets {
 
   def updateItem(instance: DerivationJobInstance, metadata: Map[String, Seq[String]]): Boolean = {
     val jobFilePath = jobFile(instance)
-    jobItem(jobFilePath).map { info =>
-      updateItem(info.item, metadata)
-    }.getOrElse(false)
+    jobItem(jobFilePath)
+      .map { info =>
+        updateItem(info.item, metadata)
+      }
+      .getOrElse(false)
   }
 
   def updateItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
@@ -480,12 +484,15 @@ object PublishedDatasets {
       .toSet
   }
 
-  def metadata(instance: DerivationJobInstance, all: Boolean = false): Option[Map[String, Seq[String]]] = {
+  def metadata(
+      instance: DerivationJobInstance,
+      all: Boolean = false): Option[Map[String, Seq[String]]] = {
     val jobFilePath = jobFile(instance)
     jobItem(jobFilePath).flatMap(info => metadata(info.item, all))
   }
 
-  def metadata(itemName: String): Option[Map[String, Seq[String]]] = metadata(itemName, all = false)
+  def metadata(itemName: String): Option[Map[String, Seq[String]]] =
+    metadata(itemName, all = false)
 
   def metadata(itemName: String, all: Boolean): Option[Map[String, Seq[String]]] = {
     request(s"metadata/$itemName/metadata").toOption

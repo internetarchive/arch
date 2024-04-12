@@ -33,13 +33,18 @@ object FileRecordFactory {
   }
 
   def apply(spec: InputSpec, default: Option[FileFactoryCompanion] = None): FileRecordFactory = {
-    spec.str("data-source").flatMap { dataSource =>
-      factories.find { factory =>
-        factory.dataSourceType == dataSource
+    spec
+      .str("data-source")
+      .flatMap { dataSource =>
+        factories.find { factory =>
+          factory.dataSourceType == dataSource
+        }
       }
-    }.orElse(default).getOrElse {
-      throw new UnsupportedOperationException()
-    }.apply(spec)
+      .orElse(default)
+      .getOrElse {
+        throw new UnsupportedOperationException()
+      }
+      .apply(spec)
   }
 
   def filePath(path: String, filename: String): String = IOHelper.concatPaths(path, filename)

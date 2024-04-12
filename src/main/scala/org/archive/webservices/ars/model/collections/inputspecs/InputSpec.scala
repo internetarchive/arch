@@ -58,13 +58,12 @@ class CollectionBasedInputSpec(
     }
 }
 
-class DatasetBasedInputSpec(
-    val uuid: String,
-    cursorOpt: Option[HCursor] = None)
-  extends InputSpec {
-  @transient lazy val dataset: DerivationJobInstance = JobManager.getInstance(uuid).filter(_.state == ProcessingState.Finished).getOrElse {
-    throw new RuntimeException("Dataset with UUID " + uuid + " not found.")
-  }
+class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
+    extends InputSpec {
+  @transient lazy val dataset: DerivationJobInstance =
+    JobManager.getInstance(uuid).filter(_.state == ProcessingState.Finished).getOrElse {
+      throw new RuntimeException("Dataset with UUID " + uuid + " not found.")
+    }
   override lazy val inputType: String =
     cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
   override val id: String = {
@@ -76,10 +75,12 @@ class DatasetBasedInputSpec(
   override def size: Long = dataset.outFiles.map(_.size).sum
   def toFileSpec: Option[InputSpec] = {
     dataset.job.datasetGlobMime(dataset.conf).map { case (glob, mime) =>
-      new DefaultInputSpec(FileSpecLoader.SpecType, Map(
-        InputSpec.DataLocationKey -> glob.asJson,
-        FileSpecLoader.MimeKey -> mime.asJson
-      ).asJson.hcursor, Some(id))
+      new DefaultInputSpec(
+        FileSpecLoader.SpecType,
+        Map(
+          InputSpec.DataLocationKey -> glob.asJson,
+          FileSpecLoader.MimeKey -> mime.asJson).asJson.hcursor,
+        Some(id))
     }
   }
 }
@@ -118,18 +119,26 @@ object InputSpec {
     }
     specType match {
       case CollectionBasedInputSpecType =>
-        cursor.get[String]("collectionId").toOption.map { collectionId =>
-          val inputPath = cursor.get[String]("inputPath").toOption
-          new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
-        }.getOrElse {
-          throw new RuntimeException("invalid input spec: collectionId missing")
-        }
+        cursor
+          .get[String]("collectionId")
+          .toOption
+          .map { collectionId =>
+            val inputPath = cursor.get[String]("inputPath").toOption
+            new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
+          }
+          .getOrElse {
+            throw new RuntimeException("invalid input spec: collectionId missing")
+          }
       case DatasetBasedInputSpecType =>
-        cursor.get[String]("uuid").toOption.map { uuid =>
-          new DatasetBasedInputSpec(uuid, Some(cursor))
-        }.getOrElse {
-          throw new RuntimeException("invalid input spec: uuid missing")
-        }
+        cursor
+          .get[String]("uuid")
+          .toOption
+          .map { uuid =>
+            new DatasetBasedInputSpec(uuid, Some(cursor))
+          }
+          .getOrElse {
+            throw new RuntimeException("invalid input spec: uuid missing")
+          }
       case _ =>
         new DefaultInputSpec(specType, cursor, id)
     }

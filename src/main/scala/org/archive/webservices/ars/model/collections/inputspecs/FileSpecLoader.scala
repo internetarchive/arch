@@ -19,7 +19,9 @@ object FileSpecLoader extends InputSpecLoader {
     }
   })
 
-  def loadHdfs(spec: InputSpec, recordFactoryBc: Broadcast[FileRecordFactory]): RDD[FileRecord] = {
+  def loadHdfs(
+      spec: InputSpec,
+      recordFactoryBc: Broadcast[FileRecordFactory]): RDD[FileRecord] = {
     for {
       location <- spec.str(InputSpec.DataLocationKey)
       mime <- spec.str(MimeKey)

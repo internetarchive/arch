@@ -50,12 +50,13 @@ trait DerivationJob {
 
   def datasetGlobMime(conf: DerivationJobConf): Option[(String, String)] = None
 
-  def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = datasetGlobMime(conf).toIterator.flatMap { case (glob, mime) =>
-    HdfsIO.files(glob).map { file =>
-      val (path, name) = file.splitAt(file.lastIndexOf('/'))
-      DerivativeOutput(name.stripPrefix("/"), path, mime.split('/').last, mime)
+  def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+    datasetGlobMime(conf).toIterator.flatMap { case (glob, mime) =>
+      HdfsIO.files(glob).map { file =>
+        val (path, name) = file.splitAt(file.lastIndexOf('/'))
+        DerivativeOutput(name.stripPrefix("/"), path, mime.split('/').last, mime)
+      }
     }
-  }
 
   def reset(conf: DerivationJobConf): Unit = {}
 

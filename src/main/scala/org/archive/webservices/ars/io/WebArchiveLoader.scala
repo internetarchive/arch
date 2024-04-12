@@ -3,8 +3,8 @@ package org.archive.webservices.ars.io
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.inputspecs.{ArchCollectionSpecLoader, FileRecord, InputSpec}
-import org.archive.webservices.ars.model.collections.{CollectionSpecifics, GenericRandomAccess}
+import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
@@ -13,8 +13,6 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, Rd
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
-import java.net.URL
-import scala.collection.mutable
 import scala.util.Try
 
 object WebArchiveLoader {
@@ -71,9 +69,13 @@ object WebArchiveLoader {
               partition.filter(_.mime == CdxMime).map { f =>
                 val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString)
                 val in = warcFilesViaCdx(cdx) { pointers =>
-                  randomAccess(accessContext, pointers.map { case ((pointer, initialOffset), positions) =>
-                    ((pointer.relative(f.pointer), initialOffset), positions.map { case (_, o, l) => (o, l) })
-                  })
+                  randomAccess(
+                    accessContext,
+                    pointers.map { case ((pointer, initialOffset), positions) =>
+                      (
+                        (pointer.relative(f.pointer), initialOffset),
+                        positions.map { case (_, o, l) => (o, l) })
+                    })
                 }
                 f.withAccess(in)
               }
@@ -267,8 +269,8 @@ object WebArchiveLoader {
   }
 
   private def warcFilesViaCdx(records: Iterator[CdxRecord])(
-    in: Iterator[((FilePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
-      InputStream]): InputStream = {
+      in: Iterator[((FilePointer, Long), Iterator[(CdxRecord, Long, Long)])] => Iterator[
+        InputStream]): InputStream = {
     val pointers = records.flatMap { cdx =>
       Try {
         val length = cdx.compressedSize
@@ -306,14 +308,15 @@ object WebArchiveLoader {
     RddUtil
       .loadTextFiles(inputPath)
       .map { case (file, lines) =>
-        (
-          file.split('/').last,
-          warcFilesViaCdx(lines.flatMap(CdxRecord.fromString))(in))
+        (file.split('/').last, warcFilesViaCdx(lines.flatMap(CdxRecord.fromString))(in))
       }
       .coalesce(numFiles / WarcFilesPerPartition + 1)
   }
 
-  private def randomAccess(context: FileAccessContext, pointers: Iterator[((FilePointer, Long), Iterator[(Long, Long)])]): Iterator[InputStream] = {
+  private def randomAccess(
+      context: FileAccessContext,
+      pointers: Iterator[((FilePointer, Long), Iterator[(Long, Long)])])
+      : Iterator[InputStream] = {
     pointers.map { case ((pointer, initialOffset), positions) =>
       RandomFileAccess.access(context, pointer, initialOffset, positions)
     }
@@ -323,9 +326,11 @@ object WebArchiveLoader {
     val accessContext = FileAccessContext.fromLocalArchConf
     loadWarcFilesViaCdx(cdxPath) { pointers =>
       accessContext.init()
-      randomAccess(accessContext, pointers.map { case ((pointer, initialOffset), positions) =>
-        ((pointer, initialOffset), positions.map { case (_, o, l) => (o, l) })
-      })
+      randomAccess(
+        accessContext,
+        pointers.map { case ((pointer, initialOffset), positions) =>
+          ((pointer, initialOffset), positions.map { case (_, o, l) => (o, l) })
+        })
     }
   }
 
@@ -407,11 +412,11 @@ object WebArchiveLoader {
   }
 
   def randomAccessAit(
-                       context: FileAccessContext,
-                       sourceId: String,
-                       filePath: String,
-                       offset: Long,
-                       positions: Iterator[(Long, Long)]): InputStream = {
+      context: FileAccessContext,
+      sourceId: String,
+      filePath: String,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     if (context.aitHdfsIO.exists(_.exists(filePath))) {
       val in = context.aitHdfsIO.get.open(
         filePath,

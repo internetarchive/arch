@@ -12,10 +12,11 @@ import scala.collection.mutable
 object RandomFileAccess {
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
 
-  def access(context: FileAccessContext,
-             file: FilePointer,
-             offset: Long,
-             positions: Iterator[(Long, Long)]): InputStream = {
+  def access(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     file.source.toLowerCase match {
       case "http" | "https" =>
         context.keyRing.forUrl(file.url) match {
@@ -34,28 +35,31 @@ object RandomFileAccess {
     }
   }
 
-  def httpAccess(context: FileAccessContext,
-                 file: FilePointer,
-                 offset: Long,
-                 positions: Iterator[(Long, Long)]): InputStream = {
+  def httpAccess(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     val in = new URL(file.url).openStream
     IOUtil.skip(in, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }
 
-  def hdfsAccess(context: FileAccessContext,
-                 file: FilePointer,
-                 offset: Long,
-                 positions: Iterator[(Long, Long)]): InputStream = {
+  def hdfsAccess(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
 
     val in = context.hdfsIO.open(file.path, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }
 
-  def collectionAccess(context: FileAccessContext,
-                       file: FilePointer,
-                       offset: Long,
-                       positions: Iterator[(Long, Long)]): InputStream = {
+  def collectionAccess(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     collectionSpecificsCache
       .getOrElseUpdate(file.source, CollectionSpecifics.get(file.source))
       .map { specifics =>
@@ -64,12 +68,13 @@ object RandomFileAccess {
       .getOrElse(IOUtil.EmptyStream)
   }
 
-  def s3Access(context: FileAccessContext,
-               file: FilePointer,
-               offset: Long,
-               positions: Iterator[(Long, Long)],
-               accessKey: String,
-               secretKey: String): InputStream = {
+  def s3Access(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)],
+      accessKey: String,
+      secretKey: String): InputStream = {
     val urlSplit = file.url.split('/')
     val (endpoint, bucket, path) = (urlSplit.head, urlSplit(1), urlSplit.drop(2).mkString("/"))
     def s3[R](action: S3Client => R): R = {
@@ -85,7 +90,9 @@ object RandomFileAccess {
           val rangeTmpFile = IOUtil.tmpFile
           s3(_.transfers.download(getObjectRequest, rangeTmpFile))
           val rangeIn = new BufferedInputStream(new FileInputStream(rangeTmpFile))
-          IOUtil.copy(new CleanupInputStream(rangeIn, rangeTmpFile.delete), IOUtil.fileOut(tmpFile, append = true))
+          IOUtil.copy(
+            new CleanupInputStream(rangeIn, rangeTmpFile.delete),
+            IOUtil.fileOut(tmpFile, append = true))
         }
       } else {
         s3(_.transfers.download(bucket, path, tmpFile).waitForCompletion())

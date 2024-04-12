@@ -26,5 +26,8 @@ object FileAccessContext {
   def fromLocalArchConf: FileAccessContext =
     new FileAccessContext(conf = LocalArchConf.instance, keyRing = FileAccessKeyRing.system)
   def fromLocalArchConf(alwaysAitHdfsIO: Boolean) =
-    new FileAccessContext(conf = LocalArchConf.instance, useAitHdfsIO = alwaysAitHdfsIO, keyRing = FileAccessKeyRing.system)
+    new FileAccessContext(
+      conf = LocalArchConf.instance,
+      useAitHdfsIO = alwaysAitHdfsIO,
+      keyRing = FileAccessKeyRing.system)
 }

@@ -1,10 +1,10 @@
 package org.archive.webservices.ars
 
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
-import org.scalatra.{ActionResult, BadRequest, Forbidden, InternalServerError, NotFound, Ok}
-import _root_.io.circe.syntax._
 import _root_.io.circe.parser.parse
+import _root_.io.circe.syntax._
+import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
+import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.scalatra._
 
 class JobUuidApiController extends BaseController {
   val UuidParam = "uuid"
@@ -88,9 +88,12 @@ class JobUuidApiController extends BaseController {
 
   get(UuidPattern + "petabox/metadata") {
     response { instance =>
-      PublishedDatasets.metadata(instance).map { metadata =>
-        Ok(metadata.asJson.spaces4, Map("Content-Type" -> "application/json"))
-      }.getOrElse(NotFound())
+      PublishedDatasets
+        .metadata(instance)
+        .map { metadata =>
+          Ok(metadata.asJson.spaces4, Map("Content-Type" -> "application/json"))
+        }
+        .getOrElse(NotFound())
     }
   }
 
@@ -106,7 +109,8 @@ class JobUuidApiController extends BaseController {
                 Ok("Success.")
               } else InternalServerError("Updating metadata failed.")
           }
-        }.getOrElse(BadRequest("Invalid metadata JSON."))
+        }
+        .getOrElse(BadRequest("Invalid metadata JSON."))
     }
   }
 
@@ -127,9 +131,12 @@ class JobUuidApiController extends BaseController {
 
   get(UuidPattern + "published") {
     response { instance =>
-      PublishedDatasets.jobItem(instance).map { info =>
-        Ok(info.toJson(includeItem = true).spaces4, Map("Content-Type" -> "application/json"))
-      }.getOrElse(NotFound())
+      PublishedDatasets
+        .jobItem(instance)
+        .map { info =>
+          Ok(info.toJson(includeItem = true).spaces4, Map("Content-Type" -> "application/json"))
+        }
+        .getOrElse(NotFound())
     }
   }
 }

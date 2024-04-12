@@ -23,9 +23,8 @@ class S3FileRecordFactory(
       extends FileRecord {
     override lazy val path: String = locatePath(filename)
     override def access: InputStream = accessFile(filePath, resolve = false)
-    override def pointer: FilePointer = FilePointer(
-      IOHelper.concatPaths(endpoint, bucket, filePath),
-      filename)
+    override def pointer: FilePointer =
+      FilePointer(IOHelper.concatPaths(endpoint, bucket, filePath), filename)
   }
 
   override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
@@ -82,7 +81,7 @@ object S3FileRecordFactory extends FileFactoryCompanion {
             accessKey <- spec.str("s3-accessKey")
             secretKey <- spec.str("s3-secretKey")
           } yield (accessKey, secretKey)
-        }
+      }
       bucket <- spec.str("s3-bucket")
       location <- spec.str(InputSpec.DataLocationKey)
     } yield {

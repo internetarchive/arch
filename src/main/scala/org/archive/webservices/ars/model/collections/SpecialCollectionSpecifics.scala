@@ -46,11 +46,11 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
   }
 
   def randomAccess(
-                    context: FileAccessContext,
-                    inputPath: String,
-                    pointer: FilePointer,
-                    offset: Long,
-                    positions: Iterator[(Long, Long)]): InputStream = {
+      context: FileAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     WebArchiveLoader.randomAccessHdfs(
       context,
       inputPath + "/" + pointer.filename,

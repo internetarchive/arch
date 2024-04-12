@@ -22,7 +22,8 @@ object DatasetPublication extends SparkJob {
 
   private def confDataset(conf: DerivationJobConf): Either[String, DerivationJobInstance] = {
     val datasetParam = conf.params.get[String]("dataset")
-    if (datasetParam.isEmpty && !InputSpec.isDatasetBased(conf.inputSpec)) return Left("No dataset specified.")
+    if (datasetParam.isEmpty && !InputSpec.isDatasetBased(conf.inputSpec))
+      return Left("No dataset specified.")
     lazy val dataset = {
       if (datasetParam.isDefined) {
         datasetParam.flatMap(PublishedDatasets.dataset(_, conf)).getOrElse {

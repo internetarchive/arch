@@ -6,7 +6,9 @@ import org.archive.webservices.ars.io.{FilePointer, WebArchiveLoader}
 import java.io.InputStream
 
 object ArchCollectionSpecLoader extends InputSpecLoader {
-  class WarcFileRecord(file: FilePointer, val in: InputStream) extends FileRecord with OneTimeAccess {
+  class WarcFileRecord(file: FilePointer, val in: InputStream)
+      extends FileRecord
+      with OneTimeAccess {
     override def filename: String = file.filename
     override def mime: String = WebArchiveLoader.WarcMime
     override def path: String =

@@ -5,7 +5,8 @@ import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.io.{FileNotFoundException, InputStream}
 
-class HdfsFileRecordFactory private (excludeSuffix: Option[String] = None) extends FileRecordFactory {
+class HdfsFileRecordFactory private (excludeSuffix: Option[String] = None)
+    extends FileRecordFactory {
   def companion = HdfsFileRecordFactory
 
   class HdfsFileRecord private[HdfsFileRecordFactory] (

@@ -10,9 +10,14 @@ class FileAccessKeyRing private (secrets: Map[String, String]) extends Serializa
       val splitAt = url.lastIndexOf(":")
       if (splitAt < 0) ("", url) else (url.take(splitAt), url.drop(splitAt + 1))
     }
-    val secretSplit = path.split('/').find(_.nonEmpty).flatMap { host =>
-      secrets.get(secretKey(protocol, host))
-    }.toArray.flatMap(_.split(SecretSeparator))
+    val secretSplit = path
+      .split('/')
+      .find(_.nonEmpty)
+      .flatMap { host =>
+        secrets.get(secretKey(protocol, host))
+      }
+      .toArray
+      .flatMap(_.split(SecretSeparator))
     secretSplit.headOption.filter(SupportedAccessMethods.contains).map((_, secretSplit.drop(1)))
   }
 }
@@ -28,9 +33,10 @@ object FileAccessKeyRing {
   }
 
   lazy val system: FileAccessKeyRing = {
-    new FileAccessKeyRing(System.getenv().asScala.toMap.filterKeys(_.startsWith(SecretEnvPrefix)).map { case (k,v) =>
-      k.stripPrefix(SecretEnvPrefix) -> v
-    })
+    new FileAccessKeyRing(
+      System.getenv().asScala.toMap.filterKeys(_.startsWith(SecretEnvPrefix)).map { case (k, v) =>
+        k.stripPrefix(SecretEnvPrefix) -> v
+      })
   }
 
   def forUrl(url: String): Option[(String, Array[String])] = system.forUrl(url)

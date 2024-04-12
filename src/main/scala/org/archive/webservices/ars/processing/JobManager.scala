@@ -66,20 +66,21 @@ object JobManager {
     collectionInstances.get(collectionId).map(_.toSet).getOrElse(Set.empty)
   }
 
-  private def registerUuid(instance: DerivationJobInstance): Unit = if (instance.job.partialOf.isEmpty) {
-    uuidInstances(instance.uuid) = instance
-    val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
-    HdfsIO.writeLines(
-      uuidPath,
-      Seq(
-        (ListMap(
-          "jobUuid" -> instance.job.uuid.asJson,
-          "jobId" -> instance.job.id.asJson,
-          "conf" -> instance.conf.toJson) ++ {
-          instance.user.map("user" -> _.id.asJson)
-        }).asJson.spaces4),
-      overwrite = true)
-  }
+  private def registerUuid(instance: DerivationJobInstance): Unit =
+    if (instance.job.partialOf.isEmpty) {
+      uuidInstances(instance.uuid) = instance
+      val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
+      HdfsIO.writeLines(
+        uuidPath,
+        Seq(
+          (ListMap(
+            "jobUuid" -> instance.job.uuid.asJson,
+            "jobId" -> instance.job.id.asJson,
+            "conf" -> instance.conf.toJson) ++ {
+            instance.user.map("user" -> _.id.asJson)
+          }).asJson.spaces4),
+        overwrite = true)
+    }
 
   def getInstance(uuid: String): Option[DerivationJobInstance] = {
     uuidInstances.get(uuid).orElse {

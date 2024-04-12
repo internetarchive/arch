@@ -6,10 +6,10 @@ import java.io.InputStream
 
 trait GenericRandomAccess {
   def randomAccess(
-                    context: FileAccessContext,
-                    inputPath: String,
-                    pointer: FilePointer,
-                    offset: Long,
-                    positions: Iterator[(Long, Long)]): InputStream =
+      context: FileAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream =
     RandomFileAccess.access(context, pointer, offset, positions)
 }

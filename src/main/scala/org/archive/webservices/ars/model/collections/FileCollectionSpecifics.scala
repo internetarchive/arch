@@ -57,11 +57,11 @@ class FileCollectionSpecifics(val id: String)
 
   private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory]
   override def randomAccess(
-                             context: FileAccessContext,
-                             inputPath: String,
-                             pointer: FilePointer,
-                             offset: Long,
-                             positions: Iterator[(Long, Long)]): InputStream = {
+      context: FileAccessContext,
+      inputPath: String,
+      pointer: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
     if (pointer.source != sourceId)
       return super.randomAccess(context, inputPath, pointer, offset, positions)
     val spec = InputSpec(inputPath)
