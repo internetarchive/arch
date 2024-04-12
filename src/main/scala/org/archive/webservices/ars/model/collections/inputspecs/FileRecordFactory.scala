@@ -28,13 +28,16 @@ object FileRecordFactory {
     HttpFileRecordFactory,
     HdfsFileRecordFactory)
 
-  def apply(spec: InputSpec): FileRecordFactory = {
+  def apply(spec: InputSpec, default: FileFactoryCompanion): FileRecordFactory = {
+    apply(spec, Some(default))
+  }
+
+  def apply(spec: InputSpec, default: Option[FileFactoryCompanion] = None): FileRecordFactory = {
     spec.str("data-source").flatMap { dataSource =>
       factories.find { factory =>
         factory.dataSourceType == dataSource
       }
-    }
-    .getOrElse {
+    }.orElse(default).getOrElse {
       throw new UnsupportedOperationException()
     }.apply(spec)
   }

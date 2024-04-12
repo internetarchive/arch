@@ -6,20 +6,12 @@ import org.archive.webservices.ars.io.{FilePointer, WebArchiveLoader}
 import java.io.InputStream
 
 object ArchCollectionSpecLoader extends InputSpecLoader {
-  class WarcFileRecord(file: FilePointer, in: InputStream) extends FileRecord {
+  class WarcFileRecord(file: FilePointer, val in: InputStream) extends FileRecord with OneTimeAccess {
     override def filename: String = file.filename
     override def mime: String = WebArchiveLoader.WarcMime
     override def path: String =
       file.url.stripSuffix(file.filename).stripSuffix(FilePointer.SourceSeparator)
     override def pointer: FilePointer = file
-
-    private var accessed = false
-    override def access: InputStream = {
-      if (!accessed) {
-        accessed = true
-        in
-      } else throw new UnsupportedOperationException("InputStream can only be accessed once.")
-    }
 
     override def meta: FileMeta = FileMeta.empty
   }

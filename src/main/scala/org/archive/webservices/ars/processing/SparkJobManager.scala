@@ -48,7 +48,7 @@ object SparkJobManager
   private def priorityWeight: Int = if (currentPriority == 0) 1 else currentPriority
 
   def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
-    sc.setJobGroup(job.id + "-" + conf.hashCode, job.name + " " + conf.serialize)
+    sc.setJobGroup(job.uuid, job.name + " " + conf.serialize)
     sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
   }
 

@@ -32,7 +32,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWatGeneration, conf)
-      WebArchiveLoader.loadWarcFiles(conf.inputSpec) { rdd =>
+      WebArchiveLoader.loadWarc(conf.inputSpec) { rdd =>
         IOHelper.sampleGrouped[String, InputStream, Boolean](
           rdd.map { file =>
             val outFile = StringUtil.stripSuffix(file.filename, Sparkling.GzipExt) + ".wat.gz"

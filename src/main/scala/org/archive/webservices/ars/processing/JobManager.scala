@@ -66,7 +66,7 @@ object JobManager {
     collectionInstances.get(collectionId).map(_.toSet).getOrElse(Set.empty)
   }
 
-  private def registerUuid(instance: DerivationJobInstance): Unit = {
+  private def registerUuid(instance: DerivationJobInstance): Unit = if (instance.job.partialOf.isEmpty) {
     uuidInstances(instance.uuid) = instance
     val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
     HdfsIO.writeLines(

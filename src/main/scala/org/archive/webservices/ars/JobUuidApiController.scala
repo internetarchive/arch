@@ -86,7 +86,7 @@ class JobUuidApiController extends BaseController {
     }
   }
 
-  get("/petabox/metadata") {
+  get(UuidPattern + "petabox/metadata") {
     response { instance =>
       PublishedDatasets.metadata(instance).map { metadata =>
         Ok(metadata.asJson.spaces4, Map("Content-Type" -> "application/json"))
@@ -94,7 +94,7 @@ class JobUuidApiController extends BaseController {
     }
   }
 
-  post("/petabox/metadata") {
+  post(UuidPattern + "petabox/metadata") {
     response { instance =>
       parse(request.body).toOption
         .map(PublishedDatasets.parseJsonMetadata)
@@ -110,7 +110,7 @@ class JobUuidApiController extends BaseController {
     }
   }
 
-  post("/petabox/delete") {
+  post(UuidPattern + "petabox/delete") {
     val doDelete = parse(request.body).toOption
       .flatMap(_.hcursor.get[Boolean]("delete").toOption)
       .getOrElse(false)
@@ -125,7 +125,7 @@ class JobUuidApiController extends BaseController {
     }
   }
 
-  get("/published") {
+  get(UuidPattern + "published") {
     response { instance =>
       PublishedDatasets.jobItem(instance).map { info =>
         Ok(info.toJson(includeItem = true).spaces4, Map("Content-Type" -> "application/json"))

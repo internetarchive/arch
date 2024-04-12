@@ -23,6 +23,8 @@ object RandomFileAccess {
             s3Access(context, file, offset, positions, accessKey, secretKey)
           case None => httpAccess(context, file, offset, positions)
         }
+      case "hdfs" | "" =>
+        hdfsAccess(context, file, offset, positions)
       case _ =>
         file.source match {
           case s if ArchCollection.prefix(s).isDefined =>
@@ -38,6 +40,15 @@ object RandomFileAccess {
                  positions: Iterator[(Long, Long)]): InputStream = {
     val in = new URL(file.url).openStream
     IOUtil.skip(in, offset)
+    IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+  }
+
+  def hdfsAccess(context: FileAccessContext,
+                 file: FilePointer,
+                 offset: Long,
+                 positions: Iterator[(Long, Long)]): InputStream = {
+
+    val in = context.hdfsIO.open(file.path, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }
 

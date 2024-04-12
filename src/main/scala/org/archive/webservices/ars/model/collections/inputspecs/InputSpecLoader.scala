@@ -8,8 +8,9 @@ trait InputSpecLoader {
 
 object InputSpecLoader {
   def get(spec: InputSpec): Option[InputSpecLoader] = spec.specType match {
-    case "collection" => Some(ArchCollectionSpecLoader)
-    case "files" => Some(FileSpecLoader)
+    case InputSpec.DatasetBasedInputSpecType => Some(DatasetSpecLoader)
+    case InputSpec.CollectionBasedInputSpecType => Some(ArchCollectionSpecLoader)
+    case FileSpecLoader.SpecType => Some(FileSpecLoader)
     case "meta-remote" => Some(MetaRemoteSpecLoader)
     case "meta-files" => Some(MetaFilesSpecLoader)
     case "multi-specs" => Some(MultiSpecLoader)

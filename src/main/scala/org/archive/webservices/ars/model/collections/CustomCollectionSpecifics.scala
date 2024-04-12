@@ -6,6 +6,7 @@ import org.archive.webservices.ars.io.{FilePointer, IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -48,7 +49,7 @@ class CustomCollectionSpecifics(val id: String)
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
     val sourceId = this.sourceId
     action({
-      val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+      val cdxPath = inputPath + "/" + UserDefinedQuery.CdxDir
       CustomCollectionSpecifics.location(customId) match {
         case Some(location) =>
           val locationId = StringUtil
@@ -82,7 +83,7 @@ class CustomCollectionSpecifics(val id: String)
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
-    val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+    val cdxPath = inputPath + "/" + UserDefinedQuery.CdxDir
     val locationPrefix = CustomCollectionSpecifics
       .location(customId)
       .map(_ + FilePointer.SourceSeparator)
@@ -100,7 +101,6 @@ object CustomCollectionSpecifics {
   val Prefix = "CUSTOM-"
   val InfoFile = "info.json"
   val LocationIdSeparator = ":"
-  val CdxDir = "index.cdx.gz"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
     CacheUtil.cache[Option[HCursor]](s"CustomCollectionSpecifics:collectionInfo:$path") {

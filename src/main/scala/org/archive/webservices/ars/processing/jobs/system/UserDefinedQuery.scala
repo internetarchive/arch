@@ -16,6 +16,8 @@ import scala.concurrent.Future
 object UserDefinedQuery extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
+  val CdxDir = "index.cdx.gz"
+
   val name = "User-Defined Query"
   val uuid = "018950a1-6773-79f3-8eb2-fba4356e23b9"
   val category: ArchJobCategory = ArchJobCategories.System
@@ -137,7 +139,7 @@ object UserDefinedQuery extends SparkJob {
               }
             }
           }
-        val cdxPath = conf.outputPath + "/" + CustomCollectionSpecifics.CdxDir
+        val cdxPath = conf.outputPath + "/" + CdxDir
         RddUtil.saveAsTextFile(
           filtered.map(_.toCdxString),
           cdxPath,
@@ -165,7 +167,9 @@ object UserDefinedQuery extends SparkJob {
     instance
   }
 
-  override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = Iterator.empty
+  override def datasetGlobMime(conf: DerivationJobConf): Option[(String, String)] = Some {
+    (conf.outputPath + "/" + CdxDir + "/*.cdx.gz", WebArchiveLoader.CdxMime)
+  }
 
   override val templateName: Option[String] = None
 

@@ -46,7 +46,7 @@ abstract class ArchiveSparkBaseJob[Root <: EnrichRoot: ClassTag] extends SparkJo
               true
             }
           }
-        case InputSpec.InputType.WARC =>
+        case t if InputSpec.InputType.warc(t) =>
           WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
             IOHelper.sample(rdd, conf.sample) { sample =>
               loadFilterEnrichSave(warcSpec(sample), conf)

@@ -2,15 +2,16 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{FileAccessContext, WebArchiveLoader}
-import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
 object FileSpecLoader extends InputSpecLoader {
+  val SpecType = "files"
+  val MimeKey = "data-mime"
+
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
-    val recordFactory = FileRecordFactory(spec)
+    val recordFactory = FileRecordFactory(spec, default = HdfsFileRecordFactory)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     recordFactory.dataSourceType match {
       case HdfsFileRecordFactory.dataSourceType => loadHdfs(spec, recordFactoryBc)
@@ -19,18 +20,10 @@ object FileSpecLoader extends InputSpecLoader {
   })
 
   def loadHdfs(spec: InputSpec, recordFactoryBc: Broadcast[FileRecordFactory]): RDD[FileRecord] = {
-    val locationMime = {
-      for {
-        location <- spec.str(InputSpec.DataLocationKey)
-        mime <- spec.str("data-mime")
-      } yield (location, mime)
-    }.orElse {
-      for {
-        uuid <- spec.str("data-cdx-uuid")
-        location <- ArchConf.uuidJobOutPath.map(_ + "/" + uuid + UserDefinedQuery.relativeOutPath)
-      } yield (location, WebArchiveLoader.CdxMime)
-    }
-    locationMime.map { case (location, mime) =>
+    for {
+      location <- spec.str(InputSpec.DataLocationKey)
+      mime <- spec.str(MimeKey)
+    } yield {
       val accessContext = FileAccessContext.fromLocalArchConf
       RddUtil.loadFilesLocality(location).mapPartitions { partition =>
         accessContext.init()

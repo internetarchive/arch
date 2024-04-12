@@ -5,7 +5,7 @@ import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.io.{FileNotFoundException, InputStream}
 
-class HdfsFileRecordFactory(excludeSuffix: Option[String]) extends FileRecordFactory {
+class HdfsFileRecordFactory private (excludeSuffix: Option[String] = None) extends FileRecordFactory {
   def companion = HdfsFileRecordFactory
 
   class HdfsFileRecord private[HdfsFileRecordFactory] (
@@ -52,4 +52,6 @@ object HdfsFileRecordFactory extends FileFactoryCompanion {
 
   def apply(spec: InputSpec): HdfsFileRecordFactory = new HdfsFileRecordFactory(
     spec.str("meta-suffix"))
+
+  def apply(): HdfsFileRecordFactory = new HdfsFileRecordFactory()
 }

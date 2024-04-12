@@ -55,24 +55,30 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarcFiles[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+  def loadWarc[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     spec.loader.load(spec) { rdd =>
       val accessContext = FileAccessContext.fromLocalArchConf
-      action(rdd.mapPartitions { partition =>
-        accessContext.init()
-        partition.flatMap { f =>
-          if (f.mime == WarcMime) Some(f)
-          else if (f.mime == CdxMime) Some {
-            val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString)
-            val in = warcFilesViaCdx(cdx) { pointers =>
-              randomAccess(accessContext, pointers.map { case ((pointer, initialOffset), positions) =>
-                ((pointer, initialOffset), positions.map { case (_, offset, length) =>
-                  (offset - initialOffset, length)
-                })
-              })
+      action({
+        spec.inputType match {
+          case InputSpec.InputType.WARC =>
+            rdd.mapPartitions { partition =>
+              accessContext.init()
+              partition.filter(_.mime == WarcMime)
             }
-            f.withAccess(in)
-          } else None
+          case InputSpec.InputType.CDX =>
+            rdd.mapPartitions { partition =>
+              accessContext.init()
+              partition.filter(_.mime == CdxMime).map { f =>
+                val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString)
+                val in = warcFilesViaCdx(cdx) { pointers =>
+                  randomAccess(accessContext, pointers.map { case ((pointer, initialOffset), positions) =>
+                    ((pointer.relative(f.pointer), initialOffset), positions.map { case (_, o, l) => (o, l) })
+                  })
+                }
+                f.withAccess(in)
+              }
+            }
+          case _ => RddUtil.emptyRDD
         }
       })
     }
@@ -80,7 +86,7 @@ object WebArchiveLoader {
 
   def loadWarcsRecords[R](inputSpec: InputSpec)(
       action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
-    loadWarcFiles(inputSpec) { rdd =>
+    loadWarc(inputSpec) { rdd =>
       action(rdd.map { file =>
         val in = file.access
         val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
@@ -287,7 +293,7 @@ object WebArchiveLoader {
       .map { case ((file, initialOffset), group) =>
         (
           (FilePointer.fromUrl(file), initialOffset),
-          group.map { case (r, _, o, l) => (r, o, l) })
+          group.map { case (r, _, o, l) => (r, o - initialOffset, l) })
       }
     new BufferedInputStream(new ChainedInputStream(in(groups))).asInstanceOf[InputStream]
   }
@@ -318,9 +324,7 @@ object WebArchiveLoader {
     loadWarcFilesViaCdx(cdxPath) { pointers =>
       accessContext.init()
       randomAccess(accessContext, pointers.map { case ((pointer, initialOffset), positions) =>
-        ((pointer, initialOffset), positions.map { case (_, offset, length) =>
-          (offset - initialOffset, length)
-        })
+        ((pointer, initialOffset), positions.map { case (_, o, l) => (o, l) })
       })
     }
   }
@@ -338,9 +342,7 @@ object WebArchiveLoader {
             specifics.inputPath,
             pointer,
             initialOffset,
-            positions.map { case (_, offset, length) =>
-              (offset - initialOffset, length)
-            })
+            positions.map { case (_, o, l) => (o, l) })
         }
       }
     }
@@ -369,9 +371,7 @@ object WebArchiveLoader {
           accessContext,
           pointer.filename,
           initialOffset,
-          positions.map { case (_, offset, length) =>
-            (offset - initialOffset, length)
-          })
+          positions.map { case (_, o, l) => (o, l) })
       }
     }
   }
@@ -401,9 +401,7 @@ object WebArchiveLoader {
           accessContext,
           warcPath + "/" + pointer.filename,
           initialOffset,
-          positions.map { case (_, offset, length) =>
-            (offset - initialOffset, length)
-          })
+          positions.map { case (_, o, l) => (o, l) })
       }
     }
   }

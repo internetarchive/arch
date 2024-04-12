@@ -37,19 +37,24 @@ object PublishedDatasets {
 
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
-  val MaxCollectionIdLength = 25
+  val MaxInputIdLength = 25
   def itemName(instance: DerivationJobInstance): String = {
     val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
-    val id = instance.conf.inputSpec.id
-    val collectionId =
-      if (id.length <= MaxCollectionIdLength) id
-      else ArchCollection.prefix(id).getOrElse("") + DigestUtil.md5Hex(id).take(16)
+    val inputSpecId = instance.conf.inputSpec.id
+    val inputId =
+      if (inputSpecId.length <= MaxInputIdLength) inputSpecId
+      else {
+        val prefix = ArchCollection.prefix(inputSpecId).getOrElse {
+          inputSpecId.split("[\\W_]", 2).head.take(10) + "-"
+        }
+        prefix + DigestUtil.md5Hex(inputSpecId).take(16)
+      }
     val timestamp = instance.info.started
       .getOrElse(Instant.now)
       .truncatedTo(ChronoUnit.SECONDS)
       .toString
       .replaceAll("[^\\dTZ]", "")
-    Seq("arch", collectionId, jobId, timestamp).mkString("_")
+    Seq("arch", inputId, jobId, timestamp).mkString("_")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
@@ -246,10 +251,6 @@ object PublishedDatasets {
       .filter(_.state == ProcessingState.Finished)
   }
 
-  def dataset(uuid: String): Option[DerivationJobInstance] = {
-    JobManager.getInstance(uuid).filter(_.state == ProcessingState.Finished)
-  }
-
   def dataset(
       jobId: String,
       collection: ArchCollection,
@@ -275,7 +276,9 @@ object PublishedDatasets {
         HdfsIO.delete(jobFilePath)
         throw new RuntimeException(s"Creating new Petabox item $item failed.")
       }
-      appendCollectionFile(dataset.conf.outputPath, itemInfo)
+      if (InputSpec.isCollectionBased(dataset.conf.inputSpec)) {
+        appendCollectionFile(dataset.conf.outputPath, itemInfo)
+      }
       HdfsIO.writeLines(
         jobFilePath,
         Seq(itemInfo.toJson(includeItem = true).spaces4),
@@ -304,14 +307,16 @@ object PublishedDatasets {
       parse(HdfsIO.lines(jobFile).mkString).toOption.map(_.hcursor).flatMap { cursor =>
         for {
           item <- cursor.get[String]("item").toOption
-          collectionId <- cursor.get[String]("collection").toOption
+          inputId <- cursor.get[String]("inputId").toOption.orElse {
+            cursor.get[String]("collection").toOption
+          }
           jobId <- cursor.get[String]("job").toOption
           isSample <- cursor.get[Boolean]("sample").toOption
           time <- cursor.get[String]("time").toOption.map(Instant.parse)
           complete <- cursor.get[Boolean]("complete").toOption
         } yield ItemInfo(
           item,
-          collectionId,
+          inputId,
           jobId,
           isSample,
           time,
@@ -329,14 +334,16 @@ object PublishedDatasets {
           jobFilePath,
           Seq(itemInfo.copy(complete = true).toJson(includeItem = true).spaces4),
           overwrite = true)
-        val collectionFilePath = collectionFile(instance.conf.outputPath)
-        syncCollectionFile(collectionFilePath) {
-          val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
-            .flatMap(_.as[Map[String, Json]].toOption)
-            .getOrElse(Map.empty)
-          val out =
-            in.updated(itemName, itemInfo.copy(complete = true).toJson(includeItem = false))
-          HdfsIO.writeLines(collectionFilePath, Seq(out.asJson.spaces4), overwrite = true)
+        if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+          val collectionFilePath = collectionFile(instance.conf.outputPath)
+          syncCollectionFile(collectionFilePath) {
+            val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
+              .flatMap(_.as[Map[String, Json]].toOption)
+              .getOrElse(Map.empty)
+            val out =
+              in.updated(itemName, itemInfo.copy(complete = true).toJson(includeItem = false))
+            HdfsIO.writeLines(collectionFilePath, Seq(out.asJson.spaces4), overwrite = true)
+          }
         }
         true
       case None => false

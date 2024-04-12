@@ -2,8 +2,8 @@ package org.archive.webservices.ars.processing.jobs.system
 
 import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.ars.model._
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
-import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery.id
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.RddUtil
@@ -22,20 +22,18 @@ object DatasetPublication extends SparkJob {
 
   private def confDataset(conf: DerivationJobConf): Either[String, DerivationJobInstance] = {
     val datasetParam = conf.params.get[String]("dataset")
-    val datasetUuidParam = conf.params.get[String]("dataset-uuid")
-    if (datasetParam.isEmpty && datasetUuidParam.isEmpty) return Left("No dataset specified.")
-    lazy val dataset = datasetParam.flatMap(PublishedDatasets.dataset(_, conf)).orElse {
-      datasetUuidParam.flatMap(PublishedDatasets.dataset)
-    }
-    val jobId = datasetParam.orElse(dataset.map(_.job.id))
-    PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
-      case Some(_) => Left("Derivation job " + jobId + " is prohibited to be published.")
-      case None => dataset.map(Right(_)).getOrElse {
-        datasetUuidParam.map(uuid => Left("Dataset with UUID " + uuid + " not found.")).getOrElse {
-          Left("Derivation job " + datasetParam.get + " not found.")
+    if (datasetParam.isEmpty && !InputSpec.isDatasetBased(conf.inputSpec)) return Left("No dataset specified.")
+    lazy val dataset = {
+      if (datasetParam.isDefined) {
+        datasetParam.flatMap(PublishedDatasets.dataset(_, conf)).getOrElse {
+          return Left("Derivation job " + datasetParam.get + " not found.")
         }
-      }
+      } else conf.inputSpec.dataset
     }
+    val jobId = datasetParam.getOrElse(dataset.job.id)
+    if (PublishedDatasets.ProhibitedJobs.exists(_.id == jobId)) {
+      Left("Derivation job " + jobId + " is prohibited to be published.")
+    } else Right(dataset)
   }
 
   override def validateParams(conf: DerivationJobConf): Option[String] = {
