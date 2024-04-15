@@ -14,18 +14,20 @@ abstract class ArchiveSparkEntityExtraction extends ArchiveSparkTextLoadJob {
   val description: String = "ArchiveSpark job " + name
   val category: ArchJobCategory = ArchJobCategories.None
 
-  def properties(lang: String): Properties = {
+  def properties(lang: Option[String] = None): Properties = {
     val default = EntitiesConstants.DefaultProps
-    val props = new StanfordCoreNLP(lang).getProperties
-    for (p <- default.stringPropertyNames.asScala) props.setProperty(p, default.getProperty(p))
-    props
+    lang match {
+      case Some(l) =>
+        val props = new StanfordCoreNLP(l).getProperties
+        for (p <- default.stringPropertyNames.asScala)
+          props.setProperty(p, default.getProperty(p))
+        props
+      case None => default
+    }
   }
 
   def functions(conf: DerivationJobConf) = {
-    val entities = conf.params.get[String]("lang") match {
-      case Some(lang) => Entities(properties(lang))
-      case None => Entities
-    }
+    val entities = Entities(properties(conf.params.get[String]("lang")))
     Seq(entities.of(textLoad))
   }
 }
@@ -41,5 +43,5 @@ object ArchiveSparkEntityExtractionChinese extends ArchiveSparkEntityExtraction 
     "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
   override val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def properties(lang: String): Properties = super.properties("chinese")
+  override def properties(lang: Option[String]): Properties = super.properties(Some("chinese"))
 }
