@@ -41,6 +41,13 @@ object PublishedDatasets {
 
   def collectionFile(collectionOutPath: String): String = collectionOutPath + "/published.json"
 
+  def isCollectionBased(instance: DerivationJobInstance): Boolean = {
+    InputSpec.isCollectionBased(instance.conf.inputSpec) && {
+      val collectionPath = DerivationJobConf.collectionOutPath(instance.conf.inputSpec.collection)
+      instance.outPath.startsWith(collectionPath + "/")
+    }
+  }
+
   val MaxInputIdLength = 25
   def itemName(instance: DerivationJobInstance): String = {
     val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
@@ -287,7 +294,7 @@ object PublishedDatasets {
         Try(newItemInfo(name, dataset)).filter { itemInfo =>
           Try {
             createItem(name, datasetMetadata(dataset, itemInfo) ++ metadata) && {
-              if (InputSpec.isCollectionBased(dataset.conf.inputSpec)) {
+              if (isCollectionBased(dataset)) {
                 appendCollectionFile(dataset.conf.inputSpec.collection, itemInfo)
               }
               HdfsIO.writeLines(
@@ -345,7 +352,7 @@ object PublishedDatasets {
           jobFilePath,
           Seq(itemInfo.copy(complete = true).toJson(includeItem = true).spaces4),
           overwrite = true)
-        if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+        if (isCollectionBased(instance)) {
           val collectionFilePath = collectionFile(instance.conf.inputSpec.collection)
           syncCollectionFile(collectionFilePath) {
             val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
@@ -471,7 +478,7 @@ object PublishedDatasets {
   def deletePublished(instance: DerivationJobInstance): Boolean = {
     val jobFilePath = jobFile(instance)
     for (info <- jobItem(jobFilePath)) yield {
-      if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+      if (isCollectionBased(instance)) {
         deletePublished(instance.conf.inputSpec.collection, info.item)
       } else {
         val success = deleteItem(info.item)
