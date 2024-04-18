@@ -99,24 +99,19 @@ class CustomCollectionSpecifics(val id: String)
 
 object CustomCollectionSpecifics {
   val Prefix = "CUSTOM-"
-  val InfoFile = "info.json"
   val LocationIdSeparator = ":"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
-    CacheUtil.cache[Option[HCursor]](s"CustomCollectionSpecifics:collectionInfo:$path") {
-      val infoPath = path + s"/$InfoFile"
-      if (HdfsIO.exists(infoPath)) {
-        val str = HdfsIO.lines(infoPath).mkString
-        Try(parser.parse(str).right.get.hcursor).toOption
-      } else None
-    }
+    UserDefinedQuery.parseInfo(path)
   }
 
-  def location(id: String): Option[String] =
+  def location(id: String): Option[String] = {
     collectionInfo(id).flatMap(_.get[String]("location").toOption)
+  }
 
-  def userPath(userId: String): String =
+  def userPath(userId: String): String = {
     ArchConf.customCollectionPath + "/" + IOHelper.escapePath(userId)
+  }
 
   def path(user: ArchUser): String = userPath(user.id)
 
@@ -133,7 +128,7 @@ object CustomCollectionSpecifics {
   def userCollectionIds(user: ArchUser): Seq[String] = {
     HdfsIO
       .files(path(user) + "/*", recursive = false)
-      .filter(p => HdfsIO.exists(p + s"/$InfoFile"))
+      .filter(p => HdfsIO.exists(p + "/" + UserDefinedQuery.InfoFile))
       .flatMap(_.stripSuffix("/").split('/').lastOption)
       .toSeq
       .map { id =>

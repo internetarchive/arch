@@ -58,11 +58,10 @@ object Keystone {
       return
     }
 
-    val outputSize = instance.outFiles.map(_.size).sum
     val outputMetadata = Map(
-      "job_start_id" -> instance.uuid,
-      "output_bytes" -> outputSize.toString,
-      "created_at" -> Instant.now.toString).asJson.noSpaces
+      "job_start_id" -> instance.uuid.asJson,
+      "output_bytes" -> instance.outputSize.asJson,
+      "created_at" -> Instant.now.toString.asJson).asJson.noSpaces
 
     val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
     printHttpRequestOutput(result)

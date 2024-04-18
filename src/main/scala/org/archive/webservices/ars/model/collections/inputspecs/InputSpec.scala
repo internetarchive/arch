@@ -46,7 +46,7 @@ class CollectionBasedInputSpec(
       "type" -> specType,
       "collectionId" -> collectionId,
       "inputPath" -> inputPath).asJson.hcursor)
-  override def size: Long = ArchCollection.get(collectionId).map(_.stats.size).getOrElse(-1)
+  override def size: Long = collection.stats.size
   private[inputspecs] var _collection: Option[ArchCollection] = None
   def collection: ArchCollection = _collection
     .orElse {
@@ -72,7 +72,7 @@ class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
   }
   override val specType: String = InputSpec.DatasetBasedInputSpecType
   override lazy val cursor: HCursor = cursorOpt.getOrElse(Map("uuid" -> uuid).asJson.hcursor)
-  override def size: Long = dataset.outFiles.map(_.size).sum
+  override lazy val size: Long = dataset.outputSize
   def toFileSpec: Option[InputSpec] = {
     dataset.job.datasetGlobMime(dataset.conf).map { case (glob, mime) =>
       new DefaultInputSpec(

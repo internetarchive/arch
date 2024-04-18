@@ -1,9 +1,11 @@
 package org.archive.webservices.ars.processing.jobs.system
 
+import io.circe.{HCursor, parser}
 import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing._
+import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.cdx.CdxLoader
@@ -12,11 +14,13 @@ import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil, Time14Util}
 
 import scala.concurrent.Future
+import scala.util.Try
 
 object UserDefinedQuery extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val CdxDir = "index.cdx.gz"
+  val InfoFile = "info.json"
 
   val name = "User-Defined Query"
   val uuid = "018950a1-6773-79f3-8eb2-fba4356e23b9"
@@ -149,7 +153,7 @@ object UserDefinedQuery extends SparkJob {
         if (HdfsIO.exists(cdxPath + "/" + Sparkling.CompleteFlagFile)) {
           val size = CdxLoader.load(cdxPath + "/*.cdx.gz").map(_.compressedSize).fold(0L)(_ + _)
           val info = conf.params.set("size" -> size)
-          val infoPath = conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile
+          val infoPath = conf.outputPath + "/" + InfoFile
           HdfsIO.writeLines(infoPath, Seq(info.toJson.spaces4))
           HdfsIO.exists(infoPath)
         } else false
@@ -161,7 +165,7 @@ object UserDefinedQuery extends SparkJob {
     val instance = super.history(conf)
     val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
     if (started) {
-      val completed = HdfsIO.exists(conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile)
+      val completed = HdfsIO.exists(conf.outputPath + "/" + InfoFile)
       instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
     }
     instance
@@ -171,9 +175,25 @@ object UserDefinedQuery extends SparkJob {
     (conf.outputPath + "/" + CdxDir + "/*.cdx.gz", WebArchiveLoader.CdxMime)
   }
 
+  override def outputSize(conf: DerivationJobConf): Long = {
+    parseInfo(conf).flatMap(_.get[Long]("size").toOption).getOrElse(0L)
+  }
+
   override val templateName: Option[String] = None
 
   override def reset(conf: DerivationJobConf): Unit = HdfsIO.delete(conf.outputPath)
 
   override val finishedNotificationTemplate: Option[String] = Some("udq-finished")
+
+  def parseInfo(conf: DerivationJobConf): Option[HCursor] = parseInfo(conf.outputPath)
+
+  def parseInfo(outPath: String): Option[HCursor] = {
+    CacheUtil.cache[Option[HCursor]](s"$id:collectionInfo:$outPath") {
+      val infoPath = outPath + s"/$InfoFile"
+      if (HdfsIO.exists(infoPath)) {
+        val str = HdfsIO.lines(infoPath).mkString
+        Try(parser.parse(str).right.get.hcursor).toOption
+      } else None
+    }
+  }
 }
