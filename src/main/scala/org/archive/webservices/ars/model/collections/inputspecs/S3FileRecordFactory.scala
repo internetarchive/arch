@@ -76,11 +76,12 @@ object S3FileRecordFactory extends FileFactoryCompanion {
       (accessKey, secretKey) <- FileAccessKeyRing.forUrl(endpoint).flatMap {
         case (FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey)) =>
           Some((accessKey, secretKey))
-        case _ =>
-          for {
-            accessKey <- spec.str("s3-accessKey")
-            secretKey <- spec.str("s3-secretKey")
-          } yield (accessKey, secretKey)
+        case _ => None
+      }.orElse {
+        for {
+          accessKey <- spec.str("s3-accessKey")
+          secretKey <- spec.str("s3-secretKey")
+        } yield (accessKey, secretKey)
       }
       bucket <- spec.str("s3-bucket")
       location <- spec.str(InputSpec.DataLocationKey)

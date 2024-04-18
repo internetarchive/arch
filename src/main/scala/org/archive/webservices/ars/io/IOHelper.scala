@@ -278,4 +278,30 @@ object IOHelper {
       merged
     }
   }
+
+  def userPwFromUrl(url: String, defaultUser: Option[String] = None, defaultPw: Option[String] = None): Option[(String, String)] = {
+    {
+      if (url.contains("@")) {
+        val urlToUser = url.split('@').head
+        val lastSlash = urlToUser.lastIndexOf('/')
+        Some(if (lastSlash < 0) urlToUser else urlToUser.drop(lastSlash + 1)).map(_.trim).filter(_.nonEmpty)
+      } else None
+    }.flatMap { userPw =>
+      val colonIdx = userPw.indexOf(":")
+      if (colonIdx < 0) {
+        defaultPw.map((userPw, _))
+      } else {
+        Some((userPw.take(colonIdx), userPw.drop(colonIdx + 1)))
+      }
+    }.orElse {
+      for {
+        user <- defaultUser
+        pw <- defaultPw
+      } yield (user, pw)
+    }
+  }
+
+  def insertUrlUser(url: String, username: String): String = {
+    url.replace("://", s"://$username@")
+  }
 }

@@ -4,10 +4,14 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
+import org.archive.webservices.sparkling.util.StringUtil
+import requests.Request
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.net.URL
+import java.util.Base64
 import scala.collection.mutable
+import scala.io.Source
 
 object RandomFileAccess {
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
@@ -22,6 +26,14 @@ object RandomFileAccess {
         context.keyRing.forUrl(file.url) match {
           case Some((FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey))) =>
             s3Access(context, file, offset, positions, accessKey, secretKey)
+          case Some((FileAccessKeyRing.AccessMethodBasic, Array(user, pw))) =>
+            httpAccess(context, file, offset, positions, basicUser = Some(user), basicPassword = Some(pw))
+          case Some((FileAccessKeyRing.AccessMethodBasic, Array(pw))) =>
+            httpAccess(context, file, offset, positions, basicPassword = Some(pw))
+          case Some((FileAccessKeyRing.AccessMethodVault, Array(user, pw))) =>
+            vaultAccess(context, file, offset, positions, username = Some(user), password = Some(pw))
+          case Some((FileAccessKeyRing.AccessMethodVault, Array(pw))) =>
+            vaultAccess(context, file, offset, positions, password = Some(pw))
           case None => httpAccess(context, file, offset, positions)
         }
       case "hdfs" | "" =>
@@ -35,12 +47,38 @@ object RandomFileAccess {
     }
   }
 
+  def vaultAccess(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)],
+      username: Option[String] = None,
+      password: Option[String] = None): InputStream = {
+    val cookie = context.keyValueCache.get(Vault.SessionIdCacheKey).map(_.asInstanceOf[String]).orElse {
+      IOHelper.userPwFromUrl(file.url, username, password).map { case (user, pw) =>
+        Vault.session(user, pw)
+      }
+    }.map(Vault.SessionIdCookie -> _)
+    httpAccess(context, file, offset, positions, cookie = cookie)
+  }
+
   def httpAccess(
       context: FileAccessContext,
       file: FilePointer,
       offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    val in = new URL(file.url).openStream
+      positions: Iterator[(Long, Long)],
+      basicUser: Option[String] = None,
+      basicPassword: Option[String] = None,
+      cookie: Option[(String, String)] = None): InputStream = {
+    val connection = new URL(file.url).openConnection
+    for {
+      (user, pw) <- IOHelper.userPwFromUrl(file.url, basicUser, basicPassword)
+    } {
+      val authString = Base64.getEncoder.encodeToString(s"$user:$pw".getBytes)
+      connection.setRequestProperty("Authorization", "Basic " + authString)
+    }
+    for ((k, v) <- cookie) connection.setRequestProperty("Cookie", s"$k=$v")
+    val in = connection.getInputStream
     IOUtil.skip(in, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }

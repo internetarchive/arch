@@ -7,7 +7,8 @@ import org.archive.webservices.sparkling.io.HdfsIO
 class FileAccessContext(
     val conf: ArchConf with Serializable,
     val useAitHdfsIO: Boolean = false,
-    val keyRing: FileAccessKeyRing)
+    val keyRing: FileAccessKeyRing,
+    val keyValueCache: Map[String, Serializable])
     extends Serializable {
   @transient lazy val hdfsIO: HdfsIO = if (useAitHdfsIO) aitHdfsIO.get else HdfsIO
   @transient lazy val aitHdfsIO: Option[HdfsIO] =
@@ -23,11 +24,15 @@ class FileAccessContext(
 }
 
 object FileAccessContext {
+  var KeyValueCache = Map.empty[String, Serializable]
+
   def fromLocalArchConf: FileAccessContext =
-    new FileAccessContext(conf = LocalArchConf.instance, keyRing = FileAccessKeyRing.system)
+    new FileAccessContext(conf = LocalArchConf.instance, keyRing = FileAccessKeyRing.system, keyValueCache = KeyValueCache)
+
   def fromLocalArchConf(alwaysAitHdfsIO: Boolean) =
     new FileAccessContext(
       conf = LocalArchConf.instance,
       useAitHdfsIO = alwaysAitHdfsIO,
-      keyRing = FileAccessKeyRing.system)
+      keyRing = FileAccessKeyRing.system,
+      keyValues = KeyValueCache)
 }

@@ -14,7 +14,7 @@ class FileAccessKeyRing private (secrets: Map[String, String]) extends Serializa
       .split('/')
       .find(_.nonEmpty)
       .flatMap { host =>
-        secrets.get(secretKey(protocol, host))
+        secrets.get(secretKey(protocol, if (host.contains("@")) host.split('@').last else host))
       }
       .toArray
       .flatMap(_.split(SecretSeparator))
@@ -25,7 +25,9 @@ class FileAccessKeyRing private (secrets: Map[String, String]) extends Serializa
 object FileAccessKeyRing {
   val SecretSeparator = "::"
   val AccessMethodS3 = "s3"
-  val SupportedAccessMethods = Set(AccessMethodS3)
+  val AccessMethodBasic = "basic"
+  val AccessMethodVault = "vault"
+  val SupportedAccessMethods = Set(AccessMethodS3, AccessMethodBasic, AccessMethodVault)
   val SecretEnvPrefix = "ARCH_SECRET_"
 
   def secretKey(protocol: String, host: String): String = {
