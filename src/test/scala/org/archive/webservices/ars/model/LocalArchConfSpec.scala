@@ -1,4 +1,4 @@
-package org.archive.webservices.ars
+package test.org.archive.webservices.ars
 
 import org.archive.webservices.ars.model.LocalArchConf
 
