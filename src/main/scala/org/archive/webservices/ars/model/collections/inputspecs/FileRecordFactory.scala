@@ -9,9 +9,9 @@ trait FileRecordFactory extends Serializable {
   def dataSourceType: String = companion.dataSourceType
   @transient var accessContext: FileAccessContext =
     FileAccessContext.fromLocalArchConf
-  def get(filename: String, mime: String, meta: FileMeta): FileRecord
+  def get(file: String, mime: String, meta: FileMeta): FileRecord
   def accessFile(
-      filePath: String,
+      file: String,
       resolve: Boolean = true,
       accessContext: FileAccessContext = accessContext): InputStream
 }
@@ -26,7 +26,8 @@ object FileRecordFactory {
     S3FileRecordFactory,
     S3HttpFileRecordFactory,
     HttpFileRecordFactory,
-    HdfsFileRecordFactory)
+    HdfsFileRecordFactory,
+    VaultFileRecordFactory)
 
   def apply(spec: InputSpec, default: FileFactoryCompanion): FileRecordFactory = {
     apply(spec, Some(default))
@@ -34,7 +35,7 @@ object FileRecordFactory {
 
   def apply(spec: InputSpec, default: Option[FileFactoryCompanion] = None): FileRecordFactory = {
     spec
-      .str("data-source")
+      .str(InputSpec.DataSourceKey)
       .flatMap { dataSource =>
         factories.find { factory =>
           factory.dataSourceType == dataSource

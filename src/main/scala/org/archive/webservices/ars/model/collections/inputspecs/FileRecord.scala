@@ -5,12 +5,15 @@ import org.archive.webservices.ars.io.FilePointer
 import java.io.InputStream
 
 trait FileRecord {
-  def filename: String
+  def filename: String = filePath.split('/').last
+  def path: String = {
+    val slashIdx = filePath.lastIndexOf('/')
+    if (slashIdx < 0) "" else filePath.take(slashIdx)
+  }
+  def filePath: String = FileRecordFactory.filePath(path, filename)
   def mime: String
-  def path: String
   def meta: FileMeta
   def access: InputStream
-  def filePath: String = FileRecordFactory.filePath(path, filename)
   def pointer: FilePointer = FilePointer(filePath, filename)
 
   def withAccess(in: InputStream): FileRecord = {

@@ -7,9 +7,9 @@ class S3HttpFileRecordFactory(location: String, longestPrefixMapping: Boolean)
     with LongestPrefixProbing {
   override def companion: FileFactoryCompanion = S3HttpFileRecordFactory
 
-  override def locatePath(filename: String): String = {
-    if (longestPrefixMapping) locateLongestPrefixPath(filename)
-    else super.locatePath(filename)
+  override def locateFile(file: String): String = {
+    if (longestPrefixMapping) FileRecordFactory.filePath(locateLongestPrefixPath(file), file)
+    else super.locateFile(file)
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]

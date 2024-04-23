@@ -54,12 +54,13 @@ object RandomFileAccess {
       positions: Iterator[(Long, Long)],
       username: Option[String] = None,
       password: Option[String] = None): InputStream = {
-    val cookie = context.keyValueCache.get(Vault.SessionIdCacheKey).map(_.asInstanceOf[String]).orElse {
-      IOHelper.userPwFromUrl(file.url, username, password).map { case (user, pw) =>
+    val (url, userPw) = IOHelper.splitUserPwUrl(file.url, username, password)
+    val cookie = userPw.map { case (user, pw) =>
+      context.keyValueCache.get(Vault.sessionIdCacheKey(user)).map(_.asInstanceOf[String]).getOrElse {
         Vault.session(user, pw)
       }
     }.map(Vault.SessionIdCookie -> _)
-    httpAccess(context, file, offset, positions, cookie = cookie)
+    httpAccessUrl(url, offset, positions, cookie = cookie)
   }
 
   def httpAccess(
@@ -70,10 +71,18 @@ object RandomFileAccess {
       basicUser: Option[String] = None,
       basicPassword: Option[String] = None,
       cookie: Option[(String, String)] = None): InputStream = {
-    val connection = new URL(file.url).openConnection
-    for {
-      (user, pw) <- IOHelper.userPwFromUrl(file.url, basicUser, basicPassword)
-    } {
+    val (url, userPw) = IOHelper.splitUserPwUrl(file.url, basicUser, basicPassword)
+    httpAccessUrl(url, offset, positions, userPw, cookie)
+  }
+
+  def httpAccessUrl(
+      url: String,
+      offset: Long,
+      positions: Iterator[(Long, Long)],
+      basicUserPw: Option[(String, String)] = None,
+      cookie: Option[(String, String)] = None): InputStream = {
+    val connection = new URL(url).openConnection
+    for ((user, pw) <- basicUserPw) {
       val authString = Base64.getEncoder.encodeToString(s"$user:$pw".getBytes)
       connection.setRequestProperty("Authorization", "Basic " + authString)
     }
@@ -88,7 +97,6 @@ object RandomFileAccess {
       file: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-
     val in = context.hdfsIO.open(file.path, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
   }

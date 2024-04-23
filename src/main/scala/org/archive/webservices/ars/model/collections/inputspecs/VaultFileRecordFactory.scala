@@ -1,8 +1,10 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
+import org.archive.webservices.ars.io.Vault.TreeNode
 import org.archive.webservices.ars.io._
 
 import java.io.InputStream
+import java.net.URL
 import scala.util.Try
 
 class VaultFileRecordFactory(
@@ -16,45 +18,60 @@ class VaultFileRecordFactory(
   def companion = VaultFileRecordFactory
 
   class VaultFileRecord private[VaultFileRecordFactory] (
-      val filename: String,
+      file: String,
       val mime: String,
       val meta: FileMeta)
       extends FileRecord {
-    override lazy val path: String = locatePath(filename)
+    override lazy val filePath: String = locateFile(file)
     lazy val url: String = contentUrl(filePath, resolve = false)
-    override def access: InputStream = Vault.access(url, sessionId)
+    override def access: InputStream = accessContentUrl(url)
     override def pointer: FilePointer = {
-      // for later when changed to Vault content URL instead of archive.org
-      //FilePointer(IOHelper.insertUrlUser(url, username), filename)
+      // for later, when changed to Vault content URL instead of public archive.org
+      // FilePointer(IOHelper.insertUrlUser(url, username), filename)
       FilePointer(url, filename)
     }
   }
 
-  override def get(filename: String, mime: String, meta: FileMeta): FileRecord =
-    new VaultFileRecord(filename, mime, meta)
+  override def get(file: String, mime: String, meta: FileMeta): FileRecord =
+    new VaultFileRecord(file, mime, meta)
 
   def accessFile(
-      filePath: String,
+      file: String,
       resolve: Boolean = true,
       accessContext: FileAccessContext): InputStream = {
-    Vault.access(contentUrl(filePath, resolve = resolve), sessionId)
+    accessContentUrl(contentUrl(file, resolve = resolve))
   }
 
-  def contentUrl(filePath: String, resolve: Boolean = true): String = {
-    val path = if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
-    Vault.contentUrl(sessionId, collectionTreenode, path).get
+  def accessContentUrl(contentUrl: String): InputStream = {
+    // for later when changed to Vault content URL instead of public archive.org
+    // Vault.access(contentUrl, sessionId)
+    new URL(contentUrl).openStream
   }
 
-  def locatePath(filename: String): String = {
-    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(filename))
+  def contentUrl(file: String, resolve: Boolean = true): String = {
+    val path = if (resolve) locateFile(file) else file
+    Vault.treeNode(sessionId, collectionTreenode, path).flatMap(_.contentUrl).get
+  }
+
+  def iterateGlob(glob: Set[String]): (Set[(String, TreeNode)], Set[String]) = {
+    val (resolved, remaining) = Vault.iterateGlob(sessionId, collectionTreenode, glob.map(IOHelper.concatPaths(location, _)))
+    (resolved.map{case (p,n) => (p.stripPrefix(location + "/"),n)}, remaining.map(_.stripPrefix(location + "/")))
+  }
+
+  def glob(glob: String): Iterator[(String, TreeNode)] = {
+    Vault.glob(sessionId, collectionTreenode, glob).map{case (p,n) => (p.stripPrefix(location + "/"),n)}
+  }
+
+  def locateFile(file: String): String = if (file.startsWith("/")) file else FileRecordFactory.filePath({
+    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(file))
     else location
-  }
+  }, file)
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
   protected def nextPrefixes(prefix: String): Set[String] = {
     prefixes.getOrElseUpdate(prefix, {
-      Vault.children(sessionId, collectionTreenode, IOHelper.concatPaths(location, prefix)).map { case (name, _) =>
-        IOHelper.concatPaths(prefix, name)
+      Vault.children(sessionId, collectionTreenode, IOHelper.concatPaths(location, prefix)).map { node =>
+        IOHelper.concatPaths(prefix, node.name)
       }.toSet
     })
   }
@@ -81,11 +98,10 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
           pw <- spec.str("vault-password")
         } yield (user, pw)
       }
-      location <- spec.str(InputSpec.DataLocationKey)
     } yield {
       val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
       new VaultFileRecordFactory(
-        location,
+        spec.str(InputSpec.DataLocationKey).getOrElse(""),
         collectionTreenode,
         username,
         Vault.session(username, password),

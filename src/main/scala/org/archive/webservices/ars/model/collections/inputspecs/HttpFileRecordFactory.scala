@@ -9,29 +9,28 @@ class HttpFileRecordFactory(location: String) extends FileRecordFactory {
   def companion: FileFactoryCompanion = HttpFileRecordFactory
 
   class HttpFileRecord private[HttpFileRecordFactory] (
-      val filename: String,
+      file: String,
       val mime: String,
       val meta: FileMeta)
       extends FileRecord {
-    override lazy val path: String = locatePath(filename)
+    override lazy val filePath: String = locateFile(file)
     override def access: InputStream = accessFile(filePath, resolve = false)
   }
 
-  override def get(filename: String, mime: String, meta: FileMeta): FileRecord = {
-    new HttpFileRecord(filename, mime, meta)
+  override def get(file: String, mime: String, meta: FileMeta): FileRecord = {
+    new HttpFileRecord(file, mime, meta)
   }
 
   def accessFile(
-      filePath: String,
+      file: String,
       resolve: Boolean = true,
       accessContext: FileAccessContext): InputStream = {
-    val url =
-      if (resolve) FileRecordFactory.filePath(locatePath(filePath), filePath) else filePath
+    val url = if (resolve) locateFile(file) else file
     println(s"Reading $url...")
     new URL(url).openStream
   }
 
-  def locatePath(filename: String): String = location
+  def locateFile(filename: String): String = FileRecordFactory.filePath(location, filename)
 }
 
 object HttpFileRecordFactory extends FileFactoryCompanion {
