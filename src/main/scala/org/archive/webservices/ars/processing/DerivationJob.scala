@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 
 import scala.concurrent.Future
 
@@ -11,6 +12,10 @@ trait DerivationJob {
   def id: String = _id
 
   def name: String
+
+  def uuid: String
+
+  def relativeOutPath: String
 
   val stage = "Processing"
 
@@ -30,10 +35,15 @@ trait DerivationJob {
     Some(instance)
   }
 
-  def history(conf: DerivationJobConf): DerivationJobInstance =
+  def history(uuid: String, conf: DerivationJobConf): DerivationJobInstance = {
+    JobManager.getInstance(uuid).getOrElse(history(conf))
+  }
+
+  def history(conf: DerivationJobConf): DerivationJobInstance = {
     JobManager.getRegistered(id, conf).getOrElse {
       DerivationJobInstance(this, conf)
     }
+  }
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
@@ -47,7 +57,11 @@ trait DerivationJob {
 
   def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
 
-  def logJobInfo: Boolean = true
+  def validateParams(conf: DerivationJobConf): Option[String] = None
 
-  def validateParams(collection: ArchCollection, conf: DerivationJobConf): Option[String] = None
+  def inputSize(conf: DerivationJobConf): Long = {
+    if (InputSpec.isCollectionBased(conf.inputSpec)) {
+      conf.inputSpec.collection.specifics.inputSize(conf)
+    } else conf.inputSpec.size
+  }
 }

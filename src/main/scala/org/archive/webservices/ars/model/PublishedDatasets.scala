@@ -5,14 +5,9 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.processing.{
-  DerivationJob,
-  DerivationJobConf,
-  DerivationJobInstance,
-  JobManager,
-  ProcessingState
-}
+import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
+import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
 
@@ -20,16 +15,17 @@ import java.io.InputStream
 import java.net.{HttpURLConnection, URL}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import scala.annotation.tailrec
 import scala.collection.immutable.{ListMap, Map}
 import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
-  val MetadataFields: Set[String] = Set("creator", "description", "licenseurl", "subject", "title")
+  val MetadataFields: Set[String] =
+    Set("creator", "description", "licenseurl", "subject", "title")
+  val DeleteCommentPrefix = "ARCH:"
 
-  val ProhibitedJobs: Set[DerivationJob] = Set(
-    WebPagesExtraction,
-  )
+  val ProhibitedJobs: Set[DerivationJob] = Set(WebPagesExtraction)
 
   private var sync = Set.empty[String]
 
@@ -40,13 +36,13 @@ object PublishedDatasets {
   def collectionFile(outPath: String): String = outPath + "/published.json"
 
   val MaxCollectionIdLength = 25
-  def itemName(collection: ArchCollection, instance: DerivationJobInstance): String = {
+  def itemName(instance: DerivationJobInstance): String = {
     val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
-    val sourceId = collection.sourceId
+    val id = instance.conf.inputSpec.id
     val collectionId =
-      if (sourceId.length <= MaxCollectionIdLength) sourceId
-      else ArchCollection.prefix(sourceId).getOrElse("") + DigestUtil.md5Hex(sourceId).take(16)
-    val timestamp = instance.info.startTime
+      if (id.length <= MaxCollectionIdLength) id
+      else ArchCollection.prefix(id).getOrElse("") + DigestUtil.md5Hex(id).take(16)
+    val timestamp = instance.info.started
       .getOrElse(Instant.now)
       .truncatedTo(ChronoUnit.SECONDS)
       .toString
@@ -56,11 +52,11 @@ object PublishedDatasets {
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
     while (sync.contains(f) || synchronized {
-             sync.contains(f) || {
-               sync += f
-               false
-             }
-           }) {}
+        sync.contains(f) || {
+          sync += f
+          false
+        }
+      }) {}
     try {
       action
     } finally {
@@ -70,8 +66,7 @@ object PublishedDatasets {
 
   case class ItemInfo(
       item: String,
-      collection: String,
-      source: String,
+      inputId: String,
       job: String,
       sample: Boolean,
       time: Instant,
@@ -79,8 +74,7 @@ object PublishedDatasets {
       ark: Option[String]) {
     def toJson(includeItem: Boolean): Json = {
       (if (includeItem) ListMap("item" -> item.asJson) else ListMap.empty) ++ Map(
-        "collection" -> collection.asJson,
-        "source" -> source.asJson,
+        "inputId" -> inputId.asJson,
         "job" -> job.asJson,
         "sample" -> sample.asJson,
         "time" -> time.toString.asJson,
@@ -88,14 +82,10 @@ object PublishedDatasets {
     }.asJson
   }
 
-  def newItemInfo(
-      itemName: String,
-      collection: ArchCollection,
-      instance: DerivationJobInstance): ItemInfo = {
+  def newItemInfo(itemName: String, instance: DerivationJobInstance): ItemInfo = {
     ItemInfo(
       itemName,
-      collection.id,
-      collection.sourceId,
+      instance.conf.inputSpec.id,
       instance.job.id,
       instance.conf.isSample,
       Instant.now,
@@ -143,8 +133,8 @@ object PublishedDatasets {
       update: Boolean = false,
       metadata: Map[String, Seq[String]] = Map.empty,
       put: Option[(InputStream, Long)] = None,
-      post: Option[String] = None): Option[String] = ArchConf.iaAuthHeader.flatMap {
-    iaAuthHeader =>
+      post: Option[String] = None): Either[(Int, String), String] = ArchConf.iaAuthHeader
+    .map { iaAuthHeader =>
       val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
       val connection = new URL(url).openConnection.asInstanceOf[HttpURLConnection]
@@ -192,27 +182,28 @@ object PublishedDatasets {
         val responseCode = connection.getResponseCode
         if (responseCode / 100 == 2) {
           val source = Source.fromInputStream(connection.getInputStream, "utf-8")
-          try Some(source.mkString)
+          try Right(source.mkString)
           finally source.close()
         } else if (responseCode / 100 >= 4) {
           // Report the request error.
           val source = Source.fromInputStream(connection.getErrorStream, "utf-8")
-          try Arch.reportError(
-            "PublishedDatasets Petabox Response Error",
-            source.mkString,
-            Map(
-              "status_code" -> responseCode.toString,
-              "path" -> path,
-              "method" -> connection.getRequestMethod
-            )
-          )
-          finally source.close()
-          None
-        } else None
+          try {
+            val error = source.mkString
+            Arch.reportError(
+              "PublishedDatasets Petabox Response Error",
+              error,
+              Map(
+                "status_code" -> responseCode.toString,
+                "path" -> path,
+                "method" -> connection.getRequestMethod))
+            Left(responseCode, error)
+          } finally source.close()
+        } else Left(-1, "")
       } finally {
         Try(connection.disconnect())
       }
-  }
+    }
+    .getOrElse(Left(-1, ""))
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
     val connection =
@@ -247,41 +238,46 @@ object PublishedDatasets {
     }
   }
 
+  def dataset(jobId: String, conf: DerivationJobConf): Option[DerivationJobInstance] = {
+    DerivationJobConf
+      .collectionInstance(jobId, conf)
+      .filter(_.state == ProcessingState.Finished)
+  }
+
   def dataset(
       jobId: String,
       collection: ArchCollection,
       sample: Boolean): Option[DerivationJobInstance] = {
     DerivationJobConf
-      .collection(collection, sample = sample)
-      .flatMap {
-        JobManager.getInstanceOrGlobal(
-          jobId,
-          _,
-          DerivationJobConf.collection(collection, sample = sample, global = true))
-      }
+      .collectionInstance(jobId, collection, sample)
       .filter(_.state == ProcessingState.Finished)
   }
 
   def publish(
       jobId: String,
-      collection: ArchCollection,
-      sample: Boolean,
+      conf: DerivationJobConf,
       metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
-    for (instance <- dataset(jobId, collection, sample)) yield {
+    for (instance <- dataset(jobId, conf)) yield {
       val jobFilePath = jobFile(instance)
       if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
-        val item = itemName(collection, instance)
-        val itemInfo = newItemInfo(item, collection, instance)
+        val item = itemName(instance)
+        val itemInfo = newItemInfo(item, instance)
         if (!createItem(item, datasetMetadata(instance, itemInfo) ++ metadata)) {
+          HdfsIO.delete(jobFilePath)
           throw new RuntimeException(s"Creating new Petabox item $item failed.")
         }
-        appendCollectionFile(DerivationJobConf.jobOutPath(collection), itemInfo)
+        appendCollectionFile(conf.outputPath, itemInfo)
         HdfsIO.writeLines(
           jobFilePath,
           Seq(itemInfo.toJson(includeItem = true).spaces4),
           overwrite = true)
         itemInfo
-      } else jobItem(jobFilePath)
+      }
+      else {
+        val itemInfoOpt = jobItem(jobFilePath)
+        for (info <- itemInfoOpt) updateItem(info.item, metadata)
+        itemInfoOpt
+      }
     }
   }.flatten
 
@@ -301,29 +297,23 @@ object PublishedDatasets {
         for {
           item <- cursor.get[String]("item").toOption
           collectionId <- cursor.get[String]("collection").toOption
-          sourceId <- cursor.get[String]("source").toOption
           jobId <- cursor.get[String]("job").toOption
           isSample <- cursor.get[Boolean]("sample").toOption
           time <- cursor.get[String]("time").toOption.map(Instant.parse)
           complete <- cursor.get[Boolean]("complete").toOption
-        } yield
-          ItemInfo(
-            item,
-            collectionId,
-            sourceId,
-            jobId,
-            isSample,
-            time,
-            complete,
-            cursor.get[String]("ark").toOption)
+        } yield ItemInfo(
+          item,
+          collectionId,
+          jobId,
+          isSample,
+          time,
+          complete,
+          cursor.get[String]("ark").toOption)
       }
     } else None
   }
 
-  def complete(
-      collection: ArchCollection,
-      instance: DerivationJobInstance,
-      itemName: String): Boolean = {
+  def complete(instance: DerivationJobInstance, itemName: String): Boolean = {
     val jobFilePath = jobFile(instance)
     jobItem(jobFilePath).filter(_.item == itemName) match {
       case Some(itemInfo) =>
@@ -331,7 +321,7 @@ object PublishedDatasets {
           jobFilePath,
           Seq(itemInfo.copy(complete = true).toJson(includeItem = true).spaces4),
           overwrite = true)
-        val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+        val collectionFilePath = collectionFile(instance.conf.outputPath)
         syncCollectionFile(collectionFilePath) {
           val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
             .flatMap(_.as[Map[String, Json]].toOption)
@@ -345,27 +335,78 @@ object PublishedDatasets {
     }
   }
 
+  private def isDark(name: String): Option[Boolean] = {
+    request("services/tasks.php?history=1&identifier=" + name).toOption.map { tasks =>
+      parse(tasks).toOption
+        .map(_.hcursor)
+        .flatMap { cursor =>
+          cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
+        }
+        .exists { lastTask =>
+          lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
+            lastTask
+              .downField("args")
+              .get[String]("curation")
+              .toOption
+              .exists(_.contains("[comment]" + DeleteCommentPrefix))
+          }
+        }
+    }
+  }
+
   def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
-    request(name, s3 = true, metadata = metadata).isDefined
+    request(name, s3 = true, metadata = metadata).isRight || {
+      isDark(name).contains(true) && {
+        request(
+          "/services/tasks.php",
+          post = Some {
+            ListMap(
+              "cmd" -> "make_undark.php".asJson,
+              "identifier" -> name.asJson,
+              "args" -> Map(
+                "comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
+          }).isRight && {
+          {
+            Common.retryWhile(
+              isDark(name).getOrElse(true),
+              sleepMs = 500,
+              maxTimes = 12,
+              _ * 2) && {
+              request(name, s3 = true, update = true, metadata = metadata).isRight
+            }
+          } || {
+            if (!Common.retryWhile(!deleteItem(name), sleepMs = 100, maxTimes = 10, _ * 2)) {
+              Arch.reportWarning(
+                "PublishedDatasets Create/Undark Item Error",
+                "An Item is likely to be undarked, but not in use, please double check.",
+                Map("item" -> name))
+            }
+            false
+          }
+        }
+      }
+    }
   }
 
   def updateItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
     this
       .metadata(name, all = true)
       .flatMap { existingMetadata =>
-        request(name, s3 = true, update = true, metadata = existingMetadata ++ metadata)
+        request(name, s3 = true, update = true, metadata = existingMetadata ++ metadata).toOption
       }
       .isDefined
   }
 
   def deleteItem(name: String): Boolean = {
-    request("/services/tasks.php", post = Some {
-      ListMap(
-        "cmd" -> "make_dark.php".asJson,
-        "identifier" -> name.asJson,
-        "args" -> Map("comment" -> "Delete published item via ARCH.").asJson
-      ).asJson.noSpaces
-    }).isDefined
+    request(
+      "/services/tasks.php",
+      post = Some {
+        ListMap(
+          "cmd" -> "make_dark.php".asJson,
+          "identifier" -> name.asJson,
+          "args" -> Map(
+            "comment" -> s"$DeleteCommentPrefix Delete published item").asJson).asJson.noSpaces
+      }).isRight
   }
 
   def deletePublished(collection: ArchCollection, itemName: String): Boolean = {
@@ -377,12 +418,9 @@ object PublishedDatasets {
       for (itemInfo <- in.get(itemName).map(_.hcursor)) yield {
         if (deleteItem(itemName)) {
           for {
-            jobId <- itemInfo.get[String]("collection").toOption
-            isSample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
-            conf <- DerivationJobConf.collection(collection, isSample)
-            instance <- JobManager.getInstanceOrGlobal(jobId, conf, {
-              DerivationJobConf.collection(collection, isSample, global = true)
-            })
+            jobId <- itemInfo.get[String]("job").toOption
+            sample <- itemInfo.get[Boolean]("sample").toOption.orElse(Some(false))
+            instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
           } {
             val jobFilePath = jobFile(instance)
             if (jobItem(jobFilePath).exists(_.item == itemName)) HdfsIO.delete(jobFilePath)
@@ -396,7 +434,7 @@ object PublishedDatasets {
   }
 
   def files(itemName: String): Set[String] = {
-    request(s"metadata/$itemName/files")
+    request(s"metadata/$itemName/files").toOption
       .flatMap(parse(_).toOption.map(_.hcursor))
       .toSeq
       .flatMap { cursor =>
@@ -408,7 +446,7 @@ object PublishedDatasets {
   }
 
   def metadata(itemName: String, all: Boolean = false): Option[Map[String, Seq[String]]] = {
-    request(s"metadata/$itemName/metadata")
+    request(s"metadata/$itemName/metadata").toOption
       .flatMap(parse(_).toOption)
       .flatMap(_.hcursor.downField("result").focus)
       .map { json =>
@@ -417,10 +455,18 @@ object PublishedDatasets {
       }
   }
 
-  def upload(itemName: String, filename: String, hdfsPath: String): Boolean = {
+  @tailrec
+  def upload(itemName: String, filename: String, hdfsPath: String): Option[String] = {
     val fileSize = HdfsIO.length(hdfsPath)
     HdfsIO.access(hdfsPath, decompress = false) { in =>
-      request(itemName + "/" + filename, s3 = true, put = Some((in, fileSize))).isDefined
+      request(itemName + "/" + filename, s3 = true, put = Some((in, fileSize)))
+    } match {
+      case Right(_) => None
+      case Left((responseCode, error)) =>
+        if (responseCode == 503) {
+          Thread.sleep(1000 * 60) // wait a minute
+          upload(itemName, filename, hdfsPath)
+        } else Some(s"$responseCode ($error)")
     }
   }
 

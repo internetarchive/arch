@@ -61,31 +61,30 @@ object Ait {
       val user = json.downArray
       for {
         userName <- user.get[String]("username").toOption
-      } yield
-        AitUser(
-          id,
-          userName,
-          user.get[String]("full_name").toOption.getOrElse(userName),
-          user.get[String]("email").toOption)
+      } yield AitUser(
+        id,
+        userName,
+        user.get[String]("full_name").toOption.getOrElse(userName),
+        user.get[String]("email").toOption)
     }.toOption
   }
 
-  def login(username: String, password: String, response: HttpServletResponse)(
-      implicit request: HttpServletRequest): Either[String, String] = {
+  def login(username: String, password: String, response: HttpServletResponse)(implicit
+      request: HttpServletRequest): Either[String, String] = {
     val either = login(username, password)
     val aitRootDomain = (new URL(ArchConf.aitBaseUrl).getHost.split('.') match {
-      case xs => xs.slice(xs.length-2, xs.length)
+      case xs => xs.slice(xs.length - 2, xs.length)
     }).mkString(".")
     for (sessionid <- either.right.toOption)
       response.addCookie(
         Cookie(AitSessionCookie, sessionid)(
-          if (ArchConf.production) CookieOptions(aitRootDomain, path = "/")
+          if (!ArchConf.isDev) CookieOptions(aitRootDomain, path = "/")
           else CookieOptions()))
     either
   }
 
-  def login(username: String, password: String)(
-      implicit request: HttpServletRequest): Either[String, String] = {
+  def login(username: String, password: String)(implicit
+      request: HttpServletRequest): Either[String, String] = {
     val ait = new URL(ArchConf.aitBaseUrl + ArchConf.aitLoginPath).openConnection
       .asInstanceOf[HttpsURLConnection]
     try {
@@ -97,9 +96,8 @@ object Ait {
       val out = ait.getOutputStream
       try {
         val postBody = Seq(("username", username.toLowerCase), ("password", password))
-          .map {
-            case (k, v) =>
-              URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
+          .map { case (k, v) =>
+            URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
           }
           .mkString("&") + "&next="
         val writer = new PrintWriter(out)
@@ -113,7 +111,7 @@ object Ait {
       val location = ait.getHeaderField("Location")
       val isSystemAccount = location != null && location.endsWith("/choose_account")
       if (ait.getResponseCode == 302 && location != null && (isSystemAccount || location.matches(
-            "^\\/\\d+$"))) {
+          "^\\/\\d+$"))) {
         ait.getHeaderFields
           .get("set-cookie")
           .asScala
@@ -160,8 +158,8 @@ object Ait {
   }
 
   def get[R](path: String, contentType: String = "text/html", basicAuth: Option[String] = None)(
-      action: InputStream => Option[R])(
-      implicit context: RequestContext = RequestContext.None): Either[Int, R] = {
+      action: InputStream => Option[R])(implicit
+      context: RequestContext = RequestContext.None): Either[Int, R] = {
     getWithAuth(path, contentType, context.forRequest(sessionId(_)), basicAuth)(action)
   }
 
@@ -205,8 +203,8 @@ object Ait {
   def getString[R](
       path: String,
       contentType: String = "text/html",
-      basicAuth: Option[String] = None)(action: String => Option[R])(
-      implicit context: RequestContext = RequestContext.None): Either[Int, R] =
+      basicAuth: Option[String] = None)(action: String => Option[R])(implicit
+      context: RequestContext = RequestContext.None): Either[Int, R] =
     getStringWithAuth(path, contentType, context.forRequest(sessionId(_)), basicAuth)(action)
 
   def getStringWithAuth[R](

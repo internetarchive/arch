@@ -11,15 +11,12 @@
     <% if (error.isDefined) { %>
     <div class="alert-box"><span class="fa fa-exclamation-triangle"></span> <%=error.get%></div>
     <% } %>
-    <p>
-        To login with your Archive-It account, either prefix your username with <code>ait:</code> or use the <a href="<%=unescape(ArchConf.aitBaseUrl)%>/login?next=<%=unescape(next)%>">Archive-It login page</a>.
-    </p>
     <label for="user">Username</label>
     <input type="text" id="user" name="username" value="" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off" autofocus>
     <label for="pass">Password</label>
     <input type="password" id="pass" name="password" ng-model="password" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" autocomplete="off">
     <input type="hidden" name="next" value="<%=unescape(next)%>">
     <button class="padding-top padding-bottom half small">Log In</button>
-    <a href="<%=unescape(ArchConf.aitBaseUrl)%>/forgot_password" class="smaller right margin-top one">Forgot Password?</a>
+    <a href="<%=unescape(ArchConf.keystonePublicBaseUrl)%>/accounts/password_reset/" class="smaller right margin-top one">Forgot Password?</a>
 </form>
 </div>

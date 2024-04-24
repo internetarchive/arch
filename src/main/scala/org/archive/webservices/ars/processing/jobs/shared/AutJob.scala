@@ -3,7 +3,7 @@ package org.archive.webservices.ars.processing.jobs.shared
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.AutLoader
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -42,7 +42,8 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     if (HdfsIO.exists(outPath + "/_" + targetFile)) Some {
       if (HdfsIO.exists(outPath + "/_" + targetFile + "/_SUCCESS")) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
   }
 
   def prepareOutputStream(out: OutputStream): Unit =
@@ -69,14 +70,15 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     if (HdfsIO.exists(outPath + "/" + targetFile)) Some {
       if (!HdfsIO.exists(outPath + "/_" + targetFile)) ProcessingState.Finished
       else ProcessingState.Failed
-    } else None
+    }
+    else None
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
         SparkJobManager.initThread(sc, AutJob.this, conf)
-        CollectionLoader.loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
+        WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
           IOHelper
             .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
               val outPath = conf.outputPath + relativeOutPath

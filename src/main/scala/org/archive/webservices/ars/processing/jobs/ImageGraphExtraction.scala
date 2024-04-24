@@ -12,15 +12,16 @@ import java.io.PrintStream
 
 object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Image graph"
+  val uuid = "01895067-92fb-739c-a99d-037fde1798a4"
   val description =
-    "Create a CSV with the following columns: crawl date, source of the image (where it was hosted), the URL of the image, and the alternative text of the image."
+    "Timestamp, location, and any original description for each image file in the collection. Output: one CSV with columns for crawl date, source page, image file url, and alt text."
 
   val targetFile: String = "image-graph.csv.gz"
 
   val srcDstFields: (String, String) = ("src", "image_url")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,url,alt_text")
+    out.println("crawl_date, source, url, alt_text")
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.imageGraph(rdd)
 
@@ -32,9 +33,8 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
             val url = AutUtil.url(r)
             AutUtil
               .extractLinks(ExtractImageLinks.apply, url, HttpUtil.bodyString(http.body, http))
-              .map {
-                case (source, target, alt) =>
-                  Row(AutUtil.timestamp(r), source, target, alt)
+              .map { case (source, target, alt) =>
+                Row(AutUtil.timestamp(r), source, target, alt)
               }
           }
           .toIterator

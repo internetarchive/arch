@@ -30,12 +30,11 @@ case class ArchCollectionInfo private (
     HdfsIO.writeLines(
       file,
       Seq((ListMap.empty[String, Json] ++ {
-        lastJob.toSeq.flatMap {
-          case (id, sample, time) =>
-            Seq(
-              "lastJobId" -> id.asJson,
-              "lastJobSample" -> sample.asJson,
-              "lastJobEpoch" -> time.asJson)
+        lastJob.toSeq.flatMap { case (id, sample, time) =>
+          Seq(
+            "lastJobId" -> id.asJson,
+            "lastJobSample" -> sample.asJson,
+            "lastJobEpoch" -> time.asJson)
         }
       }).asJson.spaces4),
       overwrite = true)

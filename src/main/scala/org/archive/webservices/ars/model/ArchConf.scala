@@ -15,6 +15,7 @@ trait ArchConf {
   def collectionCachePath: String
   def globalJobOutPath: String
   def jobOutPath: String
+  def uuidJobOutPath: Option[String]
   def jobLoggingPath: String
   def customCollectionPath: String
   def localTempPath: String
@@ -24,7 +25,6 @@ trait ArchConf {
   def baseUrl: String
   def loginUrl: String
   def hadoopQueue: String
-  def production: Boolean
   def proto: String
   def host: String
   def externalPort: Int
@@ -36,7 +36,14 @@ trait ArchConf {
   def pboxCollection: String
   def arkMintUrl: String
   def pboxS3Url: String
+  def keystoneBaseUrl: Option[String]
+  def keystonePublicBaseUrl: Option[String]
+  def keystonePrivateApiKey: Option[String]
+  def version: Option[String]
   def sentryDsn: String
+  def deploymentEnvironment: String
+  def isDev: Boolean
+  def forceKeystoneLogin: Boolean
 }
 
 object ArchConf extends ArchConf {
@@ -55,6 +62,7 @@ object ArchConf extends ArchConf {
   def collectionCachePath: String = conf.collectionCachePath
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
+  def uuidJobOutPath: Option[String] = conf.uuidJobOutPath
   def jobLoggingPath: String = conf.jobLoggingPath
   def customCollectionPath: String = conf.customCollectionPath
   def localTempPath: String = conf.localTempPath
@@ -64,7 +72,6 @@ object ArchConf extends ArchConf {
   def baseUrl: String = conf.baseUrl
   def loginUrl: String = conf.loginUrl
   def hadoopQueue: String = conf.hadoopQueue
-  def production: Boolean = conf.production
   def proto: String = conf.proto
   def host: String = conf.host
   def externalPort: Int = conf.externalPort
@@ -76,5 +83,12 @@ object ArchConf extends ArchConf {
   def pboxCollection: String = conf.pboxCollection
   def arkMintUrl: String = conf.arkMintUrl
   def pboxS3Url: String = conf.pboxS3Url
+  def keystoneBaseUrl: Option[String] = conf.keystoneBaseUrl
+  def keystonePublicBaseUrl: Option[String] = conf.keystonePublicBaseUrl
+  def keystonePrivateApiKey: Option[String] = conf.keystonePrivateApiKey
+  def version: Option[String] = conf.version
   def sentryDsn: String = conf.sentryDsn
+  def deploymentEnvironment: String = conf.deploymentEnvironment
+  def isDev: Boolean = conf.isDev
+  def forceKeystoneLogin: Boolean = conf.forceKeystoneLogin
 }

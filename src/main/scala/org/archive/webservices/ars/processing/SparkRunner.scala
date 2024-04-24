@@ -48,10 +48,12 @@ object SparkRunner {
         val job =
           Class.forName(className).getField("MODULE$").get(null).asInstanceOf[DerivationJob]
         val success = Await.result(job.run(conf), Duration.Inf)
-        Await.ready(SparkJobManager.context.map { sc =>
-          sc.stop()
-          while (!sc.isStopped) Thread.`yield`()
-        }, Duration.Inf)
+        Await.ready(
+          SparkJobManager.context.map { sc =>
+            sc.stop()
+            while (!sc.isStopped) Thread.`yield`()
+          },
+          Duration.Inf)
         System.exit(if (success) 0 else 1)
       case None =>
         System.exit(2)

@@ -1,5 +1,5 @@
 import { PropertyValues } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
 import { Dataset } from "../../lib/types";
@@ -11,6 +11,13 @@ import Styles from "./styles";
 @customElement("arch-collection-details-dataset-table")
 export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   @property({ type: String }) collectionId!: string;
+
+  @state() columnNameHeaderTooltipMap = {
+    category:
+      "Dataset categories are Collection, Network, Text, and File Format",
+    sample:
+      "Sample datasets contain only the first 100 available records from a collection",
+  };
 
   static styles = [...ArchDataTable.styles, ...Styles];
 
@@ -43,6 +50,11 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
           ? ""
           : (finishedTime as string)?.slice(0, -3),
     ];
+    this.columnFilterDisplayMaps = [
+      undefined,
+      undefined,
+      { 100: "Yes", [-1]: "No" },
+    ];
     this.columns = [
       "name",
       "category",
@@ -53,7 +65,7 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       "numFiles",
     ];
     this.columnHeaders = [
-      "Name",
+      "Dataset",
       "Category",
       "Sample",
       "State",
@@ -61,9 +73,12 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       "Finished",
       "Files",
     ];
+    this.filterableColumns = [true, true, true, true, false, false, false];
     this.nonSelectionActionLabels = ["Generate a New Dataset"];
     this.nonSelectionActions = [Topics.GENERATE_DATASET];
     this.singleName = "Dataset";
+    this.sort = "-startTime";
+    this.sortableColumns = [true, true, true, true, true, true, true];
     this.pluralName = "Datasets";
   }
 

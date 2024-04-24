@@ -1,5 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+
+import "../../archTooltip/index";
+
 import styles from "./styles";
 
 @customElement("arch-card")
@@ -8,6 +11,10 @@ export class ArchCard extends LitElement {
   @property({ type: Number }) headerLevel = 2;
   @property({ type: String }) ctaText: string | undefined = undefined;
   @property({ type: String }) ctaHref: string | undefined = undefined;
+  @property({ type: String }) ctaTooltipHeader: string | undefined = undefined;
+  @property({ type: String }) ctaTooltipText: string | undefined = undefined;
+  @property({ type: String }) ctaTooltipLearnMoreUrl: string | undefined =
+    undefined;
 
   static styles = styles;
 
@@ -35,13 +42,27 @@ export class ArchCard extends LitElement {
   }
 
   render() {
+    const { ctaTooltipHeader, ctaTooltipText, ctaTooltipLearnMoreUrl } = this;
     return html`
       <section>
         <div class="header">
           ${this.header}
           ${!this.ctaText || !this.ctaHref
             ? ""
-            : html`<a href="${this.ctaHref}">${this.ctaText}</a>`}
+            : html`
+                <a href="${this.ctaHref}">${this.ctaText}</a>
+                ${!ctaTooltipHeader &&
+                !ctaTooltipText &&
+                !ctaTooltipLearnMoreUrl
+                  ? html``
+                  : html`
+                      <arch-tooltip
+                        .header=${ctaTooltipHeader}
+                        .text=${ctaTooltipText}
+                        .learnMoreUrl=${ctaTooltipLearnMoreUrl}
+                      ></arch-tooltip>
+                    `}
+              `}
         </div>
         <hr />
         <slot name="content"></slot>

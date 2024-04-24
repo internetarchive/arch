@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.spark.storage.StorageLevel
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -17,49 +16,74 @@ import scala.util.Try
 
 object ArsLgaGeneration extends ChainedJob with ArsJob {
   val name = "Longitudinal graph"
+  val uuid = "01895064-661c-79da-9ca7-cbf82507de61"
   val category: ArchJobCategory = ArchJobCategories.Network
   def description =
-    "Creates Longitudinal Graph Analysis (LGA) files which contain a complete list of what URLs link to what URLs, along with a timestamp."
+    "All links between URLs in the collection over time. Output: one compressed TGZ file containing two compressed GZ files with data in JSON format representing, 1) a unique ID and SURT for each URL, and 2) the source URL ID, target URL ID, and timestamp for each link."
 
   val relativeOutPath = s"/$id"
+  val ParsedCacheFile = "parsed.gz"
   val MapFile = "id.map.gz"
   val GraphFile = "id.graph.gz"
 
+  val MaxPartitions = 100
+
   override def children: Seq[PartialDerivationJob] = Seq(Spark, PostProcessor)
+
+  implicit val parsedInOut =
+    TypedInOut.toStringInOut[Option[((LGA.LgaLabel, String), Iterator[LGA.LgaLabel])]](
+      {
+        case Some(((src, ts), dsts)) =>
+          (Seq(src.surt, src.url, ts) ++ dsts.flatMap { dst => Iterator(dst.surt, dst.url) })
+            .mkString("\t")
+        case None => ""
+      },
+      { str =>
+        val split = str.split("\t")
+        if (split.length > 3) Some {
+          (
+            (LGA.LgaLabel(split(0), split(1)), split(2)),
+            split.drop(3).grouped(2).filter(_.length == 2).map { dst =>
+              LGA.LgaLabel(dst(0), dst(1))
+            })
+        }
+        else None
+      })
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
     def run(conf: DerivationJobConf): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
         SparkJobManager.initThread(sc, ArsLgaGeneration, conf)
-        CollectionLoader
-          .loadWarcs(conf.collectionId, conf.inputPath) { rdd =>
-            IOHelper
-              .sample(
-                {
-                  val warcs = rdd
-                    .filter(_.http.exists(http =>
-                      http.mime.contains("text/html") && http.status == 200))
-                  LGA
-                    .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
-                    .filter(_._2.hasNext)
-                },
-                conf.sample) { parsed =>
-                val outPath = conf.outputPath + relativeOutPath
-                val cached = parsed.persist(StorageLevel.DISK_ONLY)
-                val processed = LGA.parsedToGraph(parsed) { mapRdd =>
-                  val path = outPath + "/_" + MapFile
-                  val strings = mapRdd.map(_.toJsonString)
-                  RddUtil.saveAsTextFile(strings, path)
-                  RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
-                } { graphRdd =>
-                  val path = outPath + "/_" + GraphFile
-                  val strings = graphRdd.map(_.toJsonString)
-                  RddUtil.saveAsTextFile(strings, path)
-                }
-                cached.unpersist(true)
-                processed >= 0
+        WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
+          IOHelper.sample(
+            {
+              val warcs = rdd
+                .filter(
+                  _.http.exists(http => http.mime.contains("text/html") && http.status == 200))
+              LGA
+                .parse(warcs, http => Try(HttpUtil.bodyString(http.body, http)).getOrElse(""))
+                .filter(_._2.hasNext)
+            },
+            conf.sample) { parsed =>
+            val outPath = conf.outputPath + relativeOutPath
+            val cachePath = outPath + "/" + ParsedCacheFile
+            RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
+            try {
+              val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
+              LGA.parsedToBigGraph(cached) { mapRdd =>
+                val path = outPath + "/_" + MapFile
+                RddUtil.saveAsTextFile(mapRdd.map(_.toJsonString), path)
+                RddUtil.loadTextLines(path + "/*.gz", sorted = true).flatMap(LGA.parseNode)
+              } { graphRdd =>
+                val path = outPath + "/_" + GraphFile
+                val strings = graphRdd.map(_.toJsonString)
+                RddUtil.saveAsTextFile(strings, path) >= 0
               }
+            } finally {
+              HdfsIO.delete(cachePath)
+            }
           }
+        }
       }
     }
 
@@ -110,8 +134,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
         instance.state =
           if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
-                .files(conf.outputPath + relativeOutPath + "/_*")
-                .isEmpty)
+              .files(conf.outputPath + relativeOutPath + "/_*")
+              .isEmpty)
             ProcessingState.Finished
           else ProcessingState.Failed
       }

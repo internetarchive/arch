@@ -22,6 +22,8 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
+  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
+  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
@@ -29,16 +31,19 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.scalamock" %% "scalamock" % "5.2.0" % "test",
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",
+  "com.lihaoyi" %% "requests" % "0.8.0",
   "com.thoughtworks.paranamer" % "paranamer" % "2.8",
   "com.syncthemall" % "boilerpipe" % "1.2.2",
   "xerces" % "xercesImpl" % "2.12.0",
   "org.jsoup" % "jsoup" % "1.13.1",
   "com.fasterxml.uuid" % "java-uuid-generator" % "4.1.1",
-  "io.sentry" % "sentry" % "5.2.3") ++ guavaDependent.map(
+  "io.sentry" % "sentry" % "6.28.0",
+  "com.amazonaws" % "aws-java-sdk" % "1.7.4",
+  "edu.stanford.nlp" % "stanford-corenlp" % "4.3.1" % "provided") ++ guavaDependent.map(
   _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",
-  "io.circe" %% "circe-parser").map(_ % "0.10.0")
+  "io.circe" %% "circe-parser").map(_ % "0.13.0")
 
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),

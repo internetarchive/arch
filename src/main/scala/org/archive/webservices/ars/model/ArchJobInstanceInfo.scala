@@ -1,35 +1,31 @@
 package org.archive.webservices.ars.model
 
 import _root_.io.circe.syntax._
-import io.circe.Json
 import io.circe.parser.parse
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra.guavaCache.GuavaCache
 
 import java.time.Instant
 import scala.collection.immutable.ListMap
 
-case class ArchJobInstanceInfo private (started: Long = -1, finished: Long = -1) {
-  def startTime: Option[Instant] = Some(started).filter(_ != -1).map(Instant.ofEpochSecond)
-  def finishedTime: Option[Instant] = Some(finished).filter(_ != -1).map(Instant.ofEpochSecond)
-
-  def setStartTime(time: Instant): ArchJobInstanceInfo = {
-    copy(started = time.getEpochSecond)
-  }
-
-  def setFinishedTime(time: Instant): ArchJobInstanceInfo = {
-    copy(finished = time.getEpochSecond)
-  }
+class ArchJobInstanceInfo private () {
+  var uuid: Option[String] = None
+  var conf: Option[DerivationJobConf] = None
+  var started: Option[Instant] = None
+  var finished: Option[Instant] = None
 
   def save(jobOutPath: String): Unit = {
     val file = ArchJobInstanceInfo.infoFile(jobOutPath)
     GuavaCache.put(ArchJobInstanceInfo.CachePrefix + file, this, None)
     HdfsIO.writeLines(
       file,
-      Seq((ListMap.empty[String, Json] ++ {
-        Iterator(started).filter(_ != -1).map("started" -> _.asJson)
+      Seq((ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
+        conf.map("conf" -> _.toJson)
       } ++ {
-        Iterator(finished).filter(_ != -1).map("finished" -> _.asJson)
+        started.map("started" -> _.getEpochSecond.asJson)
+      } ++ {
+        finished.map("finished" -> _.getEpochSecond.asJson)
       }).asJson.spaces4),
       overwrite = true)
   }
@@ -38,22 +34,25 @@ case class ArchJobInstanceInfo private (started: Long = -1, finished: Long = -1)
 object ArchJobInstanceInfo {
   val Charset = "utf-8"
   val CachePrefix = "job-instance-info#"
+  val InfoFile = "info.json"
 
-  def infoFile(jobOutPath: String): String =
-    jobOutPath + "/info.json"
+  def infoFile(jobOutPath: String): String = jobOutPath + s"/$InfoFile"
 
-  def get(jobOutPath: String): ArchJobInstanceInfo = {
+  def apply(jobOutPath: String): ArchJobInstanceInfo = {
     val file = infoFile(jobOutPath)
     GuavaCache.get(CachePrefix + file).getOrElse {
       val info = if (HdfsIO.exists(file)) {
         parse(HdfsIO.lines(file).mkString).right.toOption.map(_.hcursor) match {
           case Some(cursor) =>
-            val started = cursor.get[Long]("started").toOption.getOrElse(-1L)
-            val finished = cursor.get[Long]("finished").toOption.getOrElse(-1L)
-            ArchJobInstanceInfo(started, finished)
-          case None => ArchJobInstanceInfo()
+            val info = new ArchJobInstanceInfo()
+            info.uuid = cursor.get[String]("uuid").toOption
+            info.conf = cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
+            info.started = cursor.get[Long]("started").toOption.map(Instant.ofEpochSecond)
+            info.finished = cursor.get[Long]("finished").toOption.map(Instant.ofEpochSecond)
+            info
+          case None => new ArchJobInstanceInfo()
         }
-      } else ArchJobInstanceInfo()
+      } else new ArchJobInstanceInfo()
       GuavaCache.put(CachePrefix + file, info, None)
     }
   }

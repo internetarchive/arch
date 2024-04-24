@@ -1,12 +1,13 @@
 package org.archive.webservices.ars.model.collections
 
 import io.circe._
-import org.apache.http.MethodNotSupportedException
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
+import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
@@ -14,7 +15,9 @@ import org.archive.webservices.sparkling.util.StringUtil
 import java.io.InputStream
 import scala.util.Try
 
-class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
+class CustomCollectionSpecifics(val id: String)
+    extends CollectionSpecifics
+    with GenericRandomAccess {
   val customId: String = id.stripPrefix(CustomCollectionSpecifics.Prefix)
   val Some((userId, collectionId)) = ArchCollection.splitIdUserCollectionOpt(customId)
 
@@ -23,79 +26,74 @@ class CustomCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .path(customId)
       .get
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
-          u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
-        }) CustomCollectionSpecifics.collection(customId)
+        u.isAdmin || CustomCollectionSpecifics.userCollectionIds(u).contains(customId)
+      }) CustomCollectionSpecifics.collection(customId)
     else None
   }
 
-  def size(implicit context: RequestContext = RequestContext.None): Long = {
-    CustomCollectionSpecifics
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats = {
+    var stats = ArchCollectionStats.Empty
+    val size = CustomCollectionSpecifics
       .collectionInfo(customId)
       .flatMap { info =>
         info.get[Long]("size").toOption
       }
-      .getOrElse(0L)
+    for (s <- size) stats = stats.copy(size = s)
+    stats
   }
 
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
-
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R = action {
-    CustomCollectionSpecifics.location(customId) match {
-      case Some(location) =>
-        val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
-        val locationId = StringUtil
-          .prefixBySeparator(location.toLowerCase, CustomCollectionSpecifics.LocationIdSeparator)
-        locationId match {
-          case "petabox" =>
-            CollectionLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
-          case "hdfs" | "ait-hdfs" =>
-            val warcPath = StringUtil
-              .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
-            CollectionLoader
-              .loadWarcFilesViaCdxFromHdfs(cdxPath, warcPath, aitHdfs = locationId == "ait-hdfs")
-          case "arch" | _ =>
-            val parentCollectionId =
-              if (locationId == "arch")
-                StringUtil
-                  .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
-              else location
-            CollectionLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
-        }
-      case None =>
-        throw new MethodNotSupportedException("Unknown location for collection " + id)
-    }
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    val sourceId = this.sourceId
+    action({
+      val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+      CustomCollectionSpecifics.location(customId) match {
+        case Some(location) =>
+          val locationId = StringUtil
+            .prefixBySeparator(
+              location.toLowerCase,
+              CustomCollectionSpecifics.LocationIdSeparator)
+          locationId match {
+            case "petabox" =>
+              WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
+            case "hdfs" | "ait-hdfs" =>
+              val warcPath = StringUtil
+                .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)
+              WebArchiveLoader
+                .loadWarcFilesViaCdxFromHdfs(
+                  cdxPath,
+                  warcPath,
+                  aitHdfs = locationId == "ait-hdfs")
+            case "arch" | _ =>
+              val parentCollectionId =
+                if (locationId == "arch")
+                  StringUtil
+                    .stripPrefixBySeparator(
+                      location,
+                      CustomCollectionSpecifics.LocationIdSeparator)
+                else location
+              WebArchiveLoader.loadWarcFilesViaCdxFromCollections(cdxPath, parentCollectionId)
+          }
+        case None => WebArchiveLoader.loadWarcFilesViaCdxFiles(cdxPath)
+      }
+    }.map { case (filename, in) => (CollectionSpecifics.pointer(sourceId, filename), in) })
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
     val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
     val locationPrefix = CustomCollectionSpecifics
       .location(customId)
-      .map(_ + CollectionLoader.CdxCollectionLocationSeparator)
+      .map(_ + FilePointer.SourceSeparator)
       .getOrElse("")
     val cdx = CdxLoader.load(s"$cdxPath/*.cdx.gz").map { r =>
       val Seq(offsetStr, filename) = r.additionalFields
-      if (filename.contains(CollectionLoader.CdxCollectionLocationSeparator)) r
+      if (filename.contains(FilePointer.SourceSeparator)) r
       else r.copy(additionalFields = Seq(offsetStr, locationPrefix + filename))
     }
     action(cdx)
-  }
-
-  def randomAccess(
-      context: CollectionAccessContext,
-      inputPath: String,
-      pointer: CollectionSourcePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    CollectionLoader.randomAccessHdfs(
-      context,
-      inputPath + "/" + pointer.filename,
-      offset,
-      positions)
   }
 }
 
@@ -106,30 +104,29 @@ object CustomCollectionSpecifics {
   val CdxDir = "index.cdx.gz"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
-    val infoPath = path + s"/$InfoFile"
-    if (HdfsIO.exists(infoPath)) {
-      val str = HdfsIO.lines(infoPath).mkString
-      Try(parser.parse(str).right.get.hcursor).toOption
-    } else None
+    CacheUtil.cache[Option[HCursor]](s"CustomCollectionSpecifics:collectionInfo:$path") {
+      val infoPath = path + s"/$InfoFile"
+      if (HdfsIO.exists(infoPath)) {
+        val str = HdfsIO.lines(infoPath).mkString
+        Try(parser.parse(str).right.get.hcursor).toOption
+      } else None
+    }
   }
 
   def location(id: String): Option[String] =
     collectionInfo(id).flatMap(_.get[String]("location").toOption)
 
   def userPath(userId: String): String =
-    ArchConf.customCollectionPath + "/" + userId.replace(
-      ArchCollection.UserIdSeparator,
-      ArchCollection.PathUserEscape)
+    ArchConf.customCollectionPath + "/" + IOHelper.escapePath(userId)
 
   def path(user: ArchUser): String = userPath(user.id)
 
   def path(id: String): Option[String] = {
     ArchCollection
       .splitIdUserCollectionOpt(id.stripPrefix(Prefix))
-      .map {
-        case (user, collection) =>
-          val p = userPath(user)
-          s"$p/$collection"
+      .map { case (user, collection) =>
+        val p = userPath(user)
+        s"$p/$collection"
       }
       .filter(HdfsIO.exists)
   }

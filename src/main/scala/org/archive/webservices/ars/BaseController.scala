@@ -4,24 +4,47 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
+import org.scalatra.scalate.ScalateSupport
 
-import javax.servlet.http.HttpServletRequest
-import scala.util.Try
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
-class BaseController extends ScalatraServlet {
+class BaseController extends ScalatraServlet with ScalateSupport {
+  val MasqueradeUserIdSessionAttribute = "masquerade-user"
+
+  // Report and rethrow any Exceptions.
+  error {
+    case e: Exception => {
+      Arch.reportException(e)
+      throw e
+    }
+  }
+
   def login(url: String): ActionResult = TemporaryRedirect(ArchConf.loginUrl + url)
 
   def ensureLogin(action: RequestContext => ActionResult): ActionResult = ensureLogin()(action)
+
+  def clearMasqueradeUser(): Unit =
+    request.getSession.removeAttribute(MasqueradeUserIdSessionAttribute)
+
+  def masqueradeUser(userId: String): Unit = {
+    if (userId.trim.isEmpty) clearMasqueradeUser()
+    else request.getSession.setAttribute(MasqueradeUserIdSessionAttribute, userId)
+  }
+
+  def masqueradeUser: Option[String] =
+    Option(request.getSession.getAttribute(MasqueradeUserIdSessionAttribute))
+      .map(_.toString.trim)
+      .filter(_.nonEmpty)
 
   def ensureLogin(
       requiresLogin: Boolean = true,
       redirect: Boolean = true,
       useSession: Boolean = false,
-      validateCollection: Option[String] = None,
-      userId: Option[String] = None)(action: RequestContext => ActionResult): ActionResult = {
+      validateCollection: Option[String] = None)(
+      action: RequestContext => ActionResult): ActionResult = {
     val context = ArchUser.get(useSession) match {
       case Some(loggedIn) =>
-        val user = userId
+        val user = masqueradeUser
           .flatMap(ArchUser.get)
           .filter(u => loggedIn.isAdmin || loggedIn.id == u.id)
           .getOrElse(loggedIn)
@@ -30,13 +53,20 @@ class BaseController extends ScalatraServlet {
     }
     if (requiresLogin) {
       if (context.isUser && (validateCollection.isEmpty || ArchCollection
-            .get(validateCollection.get)(context)
-            .isDefined)) {
+          .get(validateCollection.get)(context)
+          .isDefined)) {
         action(context)
       } else {
         if (redirect) login(request.uri.toString) else Forbidden()
       }
     } else action(context)
+  }
+
+  def ssp(path: String, attributes: (String, Any)*)(implicit
+      request: HttpServletRequest,
+      response: HttpServletResponse,
+      context: RequestContext = RequestContext(request)): String = {
+    super.ssp(path, attributes ++ Seq("requestContext" -> context): _*)
   }
 }
 

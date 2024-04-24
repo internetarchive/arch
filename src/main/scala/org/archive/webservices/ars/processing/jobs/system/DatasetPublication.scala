@@ -13,20 +13,25 @@ object DatasetPublication extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "Dataset publication"
+  val uuid = "018950a2-21cb-7034-8d2a-03dff990cc1a"
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to publish a dataset on archive.org (internal system job)"
 
-  override def validateParams(
-      collection: ArchCollection,
-      conf: DerivationJobConf): Option[String] =
+  override def relativeOutPath: String = id
+
+  override def validateParams(conf: DerivationJobConf): Option[String] = {
     super
-      .validateParams(collection, conf)
+      .validateParams(conf)
       .orElse {
         conf.params.get[String]("dataset") match {
           case Some(jobId) =>
-            PublishedDatasets.dataset(jobId, collection, conf.isSample) match {
-              case Some(_) => None
-              case None => Some("Derivation job " + jobId + " not found.")
+            PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
+              case Some(_) => Some("Derivation job " + jobId + " prohibited to be published.")
+              case None =>
+                PublishedDatasets.dataset(jobId, conf) match {
+                  case Some(_) => None
+                  case None => Some("Derivation job " + jobId + " not found.")
+                }
             }
           case None => Some("No dataset specified.")
         }
@@ -38,14 +43,14 @@ object DatasetPublication extends SparkJob {
           case None => Some("No metadata specified.")
         }
       }
+  }
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     for {
       jobId <- conf.params.get[String]("dataset")
-      collection <- ArchCollection.get(conf.collectionId)
-      dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
+      dataset <- PublishedDatasets.dataset(jobId, conf)
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
-      itemInfo <- PublishedDatasets.publish(jobId, collection, conf.isSample, metadata)
+      itemInfo <- PublishedDatasets.publish(jobId, conf, metadata)
     } yield {
       if (itemInfo.complete) Future(true)
       else {
@@ -59,13 +64,15 @@ object DatasetPublication extends SparkJob {
             .foreachPartition { partition =>
               accessContext.init()
               val fileList = fileListBc.value
-              for ((f, p) <- partition if !fileList.contains(f)) {
-                if (!PublishedDatasets.upload(itemName, f, p)) {
-                  throw new RuntimeException(s"Uploading $f to Petabox item $itemName failed.")
-                }
+              for {
+                (f, p) <- partition if !fileList.contains(f)
+                error <- PublishedDatasets.upload(itemName, f, p)
+              } {
+                throw new RuntimeException(
+                  s"Uploading $f to Petabox item $itemName failed. - $error")
               }
             }
-          PublishedDatasets.complete(collection, dataset, itemName)
+          PublishedDatasets.complete(dataset, itemName)
         }
       }
     }
@@ -75,8 +82,7 @@ object DatasetPublication extends SparkJob {
     val instance = super.history(conf)
     for {
       jobId <- conf.params.get[String]("dataset")
-      collection <- ArchCollection.get(conf.collectionId)
-      dataset <- PublishedDatasets.dataset(jobId, collection, conf.isSample)
+      dataset <- PublishedDatasets.dataset(jobId, conf)
     } {
       val jobFilePath = PublishedDatasets.jobFile(dataset)
       for (info <- PublishedDatasets.jobItem(jobFilePath)) {
@@ -93,6 +99,4 @@ object DatasetPublication extends SparkJob {
   override def reset(conf: DerivationJobConf): Unit = {}
 
   override val finishedNotificationTemplate: Option[String] = None
-
-  override val logJobInfo: Boolean = true
 }

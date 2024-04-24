@@ -1,6 +1,7 @@
 <% import org.archive.webservices.ars.model.ArchConf %>
 <%@ val user: org.archive.webservices.ars.model.users.ArchUser %>
 <%@ val baseUrl: String %>
+<%@ val masqueradeUser: String %>
 
 #set (title)
     Admin
@@ -14,9 +15,18 @@
 <div class="large-12 columns">
 <p>
     <br>
-    You're logged in as an admin user, <s>please replace <code>admin</code> in the URL with the ID of the desired account you wish to access</s> (<em>TODO - figure out how to do this now that userId has been removed from the URL structure</em>), or click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
+    You're logged in as an admin user, click <a href="<%=unescape(baseUrl)%>">here</a> to access your own account.<br>
     <br>
     <a href="<%=ArchConf.basePath%>/admin/edit">Manage users and collections</a><br>
+    <br>
+    <form method="get">
+        Masquerade as, user ID: <input type="text" name="masquerade-user" value="<%=unescape(masqueradeUser)%>" style="display: inline; width: 100px;" />
+        <input type="submit" value="masquerade" />
+    </form>
+    <% if (masqueradeUser.nonEmpty) { %>
+        <a href="<%=unescape(baseUrl)%>">Go to front page as masqueraded user</a> (come back here to un-masquerade) - <a href="<%=ArchConf.basePath%>/admin?masquerade-user=">un-masquerade</a>
+        <br>
+    <% } %>
     <br>
     <h2>Logs</h2>
     <a href="<%=ArchConf.basePath%>/admin/logs/jobs?tail=5120" target="_blank">Jobs log</a><br>

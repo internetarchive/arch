@@ -7,9 +7,10 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 object PresentationProgramInformationExtraction extends BinaryInformationAutJob {
   val name = "Presentation file information"
+  val uuid = "01895068-a576-7a00-b4dd-2d5650bc69ab"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of a PowerPoint or similar file, filename, PowerPoint or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PowerPoint or similar file MD5 hash and PowerPoint or similar file SHA1 hash."
+    "Locations and metadata for PowerPoint, Keynote, and other presentation formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "powerpoint-information.csv.gz"
 

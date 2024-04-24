@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -22,9 +21,10 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "Web archive transformation (WAT)"
+  val uuid = "01895066-11f7-7c35-af62-603955c6c20f"
   val category: ArchJobCategory = ArchJobCategories.Collection
   def description =
-    "Creates Web Archive Transformation (WAT) files that include a brief header which identifies its corresponding URL via \"WARC-Target-URI,\" corresponding W/ARC file via \"WARC-Refers-To,\" and additional mapping information."
+    "Metadata extracted from WARC-info and WARC record headers and HTML headers, meta tags, and anchor tags thoughout the collection. Output: one WAT file with data in JSON format for each WARC file."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wat.gz"
@@ -32,40 +32,43 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWatGeneration, conf)
-      CollectionLoader.loadWarcFiles(conf.collectionId, conf.inputPath) { rdd =>
-        IOHelper
-          .sampleGrouped[String, InputStream, Boolean](
-            rdd.map {
-              case (pointer, in) =>
-                val file = new Path(pointer.filename).getName
-                val outFile = StringUtil.stripSuffix(file, Sparkling.GzipExt) + ".wat.gz"
-                val watIn = WAT.fromWarcStream(
-                  in,
-                  file,
-                  Some(outFile),
-                  maxHtmlContentLength = HttpUtil.MaxContentLength.toInt,
-                  bubbleClose = true)
-                (file, IteratorUtil.cleanup(Gzip.decompressConcatenated(watIn), watIn.close))
-            },
-            conf.sample) { rdd =>
-            val outPath = conf.outputPath + relativeOutPath + resultDir
-            val processed = RddUtil.saveGroupedAsNamedFiles(rdd.map {
-              case (f, in) =>
-                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
-                (outFile, IteratorUtil.whileDefined {
+      WebArchiveLoader.loadWarcFiles(conf.inputSpec) { rdd =>
+        IOHelper.sampleGrouped[String, InputStream, Boolean](
+          rdd.map { file =>
+            val outFile = StringUtil.stripSuffix(file.filename, Sparkling.GzipExt) + ".wat.gz"
+            val watIn = WAT.fromWarcStream(
+              file.access,
+              file.filename,
+              Some(outFile),
+              maxHtmlContentLength = HttpUtil.MaxContentLength.toInt,
+              bubbleClose = true)
+            (file.filename, IteratorUtil.cleanup(Gzip.decompressConcatenated(watIn), watIn.close))
+          },
+          conf.sample) { rdd =>
+          val outPath = conf.outputPath + relativeOutPath + resultDir
+          val processed = RddUtil.saveGroupedAsNamedFiles(
+            rdd.map { case (f, in) =>
+              val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wat.gz"
+              (
+                outFile,
+                IteratorUtil.whileDefined {
                   Try(if (in.hasNext) Some {
                     new CatchingInputStream(in.next)
-                  } else None).getOrElse {
+                  }
+                  else None).getOrElse {
                     in.clear(false)
                     None
                   }
                 })
-            }, outPath, compress = true, skipIfExists = true)
-            RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
-              for (file <- files) DerivativeOutput.hashFileHdfs(file)
-            }
-            processed >= 0
+            },
+            outPath,
+            compress = true,
+            skipIfExists = true)
+          RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
+            for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
+          processed >= 0
+        }
       }
     }
   }

@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.model
 
 import io.circe.{Json, JsonObject, parser}
-import org.archive.webservices.ars.Arch
 
 import scala.io.Source
 import scala.util.Try
@@ -73,7 +72,8 @@ class LocalArchConf extends ArchConf with Serializable {
       "https://warcs.archive-it.org")
 
   val waybackBaseUrl: String =
-    confStrValue("ARCH_WAYBACK_BASE_URL", "waybackBaseUrl").getOrElse("https://wayback.archive-it.org/")
+    confStrValue("ARCH_WAYBACK_BASE_URL", "waybackBaseUrl").getOrElse(
+      "https://wayback.archive-it.org/")
 
   val collectionCachePath: String =
     confStrValue("ARCH_COLLECTION_CACHE_PATH", "collectionCachePath").getOrElse("/data/cache")
@@ -83,6 +83,8 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val jobOutPath: String =
     confStrValue("ARCH_JOB_OUTPUT_PATH", "jobOutPath").getOrElse(globalJobOutPath + "-users")
+
+  def uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
 
   val jobLoggingPath: String =
     confStrValue("ARCH_JOB_LOGGING_PATH", "jobLoggingPath").getOrElse("/var/log/arch")
@@ -105,23 +107,24 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val internalPort: Int = confIntValue("ARCH_INTERNAL_PORT", "internalPort", 12341)
 
-  val externalPort: Int = confIntValue("ARCH_EXTERNAL_PORT", "externalPort", if (proto == "http") 80 else 443)
+  val externalPort: Int =
+    confIntValue("ARCH_EXTERNAL_PORT", "externalPort", if (proto == "http") 80 else 443)
 
   val basePath: String =
-    confStrValue("ARCH_BASE_PATH", "basePath").getOrElse("/ait")
-      match {
+    confStrValue("ARCH_BASE_PATH", "basePath").getOrElse("/ait") match {
       case "/" => ""
       case x => x
     }
 
   val baseUrl: String =
     confStrValue("ARCH_BASE_URL", "baseUrl").getOrElse({
-      val nonStdPort = (proto == "http" && externalPort != 80) || (proto == "https" && externalPort != 443)
+      val nonStdPort =
+        (proto == "http" && externalPort != 80) || (proto == "https" && externalPort != 443)
       proto + "://" + host + (if (nonStdPort) (":" + externalPort) else "") + basePath
     })
 
-  val loginUrl: String = confStrValue("ARCH_LOGIN_URL", "loginUrl").getOrElse(
-    baseUrl + "/login?next=")
+  val loginUrl: String =
+    confStrValue("ARCH_LOGIN_URL", "loginUrl").getOrElse(baseUrl + "/login?next=")
 
   val baseDir: String =
     confStrValue("ARCH_BASE_DIR", "baseDir").getOrElse("/research_services")
@@ -129,14 +132,17 @@ class LocalArchConf extends ArchConf with Serializable {
   val hadoopQueue: String =
     confStrValue("ARCH_HADOOP_QUEUE", "hadoopQueue").getOrElse("default")
 
-  val production: Boolean = confBoolValue("ARCH_PRODUCTION", "production", false)
-
   val sentryDsn: String = confStrValue("ARCH_SENTRY_DSN", "sentryDsn").getOrElse("")
 
-  /** python:
-   * import requests, base64
-   * base64.b64encode("user:pass".encode())
-   * */
+  // One of "DEV", "QA", "PROD"
+  val deploymentEnvironment: String =
+    confStrValue("ARCH_DEPLOYMENT_ENVIRONMENT", "deploymentEnvironment").getOrElse("DEV")
+
+  val isDev: Boolean = deploymentEnvironment == "DEV"
+
+  /**
+   * python: import requests, base64 base64.b64encode("user:pass".encode())
+   */
   val foreignAitAuthHeader: Option[String] =
     confValueMap("ARCH_AIT_AUTH_HEADER", "foreignAitAuthHeader", identity)("Basic " + _)
 
@@ -156,4 +162,20 @@ class LocalArchConf extends ArchConf with Serializable {
     confStrValue("ARCH_ARK_MINT_URL", "arkMintUrl").getOrElse("https://ark.archive.org/mint")
   val pboxS3Url: String =
     confStrValue("ARCH_PBOX_S3_URL", "pboxS3Url").getOrElse("http://s3.us.archive.org")
+
+  val keystoneBaseUrl: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_BASE_URL", configKey = "keystoneBaseUrl")
+  val keystonePublicBaseUrl: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_PUBLIC_BASE_URL", configKey = "keystonePublicBaseUrl")
+  val keystonePrivateApiKey: Option[String] =
+    confStrValue(envKey = "ARCH_KEYSTONE_PRIVATE_API_KEY", configKey = "keystonePrivateApiKey")
+
+  val version: Option[String] =
+    confStrValue(envKey = "ARCH_VERSION", configKey = "version")
+
+  val forceKeystoneLogin: Boolean =
+    confBoolValue(
+      envKey = "ARCH_FORCE_KEYSTONE_LOGIN",
+      configKey = "forceKeystoneLogin",
+      default = false)
 }

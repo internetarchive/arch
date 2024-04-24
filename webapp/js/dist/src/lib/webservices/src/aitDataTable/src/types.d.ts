@@ -9,10 +9,12 @@ export interface DataTableSelectAllCheckbox extends HTMLElement {
 export interface ApiConstructorType<RowT> {
     new (dataTable: DataTable<RowT>): ApiType<RowT>;
 }
+type NormalApiResponse<RowT> = Array<RowT>;
+type DistinctApiResponse<RowT> = Array<RowT[keyof RowT]>;
 export interface ApiType<RowT> {
     dataTable: DataTable<RowT>;
     get: (apiPath: string) => Promise<{
-        json: () => Promise<Array<RowT>>;
+        json: () => Promise<NormalApiResponse<RowT> | DistinctApiResponse<RowT>>;
     }>;
 }
 export interface DataTable<RowT> extends HTMLElement {

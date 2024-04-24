@@ -14,17 +14,18 @@ import java.io.{InputStream, PrintStream}
 
 object WebPagesExtraction extends BinaryInformationAutJob {
   val name = "Plain text of webpages"
+  val uuid = "0189506a-46f3-7d73-9dcf-a8fce59c50cc"
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, web domain, URL, MIME type as provided by the web server, MIME type as detected by Apache TIKA, and content (HTTP headers and HTML removed)."
+    "Location, technical metadata, and extracted full text contents of each text-bearing document in the collection. Output: one CSV file with columns for crawl date, last modified date, domain, URL, MIME type as reported by the web server and as detected by Apache TIKA, and content."
 
   val targetFile: String = "web-pages.csv.gz"
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,domain,url,mime_type_web_server,mime_type_tika,language,content")
+      "crawl_date, last_modified_date, domain,url, mime_type_web_server, mime_type_tika, language, content")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     AutUtil.checkPageMime(url, server)

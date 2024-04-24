@@ -1,21 +1,46 @@
 package org.archive.webservices.ars.processing
 
+import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo, ArchJobInstanceInfo, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchCollectionInfo, ArchConf, ArchJobInstanceInfo, DerivativeOutput}
 import org.archive.webservices.ars.util.UUID
+import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.time.Instant
 
+object DerivationJobInstance {
+  def uuid: String = uuid(false)
+
+  def uuid(reserve: Boolean): String = {
+    var uuid = UUID.uuid7str
+    for (path <- ArchConf.uuidJobOutPath) {
+      val uuidPath = new Path(path + "/" + uuid)
+      while (HdfsIO.fs.exists(uuidPath)) uuid = UUID.uuid7str
+      if (reserve) HdfsIO.fs.mkdirs(uuidPath)
+    }
+    uuid
+  }
+}
+
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
-  val uuid: String = UUID.uuid7str
+  var predefUuid: Option[String] = None
+
+  lazy val uuid: String = {
+    val uuid = predefUuid.orElse(info.uuid).getOrElse(DerivationJobInstance.uuid)
+    info.uuid = Some(uuid)
+    uuid
+  }
 
   var registered = false
   var state: Int = ProcessingState.NotStarted
 
   var user: Option[ArchUser] = None
-  var collection: Option[ArchCollection] = None
+
+  lazy val inputSize: Long = job.inputSize(conf)
 
   var attempt: Int = 1
+  var slots: Int = 1
 
   private var _queue: Option[JobQueue] = None
   private var queuePos: Int = -1
@@ -33,12 +58,13 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def queue: Option[JobQueue] = _queue
 
-  def queueIndex: Int =
+  def queueIndex: Int = {
     _queue
       .map { q =>
         if (queuePos >= q.pos) queuePos - q.pos else queuePos + (Int.MaxValue - q.pos)
       }
       .getOrElse(-1)
+  }
 
   private var activeStage: Option[DerivationJobInstance] = None
 
@@ -51,7 +77,13 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def active: DerivationJobInstance = activeStage.getOrElse(this)
 
-  def info: ArchJobInstanceInfo = ArchJobInstanceInfo.get(conf.outputPath + "/" + job.id)
+  def outPath: String = conf.outputPath + job.relativeOutPath
+
+  def info: ArchJobInstanceInfo = {
+    val info = ArchJobInstanceInfo(outPath)
+    info.conf = Some(conf)
+    info
+  }
 
   def updateState(value: Int): Unit = {
     val prevState = state
@@ -59,9 +91,8 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
     if (registered) {
       if (job.partialOf.isEmpty) {
         val now = Instant.now
-        var info = this.info
         if (prevState == ProcessingState.NotStarted) {
-          info = info.setStartTime(now)
+          info.started = Some(now)
         }
         state match {
           case ProcessingState.Queued =>
@@ -69,20 +100,18 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
           case ProcessingState.Running =>
             JobStateManager.logRunning(this)
           case ProcessingState.Failed =>
-            info = info.setFinishedTime(now)
+            info.finished = Some(now)
             JobStateManager.logFailed(this)
           case ProcessingState.Finished =>
-            info = info.setFinishedTime(now)
-            if (job.logCollectionInfo) {
-              for (info <- ArchCollectionInfo.get(conf.collectionId)) {
-                info
-                  .setLastJob(job.id, conf.isSample, now)
-                  .save()
+            info.finished = Some(now)
+            if (job.logCollectionInfo && InputSpec.isCollectionBased(conf.inputSpec)) {
+              for (info <- ArchCollectionInfo.get(conf.inputSpec.collectionId)) {
+                info.setLastJob(job.id, conf.isSample, now).save()
               }
             }
             JobStateManager.logFinished(this)
         }
-        if (job.logJobInfo) info.save(conf.outputPath + "/" + job.id)
+        info.save(outPath)
       } else {
         state match {
           case ProcessingState.Queued =>

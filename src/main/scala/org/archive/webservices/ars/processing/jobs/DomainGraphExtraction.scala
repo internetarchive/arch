@@ -13,24 +13,24 @@ import java.io.PrintStream
 
 object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Long)] {
   val name = "Domain graph"
+  val uuid = "01895067-417d-7665-ba60-a9bb9ca0aa3e"
   val description =
-    "Create a CSV with the following columns: crawl date, source domain, target domain, and count."
+    "Links between domains in the collection over time. Output: one CSV file with columns for crawl date, source, target, and count."
 
   val targetFile: String = "domain-graph.csv.gz"
 
   val srcDstFields: (String, String) = ("src_domain", "dest_domain")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,target,count")
+    out.println("crawl_date, source, target, count")
 
   override def df(rdd: RDD[((String, String, String), Long)]): Dataset[Row] = {
     val rows =
       rdd
         .reduceByKey(_ + _)
         .filter(_._2 > 5)
-        .map {
-          case ((date, source, target), count) =>
-            Row(date, source, target, count)
+        .map { case ((date, source, target), count) =>
+          Row(date, source, target, count)
         }
     AutLoader.domainGraph(rows).orderBy(desc("count"))
   }
@@ -45,17 +45,15 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
               val url = AutUtil.url(r)
               AutUtil
                 .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
-                .map {
-                  case (source, target, _) =>
-                    (
-                      AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
-                      AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
+                .map { case (source, target, _) =>
+                  (
+                    AutUtil.extractDomainRemovePrefixWWW(source, publicSuffixes.value),
+                    AutUtil.extractDomainRemovePrefixWWW(target, publicSuffixes.value))
                 }
                 .distinct
                 .filter { case (s, t) => s != "" && t != "" }
-                .map {
-                  case (source, target) =>
-                    ((AutUtil.timestamp(r).take(8), source, target), 1L)
+                .map { case (source, target) =>
+                  ((AutUtil.timestamp(r).take(8), source, target), 1L)
                 }
             }
             .toIterator

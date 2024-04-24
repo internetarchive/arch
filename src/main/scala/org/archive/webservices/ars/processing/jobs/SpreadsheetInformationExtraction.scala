@@ -7,9 +7,10 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
   val name = "Spreadsheet file information"
+  val uuid = "01895069-192a-74f8-84a9-b14f20c20f89"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the spreadsheet file, filename, spreadsheet extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, spreadsheet MD5 hash and spreadsheet SHA1 hash."
+    "Locations and metadata for CSV, XLS, ODS, and other spreadsheet formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "spreadsheet-information.csv.gz"
 
@@ -38,7 +39,8 @@ object SpreadsheetInformationExtraction extends BinaryInformationAutJob {
     "text/tab-separated-values")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
-    SpreadsheetMimeTypes.contains(tika) || server == "text/csv" || server == "text/tab-separated-values" || ((url.toLowerCase
+    SpreadsheetMimeTypes.contains(
+      tika) || server == "text/csv" || server == "text/tab-separated-values" || ((url.toLowerCase
       .endsWith(".csv") || url.toLowerCase.endsWith(".tsv")) && tika == "text/plain")
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)

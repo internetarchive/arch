@@ -7,9 +7,10 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 object WordProcessorInformationExtraction extends BinaryInformationAutJob {
   val name = "Word processing file information"
+  val uuid = "0189506a-d09d-7571-9d3c-a44698d58d39"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the word document or similar file, filename, word document or similar file extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, word document or similar file MD5 hash and word document or similar file SHA1 hash."
+    "Locations and metadata for DOC, RTF, ODT, and other word processing files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "word-document-information.csv.gz"
 

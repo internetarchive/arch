@@ -1,14 +1,8 @@
 package org.archive.webservices.ars.model
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.util.Success
-import scala.concurrent.duration._
-
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.collections._
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.util.FuturesUtil.waitAll
 import org.scalatra.guavaCache.GuavaCache
 
 case class ArchCollection(
@@ -23,50 +17,30 @@ case class ArchCollection(
   def userUrlId(userId: String): String =
     userSpecificId.filter(_._1 == userId).map(_._2).getOrElse(id)
 
-  lazy val specifics: Option[CollectionSpecifics] = CollectionSpecifics.get(id)
-
-  private var statsLoaded = false
-  def ensureStats()(implicit context: RequestContext = RequestContext.None): Unit = {
-    if (!statsLoaded) {
-      statsLoaded = true
-      for (s <- specifics) {
-        Await.result(
-          waitAll(
-            Seq(
-              Future({ s.size }),
-              Future({ s.seeds }),
-              Future({ s.lastCrawlDate }))
-          ),
-          30.seconds
-        ).zipWithIndex.map{
-          case (Success(size: Long), 0) => _size = size
-          case (Success(seeds: Int), 1) => _seeds = seeds
-          case (Success(lastCrawlDate: String), 2) => _lastCrawlDate = lastCrawlDate
-          case _ => None
-        }
-      }
-    }
+  lazy val specifics: CollectionSpecifics = CollectionSpecifics.get(id) match {
+    case Some(specifics) => specifics
+    case None => throw new RuntimeException("No specifics found for collection " + id)
   }
 
-  private var _size: Long = -1
-  def size: Long = _size
-
-  private var _seeds: Int = -1
-  def seeds: Int = _seeds
-
-  private var _lastCrawlDate: String = ""
-  def lastCrawlDate: String = _lastCrawlDate
+  private var _stats: Option[ArchCollectionStats] = None
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats = {
+    _stats.orElse {
+      synchronized {
+        _stats = Some(specifics.stats)
+        _stats
+      }
+    }.get
+  }
 }
 
 object ArchCollection {
   val UserIdSeparator = ":"
-  val PathUserEscape = "-"
 
   private def cacheKey(id: String): String = getClass.getSimpleName + id
 
-  def get(id: String)(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
-    (if (ArchConf.production) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
+  def get(id: String)(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+    (if (!ArchConf.isDev) GuavaCache.get[ArchCollection](cacheKey(id)) else None)
       .filter { c =>
         context.isInternal || context.loggedIn.isAdmin || c.user
           .map(_.id)
@@ -77,7 +51,7 @@ object ArchCollection {
           .get(id)
           .flatMap(_.collection)
           .map { c =>
-            if (ArchConf.production) {
+            if (!ArchConf.isDev) {
               for (u <- context.loggedInOpt) c.user = Some(u)
               GuavaCache.put(cacheKey(c.id), c, None)
             } else c
@@ -85,20 +59,16 @@ object ArchCollection {
       }
   }
 
-  def userCollections(user: ArchUser)(
-      implicit context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
+  def userCollections(user: ArchUser)(implicit
+      context: RequestContext = RequestContext.None): Seq[ArchCollection] = {
     (AitCollectionSpecifics.userCollections(user) ++ AitCollectionSpecifics
-      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(user) ++ CustomCollectionSpecifics
-      .userCollections(user))
-    .map( c =>
-      if (ArchConf.production) {
-        GuavaCache.get[ArchCollection](cacheKey(c.id)).getOrElse({
-          c.user = Some(user)
-          GuavaCache.put(cacheKey(c.id), c, None)
-          c
-        })
-      } else c
-    )
+      .foreignUserCollections(user) ++ SpecialCollectionSpecifics.userCollections(
+      user) ++ CustomCollectionSpecifics
+      .userCollections(user) ++ FileCollectionSpecifics.userCollections(user))
+      .map(c => {
+        c.user = Some(user)
+        c
+      })
       .sortBy(_.name.toLowerCase)
   }
 
@@ -178,6 +148,8 @@ object ArchCollection {
       Some(CustomCollectionSpecifics.Prefix)
     } else if (id.startsWith(UnionCollectionSpecifics.Prefix)) {
       Some(UnionCollectionSpecifics.Prefix)
+    } else if (id.startsWith(FileCollectionSpecifics.Prefix)) {
+      Some(FileCollectionSpecifics.Prefix)
     } else None
   }
 }

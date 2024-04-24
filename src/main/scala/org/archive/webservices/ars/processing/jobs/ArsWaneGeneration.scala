@@ -1,7 +1,6 @@
 package org.archive.webservices.ars.processing.jobs
 
-import org.apache.hadoop.fs.Path
-import org.archive.webservices.ars.io.{CollectionLoader, IOHelper}
+import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
@@ -19,10 +18,11 @@ import scala.util.Try
 object ArsWaneGeneration extends SparkJob with ArsJob {
   val MaxInputTextLength = 10000
 
-  val name = "Named entities"
+  val name = "Named entities (English)"
+  val uuid = "01895065-8f59-7a8a-b432-79e20d749f4a"
   val category: ArchJobCategory = ArchJobCategories.Text
   def description =
-    "Creates Web Archive Named Entities (WANE) files which contain the named entities from each text resource, organized by originating URL and timestamp."
+    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one WANE file with data in JSON format for each WARC file."
 
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"
@@ -30,41 +30,38 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWaneGeneration, conf)
-      CollectionLoader.loadWarcsWithSource(conf.collectionId, conf.inputPath) { rdd =>
+      WebArchiveLoader.loadWarcsRecords(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](
             rdd
-              .map {
-                case (pointer, records) =>
-                  (
-                    new Path(pointer.filename).getName,
-                    records.chain(_.filter(_.http.exists(http =>
-                      http.mime.contains("text/html") && http.status == 200))))
+              .map { case (pointer, records) =>
+                (
+                  pointer.filename,
+                  records.chain(_.filter(_.http.exists(http =>
+                    http.mime.contains("text/html") && http.status == 200))))
               }
-              .map {
-                case (f, r) =>
-                  val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
-                  val json = r.chain(_.flatMap {
-                    warc =>
-                      for {
-                        url <- warc.url
-                        timestamp <- warc.timestamp
-                        digest <- warc.payloadDigest
-                        http <- warc.http if http.status == 200
-                        html <- Try(
-                          HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
-                          .getOrElse(None)
-                        bodyText <- Try(
-                          HtmlProcessor
-                            .tagsWithText(html, Set("body"))
-                            .next
-                            ._2
-                            .take(MaxInputTextLength)).toOption
-                      } yield WANE.get(url, timestamp, digest, bodyText)
+              .map { case (f, r) =>
+                val outFile = StringUtil.stripSuffix(f, Sparkling.GzipExt) + ".wane.gz"
+                val json = r.chain(
+                  _.flatMap { warc =>
+                    for {
+                      url <- warc.url
+                      timestamp <- warc.timestamp
+                      digest <- warc.payloadDigest
+                      http <- warc.http if http.status == 200
+                      html <- Try(HtmlProcessor.strictHtml(HttpUtil.bodyString(http.body, http)))
+                        .getOrElse(None)
+                      bodyText <- Try(
+                        HtmlProcessor
+                          .tagsWithText(html, Set("body"))
+                          .next
+                          ._2
+                          .take(MaxInputTextLength)).toOption
+                    } yield WANE.get(url, timestamp, digest, bodyText)
                   }.filter(e =>
-                      e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
+                    e.locations.nonEmpty || e.organizations.nonEmpty || e.persons.nonEmpty)
                     .map(_.toJsonString))
-                  (outFile, json)
+                (outFile, json)
               },
             conf.sample) { rdd =>
             val outPath = conf.outputPath + relativeOutPath + resultDir

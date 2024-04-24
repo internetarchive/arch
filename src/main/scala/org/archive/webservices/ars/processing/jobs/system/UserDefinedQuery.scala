@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.processing.jobs.system
 
-import org.archive.webservices.ars.io.CollectionLoader
+import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
-import org.archive.webservices.ars.model.{ArchCollection, ArchJobCategories, ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -17,8 +17,11 @@ object UserDefinedQuery extends SparkJob {
   implicit val logContext: LogContext = LogContext(this)
 
   val name = "User-Defined Query"
+  val uuid = "018950a1-6773-79f3-8eb2-fba4356e23b9"
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to run a user-defined query (internal system job)"
+
+  val relativeOutPath = s"/$id"
 
   private def checkFieldOperators[T: io.circe.Decoder](
       params: DerivationJobParameters,
@@ -80,17 +83,18 @@ object UserDefinedQuery extends SparkJob {
     }
   }
 
-  override def validateParams(
-      collection: ArchCollection,
-      conf: DerivationJobConf): Option[String] =
-    super.validateParams(collection, conf).orElse {
-      validateFields[String](conf.params, Seq("surtPrefix", "surtPrefixes"), addOperators = true) {
-        v =>
-          if (v.contains(")")) SurtUtil.validateHost(v) match {
-            case Some(_) => None
-            case None => Some("Invalid host in " + v)
-          } else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
-          else None
+  override def validateParams(conf: DerivationJobConf): Option[String] = {
+    super.validateParams(conf).orElse {
+      validateFields[String](
+        conf.params,
+        Seq("surtPrefix", "surtPrefixes"),
+        addOperators = true) { v =>
+        if (v.contains(")")) SurtUtil.validateHost(v) match {
+          case Some(_) => None
+          case None => Some("Invalid host in " + v)
+        }
+        else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
+        else None
       }.orElse {
         validateFields[String](conf.params, Seq("timestampFrom", "timestampTo")) { v =>
           Time14Util.validate(v) match {
@@ -100,11 +104,12 @@ object UserDefinedQuery extends SparkJob {
         }
       }
     }
+  }
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, UserDefinedQuery, conf)
-      CollectionLoader.loadCdx(conf.collectionId, conf.inputPath) { rdd =>
+      WebArchiveLoader.loadCdx(conf.inputSpec) { rdd =>
         val paramsBc = sc.broadcast(conf.params)
         val filtered = rdd
           .mapPartitions { partition =>
@@ -152,7 +157,7 @@ object UserDefinedQuery extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath)
+    val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
     if (started) {
       val completed = HdfsIO.exists(conf.outputPath + "/" + CustomCollectionSpecifics.InfoFile)
       instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed

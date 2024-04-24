@@ -12,7 +12,7 @@
 #set (scripts)
   <script src="<%= staticPath("/js/jquery.min.js") %>"></script>
   #if (publishingEnabled)
-    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-9462fc8d.js") %>" type="module"></script>
+    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-ab9bdb46.js") %>" type="module"></script>
   #end
 #end
 
@@ -26,8 +26,10 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <h2>Dataset</h2>
-    <p><%=job.job.description.stripPrefix("Creates ")%></p>
+    <h2 id="dataset">Dataset</h2>
+    <p>
+      <%=job.job.description%>
+    </p>
     <div class="card">
       <div class="card-body">
         <p class="card-text">
@@ -43,7 +45,7 @@
     </div>
     <div class="card">
       <div class="card-body">
-        <h2 class="card-title">Download</h2>
+        <h2 id="download" class="card-title">Download</h2>
         <p>To download the files of this dataset, please use the <a href="https://github.com/WASAPI-Community/data-transfer-apis" target="_blank">WASAPI Data Transfer APIs</a> and follow the instructions <a href="https://support.archive-it.org/hc/en-us/articles/360015225051-Find-and-download-your-WARC-files-with-WASAPI" target="_blank">here.</a>
         </p>
         <p>The <a href="https://support.archive-it.org/hc/en-us/articles/360028548952" target="_blank">WASAPI result endpoint URL</a> of this dataset is:
@@ -56,9 +58,9 @@
         <p class="card-text" style="font-weight: bold;">
           $ <code style="font-weight: normal;">
             <% if (wasapiPages > 1) { %>
-              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r .files[].locations[0]; done &gt; url.list
+              for i in {1..<%=unescape(wasapiPages)%>}; do curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>&amp;page=$i" | jq -r '.files[].locations[0]'; done &gt; url.list
               <% } else { %>
-              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r .files[].locations[0] &gt; url.list
+              curl -u &lt;user&gt;:&lt;password&gt; "<%=unescape(wasapiUrl)%>" | jq -r '.files[].locations[0]' &gt; url.list
             <% } %>
           </code>
           <br />
@@ -91,7 +93,8 @@
   <div class="large-12 columns">
 
   #if (publishingEnabled)
-    <h2>Publishing</h2>
+    <h2 id="publishing">Publishing</h2>
+    <p>Publish this dataset to <a href="https://archive.org">archive.org</a> for public access.</p>
     <div class="card">
       <div class="card-body">
         <arch-dataset-publishing-card
@@ -104,7 +107,7 @@
     </div>
   #end
 
-  <h2>Regenerate</h2>
+  <h2 id="regenerate">Regenerate</h2>
     <div class="card" id="card-re-run-job">
       <div class="card-body">
         <p>

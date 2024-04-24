@@ -4,17 +4,18 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
-import org.archive.webservices.ars.Arch
-import org.archive.webservices.ars.ViewPathPatterns
+import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.ars.util.{FormatUtil, DatasetUtil, MailUtil}
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil, MailUtil}
+import org.archive.webservices.ars.{Arch, Keystone, ViewPathPatterns}
 import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{File, FileOutputStream, PrintStream}
 import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.io.Source
+import scala.util.Try
 
 object JobStateManager {
   val LoggingDir = ArchConf.jobLoggingPath
@@ -38,12 +39,12 @@ object JobStateManager {
   }
 
   private def metaInfo(instance: DerivationJobInstance): Seq[(String, Json)] = {
-    Seq("uuid" -> instance.uuid.asJson, "attempt" -> instance.attempt.asJson) ++ {
+    Seq(
+      "uuid" -> instance.uuid.asJson,
+      "attempt" -> instance.attempt.asJson,
+      "slots" -> instance.slots.asJson,
+      "size" -> FormatUtil.formatBytes(instance.inputSize).asJson) ++ {
       instance.user.map("user" -> _.id.asJson)
-    } ++ instance.collection.toSeq.map {
-      collection =>
-        collection.ensureStats()
-        "size" -> FormatUtil.formatBytes(collection.size).asJson
     }
   }
 
@@ -106,11 +107,15 @@ object JobStateManager {
       job <- JobManager.get(id)
     } {
       job.reset(conf)
-      job.enqueue(conf, { instance =>
-        instance.user = meta.downField("user").focus.flatMap(_.asString).flatMap(ArchUser.get)
-        instance.collection = ArchCollection.get(conf.collectionId)
-        instance.attempt = meta.downField("attempt").focus.flatMap(_.asNumber).flatMap(_.toInt).getOrElse(1) + 1
-      })
+      job.enqueue(
+        conf,
+        { instance =>
+          instance.predefUuid = meta.get[String]("uuid").toOption
+          instance.user = meta.get[String]("user").toOption.flatMap(ArchUser.get)
+          instance.attempt = meta.get[Int]("attempt").getOrElse(1) + 1
+          instance.slots = meta.get[Int]("slots").getOrElse(1)
+          if (instance.slots < JobManager.MaxSlots) instance.slots += 1
+        })
     }
   }
 
@@ -158,19 +163,25 @@ object JobStateManager {
       } {
         for (job <- JobManager.get(id)) {
           for (uuid <- values.get("uuid").flatMap(_.asString)) {
-            // TODO: KeystoneClient.logCancelled(uuid)
+            Try(Keystone.registerJobEvent(uuid, "CANCELLED"))
           }
           job.reset(conf)
           job.enqueue(
-            conf, { instance =>
+            conf,
+            { instance =>
+              instance.predefUuid = values.get("uuid").flatMap(_.asString)
               instance.user = values
                 .get("user")
                 .flatMap(_.asString)
                 .filter(_.nonEmpty)
                 .flatMap(ArchUser.get(_))
-              instance.collection = ArchCollection.get(conf.collectionId)
               instance.attempt = values
                 .get("attempt")
+                .flatMap(_.asNumber)
+                .flatMap(_.toInt)
+                .getOrElse(1)
+              instance.slots = values
+                .get("slots")
                 .flatMap(_.asNumber)
                 .flatMap(_.toInt)
                 .getOrElse(1)
@@ -205,18 +216,22 @@ object JobStateManager {
     }
   }
 
+  def ks(action: => Unit): Unit = for (_ <- ArchConf.keystoneBaseUrl) Try(action)
+
   def logRegister(instance: DerivationJobInstance): Unit = {
     println("Registered: " + str(instance))
+    ks(Keystone.registerJobStart(instance))
   }
 
   def logUnregister(instance: DerivationJobInstance): Unit = {
     println("Unregistered: " + str(instance))
+    ks(Keystone.registerJobComplete(instance))
   }
 
   def logQueued(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      // TODO: KeystoneClient.logQueued(uuid)
+      ks(Keystone.registerJobEvent(instance.uuid, "QUEUED"))
     }
     println("Queued: " + str(instance))
   }
@@ -224,7 +239,7 @@ object JobStateManager {
   def logRunning(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       registerRunning(instance)
-      // TODO: KeystoneClient.logRunning(instance)
+      ks(Keystone.registerJobEvent(instance.uuid, "RUNNING"))
     }
     println("Running: " + str(instance))
   }
@@ -232,31 +247,31 @@ object JobStateManager {
   def logFinished(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
     if (!subJob) {
       unregisterRunning(instance)
-      // TODO: KeystoneClient.logFinished(instance.uuid)
-      for {
-        u <- instance.user
-        email <- u.email
-      } {
-        for (template <- instance.job.finishedNotificationTemplate) {
-          val collection = instance.collection.getOrElse(ArchCollection.get(instance.conf.collectionId).get)
-          MailUtil.sendTemplate(
-            template,
-            Map(
-              "to" -> email,
-              "collectionsUrl" -> ViewPathPatterns.reverseAbs(ViewPathPatterns.Collections),
-              "datasetUrl" -> ViewPathPatterns.reverseAbs(
-                ViewPathPatterns.Dataset,
-                Map(
-                  "dataset_id" -> DatasetUtil.formatId(collection.userUrlId(u.id), instance.job),
-                  "sample" -> instance.conf.isSample.toString
-                )
-              ),
-              "jobName" -> instance.job.name,
-              "collectionName" -> collection.name,
-              "userName" -> u.fullName,
-              "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")
-            )
-          )
+      ks(Keystone.registerJobEvent(instance.uuid, "FINISHED"))
+      if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+        for {
+          u <- instance.user
+          email <- u.email
+        } {
+          for (template <- instance.job.finishedNotificationTemplate) {
+            val collection = instance.conf.inputSpec.collection
+            MailUtil.sendTemplate(
+              template,
+              Map(
+                "to" -> email,
+                "collectionsUrl" -> ViewPathPatterns.reverseAbs(ViewPathPatterns.Collections),
+                "datasetUrl" -> ViewPathPatterns.reverseAbs(
+                  ViewPathPatterns.Dataset,
+                  Map(
+                    "dataset_id" -> DatasetUtil.formatId(
+                      collection.userUrlId(u.id),
+                      instance.job),
+                    "sample" -> instance.conf.isSample.toString)),
+                "jobName" -> instance.job.name,
+                "collectionName" -> collection.name,
+                "userName" -> u.fullName,
+                "udqCollectionName" -> instance.conf.params.get[String]("name").getOrElse("")))
+          }
         }
       }
     }
@@ -267,19 +282,21 @@ object JobStateManager {
     if (!ShutdownHookManager.get().isShutdownInProgress) {
       if (!subJob) {
         registerFailed(instance)
-        // TODO: KeystoneClient.logFailed(instance.uuid)
-        if (!Arch.debugging && instance.attempt >= JobManager.MaxAttempts) {
-          for (template <- instance.job.failedNotificationTemplate)
+        ks(Keystone.registerJobEvent(instance.uuid, "FAILED"))
+        if (InputSpec.isCollectionBased(instance.conf.inputSpec) && {
+            !Arch.debugging && instance.attempt >= JobManager.MaxAttempts
+          }) {
+          for (template <- instance.job.failedNotificationTemplate) {
+            val collection = instance.conf.inputSpec.collection
             MailUtil.sendTemplate(
               template,
               Map(
                 "jobName" -> instance.job.name,
                 "jobId" -> instance.job.id,
-                "collectionName" -> instance.collection
-                  .map(_.name)
-                  .getOrElse(instance.conf.collectionId),
+                "collectionName" -> collection.name,
                 "accountId" -> instance.user.map(_.id).getOrElse("N/A"),
                 "userName" -> instance.user.map(_.fullName).getOrElse("anonymous")))
+          }
         }
       }
       println("Failed: " + str(instance))

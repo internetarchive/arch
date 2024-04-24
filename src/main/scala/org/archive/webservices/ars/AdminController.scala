@@ -4,7 +4,8 @@ import _root_.io.circe.parser._
 import _root_.io.circe.syntax._
 import org.apache.commons.io.input.BoundedInputStream
 import org.archive.webservices.ars.BaseController.relativePath
-import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, SpecialCollectionSpecifics}
+import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.{AitCollectionSpecifics, FileCollectionSpecifics, SpecialCollectionSpecifics}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.ars.processing.JobStateManager.Charset
@@ -12,24 +13,29 @@ import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.DigestUtil
 import org.scalatra._
-import org.scalatra.scalate.ScalateSupport
 
 import java.io.{File, FileInputStream}
 import scala.io.Source
 import scala.util.Try
 
-class AdminController extends BaseController with ScalateSupport {
+class AdminController extends BaseController {
   get("/?") {
     ensureLogin { implicit context =>
-      if (context.isAdmin)
+      if (context.isAdmin) {
+        for (u <- params.get("masquerade-user")) masqueradeUser(u)
         Ok(
-          ssp("admin", "user" -> context.loggedIn, "baseUrl" -> relativePath("")),
+          ssp(
+            "admin",
+            "user" -> context.loggedIn,
+            "baseUrl" -> relativePath(""),
+            "masqueradeUser" -> masqueradeUser.getOrElse("")),
           Map("Content-Type" -> "text/html"))
-      else Forbidden()
+      } else Forbidden()
     }
   }
 
-  private def renderEdit(user: ArchUser, message: Option[String] = None): ActionResult = {
+  private def renderEdit(user: ArchUser, message: Option[String] = None)(implicit
+      context: RequestContext): ActionResult = {
     Ok(
       ssp(
         "admin-edit",
@@ -45,14 +51,14 @@ class AdminController extends BaseController with ScalateSupport {
   }
 
   get("/edit") {
-    ensureLogin { context =>
+    ensureLogin { implicit context =>
       if (context.isAdmin) renderEdit(context.loggedIn)
       else Forbidden()
     }
   }
 
   post("/edit") {
-    ensureLogin { context =>
+    ensureLogin { implicit context =>
       if (context.isAdmin) {
         val r = for {
           usersJsonStr <- params.get("users-json")
@@ -100,6 +106,7 @@ class AdminController extends BaseController with ScalateSupport {
               ArchUser.invalidateData()
               AitCollectionSpecifics.invalidateData()
               SpecialCollectionSpecifics.invalidateData()
+              FileCollectionSpecifics.invalidateData()
               renderEdit(context.loggedIn)
           }
         }
@@ -118,10 +125,12 @@ class AdminController extends BaseController with ScalateSupport {
             val logFile = new File(s"${JobStateManager.LoggingDir}/${JobStateManager.JobLogFile}")
             val log = if (logFile.exists) {
               val skip = if (tail < 0) 0L else (logFile.length - tail.min(MaxLogLength)).max(0L)
-              val in = new BoundedInputStream(new FileInputStream(logFile), MaxLogLength)
+              val in = new FileInputStream(logFile)
               try {
                 IOUtil.skip(in, skip)
-                val source = Source.fromInputStream(in, JobStateManager.Charset)
+                val source = Source.fromInputStream(
+                  new BoundedInputStream(in, MaxLogLength),
+                  JobStateManager.Charset)
                 try {
                   source.mkString
                 } finally {

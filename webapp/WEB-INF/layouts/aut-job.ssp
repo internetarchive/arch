@@ -17,7 +17,8 @@
   <script src="<%= staticPath("/js/Chart.min.js") %>"></script>
   <script src="<%= staticPath("/js/d3.v3.min.js") %>"></script>
   #if (publishingEnabled)
-    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-9462fc8d.js") %>" type="module"></script>
+    <script src="<%= staticPath("/js/dist/arch-dataset-publishing-card-ab9bdb46.js") %>" type="module"></script>
+    <script src="<%= staticPath("/js/dist/arch-hover-tooltip-379f324f.js") %>" type="module"></script>
   #end
 #end
 
@@ -27,36 +28,9 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <div class="alert alert-warning text-center" id="macos-warning">
-      <p>We've detected macOS, and there is <a href="https://apple.stackexchange.com/questions/388759/archive-utility-cant-open-some-gzipped-text-files-based-on-their-contents" target="_blank">a known issue with Safari and Finder extracting gzipped text</a>. <br />Please use <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a> to extract your datasets.</p>
-    </div>
-    <script>
-        function macosWarning() {
-          var userAgent = window.navigator.userAgent,
-          platform = window.navigator.platform,
-          macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-          windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-          iosPlatforms = ['iPhone', 'iPad', 'iPod'],
-          os = null;
-
-          if (macosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "block";
-          } else if (iosPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (windowsPlatforms.indexOf(platform) !== -1) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (/Android/.test(userAgent)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          } else if (!os && /Linux/.test(platform)) {
-            os = document.getElementById("macos-warning").style.display = "none";
-          }
-          return os;
-        }
-        macosWarning();
-    </script>
-
   #if (publishingEnabled)
-    <h2>Publishing</h2>
+    <h2 id="publishing">Publishing</h2>
+    <p>Publish this dataset to <a href="https://archive.org">archive.org</a> for public access.</p>
     <div class="card">
       <div class="card-body">
         <arch-dataset-publishing-card
@@ -69,8 +43,10 @@
     </div>
   #end
 
-    <h2>Dataset(s)</h2>
-    <p><%=job.job.description.replace("Create a", "A")%></p>
+    <h2 id="datasets">Dataset(s)</h2>
+    <p>
+      <%=job.job.description%> For help and information, see: <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/17137082448276" target="_blank">How to download and open ARCH datasets.</a>
+    </p>
     <% for (file <- files) { %>
       <div class="card">
         <div class="card-body">
@@ -93,7 +69,7 @@
               </p>
             </div>
             <div class="dataset-download">
-              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank">
+              <a href="<%=ArchConf.basePath%>/files/download/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true&access=" else "?access=")%><%=unescape(file.accessToken)%>" target="_blank" download="<%=unescape(file.downloadName)%>">
                 <i class="fa fa-cloud-download fa-5x"></i>
                 <p class="card-text center">Download</p>
               </a>
@@ -107,7 +83,7 @@
       <% if (showPreview && file.lineCount > 0) { %>
         <div class="card">
           <div class="card-body">
-            <h2 class="card-title">Preview</h2>
+            <h2 id="preview" class="card-title">Preview</h2>
             <div id="csv-preview">
               <script>
                 d3.text('<%=ArchConf.basePath%>/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true" else "")%>', function(data) {
@@ -138,7 +114,7 @@
               </script>
             </div>
             <br />
-            <a class="right" href="<%=ArchConf.basePath%>/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true")%>" target="_blank">Download Preview Data</a>
+            <a class="right" href="<%=ArchConf.basePath%>/files/preview/<%=unescape(collection.id)%>/<%=unescape(job.job.id)%>/<%=unescape(file.filename)%><%=unescape(if (job.conf.isSample) "?sample=true")%>" target="_blank"><arch-hover-tooltip style="color: inherit;" text="Download a csv of only the data listed in the preview">Download Preview Data</arch-hover-tooltip></a>
           </div>
         </div>
       <% } %>
@@ -148,7 +124,7 @@
 
 <div class="row">
   <div class="large-12 columns">
-    <h2>Regenerate</h2>
+    <h2 id="regenerate">Regenerate</h2>
     <div class="card" id="card-re-run-job">
       <div class="card-body">
         <p>

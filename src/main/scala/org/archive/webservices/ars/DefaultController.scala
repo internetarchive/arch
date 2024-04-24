@@ -3,10 +3,9 @@ package org.archive.webservices.ars
 import org.archive.webservices.ars.BaseController.relativePath
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.processing.{DerivationJobConf, JobManager}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.util.DatasetUtil
 import org.scalatra._
-import org.scalatra.scalate.ScalateSupport
 
 import scala.util.Try
 
@@ -21,11 +20,10 @@ private object BreadCrumbs {
 
   def collection(collection: ArchCollection, user: ArchUser): (String, String) = {
     (
-      ViewPathPatterns.reverse(ViewPathPatterns.Collection,
-        Map("collection_id" -> collection.userUrlId(user.id))
-      ),
-      collection.name
-    )
+      ViewPathPatterns.reverse(
+        ViewPathPatterns.Collection,
+        Map("collection_id" -> collection.userUrlId(user.id))),
+      collection.name)
   }
 
   def datasets: (String, String) = {
@@ -36,41 +34,28 @@ private object BreadCrumbs {
     (
       ViewPathPatterns.reverse(
         ViewPathPatterns.Dataset,
-        Map("dataset_id" -> datasetId, "sample" -> sample.toString)
-      ),
-      datasetId
-    )
+        Map("dataset_id" -> datasetId, "sample" -> sample.toString)),
+      datasetId)
   }
 }
 
-class DefaultController extends BaseController with ScalateSupport {
+class DefaultController extends BaseController {
   get(ViewPathPatterns.Home) {
     ensureLogin { implicit context =>
       Ok(
         ssp(
           "dashboard",
-          "breadcrumbs" -> Seq(
-            (ViewPathPatterns.reverse(ViewPathPatterns.Home), "Home"),
-          ),
-          "user" -> context.user,
-        ),
-        Map("Content-Type" -> "text/html")
-      )
+          "breadcrumbs" -> Seq((ViewPathPatterns.reverse(ViewPathPatterns.Home), "Home")),
+          "user" -> context.user),
+        Map("Content-Type" -> "text/html"))
     }
   }
 
   get(ViewPathPatterns.Collections) {
     ensureLogin { implicit context =>
       Ok(
-        ssp(
-          "collections",
-          "breadcrumbs" -> Seq(
-            BreadCrumbs.collections,
-          ),
-          "user" -> context.user,
-        ),
-        Map("Content-Type" -> "text/html")
-      )
+        ssp("collections", "breadcrumbs" -> Seq(BreadCrumbs.collections), "user" -> context.user),
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -86,36 +71,12 @@ class DefaultController extends BaseController with ScalateSupport {
       ArchCollection
         .get(collectionId)
         .map { collection =>
-          collection.ensureStats()
           Ok(
             ssp(
               "collection-details",
               "breadcrumbs" -> Seq(
                 BreadCrumbs.collections,
-                BreadCrumbs.collection(collection, context.user),
-              ),
-              "user" -> context.user,
-              "collection" -> collection),
-            Map("Content-Type" -> "text/html"))
-        }
-        .getOrElse(NotFound())
-    }
-  }
-
-  get("/collections/:collection_id/subset") {
-    ensureLogin { implicit context =>
-      val collectionId = ArchCollection.userCollectionId(params("collection_id"))
-      ArchCollection
-        .get(collectionId)
-        .map { collection =>
-          Ok(
-            ssp(
-              "subset",
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.collections,
-                BreadCrumbs.collection(collection, context.user),
-                (relativePath("/collections/" + collectionId + "/subset"), "Sub-Collection Query")
-              ),
+                BreadCrumbs.collection(collection, context.user)),
               "user" -> context.user,
               "collection" -> collection),
             Map("Content-Type" -> "text/html"))
@@ -131,12 +92,11 @@ class DefaultController extends BaseController with ScalateSupport {
           "sub-collection-builder",
           "breadcrumbs" -> Seq(
             BreadCrumbs.collections,
-            (ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder), "Custom Collection Builder"),
-          ),
-          "user" -> context.user,
-        ),
-        Map("Content-Type" -> "text/html")
-      )
+            (
+              ViewPathPatterns.reverse(ViewPathPatterns.CustomCollectionBuilder),
+              "Custom Collection Builder")),
+          "user" -> context.user),
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -152,61 +112,24 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  // TODO - prune this route and associated template
-  // get(/:collection_id/jobs) {
-  //   ensureLogin { implicit context =>
-  //     val collectionId = ArchCollection.userCollectionId(params("collection_id"))
-  //     (for {
-  //       collection <- ArchCollection.get(collectionId)
-  //     } yield {
-  //       val jobs =
-  //         JobManager.jobs.values.toSeq
-  //           .filter(_.category != ArchJobCategories.None)
-  //           .groupBy(_.category)
-  //           .map {
-  //             case (category, jobs) =>
-  //               category -> jobs.sortBy(_.name.toLowerCase)
-  //           }
-  //       Ok(
-  //         ssp(
-  //           "jobs",
-  //           "breadcrumbs" -> Seq(
-  //             (relativePath("/" + collection.userUrlId + "/analysis"), collection.name),
-  //             (relativePath("/" + collection.userUrlId + "/jobs"), "Generate Datasets")),
-  //           "jobs" -> jobs,
-  //           "user" -> context.user,
-  //           "collection" -> collection),
-  //         Map("Content-Type" -> "text/html"))
-  //     }).getOrElse(NotFound())
-  //   }
-  // }
-
   get(ViewPathPatterns.Dataset) {
     ensureLogin { implicit context =>
       val datasetId = params("dataset_id")
       val sample = params.get("sample").contains("true")
       (for {
-        (collection, job) <- DatasetUtil.parseId(datasetId, context.user);
-        conf <- DerivationJobConf.collection(collection, sample)
-        instance <- JobManager.getInstanceOrGlobal(
-          job.id,
-          conf,
-          DerivationJobConf.collection(collection, sample, global = true)
-        )
+        (collection, job) <- DatasetUtil.parseId(datasetId, context.user)
+        instance <- DerivationJobConf.collectionInstance(job.id, collection, sample)
       } yield {
         instance.job.templateName match {
           case Some(templateName) =>
             val attributes = Seq(
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.datasets,
-                BreadCrumbs.dataset(datasetId, sample),
-              ),
+              "breadcrumbs" -> Seq(BreadCrumbs.datasets, BreadCrumbs.dataset(datasetId, sample)),
               "user" -> context.user,
               "collection" -> collection,
               "job" -> instance,
-              "files" -> instance.outFiles,
-              "publishingEnabled" -> !PublishedDatasets.ProhibitedJobs.contains(instance.job),
-            ) ++ instance.templateVariables
+              "files" -> instance.outFiles.map(_.prefixDownload(instance)),
+              "publishingEnabled" -> !PublishedDatasets.ProhibitedJobs.contains(
+                instance.job)) ++ instance.templateVariables
             Ok(ssp(templateName, attributes: _*), Map("Content-Type" -> "text/html"))
           case None =>
             NotFound()
@@ -215,30 +138,6 @@ class DefaultController extends BaseController with ScalateSupport {
     }
   }
 
-  // TODO - prune this route and associated template
-  // get("/subset/?") {
-  //   ensureLogin { implicit context =>
-  //     val collectionId = ArchCollection.userCollectionId("UNION-UDQ")
-  //     ArchCollection
-  //       .get(collectionId)
-  //       .map { collection =>
-  //         Ok(
-  //           ssp(
-  //             "union-subset",
-  //             "breadcrumbs" -> Seq((relativePath("/subset"), "Sub-Collection Query")),
-  //             "user" -> context.user,
-  //             "collection" -> collection,
-  //             "collections" -> ArchCollection
-  //               .userCollections(context.user)
-  //               .map(_.sourceId)
-  //               .distinct
-  //               .sorted),
-  //           Map("Content-Type" -> "text/html"))
-  //       }
-  //       .getOrElse(NotFound())
-  //   }
-  // }
-
   get(ViewPathPatterns.DatasetExplorer) {
     ensureLogin { implicit context =>
       Ok(
@@ -246,12 +145,9 @@ class DefaultController extends BaseController with ScalateSupport {
           "datasets-explore",
           "breadcrumbs" -> Seq(
             BreadCrumbs.datasets,
-            (ViewPathPatterns.reverse(ViewPathPatterns.DatasetExplorer), "Explore"),
-          ),
-          "user" -> context.user,
-        ),
-        Map("Content-Type" -> "text/html")
-      )
+            (ViewPathPatterns.reverse(ViewPathPatterns.DatasetExplorer), "Explore")),
+          "user" -> context.user),
+        Map("Content-Type" -> "text/html"))
     }
   }
 
@@ -262,25 +158,16 @@ class DefaultController extends BaseController with ScalateSupport {
           "datasets-generate",
           "breadcrumbs" -> Seq(
             BreadCrumbs.datasets,
-            (ViewPathPatterns.reverse(ViewPathPatterns.GenerateDataset), "Generate"),
-          ),
-          "user" -> context.user,
-        ),
-        Map("Content-Type" -> "text/html")
-      )
+            (ViewPathPatterns.reverse(ViewPathPatterns.GenerateDataset), "Generate")),
+          "user" -> context.user),
+        Map("Content-Type" -> "text/html"))
     }
   }
 
   get(ViewPathPatterns.Login) {
     val next = Try(params("next")).toOption.filter(_ != null).getOrElse(ArchConf.baseUrl)
     Ok(
-      ssp(
-        "login",
-        "breadcrumbs" -> Seq(
-          BreadCrumbs.login,
-        ),
-        "next" -> next
-      ),
+      ssp("login", "breadcrumbs" -> Seq(BreadCrumbs.login), "next" -> next),
       Map("Content-Type" -> "text/html"))
   }
 
@@ -296,10 +183,7 @@ class DefaultController extends BaseController with ScalateSupport {
               "login",
               "error" -> Some(error),
               "next" -> next,
-              "breadcrumbs" -> Seq(
-                BreadCrumbs.login,
-              ),
-            ),
+              "breadcrumbs" -> Seq(BreadCrumbs.login)),
             Map("Content-Type" -> "text/html"))
         case None =>
           Found(next)
@@ -313,6 +197,7 @@ class DefaultController extends BaseController with ScalateSupport {
 
   get("/logout") {
     ArchUser.logout()
+    clearMasqueradeUser()
     login(ArchConf.baseUrl)
   }
 }

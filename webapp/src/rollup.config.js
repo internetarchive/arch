@@ -78,6 +78,7 @@ export default {
     "./src/archDatasetMetadataForm/src/arch-dataset-metadata-form.ts",
     "./src/archDatasetPublishingCard/src/arch-dataset-publishing-card.ts",
     "./src/archGenerateDatasetForm/src/arch-generate-dataset-form.ts",
+    "./src/archHoverTooltip/src/arch-hover-tooltip.ts",
     "./src/archRecentDatasetsCard/src/arch-recent-datasets-card.ts",
     "./src/archSubCollectionBuilder/src/arch-sub-collection-builder.ts",
   ],

@@ -5,6 +5,7 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
+import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -13,6 +14,7 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil}
 
 import java.io._
 import java.nio.file.Files
+import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
@@ -21,9 +23,19 @@ import scala.util.Try
 object IOHelper {
   val SamplingScaleUpFactor = 4 // see RDD#take (conf.getInt("spark.rdd.limit.scaleUpFactor", 4))
   val SamplingMaxReadPerPartitionFactor = 2
+  val SpecialCharEscape = "-"
 
   def escapePath(path: String): String = {
-    path.replace(ArchCollection.UserIdSeparator, ArchCollection.PathUserEscape)
+    path
+      .replace(ArchCollection.UserIdSeparator, SpecialCharEscape)
+      .replace(ArchUser.PrefixNameSeparator, SpecialCharEscape)
+  }
+
+  def pathTimestamp(timestamp: Instant): String =
+    timestamp.toString.replaceAll("[^\\d]", "").take(14)
+
+  def concatPaths(paths: String*): String = {
+    paths.map(_.trim).filter(_.nonEmpty).mkString("/").replaceAll("/+", "/")
   }
 
   def tempDir[R](action: String => R): R = {
@@ -153,33 +165,31 @@ object IOHelper {
                       context.partitionId,
                       CleanupIterator
                         .flatten(partition.map(_._2))
-                        .iter {
-                          iter =>
-                            val conditions = conditionsBc.value.zipWithIndex
-                            val candidates = iter.take(sample * SamplingMaxReadPerPartitionFactor)
-                            var matches = Set.empty[Int]
-                            while (matches.size < conditions.size && candidates.hasNext) {
-                              val r = candidates.next
-                              read += 1
-                              val matching = conditions.filter(_._1(r)).map(_._2).toSet
-                              if ((matching -- matches).nonEmpty) {
-                                matches ++= matching
-                                take = read
-                              }
+                        .iter { iter =>
+                          val conditions = conditionsBc.value.zipWithIndex
+                          val candidates = iter.take(sample * SamplingMaxReadPerPartitionFactor)
+                          var matches = Set.empty[Int]
+                          while (matches.size < conditions.size && candidates.hasNext) {
+                            val r = candidates.next
+                            read += 1
+                            val matching = conditions.filter(_._1(r)).map(_._2).toSet
+                            if ((matching -- matches).nonEmpty) {
+                              matches ++= matching
+                              take = read
                             }
-                            matches
+                          }
+                          matches
                         },
                       take)
                   },
                   partitions)
               var matches = Set.empty[Int]
               totalResults = (totalResults ++ results).sortBy(-_._2.size)
-              val matchingPartitions = totalResults.flatMap {
-                case (p, c, t) =>
-                  if ((c -- matches).nonEmpty) {
-                    matches ++= c
-                    Some((p, t))
-                  } else None
+              val matchingPartitions = totalResults.flatMap { case (p, c, t) =>
+                if ((c -- matches).nonEmpty) {
+                  matches ++= c
+                  Some((p, t))
+                } else None
               }.sorted
               val continue = end < maxPartitions && matches.size < conditions.size
               if (continue) {
@@ -210,11 +220,14 @@ object IOHelper {
           IteratorUtil.whileDefined {
             if (remaining > 0 && p.hasNext) Some {
               val (k, records) = p.next
-              (k, records.chain(_.take(remaining).map { r =>
-                remaining -= 1
-                r
-              }))
-            } else None
+              (
+                k,
+                records.chain(_.take(remaining).map { r =>
+                  remaining -= 1
+                  r
+                }))
+            }
+            else None
           }
         } else Iterator.empty
       })
@@ -251,11 +264,18 @@ object IOHelper {
     }
   }
 
-  def splitMergeInputStreams(in: InputStream, positions: Iterator[(Long, Long)]): InputStream = {
+  def splitMergeInputStreams(
+      in: InputStream,
+      positions: Iterator[(Long, Long)],
+      buffered: Boolean = true): InputStream = {
     val split = IOUtil.splitStream(in, positions)
     val merged = new ChainedInputStream(split, nextOnError = true)
-    val buffer = IOUtil.copyToBuffer(merged)
-    in.close()
-    new CleanupInputStream(buffer.get.get, () => buffer.clear(false))
+    if (buffered) {
+      val buffer = IOUtil.copyToBuffer(merged)
+      in.close()
+      new CleanupInputStream(buffer.get.get, () => buffer.clear(false))
+    } else {
+      merged
+    }
   }
 }

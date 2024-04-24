@@ -2,7 +2,7 @@ package org.archive.webservices.ars.processing
 
 import io.circe.parser._
 import io.circe.syntax._
-import io.circe.{Decoder, Encoder, Json}
+import io.circe.{Decoder, Encoder, HCursor, Json}
 
 case class DerivationJobParameters(values: Map[String, Json]) extends Serializable {
   def size: Int = values.size
@@ -29,15 +29,14 @@ case class DerivationJobParameters(values: Map[String, Json]) extends Serializab
 object DerivationJobParameters {
   val Empty: DerivationJobParameters = DerivationJobParameters(Map.empty)
 
-  def fromJson(json: Json): Option[DerivationJobParameters] = {
-    val cursor = json.hcursor
-    cursor.keys.map { keys =>
-      val params = keys.flatMap { key =>
-        cursor.downField(key).focus.map(key -> _)
-      }.toMap
-      DerivationJobParameters(params)
-    }
+  def fromJson(cursor: HCursor): Option[DerivationJobParameters] = cursor.keys.map { keys =>
+    val params = keys.flatMap { key =>
+      cursor.downField(key).focus.map(key -> _)
+    }.toMap
+    DerivationJobParameters(params)
   }
+
+  def fromJson(json: Json): Option[DerivationJobParameters] = fromJson(json.hcursor)
 
   def fromJson(json: String): Option[DerivationJobParameters] =
     parse(json).right.toOption.flatMap(fromJson)

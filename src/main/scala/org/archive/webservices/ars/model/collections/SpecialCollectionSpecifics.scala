@@ -3,10 +3,11 @@ package org.archive.webservices.ars.model.collections
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.io.InputStream
@@ -23,31 +24,35 @@ class SpecialCollectionSpecifics(val id: String) extends CollectionSpecifics {
       .flatMap(_.get[String]("path").toOption)
       .get
 
-  def collection(
-      implicit context: RequestContext = RequestContext.None): Option[ArchCollection] = {
+  def collection(implicit
+      context: RequestContext = RequestContext.None): Option[ArchCollection] = {
     if (context.isInternal || context.loggedInOpt.exists { u =>
-          u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
-        }) SpecialCollectionSpecifics.collection(specialId, userId)
+        u.isAdmin || SpecialCollectionSpecifics.userCollectionIds(u).contains(specialId)
+      }) SpecialCollectionSpecifics.collection(specialId, userId)
     else None
   }
 
-  def size(implicit context: RequestContext = RequestContext.None): Long =
-    HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength
+  override def stats(implicit
+      context: RequestContext = RequestContext.None): ArchCollectionStats = {
+    ArchCollectionStats(HdfsIO.fs.getContentSummary(new Path(inputPath)).getLength)
+  }
 
-  def seeds(implicit context: RequestContext = RequestContext.None): Int = -1
-
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String = ""
-
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R =
-    CollectionLoader.loadWarcFiles(inputPath)(action)
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
+    val sourceId = this.sourceId
+    WebArchiveLoader.loadWarcFiles(inputPath) { rdd =>
+      action(rdd.map { case (filename, in) =>
+        (CollectionSpecifics.pointer(sourceId, filename), in)
+      })
+    }
+  }
 
   def randomAccess(
       context: CollectionAccessContext,
       inputPath: String,
-      pointer: CollectionSourcePointer,
+      pointer: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    CollectionLoader.randomAccessHdfs(
+    WebArchiveLoader.randomAccessHdfs(
       context,
       inputPath + "/" + pointer.filename,
       offset,

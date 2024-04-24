@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.users
 
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.archive.webservices.ars.ait.{Ait, AitUser}
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
@@ -26,6 +27,7 @@ trait ArchUser {
 object ArchUser {
   val AitPrefix = "ait"
   val ArchPrefix = "arch"
+  val PrefixNameSeparator = ":"
 
   val UserSessionAttribute = "arch-user"
 
@@ -78,7 +80,7 @@ object ArchUser {
         .contains("sha1:" + DigestUtil.sha1Base32(password.get)))
       .map { cursor =>
         DefaultArchUser(
-          ArchPrefix + ":" + name,
+          ArchPrefix + PrefixNameSeparator + name,
           name,
           cursor.get[String]("name").getOrElse(name),
           cursor.get[String]("email").toOption.map(_.trim).filter { email =>
@@ -93,26 +95,34 @@ object ArchUser {
           cursor.get[Boolean]("admin").getOrElse(false))
       }
 
-  def login(username: String, password: String)(
-      implicit request: HttpServletRequest,
+  def login(username: String, password: String)(implicit
+      request: HttpServletRequest,
       response: HttpServletResponse): Option[String] = {
     val (prefix, name) =
-      if (username.contains(":"))
+      if (username.contains(PrefixNameSeparator))
         (
-          StringUtil.prefixBySeparator(username, ":"),
-          StringUtil.stripPrefixBySeparator(username, ":"))
+          StringUtil.prefixBySeparator(username, PrefixNameSeparator),
+          StringUtil.stripPrefixBySeparator(username, PrefixNameSeparator))
       else (ArchPrefix, username)
-    prefix match {
+    (if (ArchConf.forceKeystoneLogin) KeystoneUser.prefix else prefix) match {
       case ArchPrefix =>
         archUser(name, Some(password)) match {
           case Some(user) =>
             request.getSession.setAttribute(UserSessionAttribute, user)
             scala.None
           case scala.None =>
-            Some("Wrong username or password!")
+            Some("Wrong username or password")
         }
       case AitPrefix =>
         Ait.login(name, password, response).left.toOption
+      case KeystoneUser.prefix =>
+        KeystoneUser.login(name, password) match {
+          case Some(user) => {
+            request.getSession.setAttribute(UserSessionAttribute, user)
+            scala.None
+          }
+          case scala.None => Some("Wrong username or password")
+        }
       case _ =>
         Some("User not found.")
     }
@@ -132,7 +142,6 @@ object ArchUser {
   def get(useSession: Boolean)(implicit request: HttpServletRequest): Option[ArchUser] = {
     Option(request.getSession.getAttribute(UserSessionAttribute))
       .map(_.asInstanceOf[ArchUser])
-      .orElse(Ait.user(useSession).filter(u => aitUserIds.contains(u.id)).map(AitArchUser(_)))
       .orElse {
         request
           .header("Authorization")
@@ -142,23 +151,28 @@ object ArchUser {
           .map(StringUtil.stripPrefixBySeparator(_, " "))
           .flatMap { base64 =>
             val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
-            val Array(user, password) = userPassword.stripPrefix(ArchPrefix + ":").split(":", 2)
+            val Array(user, password) = userPassword
+              .stripPrefix(ArchPrefix + PrefixNameSeparator)
+              .split(PrefixNameSeparator, 2)
             archUser(user, Some(password))
           }
       }
   }
 
-  def get(id: String)(
-      implicit context: RequestContext = RequestContext.None): Option[ArchUser] = {
+  def get(id: String)(implicit
+      context: RequestContext = RequestContext.None): Option[ArchUser] = {
     val (prefix, suffix) =
-      if (id.contains(":"))
-        (StringUtil.prefixBySeparator(id, ":"), StringUtil.stripPrefixBySeparator(id, ":"))
+      if (id.contains(PrefixNameSeparator))
+        (
+          StringUtil.prefixBySeparator(id, PrefixNameSeparator),
+          StringUtil.stripPrefixBySeparator(id, PrefixNameSeparator))
       else (AitPrefix, id)
     prefix match {
       case ArchPrefix =>
         archUser(suffix)
       case AitPrefix =>
         Try(suffix.toInt).toOption.flatMap(Ait.user(_)).map(AitArchUser(_))
+      case KeystoneUser.prefix => KeystoneUser.get(suffix)
       case _ =>
         scala.None
     }

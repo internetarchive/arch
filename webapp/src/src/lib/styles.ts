@@ -135,6 +135,37 @@ export const global = css`
     content: none;
     padding-right: 0;
   }
+
+  form > label {
+    font-size: 1rem;
+    color: black;
+    cursor: pointer;
+    display: block;
+    font-weight: bold;
+    line-height: 1.5;
+    margin-bottom: 0;
+  }
+
+  form > em {
+    display: block;
+    padding: 0.5rem 0;
+    color: #444;
+  }
+
+  input,
+  select {
+    background-color: #fff;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    color: rgba(0, 0, 0, 0.75);
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+
+  label.required:after {
+    content: "*";
+    color: red;
+  }
 `;
 
 /**

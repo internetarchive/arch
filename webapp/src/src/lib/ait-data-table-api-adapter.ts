@@ -1,3 +1,5 @@
+import { FilteredApiResponse, DistinctApiResponse } from "./types";
+
 import { DataTable } from "./webservices/src/aitDataTable/src/types";
 
 export default class API<RowT> {
@@ -6,7 +8,7 @@ export default class API<RowT> {
   constructor(dataTable: DataTable<RowT>) {
     this.dataTable = dataTable;
 
-    // Make DataTable.doTotalHitsQuery() a noop because Vault API responses include
+    // Make DataTable.doTotalHitsQuery() a noop because ARCH API responses include
     // a 'count' property, which we will use to manually update the DataTable hit
     // count in DataTableAPIAdapter.get().
     dataTable.doTotalHitsQuery = () => new Promise(() => null);
@@ -18,35 +20,43 @@ export default class API<RowT> {
     const { searchParams } = url;
 
     // Remove unsupported params.
-    searchParams.delete("limit");
-    searchParams.delete("offset");
     searchParams.delete("search_fields");
-    searchParams.delete("sort");
+
+    // Remove limit=-1
+    if (searchParams.get("limit") === "-1") {
+      searchParams.delete("limit");
+    }
+
+    // Replace te Django-style {field}__in={csv} params with discrete
+    // {field}={value} params.
+    Array.from(searchParams.keys())
+      .filter((k) => k.endsWith("__in"))
+      .forEach((k) => {
+        const finalK = k.slice(0, k.length - 4);
+        (searchParams.get(k) as string)
+          .split(",")
+          .forEach((v) => searchParams.append(finalK, v));
+        searchParams.delete(k);
+      });
 
     // Extract the final API path.
     apiPath = url.href.slice(url.origin.length);
 
     // Make the request.
-    const response = await fetch(
-      `${this.dataTable.props.apiBaseUrl}${apiPath}`,
-      {
+    const response = (await (
+      await fetch(`${this.dataTable.props.apiBaseUrl}${apiPath}`, {
         credentials: "same-origin",
         headers: {
           accept: "application/json",
         },
-      }
-    );
+      })
+    ).json()) as FilteredApiResponse<RowT> | DistinctApiResponse<RowT>;
 
-    // Clone the response and read the results count.
-    const count = ((await response.clone().json()) as Array<RowT>).length;
+    // Read the total results count.
+    const { count } = response;
 
-    // If request was not a facets query (as indicated by the presence of the
-    // _distinct, _pluck_ _flat URL params), update the dataTable hit counts.
-    const wasFacetsQuery =
-      searchParams.has("_distinct") &&
-      searchParams.has("_pluck") &&
-      searchParams.has("_flat");
-    if (!wasFacetsQuery) {
+    // If request was not a distinct / facets query, update the dataTable hit counts.
+    if (!searchParams.has("distinct")) {
       const dataTable = this.dataTable;
       const { selectable } = dataTable.props;
       const { search } = dataTable.state;
@@ -58,7 +68,11 @@ export default class API<RowT> {
       void dataTable.updatePaginator();
     }
 
-    // Return the response.
-    return response;
+    // The DataTable expects a Response-type object, for which json() will
+    // return the requested object, i.e. the 'results' part of the ARCH API
+    // response. So let's give it what it wants.
+    return {
+      json: () => Promise.resolve(response.results),
+    };
   }
 }

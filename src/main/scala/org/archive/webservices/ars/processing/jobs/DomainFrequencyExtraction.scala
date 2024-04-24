@@ -15,20 +15,20 @@ import java.io.PrintStream
 
 object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
+  val uuid = "01894bc7-ff6a-7e25-a5b5-4570425a8ab7"
   val category: ArchJobCategory = ArchJobCategories.Collection
   val description =
-    "Create a CSV with the following columns: domain and count."
+    "The number of unique documents collected from each domain in the collection. Output: one CSV file with columns for domain and count."
 
   val targetFile: String = "domain-frequency.csv.gz"
 
-  override def printToOutputStream(out: PrintStream): Unit = out.println("domain,count")
+  override def printToOutputStream(out: PrintStream): Unit = out.println("domain, count")
 
   override def df(rdd: RDD[(String, Long)]): Dataset[Row] = {
     val rows = rdd
       .reduceByKey(_ + _)
-      .map {
-        case (domain, count) =>
-          Row(domain, count)
+      .map { case (domain, count) =>
+        Row(domain, count)
       }
     AutLoader.domainFrequency(rows).orderBy(desc("count"))
   }

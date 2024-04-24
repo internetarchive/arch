@@ -1,8 +1,7 @@
 package org.archive.webservices.ars
 
-import org.scalatra.SinatraRouteMatcher
-
 import org.archive.webservices.ars.model.ArchConf
+import org.scalatra.SinatraRouteMatcher
 
 object ViewPathPatterns {
   val Collection = "/collections/:collection_id"

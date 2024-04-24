@@ -1,9 +1,11 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, CollectionLoader, CollectionSourcePointer}
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
+import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
 import java.io.InputStream
@@ -11,22 +13,24 @@ import java.io.InputStream
 abstract class CollectionSpecifics {
   def id: String
   def inputPath: String
+  def sourceId: String = id
+
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection]
-  def size(implicit context: RequestContext = RequestContext.None): Long
-  def seeds(implicit context: RequestContext = RequestContext.None): Int
-  def lastCrawlDate(implicit context: RequestContext = RequestContext.None): String
-  def loadWarcFiles[R](inputPath: String)(action: RDD[(String, InputStream)] => R): R
+  def stats(implicit context: RequestContext = RequestContext.None): ArchCollectionStats
+  def inputSize(conf: DerivationJobConf): Long = conf.inputSpec.collection.stats.size
+  def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R
+
   def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = loadWarcFiles(inputPath) {
     rdd =>
-      action(CollectionLoader.loadCdxFromWarcGzStreams(rdd, sourceId))
+      action(WebArchiveLoader.loadCdxFromWarcGzStreams(rdd))
   }
+
   def randomAccess(
       context: CollectionAccessContext,
       inputPath: String,
-      pointer: CollectionSourcePointer,
+      pointer: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream
-  def sourceId: String = id
 }
 
 object CollectionSpecifics {
@@ -36,6 +40,10 @@ object CollectionSpecifics {
       case SpecialCollectionSpecifics.Prefix => new SpecialCollectionSpecifics(id)
       case CustomCollectionSpecifics.Prefix => new CustomCollectionSpecifics(id)
       case UnionCollectionSpecifics.Prefix => new UnionCollectionSpecifics(id)
+      case FileCollectionSpecifics.Prefix => new FileCollectionSpecifics(id)
     }
   }
+
+  def pointer(sourceId: String, filename: String): FilePointer =
+    FilePointer(sourceId + FilePointer.SourceSeparator + filename, filename)
 }

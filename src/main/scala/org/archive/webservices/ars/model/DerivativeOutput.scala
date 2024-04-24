@@ -4,6 +4,7 @@ import _root_.io.circe._
 import _root_.io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.processing.DerivationJobInstance
 import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
@@ -12,15 +13,20 @@ import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.time.Instant
 import scala.util.Try
 
-case class DerivativeOutput(filename: String, dir: String, fileType: String, mimeType: String) {
+case class DerivativeOutput(
+    filename: String,
+    dir: String,
+    fileType: String,
+    mimeType: String,
+    downloadName: String) {
   import DerivativeOutput._
 
   lazy val path: String = dir + "/" + filename
 
-  lazy val (size, time) = {
+  lazy val (size, time) = Try {
     val status = HdfsIO.fs.getFileStatus(new Path(path))
     (status.getLen, status.getModificationTime)
-  }
+  }.getOrElse((0L, 0L))
   lazy val sizeStr: String = IOHelper.sizeStr(path)
 
   lazy val lineCount: Long = {
@@ -46,11 +52,27 @@ case class DerivativeOutput(filename: String, dir: String, fileType: String, mim
   lazy val timeStr: String = FormatUtil.instantTimeString(Instant.ofEpochMilli(time))
 
   lazy val accessToken: String = DigestUtil.sha1Base32(filename + size + time)
+
+  def prefixDownload(prefix: String): DerivativeOutput =
+    copy(downloadName = IOHelper.escapePath(prefix) + filename)
+
+  def prefixDownload(instance: DerivationJobInstance): DerivativeOutput = {
+    val timestamp = instance.info.finished.map(IOHelper.pathTimestamp).map(_ + "_")
+    prefixDownload(instance.conf.inputSpec.id + "_" + timestamp.getOrElse(""))
+  }
 }
 
 object DerivativeOutput {
   val LineCountFileSuffix = "_linecount"
   val ChecksumsFileSuffix = ".checksums"
+
+  def apply(
+      filename: String,
+      dir: String,
+      fileType: String,
+      mimeType: String): DerivativeOutput = {
+    DerivativeOutput(filename, dir, fileType, mimeType, filename)
+  }
 
   def hashFile(in: InputStream): Map[String, String] = Map("md5" -> DigestUtil.md5Hex(in))
 

@@ -15,7 +15,6 @@ class RequestContext private (
   def userOpt: Option[ArchUser] = user.option
   def isAdmin: Boolean = loggedIn.isAdmin
   def forRequest[R](action: HttpServletRequest => Option[R]): Option[R] = request.flatMap(action)
-  def forUser(user: ArchUser): RequestContext = new RequestContext(request, loggedIn, user)
 }
 
 object RequestContext {
@@ -27,8 +26,8 @@ object RequestContext {
       user: ArchUser): RequestContext = {
     new RequestContext(request, loggedIn, user)
   }
-  def apply(loggedIn: ArchUser, user: ArchUser)(
-      implicit request: HttpServletRequest): RequestContext = {
+  def apply(loggedIn: ArchUser, user: ArchUser)(implicit
+      request: HttpServletRequest): RequestContext = {
     RequestContext(Some(request), loggedIn, user)
   }
   def apply(user: ArchUser)(implicit request: HttpServletRequest): RequestContext = {

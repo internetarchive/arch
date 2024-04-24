@@ -12,15 +12,16 @@ import java.io.PrintStream
 
 object WebGraphExtraction extends NetworkAutJob[Row] {
   val name = "Web graph"
+  val uuid = "01895069-e74c-79de-8292-effb45265179"
   val description =
-    "Create a CSV with the following columns: crawl date, source, target, and anchor text. Note that this contains all links and is not aggregated into domains."
+    "Links between all documents in the collection over time and any descriptive anchor text about with them. Output: one CSV file with columns for crawl date, source, target, and anchor text."
 
   val targetFile: String = "web-graph.csv.gz"
 
   val srcDstFields: (String, String) = ("src", "dest")
 
   override def printToOutputStream(out: PrintStream): Unit =
-    out.println("crawl_date,source,target,anchor_text")
+    out.println("crawl_date, source, target, anchor_text")
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.webGraph(rdd)
 
@@ -32,9 +33,8 @@ object WebGraphExtraction extends NetworkAutJob[Row] {
             val url = AutUtil.url(r)
             AutUtil
               .extractLinks(ExtractLinks.apply, url, HttpUtil.bodyString(http.body, http))
-              .map {
-                case (source, target, alt) =>
-                  Row(AutUtil.timestamp(r), source, target, alt)
+              .map { case (source, target, alt) =>
+                Row(AutUtil.timestamp(r), source, target, alt)
               }
           }
           .toIterator

@@ -4,14 +4,15 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.util.SparkUtil
+import org.archive.webservices.sparkling.{Sparkling, _}
 
 import java.io.File
 import scala.concurrent.Future
 
-object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 60 * 3) {
+object SparkJobManager
+    extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
   val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128
@@ -25,13 +26,14 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
         val context = SparkUtil.config(
           SparkSession.builder,
           appName = "ARCH",
-          executors = 20,
+          executors = 15,
           executorCores = 4,
           executorMemory = "16g",
           queue = ArchConf.hadoopQueue,
           additionalConfigs = Map(
             "spark.master" -> ArchConf.sparkMaster,
             "spark.scheduler.mode" -> "FAIR",
+            "spark.yarn.executor.memoryOverhead" -> (4.gb / 1.mb).toString, // off-heap memory in MiB
             "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath),
           verbose = true)
         context.setLogLevel("INFO")
@@ -43,9 +45,11 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
     }
   }
 
+  private def priorityWeight: Int = if (currentPriority == 0) 1 else currentPriority
+
   def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
     sc.setJobGroup(job.id + "-" + conf.hashCode, job.name + " " + conf.serialize)
-    sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + currentPriority)
+    sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
   }
 
   def stopContext(): Unit = synchronized {
@@ -62,11 +66,6 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
     if (!Arch.debugging) stopContext()
   }
 
-  override protected def onPriorityJobsFinished(priority: Int): Unit = synchronized {
-    super.onPriorityJobsFinished(priority)
-    removePriority(priority)
-  }
-
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
     super.onTimeout(instances)
 //    stopContext()
@@ -75,8 +74,8 @@ object SparkJobManager extends JobManagerBase("Spark", 3, timeoutSeconds = 60 * 
   }
 
   def bypassJobs(): Boolean = synchronized {
-    if (currentPriority < MaxPriorityWeight && priorityRunningCount > 0) {
-      newPriority(currentPriority * 2)
+    if (priorityWeight < MaxPriorityWeight && priorityRunningCount > 0) {
+      newPriority(priorityWeight * 2)
       true
     } else false
   }

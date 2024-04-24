@@ -44,7 +44,7 @@ object CollectionCache {
       .getOrElse(0L)
     if (length > CacheClearThresholdBytes) {
       for (dir <- fs.listStatus(new Path(ArchConf.collectionCachePath))
-           if dir.isDirectory) {
+        if dir.isDirectory) {
         val path = dir.getPath
         val c = path.getName
         if (!inUse.contains(c) && !lastUse.contains(c)) {

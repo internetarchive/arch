@@ -22,14 +22,19 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Try
 
-abstract class BinaryInformationAutJob extends AutJob[Row] {
-  val category: ArchJobCategory = ArchJobCategories.BinaryInformation
-
+object BinaryInformationAutJob {
   val MimeTypeCountFile: String = "mime-type-count.csv.gz"
+  val MimeTypeColumn: String = "mime_type_web_server"
+}
+
+abstract class BinaryInformationAutJob extends AutJob[Row] {
+  import BinaryInformationAutJob._
+
+  val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
   override def printToOutputStream(out: PrintStream): Unit =
     out.println(
-      "crawl_date,last_modified_date,url,filename,extension,mime_type_web_server,mime_type_tika,md5,sha1")
+      "crawl_date, last_modified_date, url, filename, extension, mime_type_web_server, mime_type_tika, md5, sha1")
 
   def checkMime(url: String, server: String, tika: String): Boolean
 
@@ -38,7 +43,7 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
   protected def computeMimeTypeCounts(dataset: Dataset[Row], outPath: String): Unit = {
     RddUtil.saveAsTextFile(
       dataset.rdd
-        .map(r => (r.getAs[String]("mime_type_web_server"), 1L))
+        .map(r => (r.getAs[String](MimeTypeColumn), 1L))
         .reduceByKey(_ + _)
         .sortBy(-_._2)
         .map { case (m, c) => m + "," + c },
@@ -64,13 +69,14 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
         val url = AutUtil.url(r)
         val body = http.body
         val lastModifiedDate =
-          AutUtil.rfc1123toTime14(http.headerMap.get("last-modified").getOrElse(""))
+          AutUtil.rfc1123toTime14(http.headerMap.getOrElse("last-modified", ""))
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
           val crawlDate = AutUtil.timestamp(r)
           if (crawlDate.nonEmpty) Some {
             row(url, http, body, tikaMime, crawlDate, lastModifiedDate)
-          } else None
+          }
+          else None
         } else None
       }
     }

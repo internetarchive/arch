@@ -7,9 +7,10 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 object PdfInformationExtraction extends BinaryInformationAutJob {
   val name = "PDF file information"
+  val uuid = "01895068-3e02-72cb-b0d9-4e1bacc42c37"
 
   val description =
-    "Create a CSV with the following columns: crawl date, last modified date, URL of the PDF file, filename, PDF extension, MIME type as provided by the web server, MIME type as detected by Apache TIKA, PDF MD5 hash and PDF SHA1 hash."
+    "Locations and metadata for Portable Document Format (PDF) files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
   val targetFile: String = "pdf-information.csv.gz"
 
