@@ -8,6 +8,8 @@ import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
 
 object MetaFilesSpecLoader extends InputSpecLoader {
+  val specType = "meta-files"
+
   val MetaGlobKey = "meta-glob"
 
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({

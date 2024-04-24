@@ -5,6 +5,8 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
 object DatasetSpecLoader extends InputSpecLoader {
+  val specType = "dataset"
+
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     spec.toFileSpec
       .map { fileSpec =>
@@ -24,4 +26,6 @@ object DatasetSpecLoader extends InputSpecLoader {
         })
       }
   }
+
+  override def size(spec: InputSpec): Long = spec.dataset.outputSize
 }

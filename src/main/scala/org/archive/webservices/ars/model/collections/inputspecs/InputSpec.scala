@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import io.circe.HCursor
+import io.circe.{Decoder, HCursor}
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.archive.webservices.ars.model.ArchCollection
@@ -14,9 +14,10 @@ trait InputSpec {
   def specType: String
   def inputType: String
   def cursor: HCursor
-  def size: Long
-  def str(key: String): Option[String] = cursor.get[String](key).toOption
-  def int(key: String): Option[Int] = cursor.get[Int](key).toOption
+  def str(key: String): Option[String] = get[String](key)
+  def int(key: String): Option[Int] = get[Int](key)
+  def get[A : Decoder](key: String): Option[A] = cursor.get[A](key).toOption
+  lazy val size: Long = loader.size(this)
   lazy val loader: InputSpecLoader = InputSpecLoader.get(this).getOrElse {
     throw new UnsupportedOperationException("no loader found for input spec type " + specType)
   }
@@ -29,7 +30,6 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[
   }
   override lazy val inputType: String =
     cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
-  override lazy val size: Long = cursor.get[Long]("size").getOrElse(-1)
 }
 
 class CollectionBasedInputSpec(
@@ -38,7 +38,7 @@ class CollectionBasedInputSpec(
     cursorOpt: Option[HCursor] = None)
     extends InputSpec {
   override val id: String = collectionId
-  override val specType: String = InputSpec.CollectionBasedInputSpecType
+  override val specType: String = ArchCollectionSpecLoader.specType
   override val inputType: String = InputSpec.InputType.WARC
   lazy val inputPath: String = inputPathOpt.getOrElse(collection.specifics.inputPath)
   override lazy val cursor: HCursor = cursorOpt.getOrElse(
@@ -46,7 +46,6 @@ class CollectionBasedInputSpec(
       "type" -> specType,
       "collectionId" -> collectionId,
       "inputPath" -> inputPath).asJson.hcursor)
-  override def size: Long = collection.stats.size
   private[inputspecs] var _collection: Option[ArchCollection] = None
   def collection: ArchCollection = _collection
     .orElse {
@@ -70,13 +69,12 @@ class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
     val jobId = dataset.job.id + (if (dataset.conf.isSample) "-sample" else "")
     dataset.conf.inputSpec.id + "_" + jobId + "_" + uuid
   }
-  override val specType: String = InputSpec.DatasetBasedInputSpecType
+  override val specType: String = DatasetSpecLoader.specType
   override lazy val cursor: HCursor = cursorOpt.getOrElse(Map("uuid" -> uuid).asJson.hcursor)
-  override lazy val size: Long = dataset.outputSize
   def toFileSpec: Option[InputSpec] = {
     dataset.job.datasetGlobMime(dataset.conf).map { case (glob, mime) =>
       new DefaultInputSpec(
-        FileSpecLoader.SpecType,
+        FileSpecLoader.specType,
         Map(
           InputSpec.DataLocationKey -> glob.asJson,
           FileSpecLoader.MimeKey -> mime.asJson).asJson.hcursor,
@@ -90,9 +88,6 @@ object InputSpec {
   val MetaSourceKey = "meta-source"
   val DataLocationKey = "data-location"
   val MetaLocationKey = "meta-location"
-
-  val CollectionBasedInputSpecType = "collection"
-  val DatasetBasedInputSpecType = "dataset"
 
   object InputType {
     val Files = "files"
@@ -121,7 +116,7 @@ object InputSpec {
       throw new RuntimeException("invalid input spec: type missing")
     }
     specType match {
-      case CollectionBasedInputSpecType =>
+      case ArchCollectionSpecLoader.specType =>
         cursor
           .get[String]("collectionId")
           .toOption
@@ -132,7 +127,7 @@ object InputSpec {
           .getOrElse {
             throw new RuntimeException("invalid input spec: collectionId missing")
           }
-      case DatasetBasedInputSpecType =>
+      case DatasetSpecLoader.specType =>
         cursor
           .get[String]("uuid")
           .toOption

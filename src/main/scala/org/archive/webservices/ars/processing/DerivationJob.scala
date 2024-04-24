@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -74,7 +74,7 @@ trait DerivationJob {
   def inputSize(conf: DerivationJobConf): Long = {
     if (InputSpec.isCollectionBased(conf.inputSpec)) {
       conf.inputSpec.collection.specifics.inputSize(conf)
-    } else conf.inputSpec.size
+    } else InputSpecLoader.size(conf.inputSpec)
   }
 
   def outputSize(conf: DerivationJobConf): Long = outFiles(conf).map(_.size).foldLeft(0L)(_ + _)

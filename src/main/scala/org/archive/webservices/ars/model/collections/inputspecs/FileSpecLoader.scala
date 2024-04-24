@@ -6,7 +6,8 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
 object FileSpecLoader extends InputSpecLoader {
-  val SpecType = "files"
+  val specType = "files"
+
   val MimeKey = "data-mime"
 
   override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({

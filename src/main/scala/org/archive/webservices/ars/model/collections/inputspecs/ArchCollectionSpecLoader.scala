@@ -6,6 +6,8 @@ import org.archive.webservices.ars.io.{FilePointer, WebArchiveLoader}
 import java.io.InputStream
 
 object ArchCollectionSpecLoader extends InputSpecLoader {
+  val specType = "collection"
+
   class WarcFileRecord(file: FilePointer, val in: InputStream)
       extends FileRecord
       with OneTimeAccess {
@@ -25,4 +27,6 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
       })
     }
   }
+
+  override def size(spec: InputSpec): Long = spec.collection.stats.size
 }
