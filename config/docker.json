@@ -3,5 +3,7 @@
   "customCollectionPath": "/opt/arch/shared/out/custom-collections",
   "externalPort": 12341,
   "jobLoggingPath": "/opt/arch/shared/log",
-  "jobOutPath": "/opt/arch/shared/out/datasets"
+  "keystoneBaseUrl": "http://keystone:8000",
+  "keystonePrivateApiKey": "supersecret",
+  "uuidJobOutPath": "/opt/arch/shared/out/datasets"
 }
