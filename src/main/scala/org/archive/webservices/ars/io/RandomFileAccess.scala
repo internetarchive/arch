@@ -4,14 +4,11 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
-import org.archive.webservices.sparkling.util.StringUtil
-import requests.Request
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.net.URL
 import java.util.Base64
 import scala.collection.mutable
-import scala.io.Source
 
 object RandomFileAccess {
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
@@ -27,11 +24,23 @@ object RandomFileAccess {
           case Some((FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey))) =>
             s3Access(context, file, offset, positions, accessKey, secretKey)
           case Some((FileAccessKeyRing.AccessMethodBasic, Array(user, pw))) =>
-            httpAccess(context, file, offset, positions, basicUser = Some(user), basicPassword = Some(pw))
+            httpAccess(
+              context,
+              file,
+              offset,
+              positions,
+              basicUser = Some(user),
+              basicPassword = Some(pw))
           case Some((FileAccessKeyRing.AccessMethodBasic, Array(pw))) =>
             httpAccess(context, file, offset, positions, basicPassword = Some(pw))
           case Some((FileAccessKeyRing.AccessMethodVault, Array(user, pw))) =>
-            vaultAccess(context, file, offset, positions, username = Some(user), password = Some(pw))
+            vaultAccess(
+              context,
+              file,
+              offset,
+              positions,
+              username = Some(user),
+              password = Some(pw))
           case Some((FileAccessKeyRing.AccessMethodVault, Array(pw))) =>
             vaultAccess(context, file, offset, positions, password = Some(pw))
           case None => httpAccess(context, file, offset, positions)
@@ -55,11 +64,16 @@ object RandomFileAccess {
       username: Option[String] = None,
       password: Option[String] = None): InputStream = {
     val (url, userPw) = IOHelper.splitUserPwUrl(file.url, username, password)
-    val cookie = userPw.map { case (user, pw) =>
-      context.keyValueCache.get(Vault.sessionIdCacheKey(user)).map(_.asInstanceOf[String]).getOrElse {
-        Vault.session(user, pw)
+    val cookie = userPw
+      .map { case (user, pw) =>
+        context.keyValueCache
+          .get(Vault.sessionIdCacheKey(user))
+          .map(_.asInstanceOf[String])
+          .getOrElse {
+            Vault.session(user, pw)
+          }
       }
-    }.map(Vault.SessionIdCookie -> _)
+      .map(Vault.SessionIdCookie -> _)
     httpAccessUrl(url, offset, positions, cookie = cookie)
   }
 

@@ -23,7 +23,8 @@ class S3FileRecordFactory(
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     override def access: InputStream = accessFile(filePath, resolve = false)
-    override def pointer: FilePointer = FilePointer(IOHelper.concatPaths(endpoint, bucket, filePath), filename)
+    override def pointer: FilePointer =
+      FilePointer(IOHelper.concatPaths(endpoint, bucket, filePath), filename)
   }
 
   override def get(file: String, mime: String, meta: FileMeta): FileRecord =
@@ -50,10 +51,12 @@ class S3FileRecordFactory(
     new CleanupInputStream(in, tmpFile.delete)
   }
 
-  def locateFile(file: String): String = FileRecordFactory.filePath({
-    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(file))
-    else location
-  }, file)
+  def locateFile(file: String): String = FileRecordFactory.filePath(
+    {
+      if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(file))
+      else location
+    },
+    file)
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
   protected def nextPrefixes(prefix: String): Set[String] = {
@@ -72,16 +75,19 @@ object S3FileRecordFactory extends FileFactoryCompanion {
   def apply(spec: InputSpec): S3FileRecordFactory = {
     for {
       endpoint <- spec.str("s3-endpoint")
-      (accessKey, secretKey) <- FileAccessKeyRing.forUrl(endpoint).flatMap {
-        case (FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey)) =>
-          Some((accessKey, secretKey))
-        case _ => None
-      }.orElse {
-        for {
-          accessKey <- spec.str("s3-accessKey")
-          secretKey <- spec.str("s3-secretKey")
-        } yield (accessKey, secretKey)
-      }
+      (accessKey, secretKey) <- FileAccessKeyRing
+        .forUrl(endpoint)
+        .flatMap {
+          case (FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey)) =>
+            Some((accessKey, secretKey))
+          case _ => None
+        }
+        .orElse {
+          for {
+            accessKey <- spec.str("s3-accessKey")
+            secretKey <- spec.str("s3-secretKey")
+          } yield (accessKey, secretKey)
+        }
       bucket <- spec.str("s3-bucket")
       location <- spec.str(InputSpec.DataLocationKey)
     } yield {

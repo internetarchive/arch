@@ -1,8 +1,8 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import io.circe.{Decoder, HCursor}
 import io.circe.parser.parse
 import io.circe.syntax._
+import io.circe.{Decoder, HCursor}
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.FileCollectionSpecifics
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, ProcessingState}
@@ -16,7 +16,7 @@ trait InputSpec {
   def cursor: HCursor
   def str(key: String): Option[String] = get[String](key)
   def int(key: String): Option[Int] = get[Int](key)
-  def get[A : Decoder](key: String): Option[A] = cursor.get[A](key).toOption
+  def get[A: Decoder](key: String): Option[A] = cursor.get[A](key).toOption
   lazy val size: Long = loader.size(this)
   lazy val loader: InputSpecLoader = InputSpecLoader.get(this).getOrElse {
     throw new UnsupportedOperationException("no loader found for input spec type " + specType)

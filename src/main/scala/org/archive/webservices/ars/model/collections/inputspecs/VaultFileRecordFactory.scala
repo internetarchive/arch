@@ -54,26 +54,41 @@ class VaultFileRecordFactory(
   }
 
   def iterateGlob(glob: Set[String]): (Set[(String, TreeNode)], Set[String]) = {
-    val (resolved, remaining) = Vault.iterateGlob(sessionId, collectionTreenode, glob.map(IOHelper.concatPaths(location, _)))
-    (resolved.map{case (p,n) => (p.stripPrefix(location + "/"),n)}, remaining.map(_.stripPrefix(location + "/")))
+    val (resolved, remaining) = Vault.iterateGlob(
+      sessionId,
+      collectionTreenode,
+      glob.map(IOHelper.concatPaths(location, _)))
+    (
+      resolved.map { case (p, n) => (p.stripPrefix(location + "/"), n) },
+      remaining.map(_.stripPrefix(location + "/")))
   }
 
   def glob(glob: String): Iterator[(String, TreeNode)] = {
-    Vault.glob(sessionId, collectionTreenode, glob).map{case (p,n) => (p.stripPrefix(location + "/"),n)}
+    Vault.glob(sessionId, collectionTreenode, glob).map { case (p, n) =>
+      (p.stripPrefix(location + "/"), n)
+    }
   }
 
-  def locateFile(file: String): String = if (file.startsWith("/")) file else FileRecordFactory.filePath({
-    if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(file))
-    else location
-  }, file)
+  def locateFile(file: String): String = if (file.startsWith("/")) file
+  else
+    FileRecordFactory.filePath(
+      {
+        if (longestPrefixMapping) IOHelper.concatPaths(location, locateLongestPrefixPath(file))
+        else location
+      },
+      file)
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
   protected def nextPrefixes(prefix: String): Set[String] = {
-    prefixes.getOrElseUpdate(prefix, {
-      Vault.children(sessionId, collectionTreenode, IOHelper.concatPaths(location, prefix)).map { node =>
-        IOHelper.concatPaths(prefix, node.name)
-      }.toSet
-    })
+    prefixes.getOrElseUpdate(
+      prefix, {
+        Vault
+          .children(sessionId, collectionTreenode, IOHelper.concatPaths(location, prefix))
+          .map { node =>
+            IOHelper.concatPaths(prefix, node.name)
+          }
+          .toSet
+      })
   }
 }
 
@@ -85,19 +100,24 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
   def apply(spec: InputSpec): VaultFileRecordFactory = {
     val userOpt = spec.str("vault-username")
     for {
-      collectionTreenode <- spec.str("vault-collection-treenode").flatMap(id => Try(id.toInt).toOption)
-      (username, password) <- FileAccessKeyRing.forUrl(VaultUrl).flatMap {
-        case (FileAccessKeyRing.AccessMethodVault, Array(user, pw)) =>
-          Some((user, pw))
-        case (FileAccessKeyRing.AccessMethodVault, Array(pw)) =>
-          userOpt.map((_, pw))
-        case _ => None
-      }.orElse {
-        for {
-          user <- userOpt
-          pw <- spec.str("vault-password")
-        } yield (user, pw)
-      }
+      collectionTreenode <- spec
+        .str("vault-collection-treenode")
+        .flatMap(id => Try(id.toInt).toOption)
+      (username, password) <- FileAccessKeyRing
+        .forUrl(VaultUrl)
+        .flatMap {
+          case (FileAccessKeyRing.AccessMethodVault, Array(user, pw)) =>
+            Some((user, pw))
+          case (FileAccessKeyRing.AccessMethodVault, Array(pw)) =>
+            userOpt.map((_, pw))
+          case _ => None
+        }
+        .orElse {
+          for {
+            user <- userOpt
+            pw <- spec.str("vault-password")
+          } yield (user, pw)
+        }
     } yield {
       val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
       new VaultFileRecordFactory(

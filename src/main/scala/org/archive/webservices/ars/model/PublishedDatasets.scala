@@ -291,22 +291,25 @@ object PublishedDatasets {
       case None =>
         HdfsIO.fs.createNewFile(new Path(jobFilePath))
         val name = itemName(dataset)
-        Try(newItemInfo(name, dataset)).filter { itemInfo =>
-          Try {
-            createItem(name, datasetMetadata(dataset, itemInfo) ++ metadata) && {
-              if (isCollectionBased(dataset)) {
-                appendCollectionFile(dataset.conf.inputSpec.collection, itemInfo)
+        Try(newItemInfo(name, dataset))
+          .filter { itemInfo =>
+            Try {
+              createItem(name, datasetMetadata(dataset, itemInfo) ++ metadata) && {
+                if (isCollectionBased(dataset)) {
+                  appendCollectionFile(dataset.conf.inputSpec.collection, itemInfo)
+                }
+                HdfsIO.writeLines(
+                  jobFilePath,
+                  Seq(itemInfo.toJson(includeItem = true).spaces4),
+                  overwrite = true) > 0
               }
-              HdfsIO.writeLines(
-                jobFilePath,
-                Seq(itemInfo.toJson(includeItem = true).spaces4),
-                overwrite = true) > 0
-            }
-          }.getOrElse(false)
-        }.toOption.orElse {
-          HdfsIO.delete(jobFilePath)
-          throw new RuntimeException(s"Creating new Petabox item $name failed.")
-        }
+            }.getOrElse(false)
+          }
+          .toOption
+          .orElse {
+            HdfsIO.delete(jobFilePath)
+            throw new RuntimeException(s"Creating new Petabox item $name failed.")
+          }
     }
   }
 

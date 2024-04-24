@@ -34,7 +34,8 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
 
   def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
     spec
-      .str(InputSpec.MetaSourceKey).orElse(spec.str(InputSpec.DataSourceKey))
+      .str(InputSpec.MetaSourceKey)
+      .orElse(spec.str(InputSpec.DataSourceKey))
       .flatMap {
         case HdfsFileRecordFactory.dataSourceType => Some(loadMetaHdfs(spec))
         case VaultFileRecordFactory.dataSourceType => Some(loadMetaVault(spec))

@@ -18,38 +18,42 @@ object Vault {
   def sessionIdCacheKey(username: String): String = SessionIdCacheKey + "/" + username
 
   def session(username: String, password: String): String = {
-    FileAccessContext.KeyValueCache.get(sessionIdCacheKey(username)).map(_.asInstanceOf[String]).getOrElse {
-      val get = requests.get(LoginUrl)
-      val csrfToken = get.cookies(CsrfTokenCookie).getValue
-      val loginPage = get.text
-      val csrfMiddleWareTokenTag = "<input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\""
-      val loginPageStripped = StringUtil.stripPrefixBySeparator(loginPage, csrfMiddleWareTokenTag)
-      val csrfMiddleWareToken = StringUtil.prefixBySeparator(loginPageStripped, "\"")
-      val post = requests.post(LoginUrl,
-        data = Map(
-          "csrfmiddlewaretoken" -> csrfMiddleWareToken,
-          "username" -> username,
-          "password" -> password),
-        headers = Seq(
-          "Referer" -> "https://vault.archive-it.org/accounts/login/"),
-        cookieValues = Map(CsrfTokenCookie -> csrfToken),
-        check = false)
-      val sessionId = post.cookies(SessionIdCookie).getValue
-      FileAccessContext.KeyValueCache += sessionIdCacheKey(username) -> sessionId
-      sessionId
-    }
+    FileAccessContext.KeyValueCache
+      .get(sessionIdCacheKey(username))
+      .map(_.asInstanceOf[String])
+      .getOrElse {
+        val get = requests.get(LoginUrl)
+        val csrfToken = get.cookies(CsrfTokenCookie).getValue
+        val loginPage = get.text
+        val csrfMiddleWareTokenTag =
+          "<input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\""
+        val loginPageStripped =
+          StringUtil.stripPrefixBySeparator(loginPage, csrfMiddleWareTokenTag)
+        val csrfMiddleWareToken = StringUtil.prefixBySeparator(loginPageStripped, "\"")
+        val post = requests.post(
+          LoginUrl,
+          data = Map(
+            "csrfmiddlewaretoken" -> csrfMiddleWareToken,
+            "username" -> username,
+            "password" -> password),
+          headers = Seq("Referer" -> "https://vault.archive-it.org/accounts/login/"),
+          cookieValues = Map(CsrfTokenCookie -> csrfToken),
+          check = false)
+        val sessionId = post.cookies(SessionIdCookie).getValue
+        FileAccessContext.KeyValueCache += sessionIdCacheKey(username) -> sessionId
+        sessionId
+      }
   }
 
   private var treeNodes = Map.empty[(Int, String), TreeNode]
 
-  case class TreeNode (
-    id: Int,
-    name: String,
-    nodeType: String,
-    fileType: Option[String],
-    size: Long,
-    contentUrl: Option[String]
-  ) {
+  case class TreeNode(
+      id: Int,
+      name: String,
+      nodeType: String,
+      fileType: Option[String],
+      size: Long,
+      contentUrl: Option[String]) {
     def isFile: Boolean = nodeType == "FILE"
   }
 
@@ -59,8 +63,7 @@ object Vault {
     cursor.get[String]("node_type").toOption.get,
     cursor.get[String]("file_type").toOption.filter(_ != null).map(_.split(';').head),
     cursor.get[Long]("size").toOption.getOrElse(-1),
-    cursor.get[String]("content_url").toOption.filter(_ != null)
-  )
+    cursor.get[String]("content_url").toOption.filter(_ != null))
 
   def treeNode(sessionId: String, id: Int): Option[TreeNode] = {
     val source = Source.fromInputStream {
@@ -76,10 +79,14 @@ object Vault {
   def treeNode(sessionId: String, collectionTreenode: Int, path: String): Option[TreeNode] = {
     val split = path.split('/').filter(_.nonEmpty).toSeq
     if (split.isEmpty) return None
-    val (parentPath, parentNode) = split.reverse.tails.map { tail =>
-      val prefix = tail.reverse
-      treeNodes.get((collectionTreenode, prefix.mkString("/"))).map(n => (prefix, Some(n)))
-    }.find(_.isDefined).flatten.getOrElse((Seq.empty, None))
+    val (parentPath, parentNode) = split.reverse.tails
+      .map { tail =>
+        val prefix = tail.reverse
+        treeNodes.get((collectionTreenode, prefix.mkString("/"))).map(n => (prefix, Some(n)))
+      }
+      .find(_.isDefined)
+      .flatten
+      .getOrElse((Seq.empty, None))
     val remaining = split.drop(parentPath.length)
     var currentNode = parentNode
     var current = currentNode.map(_.id).getOrElse(collectionTreenode)
@@ -97,9 +104,10 @@ object Vault {
   def children(sessionId: String, collectionTreenode: Int, path: String): Seq[TreeNode] = {
     if (path.stripPrefix("/").stripSuffix("/").trim.isEmpty) {
       children(sessionId, collectionTreenode)
-    } else treeNode(sessionId, collectionTreenode, path).toSeq.flatMap { node =>
-      children(sessionId, node.id)
-    }
+    } else
+      treeNode(sessionId, collectionTreenode, path).toSeq.flatMap { node =>
+        children(sessionId, node.id)
+      }
   }
 
   def children(sessionId: String, parent: Int): Seq[TreeNode] = {
@@ -107,9 +115,14 @@ object Vault {
       access("https://vault.archive-it.org/api/treenodes/?limit=-1&parent=" + parent, sessionId)
     }
     try {
-      parse(source.mkString).toOption.flatMap(_.hcursor.values).get.map(_.hcursor).map { item =>
-        treeNode(item)
-      }.toSeq
+      parse(source.mkString).toOption
+        .flatMap(_.hcursor.values)
+        .get
+        .map(_.hcursor)
+        .map { item =>
+          treeNode(item)
+        }
+        .toSeq
     } finally {
       source.close()
     }
@@ -122,7 +135,10 @@ object Vault {
     connection.getInputStream
   }
 
-  def glob(sessionId: String, collectionTreenode: Int, glob: String): Iterator[(String, TreeNode)] = {
+  def glob(
+      sessionId: String,
+      collectionTreenode: Int,
+      glob: String): Iterator[(String, TreeNode)] = {
     var remaining = Set(glob)
     IteratorUtil.whileDefined {
       if (remaining.nonEmpty) Some {
@@ -131,11 +147,15 @@ object Vault {
           remaining = newRemaining
           resolved
         }
-      } else None
+      }
+      else None
     }.flatten
   }
 
-  def iterateGlob(sessionId: String, collectionTreenode: Int, glob: String): (Seq[(String, TreeNode)], Set[String]) = {
+  def iterateGlob(
+      sessionId: String,
+      collectionTreenode: Int,
+      glob: String): (Seq[(String, TreeNode)], Set[String]) = {
     if (glob.contains("*")) {
       val split = glob.split('/')
       val wildcardIdx = split.zipWithIndex.find(_._1.contains("*")).get._2
@@ -148,40 +168,62 @@ object Vault {
         val resolved = if (tailPath.isEmpty) {
           sub.map(node => ((parentPath :+ node.name).mkString("/"), node))
         } else Seq.empty[(String, TreeNode)]
-        (resolved, sub.filter(!_.isFile).map(_.name).flatMap { name =>
-          Iterator(
-            ((parentPath :+ name) ++ wildcardPath).mkString("/"),
-            ((parentPath :+ name) ++ tailPath).mkString("/"))
-        }.toSet)
+        (
+          resolved,
+          sub
+            .filter(!_.isFile)
+            .map(_.name)
+            .flatMap { name =>
+              Iterator(
+                ((parentPath :+ name) ++ wildcardPath).mkString("/"),
+                ((parentPath :+ name) ++ tailPath).mkString("/"))
+            }
+            .toSet)
       } else {
         val prefixSuffix = wildcard.split('*')
-        val (prefix, suffix) = if (prefixSuffix.isEmpty) ("", "") else {
-          (prefixSuffix.head, if (prefixSuffix.length > 1) prefixSuffix.last else "")
-        }
+        val (prefix, suffix) =
+          if (prefixSuffix.isEmpty) ("", "")
+          else {
+            (prefixSuffix.head, if (prefixSuffix.length > 1) prefixSuffix.last else "")
+          }
         val candidates = sub.filter { node =>
           node.name.startsWith(prefix) && node.name.endsWith(suffix)
         }
         if (tailPath.isEmpty) {
-          (candidates.map(node => ((parentPath :+ node.name).mkString("/"), node)), Set.empty[String])
+          (
+            candidates.map(node => ((parentPath :+ node.name).mkString("/"), node)),
+            Set.empty[String])
         } else {
-          (Seq.empty[(String, TreeNode)], candidates.filter(!_.isFile).map { node =>
-            ((parentPath :+ node.name) ++ tailPath).mkString("/")
-          }.toSet)
+          (
+            Seq.empty[(String, TreeNode)],
+            candidates
+              .filter(!_.isFile)
+              .map { node =>
+                ((parentPath :+ node.name) ++ tailPath).mkString("/")
+              }
+              .toSet)
         }
       }
     } else {
-      (treeNode(sessionId, collectionTreenode, glob).map { node =>
-        (glob, node)
-      }.toSeq, Set.empty[String])
+      (
+        treeNode(sessionId, collectionTreenode, glob).map { node =>
+          (glob, node)
+        }.toSeq,
+        Set.empty[String])
     }
   }
 
-  def iterateGlob(sessionId: String, collectionTreenode: Int, glob: Set[String]): (Set[(String, TreeNode)], Set[String]) = {
-    glob.toIterator.map { g =>
-      val (resolved, remaining) = iterateGlob(sessionId, collectionTreenode, g)
-      (resolved.toSet, remaining)
-    }.fold((Set.empty[(String, TreeNode)], Set.empty[String])) { case ((a1, b1), (a2, b2)) =>
-      (a1 ++ a2, b1 ++ b2)
-    }
+  def iterateGlob(
+      sessionId: String,
+      collectionTreenode: Int,
+      glob: Set[String]): (Set[(String, TreeNode)], Set[String]) = {
+    glob.toIterator
+      .map { g =>
+        val (resolved, remaining) = iterateGlob(sessionId, collectionTreenode, g)
+        (resolved.toSet, remaining)
+      }
+      .fold((Set.empty[(String, TreeNode)], Set.empty[String])) { case ((a1, b1), (a2, b2)) =>
+        (a1 ++ a2, b1 ++ b2)
+      }
   }
 }

@@ -27,7 +27,11 @@ object MetaFilesSpecLoader extends InputSpecLoader {
         partition.flatMap { case (filename, meta) =>
           for {
             mime <- meta.str(mimeKey)
-          } yield recordFactory.get(mapFile(filename), mime, meta) // TODO: mapFile(filename) can be a path, but only expects a filename here
+          } yield recordFactory.get(
+            mapFile(filename),
+            mime,
+            meta
+          ) // TODO: mapFile(filename) can be a path, but only expects a filename here
         }
       }
     }
@@ -55,7 +59,8 @@ object MetaFilesSpecLoader extends InputSpecLoader {
 
   def loadMeta(spec: InputSpec): RDD[(String, FileMeta)] = {
     spec
-      .str(InputSpec.MetaSourceKey).orElse(spec.str(InputSpec.DataSourceKey))
+      .str(InputSpec.MetaSourceKey)
+      .orElse(spec.str(InputSpec.DataSourceKey))
       .flatMap {
         case HdfsFileRecordFactory.dataSourceType => Some(loadMetaHdfs(spec))
         case VaultFileRecordFactory.dataSourceType => Some(loadMetaVault(spec))
@@ -89,12 +94,13 @@ object MetaFilesSpecLoader extends InputSpecLoader {
           spec,
           filtered.flatMap { case (path, file) =>
             file.contentUrl.map { contentUrl =>
-              (path, {
-                val in = vault.accessContentUrl(contentUrl)
-                try {
-                  StringUtil.fromInputStream(in)
-                } finally in.close()
-              })
+              (
+                path, {
+                  val in = vault.accessContentUrl(contentUrl)
+                  try {
+                    StringUtil.fromInputStream(in)
+                  } finally in.close()
+                })
             }
           })
       }

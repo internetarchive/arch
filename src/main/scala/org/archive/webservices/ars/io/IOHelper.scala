@@ -279,7 +279,10 @@ object IOHelper {
     }
   }
 
-  def splitUserPwUrl(url: String, defaultUser: Option[String] = None, defaultPw: Option[String] = None): (String, Option[(String, String)]) = {
+  def splitUserPwUrl(
+      url: String,
+      defaultUser: Option[String] = None,
+      defaultPw: Option[String] = None): (String, Option[(String, String)]) = {
     val (urlWithoutUser, userPwStr) = {
       val atIdx = url.indexOf("@")
       if (atIdx > 0) {
@@ -293,22 +296,29 @@ object IOHelper {
         }
       } else (url, None)
     }
-    (urlWithoutUser, userPwStr.flatMap { userPw =>
-      val colonIdx = userPw.indexOf(":")
-      if (colonIdx < 0) {
-        defaultPw.map((userPw, _))
-      } else {
-        Some((userPw.take(colonIdx), userPw.drop(colonIdx + 1)))
-      }
-    }.orElse {
-      for {
-        user <- defaultUser
-        pw <- defaultPw
-      } yield (user, pw)
-    })
+    (
+      urlWithoutUser,
+      userPwStr
+        .flatMap { userPw =>
+          val colonIdx = userPw.indexOf(":")
+          if (colonIdx < 0) {
+            defaultPw.map((userPw, _))
+          } else {
+            Some((userPw.take(colonIdx), userPw.drop(colonIdx + 1)))
+          }
+        }
+        .orElse {
+          for {
+            user <- defaultUser
+            pw <- defaultPw
+          } yield (user, pw)
+        })
   }
 
-  def userPwFromUrl(url: String, defaultUser: Option[String] = None, defaultPw: Option[String] = None): Option[(String, String)] = {
+  def userPwFromUrl(
+      url: String,
+      defaultUser: Option[String] = None,
+      defaultPw: Option[String] = None): Option[(String, String)] = {
     splitUserPwUrl(url, defaultUser, defaultPw)._2
   }
 

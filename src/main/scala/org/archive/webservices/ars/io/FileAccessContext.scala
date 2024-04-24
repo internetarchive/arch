@@ -27,7 +27,10 @@ object FileAccessContext {
   var KeyValueCache = Map.empty[String, java.io.Serializable]
 
   def fromLocalArchConf: FileAccessContext =
-    new FileAccessContext(conf = LocalArchConf.instance, keyRing = FileAccessKeyRing.system, keyValueCache = KeyValueCache)
+    new FileAccessContext(
+      conf = LocalArchConf.instance,
+      keyRing = FileAccessKeyRing.system,
+      keyValueCache = KeyValueCache)
 
   def fromLocalArchConf(alwaysAitHdfsIO: Boolean) =
     new FileAccessContext(

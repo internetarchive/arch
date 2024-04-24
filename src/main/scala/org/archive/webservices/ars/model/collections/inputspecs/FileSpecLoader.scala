@@ -29,9 +29,7 @@ object FileSpecLoader extends InputSpecLoader {
     }
   })
 
-  def loadHdfs(
-      spec: InputSpec,
-      recordFactory: FileRecordFactory): RDD[(String, String)] = {
+  def loadHdfs(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
     for {
       location <- spec.str(InputSpec.DataLocationKey)
       mime <- spec.str(MimeKey)
@@ -44,21 +42,21 @@ object FileSpecLoader extends InputSpecLoader {
     throw new RuntimeException("No location and/or mime type specified.")
   }
 
-  def loadVault(
-      spec: InputSpec,
-      recordFactory: FileRecordFactory): RDD[(String, String)] = {
+  def loadVault(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
     val vault = recordFactory.asInstanceOf[VaultFileRecordFactory]
     val (resolved, remaining) = vault.iterateGlob(Set(spec.str("file-glob").getOrElse("**")))
-    val partitions = (resolved.map { case (p, n) => (p, n.fileType) } ++ remaining.map { p => (p, None) }).toSeq
+    val partitions =
+      (resolved.map { case (p, n) => (p, n.fileType) } ++ remaining.map { p => (p, None) }).toSeq
     val vaultBc = Sparkling.sc.broadcast(vault)
     RddUtil.parallelize(partitions).mapPartitions { partition =>
       val vault = vaultBc.value
       partition.flatMap { case (path, fileType) =>
         fileType match {
           case Some(t) => Iterator((path, t))
-          case None => vault.glob(path).flatMap { case (p, n) =>
-            n.fileType.map((p, _))
-          }
+          case None =>
+            vault.glob(path).flatMap { case (p, n) =>
+              n.fileType.map((p, _))
+            }
         }
       }
     }
