@@ -4,7 +4,7 @@
 
 [![Scala version](https://img.shields.io/badge/Scala%20version-2.12.8-blue)](https://scala-lang.org/)
 [![Scalatra version](https://img.shields.io/badge/Scalatra%20version-2.5.4-blue)](https://scalatra.org/)
-[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](./LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 
 ## About
 
@@ -56,13 +56,13 @@ Your citations help to further the recognition of using open-source tools for sc
 
 ## License
 
-[MIT](/LICENSE)
+[AGPL v3](/LICENSE)
 
 ## Open-source, not open-contribution
 
 [Similar to SQLite](https://www.sqlite.org/copyright.html), ARCH is open source but closed to contributions.
 
-The level of complexity of this project means that even simple changes can break a lot of other moving parts in our production environment. However, community involvement, bug reports and feature requests are [warmly accepted](https://support.archive-it.org/hc/en-us/articles/11182827989268-Submit-an-ARCH-support-request).
+The level of complexity of this project means that even simple changes can break a lot of other moving parts in our production environment. However, community involvement, bug reports and feature requests are [warmly accepted](https://arch-webservices.zendesk.com/hc/en-us/requests/new).
 
 ## Acknowledgments
 
