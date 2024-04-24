@@ -1,14 +1,7 @@
 {
-  "aitCollectionPath": "/data/in",
-  "aitCollectionWarcDir": "arcs",
-  "collectionCachePath": "/data/cache",
-  "jobOutPath": "/data/user-out",
-  "globalJobOutPath": "/data/out",
-  "customCollectionPath": "/data/collections",
-  "jobLoggingPath": "logging",
-  "localTempPath": "/data/tmp",
-  "sparkMaster": "local[*]",
-  "baseUrl": "http://127.0.0.1:12341",
-  "loginUrl": "http://127.0.0.1:12341/ait/login?next=",
-  "port": 12341
+  "basePath": "/",
+  "customCollectionPath": "/opt/arch/shared/out/custom-collections",
+  "externalPort": 12341,
+  "jobLoggingPath": "/opt/arch/shared/log",
+  "jobOutPath": "/opt/arch/shared/out/datasets"
 }

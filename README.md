@@ -10,39 +10,89 @@
 
 Web application for distributed compute analysis of Archive-It web archive collections.
 
-## Building
+### Run ARCH using Docker
 
-### Backend
+#### Prerequisites
 
-#### Production
+- [GNU Make](https://www.gnu.org/software/make/manual/make.html)
+- [Docker](https://www.docker.com/)
 
-* `sbt "prod/clean" "prod/assembly" "prod/assemblyPackageDependency"`
+#### Build and Run the Docker Image
 
-#### Docker
+##### 1. Build the image
+```
+make build-docker-image
+```
 
-1. Create a config (`config/config.json`) for your Docker setup, e.g., by copying the included template: `cp config/docker.json config/config.json`
-2. Setup a `data` directory somewhere with the following sub-directories: `cache`, `collections`, `in`, `logging`, `out`, `tmp`
-3. Build the container: `docker build --no-cache -t arch .`
-4. Run the container (example): `docker run -it --rm -p 54040:54040 -p 12341:12341 -v "/home/nruest/Projects/au/sample-data/ars-cloud:/data" -v "/home/nruest/Projects/au/arch:/app" -v "/home/nruest/Projects/au/sample-data/ars-cloud/logging:/logging" arch`
+##### 2. Run the image
+```
+make run-docker-image
+```
 
-Web application will be available at: [http://localhost:12341/ait](http://localhost:12341/ait), and Apache Spark interface will be available at [http://localhost:54040](http://localhost:54040).
+##### 3. Surf on over to [http://127.0.0.1:12341](http://127.0.0.1:12341)
 
-For the `data/input` directory, an example directory structure looks like this:
+##### 4. Log in with username: `test` password: `password`
+
+#### The "shared" Directory
+
+The `run-docker-image` Make target will create a local `shared` subdirectory that, along with
+the local ARCH source code directory itself, will be mounted within the running container to
+serve as the storage destination for ARCH outputs, and as a place to add your own custom collections
+of WARCs for analysis.
+
+The `shared` directory has the structure:
 
 ```
+shared/
 ├── in
-│   ├── 13529
-│   │   └── arcs
-│   ├── 13709
-│   │   └── arcs
-│   ├── 14462
-│   │   └── arcs
-│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299797-20200624234136833-00000-h3.warc.gz
-│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299798-20200624234136479-00000-h3.warc.gz
-│   │       ├── ARCHIVEIT-14462-CRAWL_SELECTED_SEEDS-JOB1214854-SEED2299799-20200624234136645-00000-h3.warc.gz
+│   └── collections
+├── log
+└── out
+    ├── custom-collections
+    └── datasets
 ```
 
-### Frontend
+These subdirectories are utilized as follows:
+- `log`
+  - ARCH job logs
+- `out/custom-collections`
+  - ARCH Custom Collection output files
+- `out/datasets`
+  - ARCH Dataset output files
+- `in/collections`
+  - A place to make your own WARCs available to ARCH as inputs - see "Analyze Your WARCs" below
+
+##### Analyze Your WARCs
+
+For each group of WARCs that you'd like to analyze as a collection:
+
+1. Create a new subdirectory within `shared/in/collections` with a descriptive kebab-case style name like `my-test-collection` and copy your `*.warc.gz` into it, e.g.
+```
+shared/
+├── in
+    └── collections
+        └── my-test-collection
+            └── ARCHIVEIT-22994-CRAWL_SELECTED_SEEDS-JOB1965703-SEED3267421-h3.warc.gz
+```
+
+2. Start (or restart) the ARCH container to automatically include this new collection in your list of available collections. The name will be a title-cased version of the kebab-case directory name, e.g. `my-test-collection` becomes `My Test Collection`.
+
+#### ARCH Development
+
+Use the `docker-shell` Make target to get a `bash` shell inside a running container:
+```
+make docker-shell
+```
+
+Your local ARCH source code directory will be mounted at `/opt/arch`; from within this directory in the container shell, run ARCH using:
+```
+sbt dev/run
+```
+
+After modifying the ARCH source on your local machine, `ctrl-c` and rerun the `sbt dev/run` to assemble/run your new code.
+
+
+### Modifying the Web App
 
 See [webapp/src/README.md](webapp/src/README.md) for information about building the web application.
 
