@@ -73,7 +73,11 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val waybackBaseUrl: String =
     confStrValue("ARCH_WAYBACK_BASE_URL", "waybackBaseUrl").getOrElse(
-      "https://wayback.archive-it.org/")
+      "https://wayback.archive-it.org")
+
+  val vaultBaseUrl: String =
+    confStrValue("ARCH_VAULT_BASE_URL", "vaultBaseUrl").getOrElse(
+      "https://vault.archive-it.org")
 
   val collectionCachePath: String =
     confStrValue("ARCH_COLLECTION_CACHE_PATH", "collectionCachePath").getOrElse("/data/cache")

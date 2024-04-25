@@ -2,6 +2,8 @@ package org.archive.webservices.ars.io
 
 import _root_.io.circe.parser._
 import io.circe.HCursor
+import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.util.{IteratorUtil, StringUtil}
 
 import java.io.InputStream
@@ -11,7 +13,7 @@ import scala.io.Source
 
 object Vault {
   val SessionIdCacheKey = "vaultSessionId"
-  val LoginUrl = "https://vault.archive-it.org/accounts/login"
+  val LoginUrl = ArchConf.vaultBaseUrl + "/accounts/login/"
   val SessionIdCookie = "vault-session-id"
   val CsrfTokenCookie = "csrftoken"
 
@@ -25,18 +27,17 @@ object Vault {
         val get = requests.get(LoginUrl)
         val csrfToken = get.cookies(CsrfTokenCookie).getValue
         val loginPage = get.text
-        val csrfMiddleWareTokenTag =
-          "<input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\""
-        val loginPageStripped =
-          StringUtil.stripPrefixBySeparator(loginPage, csrfMiddleWareTokenTag)
-        val csrfMiddleWareToken = StringUtil.prefixBySeparator(loginPageStripped, "\"")
+        val csrfMiddleWareToken = HtmlProcessor.tag(loginPage, "input").find { tag =>
+          HtmlProcessor.attributeValue(tag, "name").contains("csrfmiddlewaretoken")
+        }.flatMap(HtmlProcessor.attributeValue(_, "value"))
         val post = requests.post(
           LoginUrl,
           data = Map(
-            "csrfmiddlewaretoken" -> csrfMiddleWareToken,
             "username" -> username,
-            "password" -> password),
-          headers = Seq("Referer" -> "https://vault.archive-it.org/accounts/login/"),
+            "password" -> password) ++ {
+            csrfMiddleWareToken.map("csrfmiddlewaretoken" -> _)
+          },
+          headers = Seq("Referer" -> LoginUrl),
           cookieValues = Map(CsrfTokenCookie -> csrfToken),
           check = false)
         val sessionId = post.cookies(SessionIdCookie).getValue
@@ -67,7 +68,7 @@ object Vault {
 
   def treeNode(sessionId: String, id: Int): Option[TreeNode] = {
     val source = Source.fromInputStream {
-      access(s"https://vault.archive-it.org/api/treenodes/$id/", sessionId)
+      access(s"${ArchConf.vaultBaseUrl}/api/treenodes/$id/", sessionId)
     }
     try {
       parse(source.mkString).toOption.map(_.hcursor).map(treeNode)
@@ -112,7 +113,7 @@ object Vault {
 
   def children(sessionId: String, parent: Int): Seq[TreeNode] = {
     val source = Source.fromInputStream {
-      access("https://vault.archive-it.org/api/treenodes/?limit=-1&parent=" + parent, sessionId)
+      access(s"${ArchConf.vaultBaseUrl}/api/treenodes/?limit=-1&parent=$parent", sessionId)
     }
     try {
       parse(source.mkString).toOption

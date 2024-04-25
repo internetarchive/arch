@@ -12,6 +12,7 @@ trait ArchConf {
   def aitLoginPath: String
   def aitWarcsBaseUrl: String
   def waybackBaseUrl: String
+  def vaultBaseUrl: String
   def collectionCachePath: String
   def globalJobOutPath: String
   def jobOutPath: String
@@ -59,6 +60,7 @@ object ArchConf extends ArchConf {
   def aitLoginPath: String = conf.aitLoginPath
   def aitWarcsBaseUrl: String = conf.aitWarcsBaseUrl
   def waybackBaseUrl: String = conf.waybackBaseUrl
+  def vaultBaseUrl: String = conf.vaultBaseUrl
   def collectionCachePath: String = conf.collectionCachePath
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
