@@ -34,7 +34,7 @@ object FileSpecLoader extends InputSpecLoader {
       location <- spec.str(InputSpec.DataLocationKey)
       mime <- spec.str(MimeKey)
     } yield {
-      RddUtil.loadFilesLocality(location).mapPartitions { partition =>
+      RddUtil.loadFilesLocality(location, setPartitionFiles = false).mapPartitions { partition =>
         partition.map((_, mime))
       }
     }
