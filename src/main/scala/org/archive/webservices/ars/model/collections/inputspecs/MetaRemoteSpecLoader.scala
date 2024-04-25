@@ -8,7 +8,7 @@ import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 object MetaRemoteSpecLoader extends InputSpecLoader {
   val specType = "meta-remote"
 
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {

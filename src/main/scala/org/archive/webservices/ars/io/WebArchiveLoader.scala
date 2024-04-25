@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
-import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec}
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
@@ -27,7 +27,7 @@ object WebArchiveLoader {
     if (InputSpec.isCollectionBased(spec)) {
       spec.collection.specifics.loadCdx(spec.inputPath)(action)
     } else {
-      spec.loader.load(spec) { rdd =>
+      InputSpecLoader.loadSpark(spec) { rdd =>
         action {
           rdd.flatMap { record =>
             if (record.mime == WarcMime) {
@@ -54,7 +54,7 @@ object WebArchiveLoader {
   }
 
   def loadWarc[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
-    spec.loader.load(spec) { rdd =>
+    InputSpecLoader.loadSpark(spec) { rdd =>
       val accessContext = FileAccessContext.fromLocalArchConf
       action({
         spec.inputType match {

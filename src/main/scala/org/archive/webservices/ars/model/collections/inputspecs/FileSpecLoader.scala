@@ -10,7 +10,7 @@ object FileSpecLoader extends InputSpecLoader {
 
   val MimeKey = "data-mime"
 
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec, default = HdfsFileRecordFactory)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     val accessContext = FileAccessContext.fromLocalArchConf

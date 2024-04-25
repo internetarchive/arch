@@ -20,7 +20,7 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
     override def meta: FileMeta = FileMeta.empty
   }
 
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     spec.collection.specifics.loadWarcFiles(spec.inputPath) { rdd =>
       action(rdd.map { case (pointer, in) =>
         new WarcFileRecord(pointer, in)

@@ -7,10 +7,10 @@ import org.archive.webservices.sparkling.util.RddUtil
 object DatasetSpecLoader extends InputSpecLoader {
   val specType = "dataset"
 
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
     spec.toFileSpec
       .map { fileSpec =>
-        FileSpecLoader.load(fileSpec)(action)
+        FileSpecLoader.loadSpark(fileSpec)(action)
       }
       .getOrElse {
         val recordFactoryBc = Sparkling.sc.broadcast(HdfsFileRecordFactory())

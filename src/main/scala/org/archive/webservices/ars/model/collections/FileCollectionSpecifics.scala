@@ -44,7 +44,7 @@ class FileCollectionSpecifics(val id: String)
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
-    InputSpecLoader.load(InputSpec(inputPath)) { rdd =>
+    InputSpecLoader.loadSpark(InputSpec(inputPath)) { rdd =>
       action(
         rdd
           .filter { file =>
