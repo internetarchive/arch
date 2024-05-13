@@ -322,7 +322,9 @@ class ApiController extends BaseController {
                     "name" -> job.name.asJson,
                     "description" -> job.description.asJson,
                     "publishable" -> (!PublishedDatasets.ProhibitedJobs.contains(job)).asJson,
-                    "internal" -> (category == ArchJobCategories.System).asJson)
+                    "internal" -> (category == ArchJobCategories.System).asJson,
+                    "codeUrl" -> job.codeUrl.asJson,
+                    "infoUrl" -> job.infoUrl.asJson)
                   .asJson
                 }.asJson
               ).asJson

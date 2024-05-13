@@ -17,6 +17,9 @@ object DomainFrequencyExtraction extends AutJob[(String, Long)] {
   val name = "Domain frequency"
   val uuid = "01894bc7-ff6a-7e25-a5b5-4570425a8ab7"
   val category: ArchJobCategory = ArchJobCategories.Collection
+
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410734896148-ARCH-Collection-datasets#domain-frequency"
+
   val description =
     "The number of unique documents collected from each domain in the collection. Output: one CSV file with columns for domain and count."
 

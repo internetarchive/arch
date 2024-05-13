@@ -9,6 +9,8 @@ object PresentationProgramInformationExtraction extends BinaryInformationAutJob 
   val name = "Presentation file information"
   val uuid = "01895068-a576-7a00-b4dd-2d5650bc69ab"
 
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410815476500-ARCH-File-format-datasets#presentation"
+
   val description =
     "Locations and metadata for PowerPoint, Keynote, and other presentation formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."
 
