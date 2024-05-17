@@ -7,6 +7,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark._
+import org.archive.webservices.ars.processing.jobs.archivespark.preset.{EntityExtraction, EntityExtractionChinese, WhisperEntityExtraction, WhisperTranscription}
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -25,9 +26,12 @@ object JobManager {
   private val collectionInstances = mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
   val userJobs: Set[DerivationJob] = Set(
+    ArchiveSparkFlexJob,
     ArchiveSparkNoop,
-    ArchiveSparkEntityExtraction,
-    ArchiveSparkEntityExtractionChinese,
+    EntityExtraction,
+    EntityExtractionChinese,
+    WhisperTranscription,
+    WhisperEntityExtraction,
     ArsLgaGeneration,
     ArsWaneGeneration,
     ArsWatGeneration,

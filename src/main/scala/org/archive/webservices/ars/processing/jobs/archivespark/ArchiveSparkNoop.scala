@@ -11,7 +11,7 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 object ArchiveSparkNoop extends ArchiveSparkBaseJob[ArchEnrichRoot[_]] {
   val name: String = id
   val uuid: String = "018d1cef-c91d-7d51-9cf4-05fe51900321"
-  val description: String = "ArchiveSpark job " + name
+  val description: String = "Am ArchiveSpark job that does nothing. Output: records turned into ArchiveSpark JSON format without any enrichment function applied."
   val category: ArchJobCategory = ArchJobCategories.None
 
   override def warcSpec(rdd: RDD[WarcRecord]): DataSpec[_, ArchEnrichRoot[_]] = ArchWarcSpec(rdd)
