@@ -14,6 +14,8 @@ abstract class ArchiveSparkEntityExtraction extends ArchiveSparkTextLoadJob {
   val description: String = "ArchiveSpark job " + name
   val category: ArchJobCategory = ArchJobCategories.None
 
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+
   def properties(lang: Option[String] = None): Properties = {
     val default = EntitiesConstants.DefaultProps
     lang match {
