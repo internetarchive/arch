@@ -5,11 +5,11 @@ import org.archive.webservices.archivespark.functions.Entities
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkArchJob}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.WhisperText
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
 
-object WhisperEntityExtraction extends ArchiveSparkArchJob {
+object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
   val uuid: String = "018f7b09-f7ca-756d-a4ca-69cea914185d"
 
   val name: String = "Named entities from Whisper transcript"
@@ -18,9 +18,8 @@ object WhisperEntityExtraction extends ArchiveSparkArchJob {
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
-  override def filter(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
-    rdd.filter(_.mime.startsWith("audio/"))
-  }
+  override def genericPredicate(record: ArchEnrichRoot[_]): Boolean = record.mime.startsWith("audio/")
+  override def warcPredicate(warc: ArchWarcRecord): Boolean = super.warcPredicate(warc) && warc.status == 200
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
     val whisperText = WhisperText.noParams

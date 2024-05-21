@@ -6,7 +6,7 @@ import org.archive.webservices.archivespark.model.EnrichRootCompanion
 import org.archive.webservices.archivespark.model.dataloads.{ByteLoad, DataLoad, TextLoad}
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.util.Json.json
-import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
+import org.archive.webservices.ars.model.collections.inputspecs.{FileMeta, FileRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileBytes, ArchFileCache}
 
 import java.io.InputStream
@@ -27,6 +27,8 @@ class ArchFileRecord(record: FileRecord)
   }
 
   def mime: String = record.mime
+
+  def meta: FileMeta = record.meta
 
   override def payloadAccess: InputStream = record.access
 }

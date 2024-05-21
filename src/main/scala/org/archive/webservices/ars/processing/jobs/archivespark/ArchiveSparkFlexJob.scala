@@ -1,36 +1,48 @@
 package org.archive.webservices.ars.processing.jobs.archivespark
 
-import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import io.circe.{HCursor, Json}
-import org.apache.spark.rdd.RDD
-import org.archive.webservices.archivespark.functions.{Entities, EntitiesConstants}
 import org.archive.webservices.archivespark.model.EnrichFunc
-import org.archive.webservices.archivespark.model.dataloads.ByteLoad
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkArchJob, LocalFileCache}
-import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
+import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 
-import java.io
-import java.util.Properties
-import scala.collection.JavaConverters.asScalaSetConverter
-
-object ArchiveSparkFlexJob extends ArchiveSparkArchJob {
+object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
   val uuid: String = "018f52cc-d917-71ac-9e64-19fb219114a4"
 
   val name: String = id
   val description: String = "ArchiveSpark flex job "
   val category: ArchJobCategory = ArchJobCategories.None
 
-  override def filter(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
+  override def filterRecord(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
     val mime = conf.params.values.get("mime").toSeq.flatMap { mime =>
-      if (mime.isString) Seq(mime.asString)
+      if (mime.isString) mime.asString.toSeq
       else if (mime.isArray) mime.asArray.toSeq.flatMap(_.flatMap(_.asString))
       else Seq.empty
     }.toSet
-    if (mime.isEmpty) rdd else rdd.mapPartitions { partition =>
-      partition.filter(r => mime.contains(r.mime))
+    if (mime.isEmpty) {
+      super.filterRecord(conf)
+    } else {
+      r: ArchEnrichRoot[_] => mime.contains(r.mime)
+    }
+  }
+
+  override def filterWarc(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
+    val superPredicate = super.filterWarc(conf)
+    val status = conf.params.values.get("status").toSeq.flatMap { status =>
+      if (status.isNumber) status.asNumber.flatMap(_.toInt).toSeq
+      else if (status.isArray) status.asArray.toSeq.flatMap(_.flatMap(_.asNumber).flatMap(_.toInt))
+      else Seq.empty
+    }
+    if (status.isEmpty) {
+      superPredicate
+    } else {
+      r: ArchWarcRecord => superPredicate(r) && {
+        status.exists { s =>
+          r.status == s || (s < 100 && (r.status / 10 == s || (s < 10 && r.status / 100 == s)))
+        }
+      }
     }
   }
 

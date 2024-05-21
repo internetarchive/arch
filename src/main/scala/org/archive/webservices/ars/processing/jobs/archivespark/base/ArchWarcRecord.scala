@@ -5,6 +5,7 @@ import org.archive.webservices.archivespark.model.EnrichRootCompanion
 import org.archive.webservices.archivespark.model.dataloads.{ByteLoad, DataLoad, TextLoad}
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.specific.warc.WarcLikeRecord
+import org.archive.webservices.ars.model.collections.inputspecs.FileMeta
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileCache, ArchWarcPayload}
 import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.warc.WarcRecord
@@ -20,6 +21,18 @@ class ArchWarcRecord(val warc: WarcRecord)
   def mime: String = warc.http.flatMap(_.mime).getOrElse("/")
 
   override def payloadAccess: InputStream = warc.http.map(_.payload).getOrElse(warc.payload)
+
+  override lazy val meta: FileMeta = FileMeta(Map(
+    "surtUrl" -> get.surtUrl,
+    "timestamp" -> get.timestamp,
+    "originalUrl" -> get.originalUrl,
+    "mime" -> get.mime,
+    "status" -> get.status,
+    "digest" -> get.digest,
+    "redirectUrl" -> get.redirectUrl,
+    "meta" -> get.meta,
+    "compressedSize" -> get.compressedSize
+  ))
 }
 
 object ArchWarcRecord extends EnrichRootCompanion[ArchWarcRecord] {

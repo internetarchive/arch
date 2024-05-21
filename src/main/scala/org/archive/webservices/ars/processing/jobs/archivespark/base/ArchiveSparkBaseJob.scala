@@ -3,11 +3,9 @@ package org.archive.webservices.ars.processing.jobs.archivespark.base
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.ArchiveSpark
 import org.archive.webservices.archivespark.dataspecs.DataSpec
-import org.archive.webservices.archivespark.model.EnrichRoot
-import org.archive.webservices.ars.WasapiController
 import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
+import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.model.{ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -15,89 +13,127 @@ import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 import scala.concurrent.Future
-import scala.reflect.ClassTag
 
-abstract class ArchiveSparkBaseJob[Root <: EnrichRoot: ClassTag] extends SparkJob {
+abstract class ArchiveSparkBaseJob extends ChainedJob {
   val relativeOutPath = s"/$id"
   val resultDir = "/out.json.gz"
+  val resultFile = "/result.json.gz"
 
-  def filterEnrich(rdd: RDD[Root], conf: DerivationJobConf): RDD[Root]
+  lazy val children: Seq[PartialDerivationJob] = Seq(ArchiveSparkProcessor, PostProcessor)
 
-  def filterEnrichSave(rdd: RDD[Root], conf: DerivationJobConf): Unit = {
-    filterEnrich(rdd, conf).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
+  def enrich(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): RDD[ArchEnrichRoot[_]]
+
+  def enrichSave(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): Unit = {
+    enrich(rdd, conf).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
   }
 
-  def loadFilterEnrichSave(spec: DataSpec[_, Root], conf: DerivationJobConf): Unit = {
-    filterEnrichSave(ArchiveSpark.load(spec), conf)
-  }
+  def warcSpec(rdd: RDD[WarcRecord]): DataSpec[_, ArchWarcRecord] = ArchWarcSpec(rdd)
 
-  def warcSpec(rdd: RDD[WarcRecord]): DataSpec[_, Root]
-
-  def fileSpec(rdd: RDD[FileRecord]): DataSpec[_, Root]
-
-  def run(conf: DerivationJobConf): Future[Boolean] = {
-    SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, this, conf)
-      conf.inputSpec.inputType match {
-        case InputSpec.InputType.Files =>
-          InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
-            IOHelper.sample(rdd, conf.sample) { sample =>
-              loadFilterEnrichSave(fileSpec(sample), conf)
-              true
-            }
-          }
-        case t if InputSpec.InputType.warc(t) =>
-          WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
-            IOHelper.sample(rdd, conf.sample) { sample =>
-              loadFilterEnrichSave(warcSpec(sample), conf)
-              true
-            }
-          }
-        case _ =>
-          throw new UnsupportedOperationException()
-      }
-    }
-  }
-
-  override def history(conf: DerivationJobConf): DerivationJobInstance = {
-    val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
-    if (started) {
-      val completed =
-        HdfsIO.exists(
-          conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
-      instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
-    }
-    instance
-  }
-
-  override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
-    HdfsIO.files(conf.outputPath + relativeOutPath + resultDir + "/*.gz").map { file =>
-      val (path, name) = file.splitAt(file.lastIndexOf('/'))
-      DerivativeOutput(name.stripPrefix("/"), path, "ArchiveSpark", "application/gzip")
-    }
+  def fileSpec(rdd: RDD[FileRecord]): DataSpec[_, ArchFileRecord] = ArchFileSpec(rdd)
 
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 
   override def reset(conf: DerivationJobConf): Unit =
     HdfsIO.delete(conf.outputPath + relativeOutPath)
 
-  override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    super.templateVariables(conf) ++ JobManager.getInstance(this.id, conf).toSeq.flatMap {
-      instance =>
-        val wasapiUrl = ArchConf.baseUrl + {
-          if (ArchConf.uuidJobOutPath.exists(instance.outPath.startsWith)) {
-            "/api/job/" + instance.uuid + "/files"
-          } else {
-            "/wasapi/v1/jobs/" + id + "/result?collection=" + conf.inputSpec.id + {
-              if (conf.isSample) "&sample=true" else ""
+  def filePredicate(file: ArchFileRecord): Boolean = genericPredicate(file)
+  def filterFile(conf: DerivationJobConf): ArchFileRecord => Boolean = filePredicate
+
+  def warcPredicate(warc: ArchWarcRecord): Boolean = genericPredicate(warc)
+  def filterWarc(conf: DerivationJobConf): ArchWarcRecord => Boolean = warcPredicate
+
+  def genericPredicate(record: ArchEnrichRoot[_]): Boolean = true
+  def filterRecord(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = genericPredicate
+
+  object ArchiveSparkProcessor extends PartialDerivationJob(this) with SparkJob {
+    override val stage: String = "ArchiveSpark"
+
+    def run(conf: DerivationJobConf): Future[Boolean] = {
+      SparkJobManager.context.map { sc =>
+        SparkJobManager.initThread(sc, ArchiveSparkBaseJob.this, conf)
+        conf.inputSpec.inputType match {
+          case InputSpec.InputType.Files =>
+            val filter = filterFile(conf)
+            InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
+              val asRdd = ArchiveSpark.load(fileSpec(rdd))
+              IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
+                val filtered = sample.filter(filter)
+                enrichSave(filtered.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
+                true
+              }
             }
-          }
+          case t if InputSpec.InputType.warc(t) =>
+            val filter = filterWarc(conf)
+            WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
+              val asRdd = ArchiveSpark.load(warcSpec(rdd))
+              IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
+                val filtered = sample.filter(filter)
+                enrichSave(filtered.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
+                true
+              }
+            }
+          case _ =>
+            throw new UnsupportedOperationException()
         }
-        Seq(
-          "wasapiUrl" -> wasapiUrl,
-          "wasapiPages" -> (outFiles(
-            conf).size.toDouble / WasapiController.FixedPageSize).ceil.toInt)
+      }
     }
+
+    override def history(conf: DerivationJobConf): DerivationJobInstance = {
+      val instance = super.history(conf)
+      val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
+      if (started) {
+        val completed =
+          HdfsIO.exists(
+            conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
+        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      }
+      instance
+    }
+  }
+
+  object PostProcessor extends PartialDerivationJob(this) with GenericJob {
+    override val stage: String = "Post-Processing"
+
+    def run(conf: DerivationJobConf): Future[Boolean] = Future {
+      val outDir = conf.outputPath + relativeOutPath + resultDir
+      val outFile = conf.outputPath + relativeOutPath + resultFile
+      IOHelper.concatHdfs(
+        outDir,
+        outFile,
+        _.endsWith(".gz"),
+        decompress = false,
+        deleteSrcFiles = true,
+        deleteSrcPath = true) { in =>
+          DerivativeOutput.hashFile(in, outFile)
+        }
+      HdfsIO.exists(outFile)
+    }
+
+    override def history(conf: DerivationJobConf): DerivationJobInstance = {
+      val instance = super.history(conf)
+      val outDir = conf.outputPath + relativeOutPath + resultDir
+      val outFile = conf.outputPath + relativeOutPath + resultFile
+      if (HdfsIO.exists(outFile)) {
+        if (!HdfsIO.exists(outDir)) instance.state = ProcessingState.Finished
+        else instance.state = ProcessingState.Failed
+      }
+      instance
+    }
+
+    override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
+      val size = HdfsIO
+        .files(conf.outputPath + relativeOutPath + resultFile)
+        .map(HdfsIO.length)
+        .sum
+      Seq("resultSize" -> size)
+    }
+
+    override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
+      Iterator(
+        DerivativeOutput(
+          resultFile,
+          conf.outputPath + relativeOutPath,
+          "ArchiveSpark/jsonl",
+          "application/gzip"))
   }
 }
