@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import io.circe.HCursor
+import org.archive.webservices.sparkling.cdx.CdxRecord
 
 import scala.reflect.{ClassTag, classTag}
 import scala.util.Try
@@ -17,6 +18,19 @@ object FileMeta {
   lazy val empty = new FileMetaMap(Map.empty)
   def apply(map: Map[String, Any]): FileMeta = new FileMetaMap(map)
   def apply(cursor: HCursor): FileMeta = new FileMetaJson(cursor)
+  def fromCdx(cdx: CdxRecord): FileMeta = {
+    FileMeta(Map(
+      "surtUrl" -> cdx.surtUrl,
+      "timestamp" -> cdx.timestamp,
+      "originalUrl" -> cdx.originalUrl,
+      "mime" -> cdx.mime,
+      "status" -> cdx.status,
+      "digest" -> cdx.digest,
+      "redirectUrl" -> cdx.redirectUrl,
+      "meta" -> cdx.meta,
+      "compressedSize" -> cdx.compressedSize
+    ))
+  }
 }
 
 class FileMetaMap(map: Map[String, Any]) extends FileMeta {

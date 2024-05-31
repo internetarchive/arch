@@ -37,7 +37,6 @@ class SystemProcess private (
       if (!stop) {
         val line = in.readLine()
         if (line == null) None else {
-          println("$$$ " + line)
           stop = if (prefix) line.startsWith(endLine) else line == endLine
           if (!stop || includeEnd) Some(line) else None
         }

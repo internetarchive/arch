@@ -7,6 +7,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrich
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
+import org.archive.webservices.sparkling.util.StringUtil
 
 object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
   val uuid: String = "018f52cc-d917-71ac-9e64-19fb219114a4"
@@ -15,32 +16,32 @@ object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
   val description: String = "ArchiveSpark flex job "
   val category: ArchJobCategory = ArchJobCategories.None
 
-  override def filterRecord(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
+  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
     val mime = conf.params.values.get("mime").toSeq.flatMap { mime =>
       if (mime.isString) mime.asString.toSeq
       else if (mime.isArray) mime.asArray.toSeq.flatMap(_.flatMap(_.asString))
       else Seq.empty
     }.toSet
     if (mime.isEmpty) {
-      super.filterRecord(conf)
+      super.genericPredicate(conf)
     } else {
-      r: ArchEnrichRoot[_] => mime.contains(r.mime)
+      record => mime.contains(record.mime) || mime.contains(StringUtil.prefixToSeparator(record.mime, "/"))
     }
   }
 
-  override def filterWarc(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superPredicate = super.filterWarc(conf)
+  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
+    val superFilter = super.warcPredicate(conf)
     val status = conf.params.values.get("status").toSeq.flatMap { status =>
       if (status.isNumber) status.asNumber.flatMap(_.toInt).toSeq
       else if (status.isArray) status.asArray.toSeq.flatMap(_.flatMap(_.asNumber).flatMap(_.toInt))
       else Seq.empty
     }
     if (status.isEmpty) {
-      superPredicate
+      superFilter
     } else {
-      r: ArchWarcRecord => superPredicate(r) && {
+      warc => superFilter(warc) && {
         status.exists { s =>
-          r.status == s || (s < 100 && (r.status / 10 == s || (s < 10 && r.status / 100 == s)))
+          warc.status == s || (s < 100 && (warc.status / 10 == s || (s < 10 && warc.status / 100 == s)))
         }
       }
     }

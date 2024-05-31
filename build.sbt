@@ -23,6 +23,7 @@ val prodProvided = Seq(
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
+  "org.archive.webservices" %% "sparkling-internal" % "0.3.8-SNAPSHOT" % "provided",
   "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.json4s" %% "json4s-native" % "3.5.0",

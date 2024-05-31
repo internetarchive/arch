@@ -36,14 +36,11 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   override def reset(conf: DerivationJobConf): Unit =
     HdfsIO.delete(conf.outputPath + relativeOutPath)
 
-  def filePredicate(file: ArchFileRecord): Boolean = genericPredicate(file)
-  def filterFile(conf: DerivationJobConf): ArchFileRecord => Boolean = filePredicate
+  def filePredicate(conf: DerivationJobConf): ArchFileRecord => Boolean = genericPredicate(conf)
 
-  def warcPredicate(warc: ArchWarcRecord): Boolean = genericPredicate(warc)
-  def filterWarc(conf: DerivationJobConf): ArchWarcRecord => Boolean = warcPredicate
+  def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = genericPredicate(conf)
 
-  def genericPredicate(record: ArchEnrichRoot[_]): Boolean = true
-  def filterRecord(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = genericPredicate
+  def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = _ => true
 
   object ArchiveSparkProcessor extends PartialDerivationJob(this) with SparkJob {
     override val stage: String = "ArchiveSpark"
@@ -53,7 +50,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
         SparkJobManager.initThread(sc, ArchiveSparkBaseJob.this, conf)
         conf.inputSpec.inputType match {
           case InputSpec.InputType.Files =>
-            val filter = filterFile(conf)
+            val filter = filePredicate(conf)
             InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
               val asRdd = ArchiveSpark.load(fileSpec(rdd))
               IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
@@ -63,7 +60,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
               }
             }
           case t if InputSpec.InputType.warc(t) =>
-            val filter = filterWarc(conf)
+            val filter = warcPredicate(conf)
             WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
               val asRdd = ArchiveSpark.load(warcSpec(rdd))
               IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
@@ -131,7 +128,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
     override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
       Iterator(
         DerivativeOutput(
-          resultFile,
+          resultFile.stripPrefix("/"),
           conf.outputPath + relativeOutPath,
           "ArchiveSpark/jsonl",
           "application/gzip"))

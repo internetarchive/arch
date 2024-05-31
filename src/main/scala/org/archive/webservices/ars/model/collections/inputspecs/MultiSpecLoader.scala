@@ -20,6 +20,11 @@ object MultiSpecLoader extends InputSpecLoader {
     if (sizes.isEmpty) -1 else sizes.sum
   }
 
+  override def inputType(spec: InputSpec): Option[String] = {
+    val types = multiSpecs(spec).map(_.inputType).toSet
+    Some(if (types.size == 1) types.head else InputSpec.InputType.Files)
+  }
+
   private def unionSpark[R](spec: InputSpec, load: InputSpec => (RDD[FileRecord] => R) => R)(action: RDD[FileRecord] => R): R = {
     val specs = multiSpecs(spec)
     var union = RddUtil.emptyRDD[FileRecord]

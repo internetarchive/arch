@@ -259,7 +259,7 @@ object WebArchiveLoader {
                     }
                     .map { case (originalPath, path, ait) =>
                       for (s <- prev) s.close()
-                      val in = (if (ait) aitHdfsIO.get else HdfsIO).open(path, decompress = false)
+                      val in = if (ait) aitHdfsIO.get.open(path, decompress = false) else HdfsIO.open(path, decompress = false)
                       prev = Some(in)
                       (originalPath, in)
                     } ++ IteratorUtil.noop {
@@ -423,8 +423,8 @@ object WebArchiveLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    if (context.aitHdfsIO.exists(_.exists(filePath))) {
-      val in = context.aitHdfsIO.get.open(
+    if (context.aitHdfsIOopt.exists(_.exists(filePath))) {
+      val in = context.aitHdfsIOopt.get.open(
         filePath,
         offset = offset,
         decompress = false,

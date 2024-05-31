@@ -4,6 +4,7 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
+import org.archive.webservices.sparkling.petabox.PetaBox
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.net.URL
@@ -11,6 +12,11 @@ import java.util.Base64
 import scala.collection.mutable
 
 object RandomFileAccess {
+  val HttpPrefix = "http"
+  val HttpsPrefix = "https"
+  val HdfsPrefix = "hdfs"
+  val PetaboxPrefix = "petabox"
+
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
 
   def access(
@@ -19,7 +25,7 @@ object RandomFileAccess {
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
     file.source.toLowerCase match {
-      case "http" | "https" =>
+      case HttpPrefix | HttpsPrefix =>
         context.keyRing.forUrl(file.url) match {
           case Some((FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey))) =>
             s3Access(context, file, offset, positions, accessKey, secretKey)
@@ -45,8 +51,10 @@ object RandomFileAccess {
             vaultAccess(context, file, offset, positions, password = Some(pw))
           case None => httpAccess(context, file, offset, positions)
         }
-      case "hdfs" | "" =>
+      case HdfsPrefix | "" =>
         hdfsAccess(context, file, offset, positions)
+      case PetaboxPrefix | "" =>
+        petaboxAccess(context, file, offset, positions)
       case _ =>
         file.source match {
           case s if ArchCollection.prefix(s).isDefined =>
@@ -113,6 +121,16 @@ object RandomFileAccess {
       positions: Iterator[(Long, Long)]): InputStream = {
     val in = context.hdfsIO.open(file.path, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+  }
+
+  def petaboxAccess(
+      context: FileAccessContext,
+      file: FilePointer,
+      offset: Long,
+      positions: Iterator[(Long, Long)]): InputStream = {
+    PetaBox.requestWebdata(file.path, offset = offset, close = false) { in =>
+      IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+    }
   }
 
   def collectionAccess(

@@ -15,8 +15,14 @@ object WhisperTranscription extends ArchiveSparkEnrichJob {
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
-  override def genericPredicate(record: ArchEnrichRoot[_]): Boolean = record.mime.startsWith("audio/")
-  override def warcPredicate(warc: ArchWarcRecord): Boolean = super.warcPredicate(warc) && warc.status == 200
+  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
+    val superFilter = super.warcPredicate(conf)
+    warc => superFilter(warc) && warc.status == 200
+  }
+
+  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
+    record => record.mime.startsWith("audio/")
+  }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
     Seq(Whisper.noParams)

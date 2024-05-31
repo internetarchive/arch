@@ -16,23 +16,14 @@ class ArchWarcRecord(val warc: WarcRecord)
     extends ArchEnrichRoot[CdxRecord]
     with WarcLikeRecord {
   override def companion: EnrichRootCompanion[ArchWarcRecord] = ArchWarcRecord
+
   override lazy val get: CdxRecord = warc.toCdx(0L, handleRevisits = true, handleOthers = true).get
 
   def mime: String = warc.http.flatMap(_.mime).getOrElse("/")
 
   override def payloadAccess: InputStream = warc.http.map(_.payload).getOrElse(warc.payload)
 
-  override lazy val meta: FileMeta = FileMeta(Map(
-    "surtUrl" -> get.surtUrl,
-    "timestamp" -> get.timestamp,
-    "originalUrl" -> get.originalUrl,
-    "mime" -> get.mime,
-    "status" -> get.status,
-    "digest" -> get.digest,
-    "redirectUrl" -> get.redirectUrl,
-    "meta" -> get.meta,
-    "compressedSize" -> get.compressedSize
-  ))
+  override lazy val meta: FileMeta = FileMeta.fromCdx(get)
 }
 
 object ArchWarcRecord extends EnrichRootCompanion[ArchWarcRecord] {

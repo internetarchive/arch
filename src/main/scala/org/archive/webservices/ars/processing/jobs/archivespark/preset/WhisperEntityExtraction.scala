@@ -1,7 +1,5 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.apache.spark.rdd.RDD
-import org.archive.webservices.archivespark.functions.Entities
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
@@ -18,8 +16,14 @@ object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
-  override def genericPredicate(record: ArchEnrichRoot[_]): Boolean = record.mime.startsWith("audio/")
-  override def warcPredicate(warc: ArchWarcRecord): Boolean = super.warcPredicate(warc) && warc.status == 200
+  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
+    val superFilter = super.warcPredicate(conf)
+    warc => superFilter(warc) && warc.status == 200
+  }
+
+  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
+    record => record.mime.startsWith("audio/")
+  }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
     val whisperText = WhisperText.noParams
