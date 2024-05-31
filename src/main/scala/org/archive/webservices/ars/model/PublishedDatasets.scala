@@ -65,7 +65,7 @@ object PublishedDatasets {
       .truncatedTo(ChronoUnit.SECONDS)
       .toString
       .replaceAll("[^\\dTZ]", "")
-    Seq("arch", inputId, jobId, timestamp).mkString("_")
+    Seq("arch", inputId, jobId, timestamp).mkString("_").replaceAll("[^a-zA-Z0-9_.-]", "-")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
