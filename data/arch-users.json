@@ -1,11 +1,11 @@
 {
     "system" : {
         "name" : "ARCH Admin",
-        "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN",
+        "password" : "sha1:LOVGDZGJXE7T6BUCEUFWZ6BTDN7OND6Y",
         "admin" : true
     },
     "test" : {
         "name" : "ARCH Test",
-        "password" : "sha1:7PUIM6HA6VQKHXJT7SPFQWDLKAE5E7PN"
+        "password" : "sha1:LOVGDZGJXE7T6BUCEUFWZ6BTDN7OND6Y"
     }
 }
