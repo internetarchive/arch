@@ -278,4 +278,51 @@ object IOHelper {
       merged
     }
   }
+
+  def splitUserPwUrl(
+      url: String,
+      defaultUser: Option[String] = None,
+      defaultPw: Option[String] = None): (String, Option[(String, String)]) = {
+    val (urlWithoutUser, userPwStr) = {
+      val atIdx = url.indexOf("@")
+      if (atIdx > 0) {
+        val afterAt = url.drop(atIdx + 1)
+        val beforeAt = url.take(atIdx)
+        val lastSlashIdx = beforeAt.lastIndexOf('/')
+        if (lastSlashIdx < 0) {
+          (afterAt, Some(beforeAt))
+        } else {
+          (url.take(lastSlashIdx + 1) + afterAt, Some(beforeAt.drop(lastSlashIdx + 1)))
+        }
+      } else (url, None)
+    }
+    (
+      urlWithoutUser,
+      userPwStr
+        .flatMap { userPw =>
+          val colonIdx = userPw.indexOf(":")
+          if (colonIdx < 0) {
+            defaultPw.map((userPw, _))
+          } else {
+            Some((userPw.take(colonIdx), userPw.drop(colonIdx + 1)))
+          }
+        }
+        .orElse {
+          for {
+            user <- defaultUser
+            pw <- defaultPw
+          } yield (user, pw)
+        })
+  }
+
+  def userPwFromUrl(
+      url: String,
+      defaultUser: Option[String] = None,
+      defaultPw: Option[String] = None): Option[(String, String)] = {
+    splitUserPwUrl(url, defaultUser, defaultPw)._2
+  }
+
+  def insertUrlUser(url: String, username: String): String = {
+    url.replace("://", s"://$username@")
+  }
 }

@@ -5,9 +5,11 @@ import scala.io.Source
 class S3HttpFileRecordFactory(location: String, longestPrefixMapping: Boolean)
     extends HttpFileRecordFactory(location)
     with LongestPrefixProbing {
-  override def locatePath(filename: String): String = {
-    if (longestPrefixMapping) locateLongestPrefixPath(filename)
-    else super.locatePath(filename)
+  override def companion: FileFactoryCompanion = S3HttpFileRecordFactory
+
+  override def locateFile(file: String): String = {
+    if (longestPrefixMapping) FileRecordFactory.filePath(locateLongestPrefixPath(file), file)
+    else super.locateFile(file)
   }
 
   private val prefixes = collection.mutable.Map.empty[String, Set[String]]
@@ -31,10 +33,12 @@ class S3HttpFileRecordFactory(location: String, longestPrefixMapping: Boolean)
   }
 }
 
-object S3HttpFileRecordFactory {
+object S3HttpFileRecordFactory extends FileFactoryCompanion {
+  val dataSourceType: String = "s3-http"
+
   def apply(spec: InputSpec): S3HttpFileRecordFactory = {
     spec
-      .str("data-location")
+      .str(InputSpec.DataLocationKey)
       .map { location =>
         val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
         new S3HttpFileRecordFactory(location, longestPrefixMapping)

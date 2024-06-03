@@ -2,20 +2,24 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import io.circe.parser._
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.RddUtil
+import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
 
 object MetaFilesSpecLoader extends InputSpecLoader {
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
+  val specType = "meta-files"
+
+  val MetaGlobKey = "meta-glob"
+
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
       mimeKey <- spec.str("meta-mime-key")
     } yield {
       val mapFile = pathMapping(spec)
-      val accessContext = CollectionAccessContext.fromLocalArchConf
+      val accessContext = FileAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
         accessContext.init()
         val recordFactory = recordFactoryBc.value
@@ -23,7 +27,11 @@ object MetaFilesSpecLoader extends InputSpecLoader {
         partition.flatMap { case (filename, meta) =>
           for {
             mime <- meta.str(mimeKey)
-          } yield recordFactory.get(mapFile(filename), mime, meta)
+          } yield recordFactory.get(
+            mapFile(filename),
+            mime,
+            meta
+          ) // TODO: mapFile(filename) can be a path, but only expects a filename here
         }
       }
     }
@@ -51,9 +59,11 @@ object MetaFilesSpecLoader extends InputSpecLoader {
 
   def loadMeta(spec: InputSpec): RDD[(String, FileMeta)] = {
     spec
-      .str("meta-source")
+      .str(InputSpec.MetaSourceKey)
+      .orElse(spec.str(InputSpec.DataSourceKey))
       .flatMap {
-        case "hdfs" => Some(loadMetaHdfs(spec))
+        case HdfsFileRecordFactory.dataSourceType => Some(loadMetaHdfs(spec))
+        case VaultFileRecordFactory.dataSourceType => Some(loadMetaVault(spec))
         case _ => None
       }
       .getOrElse {
@@ -61,15 +71,54 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
   }
 
+  def loadMetaVault(spec: InputSpec): RDD[(String, FileMeta)] = {
+    spec
+      .str(MetaGlobKey)
+      .map { glob =>
+        val vault = VaultFileRecordFactory(spec)
+        val (resolved, remaining) = vault.iterateGlob(Set(glob))
+        val partitions = (resolved.map(_._1) ++ remaining).toSeq
+        val vaultBc = Sparkling.sc.broadcast(vault)
+        val files = RddUtil.parallelize(partitions).mapPartitions { partition =>
+          val vault = vaultBc.value
+          partition.flatMap { g =>
+            vault.glob(g)
+          }
+        }
+        val excludePrefix = spec.str("meta-exclude-prefix")
+        val filtered = {
+          if (excludePrefix.isEmpty) files
+          else files.filter(!_._2.name.startsWith(excludePrefix.get))
+        }
+        parseMeta(
+          spec,
+          filtered.flatMap { case (path, file) =>
+            file.contentUrl.map { contentUrl =>
+              (
+                path, {
+                  val in = vault.accessContentUrl(contentUrl)
+                  try {
+                    StringUtil.fromInputStream(in)
+                  } finally in.close()
+                })
+            }
+          })
+      }
+      .getOrElse {
+        throw new RuntimeException("No meta glob specified")
+      }
+  }
+
   def loadMetaHdfs(spec: InputSpec): RDD[(String, FileMeta)] = {
     spec
-      .str("meta-glob")
+      .str(MetaGlobKey)
       .map { glob =>
         val files = RddUtil.loadFilesLocality(glob)
         val excludePrefix = spec.str("meta-exclude-prefix")
-        val filtered =
+        val filtered = {
           if (excludePrefix.isEmpty) files
           else files.filter(!_.split('/').last.startsWith(excludePrefix.get))
+        }
         parseMeta(
           spec,
           filtered.map { file =>
@@ -77,7 +126,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
           })
       }
       .getOrElse {
-        throw new RuntimeException("No meta location specified")
+        throw new RuntimeException("No meta glob specified")
       }
   }
 

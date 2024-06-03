@@ -39,6 +39,8 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   lazy val inputSize: Long = job.inputSize(conf)
 
+  lazy val outputSize: Long = job.outputSize(conf)
+
   var attempt: Int = 1
   var slots: Int = 1
 
@@ -80,9 +82,11 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def outPath: String = conf.outputPath + job.relativeOutPath
 
   def info: ArchJobInstanceInfo = {
-    val info = ArchJobInstanceInfo(outPath)
-    info.conf = Some(conf)
-    info
+    if (job.generatesOuputput) {
+      val info = ArchJobInstanceInfo(outPath)
+      info.conf = Some(conf)
+      info
+    } else ArchJobInstanceInfo.inMemory
   }
 
   def updateState(value: Int): Unit = {
@@ -111,7 +115,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             }
             JobStateManager.logFinished(this)
         }
-        info.save(outPath)
+        if (job.generatesOuputput) info.save(outPath)
       } else {
         state match {
           case ProcessingState.Queued =>

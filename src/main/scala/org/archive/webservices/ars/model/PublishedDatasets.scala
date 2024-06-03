@@ -5,6 +5,7 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.Arch
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.util.Common
@@ -21,6 +22,7 @@ import scala.io.Source
 import scala.util.Try
 
 object PublishedDatasets {
+  val NAAN = 13960
   val MetadataFields: Set[String] =
     Set("creator", "description", "licenseurl", "subject", "title")
   val DeleteCommentPrefix = "ARCH:"
@@ -30,24 +32,40 @@ object PublishedDatasets {
   private var sync = Set.empty[String]
 
   def jobFile(instance: DerivationJobInstance): String = {
-    instance.conf.outputPath + "/" + instance.job.id + "/published.json"
+    instance.outPath + "/published.json"
   }
 
-  def collectionFile(outPath: String): String = outPath + "/published.json"
+  def collectionFile(collection: ArchCollection): String = {
+    collectionFile(DerivationJobConf.collectionOutPath(collection))
+  }
 
-  val MaxCollectionIdLength = 25
+  def collectionFile(collectionOutPath: String): String = collectionOutPath + "/published.json"
+
+  def isCollectionBased(instance: DerivationJobInstance): Boolean = {
+    InputSpec.isCollectionBased(instance.conf.inputSpec) && {
+      val collectionPath = DerivationJobConf.collectionOutPath(instance.conf.inputSpec.collection)
+      instance.outPath.startsWith(collectionPath + "/")
+    }
+  }
+
+  val MaxInputIdLength = 25
   def itemName(instance: DerivationJobInstance): String = {
     val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
-    val id = instance.conf.inputSpec.id
-    val collectionId =
-      if (id.length <= MaxCollectionIdLength) id
-      else ArchCollection.prefix(id).getOrElse("") + DigestUtil.md5Hex(id).take(16)
+    val inputSpecId = instance.conf.inputSpec.id
+    val inputId =
+      if (inputSpecId.length <= MaxInputIdLength) inputSpecId
+      else {
+        val prefix = ArchCollection.prefix(inputSpecId).getOrElse {
+          inputSpecId.split("[\\W_]", 2).head.take(10) + "-"
+        }
+        prefix + DigestUtil.md5Hex(inputSpecId).take(16)
+      }
     val timestamp = instance.info.started
       .getOrElse(Instant.now)
       .truncatedTo(ChronoUnit.SECONDS)
       .toString
       .replaceAll("[^\\dTZ]", "")
-    Seq("arch", collectionId, jobId, timestamp).mkString("_")
+    Seq("arch", inputId, jobId, timestamp).mkString("_")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
@@ -93,9 +111,10 @@ object PublishedDatasets {
       ark(itemName))
   }
 
-  def appendCollectionFile(outPath: String, info: ItemInfo): Unit = {
-    HdfsIO.fs.mkdirs(new Path(outPath))
-    val f = collectionFile(outPath)
+  def appendCollectionFile(collection: ArchCollection, info: ItemInfo): Unit = {
+    val collectionOutPath = DerivationJobConf.collectionOutPath(collection)
+    HdfsIO.fs.mkdirs(new Path(collectionOutPath))
+    val f = collectionFile(collectionOutPath)
     syncCollectionFile(f) {
       val in = if (HdfsIO.exists(f)) {
         parse(HdfsIO.lines(f).mkString).toSeq
@@ -113,7 +132,7 @@ object PublishedDatasets {
   }
 
   def collectionItems(collection: ArchCollection): Set[String] = {
-    val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+    val collectionFilePath = collectionFile(DerivationJobConf.collectionOutPath(collection))
     parse(HdfsIO.lines(collectionFilePath).mkString).toSeq
       .map(_.hcursor)
       .flatMap { cursor =>
@@ -123,7 +142,7 @@ object PublishedDatasets {
   }
 
   def collectionInfoJson(collection: ArchCollection): String = {
-    val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+    val collectionFilePath = collectionFile(DerivationJobConf.collectionOutPath(collection))
     HdfsIO.lines(collectionFilePath).mkString("\n")
   }
 
@@ -218,7 +237,7 @@ object PublishedDatasets {
       try {
         out.println(
           Map(
-            "naan" -> 13960.asJson,
+            "naan" -> NAAN.asJson,
             "shoulder" -> "/a3".asJson,
             "url" -> (ArchConf.iaBaseUrl + "/details/" + itemName).asJson,
             "metadata" -> Map.empty[String, String].asJson,
@@ -257,29 +276,42 @@ object PublishedDatasets {
       jobId: String,
       conf: DerivationJobConf,
       metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
-    for (instance <- dataset(jobId, conf)) yield {
-      val jobFilePath = jobFile(instance)
-      if (HdfsIO.fs.createNewFile(new Path(jobFilePath))) Some {
-        val item = itemName(instance)
-        val itemInfo = newItemInfo(item, instance)
-        if (!createItem(item, datasetMetadata(instance, itemInfo) ++ metadata)) {
-          HdfsIO.delete(jobFilePath)
-          throw new RuntimeException(s"Creating new Petabox item $item failed.")
-        }
-        appendCollectionFile(conf.outputPath, itemInfo)
-        HdfsIO.writeLines(
-          jobFilePath,
-          Seq(itemInfo.toJson(includeItem = true).spaces4),
-          overwrite = true)
-        itemInfo
-      }
-      else {
-        val itemInfoOpt = jobItem(jobFilePath)
-        for (info <- itemInfoOpt) updateItem(info.item, metadata)
-        itemInfoOpt
-      }
-    }
+    for (instance <- dataset(jobId, conf)) yield publish(instance, metadata)
   }.flatten
+
+  def publish(
+      dataset: DerivationJobInstance,
+      metadata: Map[String, Seq[String]]): Option[ItemInfo] = {
+    val jobFilePath = jobFile(dataset)
+    val itemInfoOpt = jobItem(jobFilePath)
+    itemInfoOpt match {
+      case Some(itemInfo) =>
+        updateItem(itemInfo.item, metadata)
+        itemInfoOpt
+      case None =>
+        HdfsIO.fs.createNewFile(new Path(jobFilePath))
+        val name = itemName(dataset)
+        Try(newItemInfo(name, dataset))
+          .filter { itemInfo =>
+            Try {
+              createItem(name, datasetMetadata(dataset, itemInfo) ++ metadata) && {
+                if (isCollectionBased(dataset)) {
+                  appendCollectionFile(dataset.conf.inputSpec.collection, itemInfo)
+                }
+                HdfsIO.writeLines(
+                  jobFilePath,
+                  Seq(itemInfo.toJson(includeItem = true).spaces4),
+                  overwrite = true) > 0
+              }
+            }.getOrElse(false)
+          }
+          .toOption
+          .orElse {
+            HdfsIO.delete(jobFilePath)
+            throw new RuntimeException(s"Creating new Petabox item $name failed.")
+          }
+    }
+  }
 
   def datasetMetadata(
       instance: DerivationJobInstance,
@@ -296,14 +328,16 @@ object PublishedDatasets {
       parse(HdfsIO.lines(jobFile).mkString).toOption.map(_.hcursor).flatMap { cursor =>
         for {
           item <- cursor.get[String]("item").toOption
-          collectionId <- cursor.get[String]("collection").toOption
+          inputId <- cursor.get[String]("inputId").toOption.orElse {
+            cursor.get[String]("collection").toOption
+          }
           jobId <- cursor.get[String]("job").toOption
           isSample <- cursor.get[Boolean]("sample").toOption
           time <- cursor.get[String]("time").toOption.map(Instant.parse)
           complete <- cursor.get[Boolean]("complete").toOption
         } yield ItemInfo(
           item,
-          collectionId,
+          inputId,
           jobId,
           isSample,
           time,
@@ -321,14 +355,16 @@ object PublishedDatasets {
           jobFilePath,
           Seq(itemInfo.copy(complete = true).toJson(includeItem = true).spaces4),
           overwrite = true)
-        val collectionFilePath = collectionFile(instance.conf.outputPath)
-        syncCollectionFile(collectionFilePath) {
-          val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
-            .flatMap(_.as[Map[String, Json]].toOption)
-            .getOrElse(Map.empty)
-          val out =
-            in.updated(itemName, itemInfo.copy(complete = true).toJson(includeItem = false))
-          HdfsIO.writeLines(collectionFilePath, Seq(out.asJson.spaces4), overwrite = true)
+        if (isCollectionBased(instance)) {
+          val collectionFilePath = collectionFile(instance.conf.inputSpec.collection)
+          syncCollectionFile(collectionFilePath) {
+            val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
+              .flatMap(_.as[Map[String, Json]].toOption)
+              .getOrElse(Map.empty)
+            val out =
+              in.updated(itemName, itemInfo.copy(complete = true).toJson(includeItem = false))
+            HdfsIO.writeLines(collectionFilePath, Seq(out.asJson.spaces4), overwrite = true)
+          }
         }
         true
       case None => false
@@ -388,6 +424,15 @@ object PublishedDatasets {
     }
   }
 
+  def updateItem(instance: DerivationJobInstance, metadata: Map[String, Seq[String]]): Boolean = {
+    val jobFilePath = jobFile(instance)
+    jobItem(jobFilePath)
+      .map { info =>
+        updateItem(info.item, metadata)
+      }
+      .getOrElse(false)
+  }
+
   def updateItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
     this
       .metadata(name, all = true)
@@ -410,7 +455,7 @@ object PublishedDatasets {
   }
 
   def deletePublished(collection: ArchCollection, itemName: String): Boolean = {
-    val collectionFilePath = collectionFile(DerivationJobConf.jobOutPath(collection))
+    val collectionFilePath = collectionFile(DerivationJobConf.collectionOutPath(collection))
     syncCollectionFile(collectionFilePath) {
       val in = parse(HdfsIO.lines(collectionFilePath).mkString).toOption
         .flatMap(_.as[Map[String, Json]].toOption)
@@ -433,6 +478,19 @@ object PublishedDatasets {
     }.getOrElse(false)
   }
 
+  def deletePublished(instance: DerivationJobInstance): Boolean = {
+    val jobFilePath = jobFile(instance)
+    for (info <- jobItem(jobFilePath)) yield {
+      if (isCollectionBased(instance)) {
+        deletePublished(instance.conf.inputSpec.collection, info.item)
+      } else {
+        val success = deleteItem(info.item)
+        if (success) HdfsIO.delete(jobFilePath)
+        success
+      }
+    }
+  }.getOrElse(false)
+
   def files(itemName: String): Set[String] = {
     request(s"metadata/$itemName/files").toOption
       .flatMap(parse(_).toOption.map(_.hcursor))
@@ -445,7 +503,17 @@ object PublishedDatasets {
       .toSet
   }
 
-  def metadata(itemName: String, all: Boolean = false): Option[Map[String, Seq[String]]] = {
+  def metadata(
+      instance: DerivationJobInstance,
+      all: Boolean = false): Option[Map[String, Seq[String]]] = {
+    val jobFilePath = jobFile(instance)
+    jobItem(jobFilePath).flatMap(info => metadata(info.item, all))
+  }
+
+  def metadata(itemName: String): Option[Map[String, Seq[String]]] =
+    metadata(itemName, all = false)
+
+  def metadata(itemName: String, all: Boolean): Option[Map[String, Seq[String]]] = {
     request(s"metadata/$itemName/metadata").toOption
       .flatMap(parse(_).toOption)
       .flatMap(_.hcursor.downField("result").focus)

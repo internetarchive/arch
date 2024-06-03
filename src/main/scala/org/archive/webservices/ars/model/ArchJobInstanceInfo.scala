@@ -56,4 +56,6 @@ object ArchJobInstanceInfo {
       GuavaCache.put(CachePrefix + file, info, None)
     }
   }
+
+  def inMemory: ArchJobInstanceInfo = new ArchJobInstanceInfo()
 }

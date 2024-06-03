@@ -1,7 +1,8 @@
 package org.archive.webservices.ars.processing.jobs.system
 
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.ars.model._
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.logging.LogContext
@@ -17,24 +18,30 @@ object DatasetPublication extends SparkJob {
   val category: ArchJobCategory = ArchJobCategories.System
   def description = "Job to publish a dataset on archive.org (internal system job)"
 
-  override def relativeOutPath: String = id
+  override def relativeOutPath: String = throw new UnsupportedOperationException()
+
+  private def confDataset(conf: DerivationJobConf): Either[String, DerivationJobInstance] = {
+    val datasetParam = conf.params.get[String]("dataset")
+    if (datasetParam.isEmpty && !InputSpec.isDatasetBased(conf.inputSpec))
+      return Left("No dataset specified.")
+    lazy val dataset = {
+      if (datasetParam.isDefined) {
+        datasetParam.flatMap(PublishedDatasets.dataset(_, conf)).getOrElse {
+          return Left("Derivation job " + datasetParam.get + " not found.")
+        }
+      } else conf.inputSpec.dataset
+    }
+    val jobId = datasetParam.getOrElse(dataset.job.id)
+    if (PublishedDatasets.ProhibitedJobs.exists(_.id == jobId)) {
+      Left("Derivation job " + jobId + " is prohibited to be published.")
+    } else Right(dataset)
+  }
 
   override def validateParams(conf: DerivationJobConf): Option[String] = {
     super
       .validateParams(conf)
       .orElse {
-        conf.params.get[String]("dataset") match {
-          case Some(jobId) =>
-            PublishedDatasets.ProhibitedJobs.find(_.id == jobId) match {
-              case Some(_) => Some("Derivation job " + jobId + " prohibited to be published.")
-              case None =>
-                PublishedDatasets.dataset(jobId, conf) match {
-                  case Some(_) => None
-                  case None => Some("Derivation job " + jobId + " not found.")
-                }
-            }
-          case None => Some("No dataset specified.")
-        }
+        confDataset(conf).left.toOption
       }
       .orElse {
         conf.params.values.get("metadata") match {
@@ -47,17 +54,16 @@ object DatasetPublication extends SparkJob {
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     for {
-      jobId <- conf.params.get[String]("dataset")
-      dataset <- PublishedDatasets.dataset(jobId, conf)
+      dataset <- confDataset(conf).toOption
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
-      itemInfo <- PublishedDatasets.publish(jobId, conf, metadata)
+      itemInfo <- PublishedDatasets.publish(dataset, metadata)
     } yield {
       if (itemInfo.complete) Future(true)
       else {
         val itemName = itemInfo.item
         SparkJobManager.context.map { sc =>
           SparkJobManager.initThread(sc, DatasetPublication, conf)
-          val accessContext = CollectionAccessContext.fromLocalArchConf
+          val accessContext = FileAccessContext.fromLocalArchConf
           val fileListBc = sc.broadcast(PublishedDatasets.files(itemName))
           RddUtil
             .parallelize(dataset.outFiles.map(f => (f.filename, f.path)).toList)
@@ -80,10 +86,7 @@ object DatasetPublication extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    for {
-      jobId <- conf.params.get[String]("dataset")
-      dataset <- PublishedDatasets.dataset(jobId, conf)
-    } {
+    for (dataset <- confDataset(conf).toOption) {
       val jobFilePath = PublishedDatasets.jobFile(dataset)
       for (info <- PublishedDatasets.jobItem(jobFilePath)) {
         instance.state = if (info.complete) ProcessingState.Finished else ProcessingState.Failed
@@ -99,4 +102,6 @@ object DatasetPublication extends SparkJob {
   override def reset(conf: DerivationJobConf): Unit = {}
 
   override val finishedNotificationTemplate: Option[String] = None
+
+  override def generatesOuputput: Boolean = false
 }

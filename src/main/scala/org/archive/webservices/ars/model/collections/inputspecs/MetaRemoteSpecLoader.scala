@@ -1,18 +1,21 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.archive.webservices.ars.io.CollectionAccessContext
+import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 object MetaRemoteSpecLoader extends InputSpecLoader {
-  override def load[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
+  val specType = "meta-remote"
+
+  override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
       filenameKey <- spec.str("meta-filename-key")
       mimeKey <- spec.str("meta-mime-key")
     } yield {
-      val accessContext = CollectionAccessContext.fromLocalArchConf
+      val accessContext = FileAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>
         accessContext.init()
         val recordFactory = recordFactoryBc.value
@@ -31,9 +34,11 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
 
   def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
     spec
-      .str("meta-source")
+      .str(InputSpec.MetaSourceKey)
+      .orElse(spec.str(InputSpec.DataSourceKey))
       .flatMap {
-        case "hdfs" => Some(loadMetaHdfs(spec))
+        case HdfsFileRecordFactory.dataSourceType => Some(loadMetaHdfs(spec))
+        case VaultFileRecordFactory.dataSourceType => Some(loadMetaVault(spec))
         case _ => None
       }
       .getOrElse {
@@ -43,18 +48,43 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
 
   def loadMetaHdfs(spec: InputSpec): RDD[Map[String, Any]] = {
     spec
-      .str("meta-location")
+      .str(InputSpec.MetaLocationKey)
       .map {
         case location if location.endsWith(".parquet") =>
-          val dataFrame = SparkSession.builder.getOrCreate.read.parquet(location)
-          val schema = Sparkling.sc.broadcast(dataFrame.schema)
-          dataFrame.rdd.map {
-            _.getValuesMap[Any](schema.value.fieldNames)
-          }
+          loadParquet(location)
         case _ => throw new UnsupportedOperationException()
       }
       .getOrElse {
         throw new RuntimeException("No meta location specified")
       }
+  }
+
+  def loadMetaVault(spec: InputSpec): RDD[Map[String, Any]] = {
+    spec
+      .str(InputSpec.MetaLocationKey)
+      .map {
+        case location if location.endsWith(".parquet") =>
+          val in = VaultFileRecordFactory(spec).accessFile(location)
+          val tmpFile = HdfsIO.createTmpPath()
+          val out = HdfsIO.out(tmpFile)
+          try {
+            IOUtil.copy(in, out)
+          } finally {
+            out.close()
+          }
+          loadParquet(tmpFile)
+        case _ => throw new UnsupportedOperationException()
+      }
+      .getOrElse {
+        throw new RuntimeException("No meta location specified")
+      }
+  }
+
+  def loadParquet(path: String): RDD[Map[String, Any]] = {
+    val dataFrame = SparkSession.builder.getOrCreate.read.parquet(path)
+    val schema = Sparkling.sc.broadcast(dataFrame.schema)
+    dataFrame.rdd.map {
+      _.getValuesMap[Any](schema.value.fieldNames)
+    }
   }
 }

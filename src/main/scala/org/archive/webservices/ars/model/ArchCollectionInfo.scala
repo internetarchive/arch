@@ -49,8 +49,8 @@ object ArchCollectionInfo {
   def get(collectionId: String): Option[ArchCollectionInfo] = {
     GuavaCache.get(CachePrefix + collectionId).orElse {
       ArchCollection.get(collectionId).map { c =>
-        val file = DerivationJobConf.jobOutPath(c) + "/info.json"
-        val globalFile = DerivationJobConf.jobOutPath(c, global = true) + "/info.json"
+        val file = DerivationJobConf.collectionOutPath(c) + "/info.json"
+        val globalFile = DerivationJobConf.collectionOutPath(c, global = true) + "/info.json"
         val lastJob = Seq(file, globalFile)
           .filter(HdfsIO.exists)
           .flatMap { inFile =>

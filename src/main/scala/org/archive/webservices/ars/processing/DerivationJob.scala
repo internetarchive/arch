@@ -1,7 +1,8 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
+import org.archive.webservices.sparkling.io.HdfsIO
 
 import scala.concurrent.Future
 
@@ -47,7 +48,16 @@ trait DerivationJob {
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
-  def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = Iterator.empty
+  def datasetGlobMime(conf: DerivationJobConf): Option[(String, String)] = None
+
+  def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = {
+    datasetGlobMime(conf).toIterator.flatMap { case (glob, mime) =>
+      HdfsIO.files(glob).map { file =>
+        val (path, name) = file.splitAt(file.lastIndexOf('/'))
+        DerivativeOutput(name.stripPrefix("/"), path, mime.split('/').last, mime)
+      }
+    }
+  }
 
   def reset(conf: DerivationJobConf): Unit = {}
 
@@ -55,13 +65,17 @@ trait DerivationJob {
 
   def finishedNotificationTemplate: Option[String] = Some("finished")
 
-  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this)
+  def generatesOuputput: Boolean = true
+
+  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOuputput
 
   def validateParams(conf: DerivationJobConf): Option[String] = None
 
   def inputSize(conf: DerivationJobConf): Long = {
     if (InputSpec.isCollectionBased(conf.inputSpec)) {
       conf.inputSpec.collection.specifics.inputSize(conf)
-    } else conf.inputSpec.size
+    } else InputSpecLoader.size(conf.inputSpec)
   }
+
+  def outputSize(conf: DerivationJobConf): Long = outFiles(conf).map(_.size).foldLeft(0L)(_ + _)
 }

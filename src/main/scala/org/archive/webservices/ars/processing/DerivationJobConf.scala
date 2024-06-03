@@ -41,7 +41,7 @@ object DerivationJobConf {
 
   implicit def toIdentifier(conf: DerivationJobConf): Identifier = Identifier(conf.serialize)
 
-  def jobOutPath(collection: ArchCollection, global: Boolean = false): String = {
+  def collectionOutPath(collection: ArchCollection, global: Boolean = false): String = {
     collection.userSpecificId
       .filter(_ => !global)
       .map { case (userId, sourceId) =>
@@ -88,7 +88,7 @@ object DerivationJobConf {
       global: Boolean = false): DerivationJobConf = {
     new DerivationJobConf(
       InputSpec.apply(collection, collection.specifics.inputPath),
-      jobOutPath(collection, global) + (if (sample) "/samples" else "/out"),
+      collectionOutPath(collection, global) + (if (sample) "/samples" else "/out"),
       if (sample) SampleSize else -1,
       params)
   }

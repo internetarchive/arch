@@ -2,14 +2,9 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe.{HCursor, Json, JsonObject, parser}
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, IOHelper}
+import org.archive.webservices.ars.io.{FileAccessContext, FilePointer, IOHelper}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.{
-  FilePointer,
-  FileRecordFactory,
-  InputSpec,
-  InputSpecLoader
-}
+import org.archive.webservices.ars.model.collections.inputspecs.{FileRecordFactory, InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.sparkling.Sparkling
@@ -49,7 +44,7 @@ class FileCollectionSpecifics(val id: String)
   }
 
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
-    InputSpecLoader.load(InputSpec(inputPath)) { rdd =>
+    InputSpecLoader.loadSpark(InputSpec(inputPath)) { rdd =>
       action(
         rdd
           .filter { file =>
@@ -62,7 +57,7 @@ class FileCollectionSpecifics(val id: String)
 
   private val factories = scala.collection.mutable.Map.empty[String, FileRecordFactory]
   override def randomAccess(
-      context: CollectionAccessContext,
+      context: FileAccessContext,
       inputPath: String,
       pointer: FilePointer,
       offset: Long,

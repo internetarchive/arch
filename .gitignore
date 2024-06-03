@@ -230,10 +230,13 @@ project/metals.sbt
 project/project/
 # End of metals
 
-config/config.json
-
-lib/stanford-corenlp-4.3.1.jar
-lib/stanford-corenlp-4.3.1-models.jar
-lib/jollyday.jar
+/config/config.json
+/lib/archivespark-assembly-3.3.8-SNAPSHOT.jar
+/lib/sparkling-assembly-0.3.8-SNAPSHOT.jar
+/lib/stanford-corenlp-4.5.1-models.jar
+/lib/stanford-corenlp-4.5.1.jar
+/lib/stanford-corenlp-models-chinese.jar
+/lib/.symlinks-copied
+/shared
 
 !webapp/js/dist

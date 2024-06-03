@@ -1,9 +1,8 @@
 package org.archive.webservices.ars.model.collections
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{CollectionAccessContext, WebArchiveLoader}
+import org.archive.webservices.ars.io.{FileAccessContext, FilePointer, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.cdx.CdxRecord
@@ -26,7 +25,7 @@ abstract class CollectionSpecifics {
   }
 
   def randomAccess(
-      context: CollectionAccessContext,
+      context: FileAccessContext,
       inputPath: String,
       pointer: FilePointer,
       offset: Long,

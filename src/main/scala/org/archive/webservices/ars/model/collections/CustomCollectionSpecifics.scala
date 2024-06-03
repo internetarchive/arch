@@ -2,18 +2,16 @@ package org.archive.webservices.ars.model.collections
 
 import io.circe._
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
+import org.archive.webservices.ars.io.{FilePointer, IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.collections.inputspecs.FilePointer
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionStats, ArchConf}
-import org.archive.webservices.ars.util.CacheUtil
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
 
 import java.io.InputStream
-import scala.util.Try
 
 class CustomCollectionSpecifics(val id: String)
     extends CollectionSpecifics
@@ -49,7 +47,7 @@ class CustomCollectionSpecifics(val id: String)
   def loadWarcFiles[R](inputPath: String)(action: RDD[(FilePointer, InputStream)] => R): R = {
     val sourceId = this.sourceId
     action({
-      val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+      val cdxPath = inputPath + "/" + UserDefinedQuery.CdxDir
       CustomCollectionSpecifics.location(customId) match {
         case Some(location) =>
           val locationId = StringUtil
@@ -83,7 +81,7 @@ class CustomCollectionSpecifics(val id: String)
   }
 
   override def loadCdx[R](inputPath: String)(action: RDD[CdxRecord] => R): R = {
-    val cdxPath = inputPath + "/" + CustomCollectionSpecifics.CdxDir
+    val cdxPath = inputPath + "/" + UserDefinedQuery.CdxDir
     val locationPrefix = CustomCollectionSpecifics
       .location(customId)
       .map(_ + FilePointer.SourceSeparator)
@@ -99,25 +97,19 @@ class CustomCollectionSpecifics(val id: String)
 
 object CustomCollectionSpecifics {
   val Prefix = "CUSTOM-"
-  val InfoFile = "info.json"
   val LocationIdSeparator = ":"
-  val CdxDir = "index.cdx.gz"
 
   private def collectionInfo(id: String): Option[HCursor] = path(id).flatMap { path =>
-    CacheUtil.cache[Option[HCursor]](s"CustomCollectionSpecifics:collectionInfo:$path") {
-      val infoPath = path + s"/$InfoFile"
-      if (HdfsIO.exists(infoPath)) {
-        val str = HdfsIO.lines(infoPath).mkString
-        Try(parser.parse(str).right.get.hcursor).toOption
-      } else None
-    }
+    UserDefinedQuery.parseInfo(path)
   }
 
-  def location(id: String): Option[String] =
+  def location(id: String): Option[String] = {
     collectionInfo(id).flatMap(_.get[String]("location").toOption)
+  }
 
-  def userPath(userId: String): String =
+  def userPath(userId: String): String = {
     ArchConf.customCollectionPath + "/" + IOHelper.escapePath(userId)
+  }
 
   def path(user: ArchUser): String = userPath(user.id)
 
@@ -134,7 +126,7 @@ object CustomCollectionSpecifics {
   def userCollectionIds(user: ArchUser): Seq[String] = {
     HdfsIO
       .files(path(user) + "/*", recursive = false)
-      .filter(p => HdfsIO.exists(p + s"/$InfoFile"))
+      .filter(p => HdfsIO.exists(p + "/" + UserDefinedQuery.InfoFile))
       .flatMap(_.stripSuffix("/").split('/').lastOption)
       .toSeq
       .map { id =>

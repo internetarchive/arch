@@ -1,10 +1,11 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
-import io.circe.HCursor
 import io.circe.parser.parse
 import io.circe.syntax._
+import io.circe.{Decoder, HCursor}
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.FileCollectionSpecifics
+import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, ProcessingState}
 
 import scala.util.Try
 
@@ -13,9 +14,10 @@ trait InputSpec {
   def specType: String
   def inputType: String
   def cursor: HCursor
-  def size: Long
-  def str(key: String): Option[String] = cursor.get[String](key).toOption
-  def int(key: String): Option[Int] = cursor.get[Int](key).toOption
+  def str(key: String): Option[String] = get[String](key)
+  def int(key: String): Option[Int] = get[Int](key)
+  def get[A: Decoder](key: String): Option[A] = cursor.get[A](key).toOption
+  lazy val size: Long = loader.size(this)
   lazy val loader: InputSpecLoader = InputSpecLoader.get(this).getOrElse {
     throw new UnsupportedOperationException("no loader found for input spec type " + specType)
   }
@@ -28,7 +30,6 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[
   }
   override lazy val inputType: String =
     cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
-  override lazy val size: Long = cursor.get[Long]("size").getOrElse(-1)
 }
 
 class CollectionBasedInputSpec(
@@ -37,7 +38,7 @@ class CollectionBasedInputSpec(
     cursorOpt: Option[HCursor] = None)
     extends InputSpec {
   override val id: String = collectionId
-  override val specType: String = CollectionBasedInputSpec.SpecType
+  override val specType: String = ArchCollectionSpecLoader.specType
   override val inputType: String = InputSpec.InputType.WARC
   lazy val inputPath: String = inputPathOpt.getOrElse(collection.specifics.inputPath)
   override lazy val cursor: HCursor = cursorOpt.getOrElse(
@@ -45,7 +46,6 @@ class CollectionBasedInputSpec(
       "type" -> specType,
       "collectionId" -> collectionId,
       "inputPath" -> inputPath).asJson.hcursor)
-  override def size: Long = ArchCollection.get(collectionId).map(_.stats.size).getOrElse(-1)
   private[inputspecs] var _collection: Option[ArchCollection] = None
   def collection: ArchCollection = _collection
     .orElse {
@@ -57,14 +57,44 @@ class CollectionBasedInputSpec(
     }
 }
 
-object CollectionBasedInputSpec {
-  val SpecType = "collection"
+class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
+    extends InputSpec {
+  @transient lazy val dataset: DerivationJobInstance =
+    JobManager.getInstance(uuid).filter(_.state == ProcessingState.Finished).getOrElse {
+      throw new RuntimeException("Dataset with UUID " + uuid + " not found.")
+    }
+  override lazy val inputType: String =
+    cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
+  override val id: String = {
+    val jobId = dataset.job.id + (if (dataset.conf.isSample) "-sample" else "")
+    dataset.conf.inputSpec.id + "_" + jobId + "_" + uuid
+  }
+  override val specType: String = DatasetSpecLoader.specType
+  override lazy val cursor: HCursor = cursorOpt.getOrElse(Map("uuid" -> uuid).asJson.hcursor)
+  def toFileSpec: Option[InputSpec] = {
+    dataset.job.datasetGlobMime(dataset.conf).map { case (glob, mime) =>
+      new DefaultInputSpec(
+        FileSpecLoader.specType,
+        Map(
+          InputSpec.DataLocationKey -> glob.asJson,
+          FileSpecLoader.MimeKey -> mime.asJson).asJson.hcursor,
+        Some(id))
+    }
+  }
 }
 
 object InputSpec {
+  val DataSourceKey = "data-source"
+  val MetaSourceKey = "meta-source"
+  val DataLocationKey = "data-location"
+  val MetaLocationKey = "meta-location"
+
   object InputType {
     val Files = "files"
     val WARC = "warc"
+    val CDX = "cdx"
+
+    def warc(inputType: String): Boolean = inputType == WARC || inputType == CDX
   }
 
   case class Identifier private (str: String) {
@@ -82,22 +112,34 @@ object InputSpec {
     id)
 
   def apply(cursor: HCursor, id: Option[String] = None): InputSpec = {
-    val specType = cursor.get[String]("type").toOption.orElse {
+    val specType = cursor.get[String]("type").toOption.getOrElse {
       throw new RuntimeException("invalid input spec: type missing")
     }
-    specType
-      .filter(_ == CollectionBasedInputSpec.SpecType)
-      .flatMap { _ =>
-        for {
-          collectionId <- cursor.get[String]("collectionId").toOption
-        } yield {
-          val inputPath = cursor.get[String]("inputPath").toOption
-          new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
-        }
-      }
-      .getOrElse {
-        new DefaultInputSpec(specType.get, cursor, id)
-      }
+    specType match {
+      case ArchCollectionSpecLoader.specType =>
+        cursor
+          .get[String]("collectionId")
+          .toOption
+          .map { collectionId =>
+            val inputPath = cursor.get[String]("inputPath").toOption
+            new CollectionBasedInputSpec(collectionId, inputPath, Some(cursor))
+          }
+          .getOrElse {
+            throw new RuntimeException("invalid input spec: collectionId missing")
+          }
+      case DatasetSpecLoader.specType =>
+        cursor
+          .get[String]("uuid")
+          .toOption
+          .map { uuid =>
+            new DatasetBasedInputSpec(uuid, Some(cursor))
+          }
+          .getOrElse {
+            throw new RuntimeException("invalid input spec: uuid missing")
+          }
+      case _ =>
+        new DefaultInputSpec(specType, cursor, id)
+    }
   }
 
   def apply(collection: ArchCollection, inputPath: String): InputSpec = {
@@ -114,8 +156,15 @@ object InputSpec {
 
   def isCollectionBased(spec: InputSpec): Boolean = spec.isInstanceOf[CollectionBasedInputSpec]
 
+  def isDatasetBased(spec: InputSpec): Boolean = spec.isInstanceOf[DatasetBasedInputSpec]
+
   implicit def toCollectionBased(spec: InputSpec): CollectionBasedInputSpec =
     Try(spec.asInstanceOf[CollectionBasedInputSpec]).getOrElse {
       throw new UnsupportedOperationException("this spec is not collection-based.")
+    }
+
+  implicit def toDatasetBased(spec: InputSpec): DatasetBasedInputSpec =
+    Try(spec.asInstanceOf[DatasetBasedInputSpec]).getOrElse {
+      throw new UnsupportedOperationException("this spec is not dataset-based.")
     }
 }
