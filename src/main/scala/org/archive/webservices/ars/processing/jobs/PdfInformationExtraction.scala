@@ -17,7 +17,7 @@ object PdfInformationExtraction extends BinaryInformationAutJob {
   val targetFile: String = "pdf-information.csv.gz"
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
-    tika == "application/pdf"
+    server == "application/pdf" // not `tika == `, which we had before, but also matches Adobe Illustrator and PostScript
 
   override def prepareRecords(rdd: RDD[WarcRecord]): RDD[Row] = rdd.flatMap(prepareRecord)
 }
