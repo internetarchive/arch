@@ -27,7 +27,8 @@ object FileRecordFactory {
     S3HttpFileRecordFactory,
     HttpFileRecordFactory,
     HdfsFileRecordFactory,
-    VaultFileRecordFactory)
+    VaultFileRecordFactory,
+    PetaboxFileRecordFactory)
 
   def apply(spec: InputSpec, default: FileFactoryCompanion): FileRecordFactory = {
     apply(spec, Some(default))

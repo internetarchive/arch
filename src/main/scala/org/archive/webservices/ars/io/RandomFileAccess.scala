@@ -1,8 +1,9 @@
 package org.archive.webservices.ars.io
 
 import com.amazonaws.services.s3.model.GetObjectRequest
-import org.archive.webservices.ars.model.ArchCollection
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 import org.archive.webservices.sparkling.petabox.PetaBox
 
@@ -128,8 +129,13 @@ object RandomFileAccess {
       file: FilePointer,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    PetaBox.requestWebdata(file.path, offset = offset, close = false) { in =>
-      IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+    val uncompressed = file.filename.toLowerCase.stripSuffix(Sparkling.GzipExt).stripSuffix(Sparkling.ZstdExt)
+    if (uncompressed.endsWith(Sparkling.WarcExt) || uncompressed.endsWith(Sparkling.ArcExt)) {
+      PetaBox.requestWebdata(file.path, offset = offset, close = false) { in =>
+        IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+      }
+    } else {
+      httpAccessUrl(ArchConf.iaBaseUrl + "/serve/" + file.path, offset, positions)
     }
   }
 
