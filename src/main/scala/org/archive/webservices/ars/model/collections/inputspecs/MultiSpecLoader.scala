@@ -25,7 +25,8 @@ object MultiSpecLoader extends InputSpecLoader {
     Some(if (types.size == 1) types.head else InputSpec.InputType.Files)
   }
 
-  private def unionSpark[R](spec: InputSpec, load: InputSpec => (RDD[FileRecord] => R) => R)(action: RDD[FileRecord] => R): R = {
+  private def unionSpark[R](spec: InputSpec, load: InputSpec => (RDD[FileRecord] => R) => R)(
+      action: RDD[FileRecord] => R): R = {
     val specs = multiSpecs(spec)
     var union = RddUtil.emptyRDD[FileRecord]
     def next: R = {

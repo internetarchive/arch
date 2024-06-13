@@ -13,12 +13,11 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 
 import java.io.InputStream
 
-class ArchWarcRecord(val warc: WarcRecord)
-    extends ArchEnrichRoot[CdxRecord]
-    with WarcLikeRecord {
+class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] with WarcLikeRecord {
   override def companion: EnrichRootCompanion[ArchWarcRecord] = ArchWarcRecord
 
-  override lazy val get: CdxRecord = warc.toCdx(0L, handleRevisits = true, handleOthers = true).get
+  override lazy val get: CdxRecord =
+    warc.toCdx(0L, handleRevisits = true, handleOthers = true).get
 
   def mime: String = warc.http.flatMap(_.mime).getOrElse("/")
 

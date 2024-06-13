@@ -103,8 +103,8 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
         decompress = false,
         deleteSrcFiles = true,
         deleteSrcPath = true) { in =>
-          DerivativeOutput.hashFile(in, outFile)
-        }
+        DerivativeOutput.hashFile(in, outFile)
+      }
       HdfsIO.exists(outFile)
     }
 

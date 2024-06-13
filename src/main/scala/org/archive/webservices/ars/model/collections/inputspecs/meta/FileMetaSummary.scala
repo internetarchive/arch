@@ -2,7 +2,6 @@ package org.archive.webservices.ars.model.collections.inputspecs.meta
 
 import io.circe._
 import io.circe.syntax._
-import org.archive.webservices.sparkling.util.IteratorUtil
 
 import scala.collection.immutable.ListMap
 
@@ -20,12 +19,15 @@ class FileMetaSummary extends Serializable {
     for (missing <- (fields -- meta.keys).values) missing.optional = true
     val first = fields.isEmpty
     for (field <- meta.fields) {
-      fields.getOrElse(field.key, {
-        val summary = new FileMetaFieldSummary
-        summary.optional = !first
-        fields += field.key -> summary
-        summary
-      }).add(field)
+      fields
+        .getOrElse(
+          field.key, {
+            val summary = new FileMetaFieldSummary
+            summary.optional = !first
+            fields += field.key -> summary
+            summary
+          })
+        .add(field)
     }
   }
 
@@ -35,19 +37,24 @@ class FileMetaSummary extends Serializable {
     else {
       val newFields = {
         fields.toSeq.map(_._1).zipWithIndex ++ that.fields.toSeq.map(_._1).zipWithIndex
-      }.groupBy(_._1).toSeq.map { case (key, group) =>
-        (key, group.map(_._2).min)
-      }.sortBy(_._2).map(_._1).map { field =>
-        val thisField = fields.get(field)
-        val thatField = that.fields.get(field)
-        field -> {
-          if (thisField.isEmpty || thatField.isEmpty) {
-            val field = thisField.orElse(thatField).get
-            field.optional = true
-            field
-          } else thisField.get ++ thatField.get
+      }.groupBy(_._1)
+        .toSeq
+        .map { case (key, group) =>
+          (key, group.map(_._2).min)
         }
-      }
+        .sortBy(_._2)
+        .map(_._1)
+        .map { field =>
+          val thisField = fields.get(field)
+          val thatField = that.fields.get(field)
+          field -> {
+            if (thisField.isEmpty || thatField.isEmpty) {
+              val field = thisField.orElse(thatField).get
+              field.optional = true
+              field
+            } else thisField.get ++ thatField.get
+          }
+        }
       val summary = new FileMetaSummary
       summary.fields ++= newFields
       summary
@@ -55,9 +62,12 @@ class FileMetaSummary extends Serializable {
   }
 
   def toJson: Json = {
-    fields.toSeq.map { case (key, field) =>
-      key -> field.toJson
-    }.toMap.asJson
+    fields.toSeq
+      .map { case (key, field) =>
+        key -> field.toJson
+      }
+      .toMap
+      .asJson
   }
 
   def toJsonSchema: Json = {
@@ -67,7 +77,6 @@ class FileMetaSummary extends Serializable {
       "required" -> fields.toSeq.filter(!_._2.optional).map(_._1).asJson,
       "properties" -> ListMap(fields.toSeq.map { case (key, field) =>
         key -> (ListMap("title" -> key.asJson) ++ field.toJsonSchemaProperties)
-      }: _*).asJson
-    ).asJson
+      }: _*).asJson).asJson
   }
 }

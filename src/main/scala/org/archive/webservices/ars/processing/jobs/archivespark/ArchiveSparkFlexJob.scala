@@ -17,15 +17,19 @@ object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
   val category: ArchJobCategory = ArchJobCategories.None
 
   override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    val mime = conf.params.values.get("mime").toSeq.flatMap { mime =>
-      if (mime.isString) mime.asString.toSeq
-      else if (mime.isArray) mime.asArray.toSeq.flatMap(_.flatMap(_.asString))
-      else Seq.empty
-    }.toSet
+    val mime = conf.params.values
+      .get("mime")
+      .toSeq
+      .flatMap { mime =>
+        if (mime.isString) mime.asString.toSeq
+        else if (mime.isArray) mime.asArray.toSeq.flatMap(_.flatMap(_.asString))
+        else Seq.empty
+      }
+      .toSet
     if (mime.isEmpty) {
       super.genericPredicate(conf)
-    } else {
-      record => mime.contains(record.mime) || mime.contains(StringUtil.prefixToSeparator(record.mime, "/"))
+    } else { record =>
+      mime.contains(record.mime) || mime.contains(StringUtil.prefixToSeparator(record.mime, "/"))
     }
   }
 
@@ -33,13 +37,14 @@ object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
     val superFilter = super.warcPredicate(conf)
     val status = conf.params.values.get("status").toSeq.flatMap { status =>
       if (status.isNumber) status.asNumber.flatMap(_.toInt).toSeq
-      else if (status.isArray) status.asArray.toSeq.flatMap(_.flatMap(_.asNumber).flatMap(_.toInt))
+      else if (status.isArray)
+        status.asArray.toSeq.flatMap(_.flatMap(_.asNumber).flatMap(_.toInt))
       else Seq.empty
     }
     if (status.isEmpty) {
       superFilter
-    } else {
-      warc => superFilter(warc) && {
+    } else { warc =>
+      superFilter(warc) && {
         status.exists { s =>
           warc.status == s || (s < 100 && (warc.status / 10 == s || (s < 10 && warc.status / 100 == s)))
         }
@@ -53,19 +58,16 @@ object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
     }
   }
 
-  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_]] = Seq(
-    EntitiesAdapter,
-    Whisper,
-    WhisperText
-  ).flatMap { adapter =>
-    Iterator(
-      adapter.name -> adapter,
-      adapter.name.toLowerCase -> adapter
-    )
-  }.toMap
+  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_]] =
+    Seq(EntitiesAdapter, Whisper, WhisperText).flatMap { adapter =>
+      Iterator(adapter.name -> adapter, adapter.name.toLowerCase -> adapter)
+    }.toMap
 
-  private def initFunction[A](func: ArchArchiveSparkFunctionAdapter[A], cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], A, _] = {
-    val dependency = cursor.downField("on").focus.map(initFunction).flatMap(func.toDependencyPointer)
+  private def initFunction[A](
+      func: ArchArchiveSparkFunctionAdapter[A],
+      cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], A, _] = {
+    val dependency =
+      cursor.downField("on").focus.map(initFunction).flatMap(func.toDependencyPointer)
     cursor.downField("params").focus.flatMap(DerivationJobParameters.fromJson) match {
       case Some(params) => func.withParams(params, on = dependency)
       case None => func.noParams(on = dependency)

@@ -20,8 +20,7 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
     override lazy val meta: FileMetaData = FileMetaData(
       FileMetaField("filename", filename),
       FileMetaField("mime", mime),
-      FileMetaField("path", path)
-    )
+      FileMetaField("path", path))
   }
 
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {

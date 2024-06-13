@@ -14,7 +14,7 @@ trait FileMetaFieldTypeSummary extends Serializable {
   def toJsonSchemaProperties: Seq[(String, Json)]
 }
 
-abstract class FileMetaFieldOrderedTypeSummary[A : Ordering] extends FileMetaFieldTypeSummary {
+abstract class FileMetaFieldOrderedTypeSummary[A: Ordering] extends FileMetaFieldTypeSummary {
   protected var empty: Boolean = true
   protected var minNumValues = 1
   protected var maxNumValues = 1
@@ -58,8 +58,8 @@ class FileMetaFieldStringTypeSummary extends FileMetaFieldOrderedTypeSummary[Str
     val v = value.asInstanceOf[String]
 
     if (!freeText && (v.length > FileMetaSummary.MaxStringOptionLength || {
-      options.size == FileMetaSummary.MaxOptions && !options.contains(v)
-    })) freeText = true
+        options.size == FileMetaSummary.MaxOptions && !options.contains(v)
+      })) freeText = true
 
     if (options.size < FileMetaSummary.MaxOptions) {
       if (v.length <= FileMetaSummary.MaxStringOptionLength) options += v
@@ -87,7 +87,8 @@ class FileMetaFieldStringTypeSummary extends FileMetaFieldOrderedTypeSummary[Str
       summary.minLength = minLength.min(thatTyped.minLength)
       summary.maxLength = maxLength.max(thatTyped.maxLength)
       val newOptions = options ++ thatTyped.options
-      summary.freeText = freeText || thatTyped.freeText || newOptions.size > FileMetaSummary.MaxOptions
+      summary.freeText =
+        freeText || thatTyped.freeText || newOptions.size > FileMetaSummary.MaxOptions
       summary.options = newOptions.take(FileMetaSummary.MaxOptions)
       summary
     }
@@ -96,32 +97,27 @@ class FileMetaFieldStringTypeSummary extends FileMetaFieldOrderedTypeSummary[Str
   override def toJson: (String, Json) = "string" -> {
     val multiValues = maxNumValues > 1
     ListMap("multiValues" -> multiValues.asJson) ++ {
-      if (multiValues) Seq(
-        "minNumValues" -> minNumValues.asJson,
-        "maxNumValues" -> maxNumValues.asJson
-      ) else Seq.empty
-    } ++ Seq(
-      "freeText" -> freeText.asJson
-    ) ++ {
-      if (freeText) Seq(
-        "minLength" -> minLength.asJson,
-        "maxLength" -> maxLength.asJson,
-        "examples" -> options.toSeq.sorted.asJson
-      ) else Seq(
-        "options" -> options.toSeq.sorted.asJson
-      )
+      if (multiValues)
+        Seq("minNumValues" -> minNumValues.asJson, "maxNumValues" -> maxNumValues.asJson)
+      else Seq.empty
+    } ++ Seq("freeText" -> freeText.asJson) ++ {
+      if (freeText)
+        Seq(
+          "minLength" -> minLength.asJson,
+          "maxLength" -> maxLength.asJson,
+          "examples" -> options.toSeq.sorted.asJson)
+      else Seq("options" -> options.toSeq.sorted.asJson)
     }
   }.asJson
 
   override def toJsonSchemaProperties: Seq[(String, Json)] = {
     val typeSchema = Seq("type" -> "string".asJson) ++ {
-      if (freeText) Seq(
-        "minLength" -> minLength.asJson,
-        "maxLength" -> maxLength.asJson,
-        "examples" -> options.toSeq.sorted.asJson
-      ) else Seq(
-        "enum" -> options.toSeq.sorted.asJson
-      )
+      if (freeText)
+        Seq(
+          "minLength" -> minLength.asJson,
+          "maxLength" -> maxLength.asJson,
+          "examples" -> options.toSeq.sorted.asJson)
+      else Seq("enum" -> options.toSeq.sorted.asJson)
     }
     wrapJsonSchemaArray(typeSchema)
   }
@@ -165,28 +161,17 @@ class FileMetaFieldNumberTypeSummary extends FileMetaFieldOrderedTypeSummary[Dou
   override def toJson: (String, Json) = "number" -> {
     val multiValues = maxNumValues > 1
     ListMap("multiValues" -> multiValues.asJson) ++ {
-      if (multiValues) Seq(
-        "minNumValues" -> minNumValues.asJson,
-        "maxNumValues" -> maxNumValues.asJson
-      ) else Seq.empty
-    } ++ Seq(
-      "freeRange" -> freeRange.asJson,
-      "isDecimal" -> isDecimal.asJson
-    ) ++ {
+      if (multiValues)
+        Seq("minNumValues" -> minNumValues.asJson, "maxNumValues" -> maxNumValues.asJson)
+      else Seq.empty
+    } ++ Seq("freeRange" -> freeRange.asJson, "isDecimal" -> isDecimal.asJson) ++ {
       if (isDecimal) {
-        if (freeRange) Seq(
-          "minValue" -> minValue.asJson,
-          "maxValue" -> maxValue.asJson
-        ) else Seq(
-          "options" -> options.toSeq.sorted.asJson
-        )
+        if (freeRange) Seq("minValue" -> minValue.asJson, "maxValue" -> maxValue.asJson)
+        else Seq("options" -> options.toSeq.sorted.asJson)
       } else {
-        if (freeRange) Seq(
-          "minValue" -> minValue.toLong.asJson,
-          "maxValue" -> maxValue.toLong.asJson
-        ) else Seq(
-          "options" -> options.map(_.toLong).toSeq.sorted.asJson
-        )
+        if (freeRange)
+          Seq("minValue" -> minValue.toLong.asJson, "maxValue" -> maxValue.toLong.asJson)
+        else Seq("options" -> options.map(_.toLong).toSeq.sorted.asJson)
       }
     }
   }.asJson

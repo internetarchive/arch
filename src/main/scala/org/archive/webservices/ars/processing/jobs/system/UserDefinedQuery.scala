@@ -99,10 +99,7 @@ object UserDefinedQuery extends SparkJob {
   }
 
   def validateQuery(query: DerivationJobParameters): Option[String] = {
-    validateFields[String](
-      query,
-      Seq("surtPrefix", "surtPrefixes"),
-      addOperators = true) { v =>
+    validateFields[String](query, Seq("surtPrefix", "surtPrefixes"), addOperators = true) { v =>
       if (v.contains(")")) SurtUtil.validateHost(v) match {
         case Some(_) => None
         case None => Some("Invalid host in " + v)
@@ -121,7 +118,8 @@ object UserDefinedQuery extends SparkJob {
 
   def filterQuery(cdx: CdxRecord, query: DerivationJobParameters): Boolean = {
     {
-      checkFieldOperators[String](query, Seq("surtPrefix", "surtPrefixes"))(cdx.surtUrl.startsWith)
+      checkFieldOperators[String](query, Seq("surtPrefix", "surtPrefixes"))(
+        cdx.surtUrl.startsWith)
     } && {
       query.get[String]("timestampFrom").forall(cdx.timestamp >= _)
     } && {
@@ -136,12 +134,13 @@ object UserDefinedQuery extends SparkJob {
     } && {
       checkFieldOperators[String](query, Seq("mime", "mimes"))(cdx.mime == _)
     } && {
-      checkFieldOperators[String](query, Seq("mimePrefix", "mimePrefixes"))(
-        cdx.mime.startsWith)
+      checkFieldOperators[String](query, Seq("mimePrefix", "mimePrefixes"))(cdx.mime.startsWith)
     }
   }
 
-  def filterQuery(records: Iterator[CdxRecord], query: DerivationJobParameters): Iterator[CdxRecord] = {
+  def filterQuery(
+      records: Iterator[CdxRecord],
+      query: DerivationJobParameters): Iterator[CdxRecord] = {
     records.filter(filterQuery(_, query))
   }
 

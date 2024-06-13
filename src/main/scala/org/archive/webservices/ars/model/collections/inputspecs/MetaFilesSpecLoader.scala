@@ -180,7 +180,9 @@ object MetaFilesSpecLoader extends InputSpecLoader {
     }
   }
 
-  def parseJson(rdd: RDD[(String, String)], fuzzy: Boolean = false): RDD[(String, FileMetaData)] = {
+  def parseJson(
+      rdd: RDD[(String, String)],
+      fuzzy: Boolean = false): RDD[(String, FileMetaData)] = {
     val cleaned = if (fuzzy) {
       rdd.map { case (filename, content) =>
         var missingComma = false

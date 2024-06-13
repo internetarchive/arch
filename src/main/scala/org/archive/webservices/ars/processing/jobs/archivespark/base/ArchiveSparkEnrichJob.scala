@@ -18,7 +18,9 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]]
 
-  override def enrich(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
+  override def enrich(
+      rdd: RDD[ArchEnrichRoot[_]],
+      conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
     var enriched = rdd
     for (func <- functions(conf)) enriched = enriched.enrich(func)
     enriched

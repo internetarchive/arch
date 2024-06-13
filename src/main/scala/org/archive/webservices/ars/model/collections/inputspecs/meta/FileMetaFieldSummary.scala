@@ -10,15 +10,16 @@ class FileMetaFieldSummary extends Serializable {
   var types: Map[FileMetaFieldType, FileMetaFieldTypeSummary] = Map.empty
 
   def add(field: FileMetaField): Unit = {
-    val summary = types.getOrElse(field.fieldType, {
-      val summary = field.fieldType.primitive match {
-        case FileMetaFieldType.String => new FileMetaFieldStringTypeSummary
-        case FileMetaFieldType.Number => new FileMetaFieldNumberTypeSummary
-        case FileMetaFieldType.Boolean => FileMetaFieldBooleanTypeSummary
-      }
-      types += field.fieldType.primitive -> summary
-      summary
-    })
+    val summary = types.getOrElse(
+      field.fieldType, {
+        val summary = field.fieldType.primitive match {
+          case FileMetaFieldType.String => new FileMetaFieldStringTypeSummary
+          case FileMetaFieldType.Number => new FileMetaFieldNumberTypeSummary
+          case FileMetaFieldType.Boolean => FileMetaFieldBooleanTypeSummary
+        }
+        types += field.fieldType.primitive -> summary
+        summary
+      })
     if (field.fieldType.multi) {
       val values = field.value.asInstanceOf[Seq[_]]
       summary.adds(values)
@@ -31,16 +32,14 @@ class FileMetaFieldSummary extends Serializable {
     summary.types = (types.keySet ++ that.types.keySet).toSeq.map { t =>
       val thisType = types.get(t)
       val thatType = that.types.get(t)
-      t -> (if (thisType.isEmpty || thatType.isEmpty) thisType.orElse(thatType).get else thisType.get ++ thatType.get)
+      t -> (if (thisType.isEmpty || thatType.isEmpty) thisType.orElse(thatType).get
+            else thisType.get ++ thatType.get)
     }.toMap
     summary
   }
 
   def toJson: Json = {
-    Map(
-      "optional" -> optional.asJson,
-      "types" -> types.values.map(_.toJson).toMap.asJson
-    ).asJson
+    Map("optional" -> optional.asJson, "types" -> types.values.map(_.toJson).toMap.asJson).asJson
   }
 
   def toJsonSchemaProperties: Seq[(String, Json)] = {

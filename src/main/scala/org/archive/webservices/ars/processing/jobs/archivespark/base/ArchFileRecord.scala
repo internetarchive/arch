@@ -14,8 +14,7 @@ import java.io.InputStream
 import scala.collection.immutable.ListMap
 import scala.util.Try
 
-class ArchFileRecord(record: FileRecord)
-    extends ArchEnrichRoot[FileRecord] {
+class ArchFileRecord(record: FileRecord) extends ArchEnrichRoot[FileRecord] {
   override def companion: EnrichRootCompanion[ArchFileRecord] = ArchFileRecord
   override def get: FileRecord = record
 

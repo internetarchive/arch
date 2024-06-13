@@ -15,7 +15,8 @@ trait InputSpec {
   def inputType: String
   def cursor: HCursor
   def downField(key: String): Option[Json] = cursor.downField(key).focus
-  def params(key: String): Option[DerivationJobParameters] = downField(key).flatMap(DerivationJobParameters.fromJson)
+  def params(key: String): Option[DerivationJobParameters] =
+    downField(key).flatMap(DerivationJobParameters.fromJson)
   def str(key: String): Option[String] = get[String](key)
   def int(key: String): Option[Int] = get[Int](key)
   def get[A: Decoder](key: String): Option[A] = cursor.get[A](key).toOption
@@ -31,7 +32,9 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[
     cursor.get[String]("id").getOrElse(specType + ":" + cursor.focus.get.noSpaces.hashCode)
   }
   override lazy val inputType: String =
-    cursor.get[String]("inputType").getOrElse(loader.inputType(this).getOrElse(InputSpec.InputType.Files))
+    cursor
+      .get[String]("inputType")
+      .getOrElse(loader.inputType(this).getOrElse(InputSpec.InputType.Files))
 }
 
 class CollectionBasedInputSpec(

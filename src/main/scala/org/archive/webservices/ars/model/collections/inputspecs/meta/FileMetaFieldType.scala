@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs.meta
 
-import io.circe.Json
 import _root_.io.circe.syntax._
+import io.circe.Json
 
 trait FileMetaFieldType extends Serializable {
   def primitive: FileMetaFieldType = this

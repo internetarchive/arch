@@ -46,14 +46,20 @@ object FileAccessKeyRing {
 
   def loadSecrets: Map[String, String] = {
     if (new File(SecretsFile).exists) {
-      IOUtil.lines(SecretsFile).flatMap { line =>
-        val equalIdx = line.indexOf("=")
-        if (equalIdx == -1) None else Some {
-          line.take(equalIdx).trim -> line.drop(equalIdx + 1).trim
+      IOUtil
+        .lines(SecretsFile)
+        .flatMap { line =>
+          val equalIdx = line.indexOf("=")
+          if (equalIdx == -1) None
+          else
+            Some {
+              line.take(equalIdx).trim -> line.drop(equalIdx + 1).trim
+            }
         }
-      }.filter { case (k, v) =>
-        k.nonEmpty && v.nonEmpty
-      }.toMap
+        .filter { case (k, v) =>
+          k.nonEmpty && v.nonEmpty
+        }
+        .toMap
     } else Map.empty
   }
 

@@ -9,7 +9,8 @@ object CdxQuerySpecLoader extends InputSpecLoader {
 
   def input(spec: InputSpec): InputSpec = {
     spec.cursor
-      .downField("input").focus
+      .downField("input")
+      .focus
       .map(json => InputSpec(json.hcursor))
   }.getOrElse {
     throw new UnsupportedOperationException("No sub spec specified.")

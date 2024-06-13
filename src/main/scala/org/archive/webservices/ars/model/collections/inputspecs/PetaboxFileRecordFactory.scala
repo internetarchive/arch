@@ -16,7 +16,8 @@ class PetaboxFileRecordFactory private () extends FileRecordFactory {
       val meta: FileMetaData)
       extends FileRecord {
     override def access: InputStream = accessFile(filePath, resolve = false)
-    override def pointer: FilePointer = new FilePointer(RandomFileAccess.PetaboxPrefix + ":" + filePath, filename)
+    override def pointer: FilePointer =
+      new FilePointer(RandomFileAccess.PetaboxPrefix + ":" + filePath, filename)
   }
 
   override def get(file: String, mime: String, meta: FileMetaData): FileRecord = {

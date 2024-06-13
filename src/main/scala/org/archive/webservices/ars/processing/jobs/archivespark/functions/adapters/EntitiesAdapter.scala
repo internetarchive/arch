@@ -12,7 +12,8 @@ import scala.collection.JavaConverters.asScalaSetConverter
 object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String] {
   override def baseFunc: Entities.type = Entities
 
-  override def defaultDependency: Option[DataLoadPointer[ArchEnrichRoot[_], String]] = Some(ArchiveSparkEnrichJob.plainTextLoad)
+  override def defaultDependency: Option[DataLoadPointer[ArchEnrichRoot[_], String]] = Some(
+    ArchiveSparkEnrichJob.plainTextLoad)
 
   override def initFunc(params: DerivationJobParameters): EnrichFunc[_, String, _] = {
     Entities(properties(params.get[String]("lang")))

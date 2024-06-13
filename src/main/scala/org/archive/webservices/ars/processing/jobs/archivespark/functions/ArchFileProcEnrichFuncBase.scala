@@ -9,15 +9,13 @@ import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 import java.io.File
 
-abstract class ArchFileProcEnrichFuncBase[A] extends EnrichFunc[EnrichRoot with LocalFileCache, String, A] with ArchArchiveSparkFunction[String] {
+abstract class ArchFileProcEnrichFuncBase[A]
+    extends EnrichFunc[EnrichRoot with LocalFileCache, String, A]
+    with ArchArchiveSparkFunction[String] {
   val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
 
   def suppresInOutSh(script: String): String = {
-    Seq(
-      "{",
-      script,
-      "} < /dev/null 1>&2"
-    ).mkString("\n")
+    Seq("{", script, "} < /dev/null 1>&2").mkString("\n")
   }
 
   def workingDir: String = IOUtil.tmpFile.getPath
@@ -72,14 +70,16 @@ abstract class ArchFileProcEnrichFuncBase[A] extends EnrichFunc[EnrichRoot with 
   override def derive(source: TypedEnrichable[String], derivatives: Derivatives): Unit = {
     doInit()
     val inFile = source.get
-    val file = script(inFile).map { script =>
-      val scriptFile = IOUtil.tmpFile
-      val scriptOut = IOUtil.print(IOUtil.fileOut(scriptFile))
-      try {
-        scriptOut.print(script)
-      } finally scriptOut.close()
-      scriptFile.getPath
-    }.getOrElse(inFile)
+    val file = script(inFile)
+      .map { script =>
+        val scriptFile = IOUtil.tmpFile
+        val scriptOut = IOUtil.print(IOUtil.fileOut(scriptFile))
+        try {
+          scriptOut.print(script)
+        } finally scriptOut.close()
+        scriptFile.getPath
+      }
+      .getOrElse(inFile)
     val proc = globalProcess match {
       case Some(proc) =>
         proc.exec(cmd(file))

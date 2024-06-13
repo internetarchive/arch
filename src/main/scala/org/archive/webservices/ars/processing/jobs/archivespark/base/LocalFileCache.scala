@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.base
 
-import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil}
+import org.archive.webservices.sparkling.io.IOUtil
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
 

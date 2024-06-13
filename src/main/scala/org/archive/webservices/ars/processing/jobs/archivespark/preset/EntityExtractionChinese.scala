@@ -10,7 +10,8 @@ object EntityExtractionChinese extends EntityExtraction {
   override val name: String = super.name + " (Chinese)"
   override val description: String = super.description + " (Chinese)"
 
-  override def entitiesFunc(params: DerivationJobParameters): EnrichFunc[ArchEnrichRoot[_], _, _] = {
+  override def entitiesFunc(
+      params: DerivationJobParameters): EnrichFunc[ArchEnrichRoot[_], _, _] = {
     super.entitiesFunc(params.set("lang", "chinese"))
   }
 }

@@ -17,17 +17,30 @@ object WaybackSpecLoader extends InputSpecLoader {
     for {
       cdxTimestamp <- spec.str("cdx-timestamp")
     } yield {
-      val prefixes = spec.str("surt-prefix").map(Set(_)).orElse {
-        spec.downField("surt-prefixes").flatMap(_.asArray).map(_.flatMap(_.asString).toSet).orElse {
-          spec.str("url-prefix").map(CdxServerIndex.urlToPrefix(_)).orElse {
-            spec.downField("url-prefixes").flatMap(_.asArray).map(_.flatMap(_.asString).flatMap { prefix =>
-              CdxServerIndex.urlToPrefix(prefix)
-            }.toSet)
-          }
+      val prefixes = spec
+        .str("surt-prefix")
+        .map(Set(_))
+        .orElse {
+          spec
+            .downField("surt-prefixes")
+            .flatMap(_.asArray)
+            .map(_.flatMap(_.asString).toSet)
+            .orElse {
+              spec.str("url-prefix").map(CdxServerIndex.urlToPrefix(_)).orElse {
+                spec
+                  .downField("url-prefixes")
+                  .flatMap(_.asArray)
+                  .map(_.flatMap(_.asString)
+                    .flatMap { prefix =>
+                      CdxServerIndex.urlToPrefix(prefix)
+                    }
+                    .toSet)
+              }
+            }
         }
-      }.getOrElse {
-        throw new UnsupportedOperationException("SURT/URL prefixes missing.")
-      }
+        .getOrElse {
+          throw new UnsupportedOperationException("SURT/URL prefixes missing.")
+        }
 
       val query = spec.params("filter-query")
       for {
@@ -45,7 +58,8 @@ object WaybackSpecLoader extends InputSpecLoader {
       }
 
       val rdd = if (selectFirst || selectLast) {
-        val all = CdxServerIndex.loadFromFilesGroupedByPrefix(cdxDir + "/" + cdxTimestamp, prefixes)
+        val all =
+          CdxServerIndex.loadFromFilesGroupedByPrefix(cdxDir + "/" + cdxTimestamp, prefixes)
         val filtered = query match {
           case Some(q) =>
             val queryBc = all.sparkContext.broadcast(q)
@@ -71,13 +85,16 @@ object WaybackSpecLoader extends InputSpecLoader {
         }
       }
 
-      rdd.mapPartitionsWithIndex { (idx, partition) =>
-        val cdx = partition.map { record =>
-          val (location, offset) = record.locationFromAdditionalFields
-          record.copy(additionalFields = Seq(offset.toString, RandomFileAccess.PetaboxPrefix + ":" + location))
+      rdd
+        .mapPartitionsWithIndex { (idx, partition) =>
+          val cdx = partition.map { record =>
+            val (location, offset) = record.locationFromAdditionalFields
+            record.copy(additionalFields =
+              Seq(offset.toString, RandomFileAccess.PetaboxPrefix + ":" + location))
+          }
+          Iterator(InMemoryCdxFileRecord(idx, cdx).asInstanceOf[FileRecord])
         }
-        Iterator(InMemoryCdxFileRecord(idx, cdx).asInstanceOf[FileRecord])
-      }.coalesce(Sparkling.parallelism)
+        .coalesce(Sparkling.parallelism)
     }
   }.getOrElse {
     throw new UnsupportedOperationException("missing cdx-timestamp")

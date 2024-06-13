@@ -23,12 +23,16 @@ object MetadataSummary extends SparkJob {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, MetadataSummary, conf)
       InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
-        val summary = rdd.mapPartitions { partition =>
-          val summary = new FileMetaSummary()
-          for (f <- partition) summary.add(f.meta)
-          Iterator(summary)
-        }.fold(FileMetaSummary.empty)(_ ++ _)
-        HdfsIO.writeLines(conf.outputPath + relativeOutPath + "/" + SummaryFile, lines = Seq(summary.toJsonSchema.spaces4))
+        val summary = rdd
+          .mapPartitions { partition =>
+            val summary = new FileMetaSummary()
+            for (f <- partition) summary.add(f.meta)
+            Iterator(summary)
+          }
+          .fold(FileMetaSummary.empty)(_ ++ _)
+        HdfsIO.writeLines(
+          conf.outputPath + relativeOutPath + "/" + SummaryFile,
+          lines = Seq(summary.toJsonSchema.spaces4))
         true
       }
     }
@@ -36,7 +40,8 @@ object MetadataSummary extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
+    val started =
+      HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
     if (started) {
       val completed = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + SummaryFile)
       instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
@@ -45,10 +50,10 @@ object MetadataSummary extends SparkJob {
   }
 
   override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = Iterator(
-    DerivativeOutput(SummaryFile, conf.outputPath + relativeOutPath, "JSON", "application/json")
-  )
+    DerivativeOutput(SummaryFile, conf.outputPath + relativeOutPath, "JSON", "application/json"))
 
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 
-  override def reset(conf: DerivationJobConf): Unit = HdfsIO.delete(conf.outputPath + relativeOutPath)
+  override def reset(conf: DerivationJobConf): Unit =
+    HdfsIO.delete(conf.outputPath + relativeOutPath)
 }

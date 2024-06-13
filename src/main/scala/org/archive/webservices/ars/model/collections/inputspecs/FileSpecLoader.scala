@@ -29,10 +29,10 @@ object FileSpecLoader extends InputSpecLoader {
       val recordFactory = recordFactoryBc.value
       recordFactory.accessContext = accessContext
       partition.map { case (path, mime) =>
-        recordFactory.get(path, mime, FileMetaData(
-          FileMetaField("path", path),
-          FileMetaField("mime", mime)
-        ))
+        recordFactory.get(
+          path,
+          mime,
+          FileMetaData(FileMetaField("path", path), FileMetaField("mime", mime)))
       }
     }
   })
@@ -49,14 +49,24 @@ object FileSpecLoader extends InputSpecLoader {
     }
   }
 
-  def setMime(files: Iterator[String], mime: Either[String, Map[String, String]]): Iterator[(String, String)] = {
+  def setMime(
+      files: Iterator[String],
+      mime: Either[String, Map[String, String]]): Iterator[(String, String)] = {
     mime match {
       case Left(m) => files.map((_, m))
       case Right(map) =>
         files.flatMap { path =>
-          path.split('/').last.split('.').drop(1).tails.map(_.mkString(".")).find(map.contains).map { ext =>
-            (path, map(ext))
-          }
+          path
+            .split('/')
+            .last
+            .split('.')
+            .drop(1)
+            .tails
+            .map(_.mkString("."))
+            .find(map.contains)
+            .map { ext =>
+              (path, map(ext))
+            }
         }
     }
   }
@@ -102,18 +112,30 @@ object FileSpecLoader extends InputSpecLoader {
       mime <- dataMime(spec)
     } yield {
       val source = Source.fromURL(ArchConf.iaBaseUrl + s"/metadata/$itemName/metadata/mediatype")
-      val isCollection = try {
-        parse(source.mkString).toOption.flatMap(_.hcursor.get[String]("result").toOption).contains("collection")
-      } finally source.close()
+      val isCollection =
+        try {
+          parse(source.mkString).toOption
+            .flatMap(_.hcursor.get[String]("result").toOption)
+            .contains("collection")
+        } finally source.close()
       if (isCollection) {
         // search items, foreach process item
-        val collectionSource = Source.fromURL(ArchConf.iaBaseUrl + "/advancedsearch.php?rows=1000&output=json&q=collection:" + itemName)
+        val collectionSource = Source.fromURL(
+          ArchConf.iaBaseUrl + "/advancedsearch.php?rows=1000&output=json&q=collection:" + itemName)
         try {
-          val items = parse(collectionSource.mkString).toOption.map(_.hcursor).toSeq.flatMap { cursor =>
-            cursor.downField("response").downField("docs").values.toSeq.flatten.map(_.hcursor).flatMap { itemCursor =>
-              itemCursor.get[String]("identifier").toOption
+          val items =
+            parse(collectionSource.mkString).toOption.map(_.hcursor).toSeq.flatMap { cursor =>
+              cursor
+                .downField("response")
+                .downField("docs")
+                .values
+                .toSeq
+                .flatten
+                .map(_.hcursor)
+                .flatMap { itemCursor =>
+                  itemCursor.get[String]("identifier").toOption
+                }
             }
-          }
           val rdd = RddUtil.parallelize(items)
           val mimeBc = rdd.sparkContext.broadcast(mime)
           rdd.flatMap(petaboxFiles).mapPartitions { partition =>
@@ -132,9 +154,13 @@ object FileSpecLoader extends InputSpecLoader {
   def petaboxFiles(itemName: String): Seq[String] = {
     val source = Source.fromURL(ArchConf.iaBaseUrl + s"/metadata/$itemName/metadata/files")
     try {
-      parse(source.mkString).toOption.flatMap(_.hcursor.values).getOrElse(Seq.empty).map(_.hcursor).flatMap { file =>
-        file.get[String]("filename").toOption.map(itemName + "/" + _)
-      }
+      parse(source.mkString).toOption
+        .flatMap(_.hcursor.values)
+        .getOrElse(Seq.empty)
+        .map(_.hcursor)
+        .flatMap { file =>
+          file.get[String]("filename").toOption.map(itemName + "/" + _)
+        }
     } finally source.close()
   }.toSeq
 }

@@ -9,10 +9,10 @@ import scala.concurrent.Future
 import scala.util.Random
 
 class SystemProcess private (
-  val process: Process,
-  val supportsEcho: Boolean,
-  val in: BufferedReader,
-  val out: PrintStream) {
+    val process: Process,
+    val supportsEcho: Boolean,
+    val in: BufferedReader,
+    val out: PrintStream) {
 
   val errorFuture = Future {
     val error = new BufferedReader(new InputStreamReader(process.getErrorStream))
@@ -31,12 +31,16 @@ class SystemProcess private (
     consumeToLine(endLine)
   }
 
-  def readToLine(endLine: String, prefix: Boolean = false, includeEnd: Boolean = true): Iterator[String] = {
+  def readToLine(
+      endLine: String,
+      prefix: Boolean = false,
+      includeEnd: Boolean = true): Iterator[String] = {
     var stop = false
     IteratorUtil.whileDefined {
       if (!stop) {
         val line = in.readLine()
-        if (line == null) None else {
+        if (line == null) None
+        else {
           stop = if (prefix) line.startsWith(endLine) else line == endLine
           if (!stop || includeEnd) Some(line) else None
         }
@@ -53,7 +57,12 @@ class SystemProcess private (
     out.println(cmd)
   }
 
-  def subProcess(cmd: String, clearInput: Boolean = true, supportsEcho: Boolean = false, waitForLine: Option[String], waitForPrefix: Boolean = false): SystemProcess = {
+  def subProcess(
+      cmd: String,
+      clearInput: Boolean = true,
+      supportsEcho: Boolean = false,
+      waitForLine: Option[String],
+      waitForPrefix: Boolean = false): SystemProcess = {
     exec(cmd, clearInput)
     for (waitLine <- waitForLine) {
       println("#### WAITING FOR " + waitLine)
@@ -75,5 +84,6 @@ object SystemProcess {
 
   def bash: SystemProcess = exec("/bin/bash", supportsEcho = true)
 
-  def exec(cmd: String, supportsEcho: Boolean = false): SystemProcess = SystemProcess(Runtime.getRuntime.exec(cmd), supportsEcho)
+  def exec(cmd: String, supportsEcho: Boolean = false): SystemProcess =
+    SystemProcess(Runtime.getRuntime.exec(cmd), supportsEcho)
 }
