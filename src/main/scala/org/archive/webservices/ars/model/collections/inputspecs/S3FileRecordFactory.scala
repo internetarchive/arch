@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.{FileAccessContext, FileAccessKeyRing, FilePointer, IOHelper}
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -19,7 +20,7 @@ class S3FileRecordFactory(
   class S3FileRecord private[S3FileRecordFactory] (
       file: String,
       val mime: String,
-      val meta: FileMeta)
+      val meta: FileMetaData)
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     override def access: InputStream = accessFile(filePath, resolve = false)
@@ -27,7 +28,7 @@ class S3FileRecordFactory(
       FilePointer(IOHelper.concatPaths(endpoint, bucket, filePath), filename)
   }
 
-  override def get(file: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(file: String, mime: String, meta: FileMetaData): FileRecord =
     new S3FileRecord(file, mime, meta)
 
   private def s3[R](action: S3Client => R): R = {

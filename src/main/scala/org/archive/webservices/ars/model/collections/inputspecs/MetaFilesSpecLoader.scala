@@ -3,6 +3,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 import io.circe.parser._
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.FileAccessContext
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
@@ -57,7 +58,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadMeta(spec: InputSpec): RDD[(String, FileMeta)] = {
+  def loadMeta(spec: InputSpec): RDD[(String, FileMetaData)] = {
     spec
       .str(InputSpec.MetaSourceKey)
       .orElse(spec.str(InputSpec.DataSourceKey))
@@ -71,7 +72,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadMetaVault(spec: InputSpec): RDD[(String, FileMeta)] = {
+  def loadMetaVault(spec: InputSpec): RDD[(String, FileMetaData)] = {
     spec
       .str(MetaGlobKey)
       .map { glob =>
@@ -109,7 +110,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadMetaHdfs(spec: InputSpec): RDD[(String, FileMeta)] = {
+  def loadMetaHdfs(spec: InputSpec): RDD[(String, FileMetaData)] = {
     spec
       .str(MetaGlobKey)
       .map { glob =>
@@ -130,7 +131,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
   }
 
-  def parseMeta(spec: InputSpec, rdd: RDD[(String, String)]): RDD[(String, FileMeta)] = {
+  def parseMeta(spec: InputSpec, rdd: RDD[(String, String)]): RDD[(String, FileMetaData)] = {
     spec.str("meta-format") match {
       case Some(format) if format.startsWith("json") =>
         parseJson(rdd: RDD[(String, String)], format.endsWith("-fuzzy"))
@@ -168,7 +169,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
               case Some(_) => throw new UnsupportedOperationException()
               case None =>
                 parsed.map { case (file, map) =>
-                  file -> FileMeta(map)
+                  file -> FileMetaData.stringValues(map)
                 }
             }
           }
@@ -179,7 +180,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
     }
   }
 
-  def parseJson(rdd: RDD[(String, String)], fuzzy: Boolean = false): RDD[(String, FileMeta)] = {
+  def parseJson(rdd: RDD[(String, String)], fuzzy: Boolean = false): RDD[(String, FileMetaData)] = {
     val cleaned = if (fuzzy) {
       rdd.map { case (filename, content) =>
         var missingComma = false
@@ -208,8 +209,8 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       }
     } else rdd
     cleaned.flatMap { case (filename, json) =>
-      parse(json).toOption.map(_.hcursor).map { cursor =>
-        filename -> FileMeta(cursor)
+      parse(json).toOption.map { json =>
+        filename -> FileMetaData.fromJson(json)
       }
     }
   }

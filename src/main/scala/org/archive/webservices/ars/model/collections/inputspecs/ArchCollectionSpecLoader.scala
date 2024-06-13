@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.{FilePointer, WebArchiveLoader}
+import org.archive.webservices.ars.model.collections.inputspecs.meta.{FileMetaData, FileMetaField}
 
 import java.io.InputStream
 
@@ -16,8 +17,11 @@ object ArchCollectionSpecLoader extends InputSpecLoader {
     override def path: String =
       file.url.stripSuffix(file.filename).stripSuffix(FilePointer.SourceSeparator)
     override def pointer: FilePointer = file
-
-    override def meta: FileMeta = FileMeta.empty
+    override lazy val meta: FileMetaData = FileMetaData(
+      FileMetaField("filename", filename),
+      FileMetaField("mime", mime),
+      FileMetaField("path", path)
+    )
   }
 
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {

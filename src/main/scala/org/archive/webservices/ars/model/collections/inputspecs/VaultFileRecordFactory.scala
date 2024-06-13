@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.Vault.TreeNode
 import org.archive.webservices.ars.io._
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
 import java.net.URL
@@ -20,7 +21,7 @@ class VaultFileRecordFactory(
   class VaultFileRecord private[VaultFileRecordFactory] (
       file: String,
       val mime: String,
-      val meta: FileMeta)
+      val meta: FileMetaData)
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     lazy val url: String = contentUrl(filePath, resolve = false)
@@ -32,7 +33,7 @@ class VaultFileRecordFactory(
     }
   }
 
-  override def get(file: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(file: String, mime: String, meta: FileMetaData): FileRecord =
     new VaultFileRecord(file, mime, meta)
 
   def accessFile(

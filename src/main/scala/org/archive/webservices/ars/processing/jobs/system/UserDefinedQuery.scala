@@ -16,15 +16,12 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil, Time14Util}
 
 import scala.concurrent.Future
 import scala.util.Try
 
 object UserDefinedQuery extends SparkJob {
-  implicit val logContext: LogContext = LogContext(this)
-
   val CdxDir = "index.cdx.gz"
   val InfoFile = "info.json"
 

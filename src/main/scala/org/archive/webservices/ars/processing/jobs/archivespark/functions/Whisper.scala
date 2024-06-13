@@ -4,6 +4,8 @@ import io.circe.Json
 import org.archive.webservices.archivespark.model.Derivatives
 import org.archive.webservices.ars.io.SystemProcess
 
+import java.io.File
+
 object Whisper extends ArchFileProcEnrichFuncBase[Json] {
   val HdfsDir = "/user/helge/arch-data/whisper"
   val PythonFile = "whisper-run.py"
@@ -23,6 +25,7 @@ object Whisper extends ArchFileProcEnrichFuncBase[Json] {
       }
       dir.mkdir()
       bash.exec(s"tar -xzf $CondaFile -C $CondaEnv")
+      new File(CondaFile).delete()
     }
 
     bash.exec(s"source $CondaEnv/bin/activate")

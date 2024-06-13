@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.archive.webservices.ars.io.FileAccessContext
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
@@ -22,9 +23,9 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
         recordFactory.accessContext = accessContext
         partition.flatMap { meta =>
           for {
-            filename <- meta.get(filenameKey).filter(_ != null).map(_.toString)
-            mime <- meta.get(mimeKey).filter(_ != null).map(_.toString)
-          } yield recordFactory.get(filename, mime, FileMeta(meta))
+            filename <- meta.str(filenameKey)
+            mime <- meta.str(mimeKey)
+          } yield recordFactory.get(filename, mime, meta)
         }
       }
     }
@@ -32,7 +33,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
     throw new RuntimeException("No meta filename and/or mime key specified.")
   })
 
-  def loadMeta(spec: InputSpec): RDD[Map[String, Any]] = {
+  def loadMeta(spec: InputSpec): RDD[FileMetaData] = {
     spec
       .str(InputSpec.MetaSourceKey)
       .orElse(spec.str(InputSpec.DataSourceKey))
@@ -46,7 +47,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadMetaHdfs(spec: InputSpec): RDD[Map[String, Any]] = {
+  def loadMetaHdfs(spec: InputSpec): RDD[FileMetaData] = {
     spec
       .str(InputSpec.MetaLocationKey)
       .map {
@@ -59,7 +60,7 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadMetaVault(spec: InputSpec): RDD[Map[String, Any]] = {
+  def loadMetaVault(spec: InputSpec): RDD[FileMetaData] = {
     spec
       .str(InputSpec.MetaLocationKey)
       .map {
@@ -80,11 +81,11 @@ object MetaRemoteSpecLoader extends InputSpecLoader {
       }
   }
 
-  def loadParquet(path: String): RDD[Map[String, Any]] = {
+  def loadParquet(path: String): RDD[FileMetaData] = {
     val dataFrame = SparkSession.builder.getOrCreate.read.parquet(path)
     val schema = Sparkling.sc.broadcast(dataFrame.schema)
-    dataFrame.rdd.map {
-      _.getValuesMap[Any](schema.value.fieldNames)
+    dataFrame.rdd.map { row =>
+      FileMetaData.fromParquet(schema.value, row)
     }
   }
 }

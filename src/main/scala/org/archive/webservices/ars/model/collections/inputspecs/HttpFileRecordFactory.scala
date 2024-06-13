@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.FileAccessContext
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
 import java.net.URL
@@ -11,13 +12,13 @@ class HttpFileRecordFactory(location: String) extends FileRecordFactory {
   class HttpFileRecord private[HttpFileRecordFactory] (
       file: String,
       val mime: String,
-      val meta: FileMeta)
+      val meta: FileMetaData)
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     override def access: InputStream = accessFile(filePath, resolve = false)
   }
 
-  override def get(file: String, mime: String, meta: FileMeta): FileRecord = {
+  override def get(file: String, mime: String, meta: FileMetaData): FileRecord = {
     new HttpFileRecord(file, mime, meta)
   }
 

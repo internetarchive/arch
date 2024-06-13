@@ -15,6 +15,8 @@ import org.archive.webservices.sparkling.warc.WarcRecord
 import scala.concurrent.Future
 
 abstract class ArchiveSparkBaseJob extends ChainedJob {
+  override def id: String = "ArchiveSpark" + super.id
+
   val relativeOutPath = s"/$id"
   val resultDir = "/out.json.gz"
   val resultFile = "/result.json.gz"

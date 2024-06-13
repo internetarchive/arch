@@ -4,6 +4,7 @@ import _root_.io.circe.parser._
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.FileAccessContext
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.collections.inputspecs.meta.{FileMetaData, FileMetaField}
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
@@ -27,9 +28,11 @@ object FileSpecLoader extends InputSpecLoader {
       accessContext.init()
       val recordFactory = recordFactoryBc.value
       recordFactory.accessContext = accessContext
-      val meta = FileMeta.empty
       partition.map { case (path, mime) =>
-        recordFactory.get(path, mime, meta)
+        recordFactory.get(path, mime, FileMetaData(
+          FileMetaField("path", path),
+          FileMetaField("mime", mime)
+        ))
       }
     }
   })

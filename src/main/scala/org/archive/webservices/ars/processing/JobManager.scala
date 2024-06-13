@@ -8,7 +8,7 @@ import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark._
 import org.archive.webservices.ars.processing.jobs.archivespark.preset.{EntityExtraction, EntityExtractionChinese, WhisperEntityExtraction, WhisperTranscription}
-import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
+import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, MetadataSummary, UserDefinedQuery}
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import scala.collection.immutable.ListMap
@@ -49,7 +49,7 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication)
+  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication, MetadataSummary)
 
   val jobs: ListMap[String, DerivationJob] = ListMap(
     (userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
