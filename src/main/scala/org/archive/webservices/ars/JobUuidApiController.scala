@@ -2,6 +2,7 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
+import org.archive.webservices.ars.ApiController.jobStateJson
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
@@ -50,6 +51,12 @@ class JobUuidApiController(implicit val swagger: Swagger)
 
   get(UuidPattern + "state", operation(getJobState)) {
     response(ApiController.jobStateResponse)
+  }
+
+  get(UuidPattern + "info") {
+    response { instance =>
+      Ok(instance.info.toJson.spaces4, Map("Content-Type" -> "application/json"))
+    }
   }
 
   def getResult =
