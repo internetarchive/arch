@@ -16,7 +16,7 @@ import java.io.{BufferedInputStream, InputStream}
 import scala.util.Try
 
 object WebArchiveLoader {
-  val WasapiPageSize = 1000
+  val WasapiPageSize = 100
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
   val WasapiAttempts = 10
@@ -145,7 +145,7 @@ object WebArchiveLoader {
     val hdfsHostPort = ArchConf.aitCollectionHdfsHostPort
     if (basicAuth.isDefined) {
       val wasapiUrl =
-        ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size=" + WasapiPageSize
+        ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       var attempts = 0
       while (apiFileCount < 0) {
