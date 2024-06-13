@@ -153,7 +153,7 @@ object WebArchiveLoader {
           } match {
           case Right(i) => apiFileCount = i
           case Left(status) =>
-            if (status / 100 != 5) Thread.sleep(RetrySleepMillis) else apiFileCount = 0
+            if (status / 100 == 5) Thread.sleep(RetrySleepMillis) else apiFileCount = 0
         }
       }
       val hdfsFileCount = hdfsHostPort
