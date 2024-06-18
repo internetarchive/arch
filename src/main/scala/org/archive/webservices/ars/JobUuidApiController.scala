@@ -3,6 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
+import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.scalatra._
 
@@ -28,7 +29,7 @@ class JobUuidApiController extends BaseController {
     response(ApiController.jobStateResponse)
   }
 
-  get(UuidPattern + "files") {
+  get(UuidPattern + "result") {
     response { instance =>
       WasapiController.files(
         instance,
@@ -37,6 +38,14 @@ class JobUuidApiController extends BaseController {
         ),
         params,
         addSample = false)
+    }
+  }
+
+  get(UuidPattern + "files") {
+    response { instance =>
+      Ok(
+        instance.outFiles.map(DatasetFile.apply).map(_.toJson).toArray.asJson,
+        Map("Content-Type" -> "application/json"))
     }
   }
 
