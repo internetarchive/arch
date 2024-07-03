@@ -7,8 +7,8 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichR
 object EntityExtractionChinese extends EntityExtraction {
   val uuid: String = "018d1151-3a3a-7184-b6ed-8ec176ee750e"
 
-  override val name: String = super.name + " (Chinese)"
-  override val description: String = super.description + " (Chinese)"
+  override val name: String = EntityExtraction.name + " (Chinese)"
+  override val description: String = EntityExtraction.description + " (Chinese)"
 
   override def entitiesFunc(
       params: DerivationJobParameters): EnrichFunc[ArchEnrichRoot[_], _, _] = {

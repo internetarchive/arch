@@ -7,10 +7,6 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapte
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 
 abstract class EntityExtraction extends ArchiveSparkEnrichJob {
-  val name: String = "Named entities"
-  val description: String =
-    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
-
   override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
   val category: ArchJobCategory = ArchJobCategories.Text
@@ -34,5 +30,9 @@ abstract class EntityExtraction extends ArchiveSparkEnrichJob {
 }
 
 object EntityExtraction extends EntityExtraction {
+  val name: String = "Named entities"
+  val description: String =
+    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
+
   val uuid: String = "018d114d-3426-730e-94a1-b56ca73fc1ad"
 }
