@@ -17,9 +17,11 @@ trait ArchConf {
   def globalJobOutPath: String
   def jobOutPath: String
   def uuidJobOutPath: Option[String]
+  def hdfsDataPath: String
   def jobLoggingPath: String
   def customCollectionPath: String
   def localTempPath: String
+  def hadoopNodeLocalTempPath: String
   def sparkMaster: String
   def baseDir: String
   def basePath: String
@@ -65,9 +67,11 @@ object ArchConf extends ArchConf {
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
   def uuidJobOutPath: Option[String] = conf.uuidJobOutPath
+  def hdfsDataPath: String = conf.hdfsDataPath
   def jobLoggingPath: String = conf.jobLoggingPath
   def customCollectionPath: String = conf.customCollectionPath
   def localTempPath: String = conf.localTempPath
+  def hadoopNodeLocalTempPath: String = conf.hadoopNodeLocalTempPath
   def sparkMaster: String = conf.sparkMaster
   def baseDir: String = conf.baseDir
   def basePath: String = conf.basePath

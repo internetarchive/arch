@@ -87,7 +87,10 @@ class LocalArchConf extends ArchConf with Serializable {
   val jobOutPath: String =
     confStrValue("ARCH_JOB_OUTPUT_PATH", "jobOutPath").getOrElse(globalJobOutPath + "-users")
 
-  def uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
+  val uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
+
+  val hdfsDataPath: String =
+    confStrValue("ARCH_HDFS_DATA_PATH", "hdfsDataPath").getOrElse("data/data")
 
   val jobLoggingPath: String =
     confStrValue("ARCH_JOB_LOGGING_PATH", "jobLoggingPath").getOrElse("/var/log/arch")
@@ -98,6 +101,9 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val localTempPath: String =
     confStrValue("ARCH_LOCAL_TEMP_PATH", "localTempPath").getOrElse("data/tmp")
+
+  val hadoopNodeLocalTempPath: String =
+    confStrValue("ARCH_HADOOP_NODE_LOCAL_TEMP_PATH", "hadoopNodeLocalTempPath").getOrElse("/arch-tmp")
 
   val sparkMaster: String =
     confStrValue("ARCH_SPARK_MASTER", "sparkMaster").getOrElse("local[*]")
