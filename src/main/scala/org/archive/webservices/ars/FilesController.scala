@@ -212,7 +212,8 @@ class FilesController extends BaseController {
       case None =>
         ensureAuth { implicit context =>
           (for {
-            collection <- ArchCollection.get(ArchCollection.userCollectionId(collectionId, context.user))
+            collection <- ArchCollection.get(
+              ArchCollection.userCollectionId(collectionId, context.user))
             instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
           } yield {
             instance.outFiles.find(_.filename == filename) match {
@@ -233,7 +234,8 @@ class FilesController extends BaseController {
     ensureAuth { implicit context =>
       val jobId = params("job_id")
       (for {
-        collection <- ArchCollection.get(ArchCollection.userCollectionId(collectionId, context.user))
+        collection <- ArchCollection.get(
+          ArchCollection.userCollectionId(collectionId, context.user))
         instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
       } yield FilesController.preview(instance, filename)).getOrElse(NotFound())
     }
@@ -246,9 +248,10 @@ class FilesController extends BaseController {
     val sample = params.get("sample").contains("true")
     params.get("access") match {
       case Some(accessToken) => {
-        val fileUrl = params.get("file_download_url").getOrElse(
-          s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}"
-        )
+        val fileUrl = params
+          .get("file_download_url")
+          .getOrElse(
+            s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}")
         (for {
           collection <- ArchCollection.get(collectionId)
           instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)

@@ -103,7 +103,8 @@ class LocalArchConf extends ArchConf with Serializable {
     confStrValue("ARCH_LOCAL_TEMP_PATH", "localTempPath").getOrElse("data/tmp")
 
   val hadoopNodeLocalTempPath: String =
-    confStrValue("ARCH_HADOOP_NODE_LOCAL_TEMP_PATH", "hadoopNodeLocalTempPath").getOrElse("/arch-tmp")
+    confStrValue("ARCH_HADOOP_NODE_LOCAL_TEMP_PATH", "hadoopNodeLocalTempPath").getOrElse(
+      "/arch-tmp")
 
   val sparkMaster: String =
     confStrValue("ARCH_SPARK_MASTER", "sparkMaster").getOrElse("local[*]")

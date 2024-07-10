@@ -2,10 +2,9 @@ package org.archive.webservices.ars.model.api
 
 import io.circe.Json
 import io.circe.syntax._
-
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
+import org.archive.webservices.ars.model.{ArchCollection, ArchCollectionInfo}
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.FormatUtil
 

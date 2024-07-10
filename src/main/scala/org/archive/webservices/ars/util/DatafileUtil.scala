@@ -1,12 +1,11 @@
 package org.archive.webservices.ars.util
 
-import java.io.{File, PrintWriter}
+import io.circe.parser.parse
+import io.circe.{Json, JsonObject}
 
+import java.io.{File, PrintWriter}
 import scala.io.Source
 import scala.util.Try
-
-import io.circe.{Json, JsonObject}
-import io.circe.parser.parse
 
 object DatafileUtil {
   private def getPath(filename: String) = s"data/$filename"

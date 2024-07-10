@@ -4,7 +4,6 @@ import io.circe.HCursor
 import io.circe.parser._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}

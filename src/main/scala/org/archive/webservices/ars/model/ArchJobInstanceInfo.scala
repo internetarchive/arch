@@ -29,10 +29,7 @@ class ArchJobInstanceInfo private () {
   def save(jobOutPath: String): Unit = {
     val file = ArchJobInstanceInfo.infoFile(jobOutPath)
     GuavaCache.put(ArchJobInstanceInfo.CachePrefix + file, this, None)
-    HdfsIO.writeLines(
-      file,
-      Seq(toJson.spaces4),
-      overwrite = true)
+    HdfsIO.writeLines(file, Seq(toJson.spaces4), overwrite = true)
   }
 }
 

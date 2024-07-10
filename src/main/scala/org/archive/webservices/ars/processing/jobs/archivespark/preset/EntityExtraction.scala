@@ -7,7 +7,8 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapte
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 
 abstract class EntityExtraction extends ArchiveSparkEnrichJob {
-  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+  override val infoUrl =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
   val category: ArchJobCategory = ArchJobCategories.Text
 

@@ -1,11 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 import _root_.io.circe.parser._
 import io.circe.Json
-import org.archive.webservices.archivespark.model.Derivatives
-import org.archive.webservices.ars.io.SystemProcess
-import org.archive.webservices.ars.model.ArchConf
-
-import java.io.File
 
 object Whisper extends CondaBasedFunction[Json] {
   override val hdfsDataDir: String = "whisper"

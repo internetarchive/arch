@@ -21,7 +21,7 @@ import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.util.{DatasetUtil,FormatUtil}
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 import org.scalatra.swagger._

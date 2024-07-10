@@ -15,7 +15,8 @@ object DomainGraphExtraction extends NetworkAutJob[((String, String, String), Lo
   val name = "Domain graph"
   val uuid = "01895067-417d-7665-ba60-a9bb9ca0aa3e"
 
-  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410738717588-ARCH-Network-datasets#domain-graph"
+  override val infoUrl =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410738717588-ARCH-Network-datasets#domain-graph"
 
   val description =
     "Links between domains in the collection over time. Output: one CSV file with columns for crawl date, source, target, and count."

@@ -4,7 +4,6 @@ import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
-import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
@@ -35,8 +34,7 @@ object Keystone {
         "attempt" -> instance.attempt.asJson,
         "conf" -> instance.conf.toJson).asJson,
       "commit_hash" -> ArchConf.version.getOrElse("").asJson,
-      "created_at" -> Instant.now.toString.asJson).asJson
-      .noSpaces
+      "created_at" -> Instant.now.toString.asJson).asJson.noSpaces
     val result = retryHttpRequest(jobStartEndpoint, inputMetadata, maxRetries)
     printHttpRequestOutput(result)
   }
