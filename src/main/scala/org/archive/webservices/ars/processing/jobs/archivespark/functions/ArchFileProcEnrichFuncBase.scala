@@ -3,6 +3,7 @@ package org.archive.webservices.ars.processing.jobs.archivespark.functions
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, EnrichRoot, TypedEnrichable}
 import org.archive.webservices.ars.io.SystemProcess
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.LocalFileCache
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunction
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
@@ -18,7 +19,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
     Seq("{", script, "} < /dev/null 1>&2").mkString("\n")
   }
 
-  def workingDir: String = IOUtil.tmpFile.getPath
+  def workingDir: String = ArchConf.hadoopNodeLocalTempPath
 
   lazy val bash: SystemProcess = {
     val process = SystemProcess.bash

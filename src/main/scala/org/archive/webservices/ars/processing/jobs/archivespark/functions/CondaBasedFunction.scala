@@ -20,7 +20,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   val HdfsDir: String = ArchConf.hdfsDataPath + "/" + hdfsDataDir
 
-  override val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/arch-tmp-whisper"
+  override val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + hdfsDataDir
 
   override def fields: Seq[String] = Seq("whisper")
 
