@@ -18,7 +18,6 @@ class SystemProcess private (
     val error = new BufferedReader(new InputStreamReader(process.getErrorStream))
     var line = error.readLine()
     while (line != null) {
-      println("EEE " + line)
       line = error.readLine()
     }
     true
@@ -64,11 +63,7 @@ class SystemProcess private (
       waitForLine: Option[String],
       waitForPrefix: Boolean = false): SystemProcess = {
     exec(cmd, clearInput)
-    for (waitLine <- waitForLine) {
-      println("#### WAITING FOR " + waitLine)
-      consumeToLine(waitLine, waitForPrefix)
-      println("#### NO LONGER WAITING FOR " + waitLine)
-    }
+    for (waitLine <- waitForLine) consumeToLine(waitLine, waitForPrefix)
     new SystemProcess(process, supportsEcho, in, out)
   }
 }
