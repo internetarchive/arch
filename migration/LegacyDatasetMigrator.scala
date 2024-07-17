@@ -50,28 +50,26 @@ object LegacyDatasetMigrator {
   }
 
   def copyDatasetFiles(oldInstance: DerivationJobInstance, newInstance: DerivationJobInstance) = {
-    val newPath = new Path(newInstance.conf.outputPath + newInstance.job.relativeOutPath)
+    val newOutPath = new Path(newInstance.conf.outputPath)
     // Create the output path.
-    HdfsIO.fs.mkdirs(newPath)
-    // Copy the dataset files but omit info.json, which we'll generated ourselves.
+    HdfsIO.fs.mkdirs(newOutPath)
+    // Copy the dataset files.
     FileUtil.copy(
       HdfsIO.fs,
-      HdfsIO.files(oldInstance.conf.outputPath + oldInstance.job.relativeOutPath)
-        .filter(p => !(p.endsWith("info.json") || p.endsWith("info.json.crc")))
-        .toArray.map(new Path(_)),
+      new Path(oldInstance.conf.outputPath + oldInstance.job.relativeOutPath),
       HdfsIO.fs,
-      newPath,
+      newOutPath,
       false,
       true,
       new org.apache.hadoop.conf.Configuration(SparkHadoopUtil.get.conf)
     )
-    // Create the new job instance info.json file.
+    // Overwrite the old/copied info.json with a new one.
     val instanceInfo = ArchJobInstanceInfo.apply(newInstance.conf.outputPath)
     instanceInfo.uuid = Some(newInstance.uuid)
     instanceInfo.conf = Some(newInstance.conf)
     instanceInfo.started = oldInstance.info.started
     instanceInfo.finished = oldInstance.info.finished
-    instanceInfo.save(newPath.toString)
+    instanceInfo.save(newInstance.conf.outputPath + newInstance.job.relativeOutPath)
   }
 
   def migrateLegacyDataset(
@@ -116,9 +114,11 @@ object LegacyDatasetMigrator {
 
   def run() = {
     for ((glob, isGlobal) <- Seq((globalGlob, true), (usersGlob, false))) {
-      for (p <- HdfsIO.files(glob, recursive = false)) {
-        val Seq(userId, collectionId, outOrSamples, jobId) =
-          pathRegex.findFirstMatchIn(p).map(_.subgroups).get
+      for {
+        p <- HdfsIO.files(glob, recursive = false)
+        Seq(userId, collectionId, outOrSamples, jobId) <- pathRegex.findFirstMatchIn(p).map(_.subgroups)
+        if !collectionId.endsWith("_backup")
+      } {
         val Some(user) = ArchUser.get(
           if (isGlobal) globalDatasetUsername else userId.split("-", 2).mkString(":"))
         val userCollectionId = ArchCollection.userCollectionId(collectionId, user)
