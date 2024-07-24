@@ -148,14 +148,17 @@ object WebArchiveLoader {
         ArchConf.aitWarcsBaseUrl + "/wasapi/v1/webdata?format=json&filetype=warc&collection=" + aitId + "&page_size="
       var apiFileCount = -1
       var attempts = 0
-      while (apiFileCount < 0) {
+      var success = false
+      while (!success && apiFileCount < 0) {
         attempts += 1
         if (attempts > WasapiAttempts) throw new RuntimeException("WASAPI error (AIT collection " + aitId + ")")
         Ait
           .getJsonWithAuth(wasapiUrl + 1, basicAuth = basicAuth) { json =>
             json.get[Int]("count").toOption
           } match {
-          case Right(i) => apiFileCount = i
+          case Right(i) =>
+            success = true
+            apiFileCount = i
           case Left(status) => Thread.sleep(RetrySleepMillis)
         }
       }
