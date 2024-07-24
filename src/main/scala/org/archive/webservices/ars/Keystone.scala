@@ -60,11 +60,25 @@ object Keystone {
       "job_start_id" -> instance.uuid.asJson,
       "output_bytes" -> instance.outputSize.asJson,
       "created_at" -> Instant.now.toString.asJson,
-      "files" -> instance.outFiles
-        .map(DatasetFile.apply)
-        .map(_.toJson)
-        .toSeq
-        .asJson).asJson.noSpaces
+      "files" -> (
+        // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
+        // until peformance issue is resolved, see: WT-2870
+        if (
+          instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese
+        )
+          Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
+        else
+          instance.outFiles
+          .map(DatasetFile.apply)
+          .map(_.toJson)
+          .toSeq
+          .asJson
+      )
+    ).asJson.noSpaces
+
 
     val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
     printHttpRequestOutput(result)
