@@ -1,2 +1,0 @@
-<% layout("/layouts/aut-job.ssp") { %>
-<% } %>

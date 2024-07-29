@@ -90,7 +90,7 @@ object SpecialCollectionSpecifics {
   def userCollectionIds(user: ArchUser): Seq[String] = {
     collectionsCursor
       .downField("users")
-      .downField(user.id)
+      .downField(user.datafileKey)
       .values
       .toSeq
       .flatten

@@ -149,7 +149,7 @@ object Ait {
               .flatMap { base64 =>
                 val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
                 val Array(user, password) =
-                  userPassword.stripPrefix(ArchUser.AitPrefix + ":").split(":", 2)
+                  userPassword.stripPrefix("ait:").split(":", 2)
                 login(user, password).right.toOption
               }
           }

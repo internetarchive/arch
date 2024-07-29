@@ -2,7 +2,13 @@ package org.archive.webservices.ars.processing.jobs.system
 
 import io.circe.{HCursor, parser}
 import org.archive.webservices.ars.io.WebArchiveLoader
-import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
+import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
+import org.archive.webservices.ars.model.{
+  ArchCollection,
+  ArchJobCategories,
+  ArchJobCategory,
+  DerivativeOutput
+}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.Sparkling

@@ -20,5 +20,5 @@ object FormatUtil {
   }
 
   def instantTimeString(instant: Instant): String =
-    instant.toString.stripSuffix("Z").replace("T", " ")
+    instant.toString
 }

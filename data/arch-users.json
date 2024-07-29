@@ -1,11 +1,7 @@
 {
-    "system" : {
-        "name" : "ARCH Admin",
-        "password" : "sha1:LOVGDZGJXE7T6BUCEUFWZ6BTDN7OND6Y",
-        "admin" : true
-    },
-    "test" : {
-        "name" : "ARCH Test",
-        "password" : "sha1:LOVGDZGJXE7T6BUCEUFWZ6BTDN7OND6Y"
-    }
+  "ks:system" : {
+    "name" : "Keystone System",
+    "admin" : true,
+    "apiKey" : "$pbkdf2-sha512$120000$edRi7uf7Dg18ebkFm5lphcfOAiVVCvRB$vyl48k.uOahDCmTKOqViXpw8FG7fKzkVParjfOZ/60U"
+  }
 }

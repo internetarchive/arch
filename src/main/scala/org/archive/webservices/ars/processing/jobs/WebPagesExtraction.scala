@@ -18,6 +18,8 @@ object WebPagesExtraction extends BinaryInformationAutJob {
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#webpages"
+
   val description =
     "Location, technical metadata, and extracted full text contents of each text-bearing document in the collection. Output: one CSV file with columns for crawl date, last modified date, domain, URL, MIME type as reported by the web server and as detected by Apache TIKA, and content."
 

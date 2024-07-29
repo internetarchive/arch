@@ -24,6 +24,10 @@ trait DerivationJob {
 
   def description: String
 
+  def codeUrl: String = s"https://github.com/internetarchive/arch/blob/main/src/main/scala/${getClass.getName.replace(".", "/").stripSuffix("$")}.scala"
+
+  def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/sections/14410598107028-ARCH-Datasets"
+
   def templateName: Option[String] = Some("jobs/" + id)
 
   def run(conf: DerivationJobConf): Future[Boolean]
@@ -45,6 +49,8 @@ trait DerivationJob {
       DerivationJobInstance(this, conf)
     }
   }
+
+  def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] = None
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 

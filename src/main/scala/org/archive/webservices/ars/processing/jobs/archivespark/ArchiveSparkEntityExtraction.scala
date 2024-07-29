@@ -14,6 +14,8 @@ abstract class ArchiveSparkEntityExtraction extends ArchiveSparkTextLoadJob {
   val description: String = "ArchiveSpark job " + name
   val category: ArchJobCategory = ArchJobCategories.None
 
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+
   def properties(lang: Option[String] = None): Properties = {
     val default = EntitiesConstants.DefaultProps
     lang match {
@@ -34,6 +36,10 @@ abstract class ArchiveSparkEntityExtraction extends ArchiveSparkTextLoadJob {
 
 object ArchiveSparkEntityExtraction extends ArchiveSparkEntityExtraction {
   override val uuid: String = "018d114d-3426-730e-94a1-b56ca73fc1ad"
+  override val name: String = "Named entities"
+  override val description: String =
+    "Names of persons, organizations, and geographic locations detected in each text-bearing document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
+  override val category: ArchJobCategory = ArchJobCategories.Text
 }
 
 object ArchiveSparkEntityExtractionChinese extends ArchiveSparkEntityExtraction {

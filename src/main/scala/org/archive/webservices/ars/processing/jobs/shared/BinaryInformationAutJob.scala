@@ -7,7 +7,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState}
+import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState, SampleVizData}
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -151,19 +151,29 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override val templateName: Option[String] = Some("jobs/BinaryInformationExtraction")
 
+  override def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] =
+    checkFinishedState(conf.outputPath + relativeOutPath) match {
+      case Some(ProcessingState.Finished) => Some(
+        SampleVizData(
+          HdfsIO
+            .lines(conf.outputPath + relativeOutPath + "/" + MimeTypeCountFile, n = 5)
+            .flatMap { line =>
+              val comma = line.lastIndexOf(',')
+              if (comma < 0) None
+              else
+                Some {
+                  val (mimeType, count) =
+                    (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
+                  (mimeType, count)
+                }
+            }
+        )
+      )
+      case _ => None
+    }
+
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    val mimeCount = HdfsIO
-      .lines(conf.outputPath + relativeOutPath + "/" + MimeTypeCountFile, n = 5)
-      .flatMap { line =>
-        val comma = line.lastIndexOf(',')
-        if (comma < 0) None
-        else
-          Some {
-            val (mimeType, count) =
-              (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
-            (mimeType, count.toInt)
-          }
-      }
-    super.templateVariables(conf) ++ Seq("mimeCount" -> mimeCount)
+    super.templateVariables(conf) ++ Seq("mimeCount" ->
+      sampleVizData(conf).map(_.nodes).getOrElse(Seq.empty))
   }
 }

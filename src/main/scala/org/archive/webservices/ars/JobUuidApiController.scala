@@ -3,7 +3,8 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.model.api.DatasetFile
+import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.scalatra._
 
 class JobUuidApiController extends BaseController {
@@ -11,7 +12,7 @@ class JobUuidApiController extends BaseController {
   val UuidPattern = s"/:$UuidParam/"
 
   def response(action: DerivationJobInstance => ActionResult): ActionResult = {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val uuid = params(UuidParam)
       JobManager.getInstance(uuid) match {
         case Some(instance) =>
@@ -28,13 +29,33 @@ class JobUuidApiController extends BaseController {
     response(ApiController.jobStateResponse)
   }
 
-  get(UuidPattern + "files") {
+  get(UuidPattern + "result") {
     response { instance =>
       WasapiController.files(
         instance,
-        ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download",
+        params.get("base_download_url").getOrElse(
+          ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download"
+        ),
         params,
         addSample = false)
+    }
+  }
+
+  get(UuidPattern + "files") {
+    response { instance =>
+      Ok(
+        // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
+        // until peformance issue is resolved, see: WT-2870
+        if (
+          instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese
+        )
+          Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
+        else
+          instance.outFiles.map(DatasetFile.apply).map(_.toJson).toArray.asJson,
+        Map("Content-Type" -> "application/json"))
     }
   }
 
@@ -73,13 +94,25 @@ class JobUuidApiController extends BaseController {
     }
   }
 
+  get(UuidPattern + "sample_viz_data") {
+    response { instance =>
+      instance.sampleVizData match {
+        case Some(data: SampleVizData) =>
+          Ok(data.asJson, Map("Content-Type" -> "application/json"))
+        case _ => NotFound()
+      }
+    }
+  }
+
   get(UuidPattern + "colab/:file") {
     params.get("access") match {
       case Some(accessToken) =>
         response { instance =>
           val filename = params("file")
-          val fileUrl =
-            ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename
+          val fileUrl = params
+            .get("file_download_url")
+            .getOrElse(
+              ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download/" + filename)
           FilesController.colab(instance, filename, fileUrl, accessToken)
         }
       case None => Forbidden()

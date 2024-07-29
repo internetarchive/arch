@@ -11,6 +11,5 @@ class ScalatraBootstrap extends LifeCycle {
     context.mount(new JobUuidApiController, "/api/job/*")
     context.mount(new WasapiController, "/wasapi/*")
     context.mount(new FilesController, "/files/*")
-    context.mount(new DefaultController, "/*")
   }
 }
