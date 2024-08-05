@@ -231,11 +231,9 @@ project/project/
 # End of metals
 
 /config/config.json
-/lib/archivespark-assembly-3.3.8-SNAPSHOT.jar
-/lib/sparkling-assembly-0.3.8-SNAPSHOT.jar
-/lib/stanford-corenlp-4.5.1-models.jar
-/lib/stanford-corenlp-4.5.1.jar
-/lib/stanford-corenlp-models-chinese.jar
+/lib/archivespark-assembly-*.jar
+/lib/sparkling-assembly-*.jar
+/lib/stanford-corenlp-*.jar
 /lib/.symlinks-copied
 /shared
 

@@ -1,6 +1,6 @@
 import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
 
-lazy val commonSettings = Seq(name := "arch", version := "0.1.0", scalaVersion := "2.12.8")
+lazy val commonSettings = Seq(name := "arch", version := "2.0.0", scalaVersion := "2.12.8")
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
