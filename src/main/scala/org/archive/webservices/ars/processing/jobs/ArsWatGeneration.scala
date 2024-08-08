@@ -3,6 +3,7 @@ package org.archive.webservices.ars.processing.jobs
 import org.archive.webservices.ars.io.{IOHelper, WebArchiveLoader}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.ars.processing._
+import org.archive.webservices.ars.processing.jobs.ArsWaneGeneration.lazyOutFilesCache
 import org.archive.webservices.ars.processing.jobs.shared.ArsJob
 import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.Sparkling
@@ -67,6 +68,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
           RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
             for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
+          lazyOutFilesCache(conf) // trigger lazy outfile caching
           processed >= 0
         }
       }

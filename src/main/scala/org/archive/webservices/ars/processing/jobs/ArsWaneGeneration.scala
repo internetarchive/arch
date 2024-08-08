@@ -75,6 +75,7 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
             RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
               for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }
+            lazyOutFilesCache(conf) // trigger lazy outfile caching
             processed >= 0
           }
       }
