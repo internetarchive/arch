@@ -1,9 +1,9 @@
 package org.archive.webservices.ars.processing
 
 import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.util.UUID
 import org.archive.webservices.sparkling.io.HdfsIO
 

@@ -31,7 +31,10 @@ object LazyCache {
             processing += cacheFile -> lazyFuture
             lazyFuture
           })
-        .map(_ => parse(cacheFile).get)
+        .map { _ =>
+          processing -= cacheFile
+          parse(cacheFile).get
+        }
     }
 
   def getIfCached[A](cacheFile: String)(parse: String => Option[A]): Option[A] = {
