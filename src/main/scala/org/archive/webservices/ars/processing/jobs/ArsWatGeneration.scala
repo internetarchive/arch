@@ -91,6 +91,8 @@ object ArsWatGeneration extends SparkJob with ArsJob {
       DerivativeOutput(name.stripPrefix("/"), path, "wat", "application/gzip")
     }
 
+  override val outputScalesWithInput: Boolean = true
+
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 
   override def reset(conf: DerivationJobConf): Unit =
