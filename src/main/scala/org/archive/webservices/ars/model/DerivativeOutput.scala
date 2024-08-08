@@ -13,30 +13,54 @@ import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.time.Instant
 import scala.util.Try
 
-case class DerivativeOutput(
+trait DerivativeOutput {
+  def filename: String
+  def dir: String
+  def fileType: String
+  def mimeType: String
+  def downloadName: String
+  def size: Long
+  def time: Long
+  def lineCount: Long
+  def checksums: Map[String, String]
+  def prefixDownload(prefix: String): DerivativeOutput
+
+  lazy val path: String = dir + "/" + filename
+
+  lazy val sizeStr: String = IOHelper.sizeStr(path)
+
+  lazy val timeStr: String = FormatUtil.instantTimeString(Instant.ofEpochMilli(time))
+
+  lazy val lineCountStr: Option[String] =
+    if (lineCount < 0) None else Some(StringUtil.formatNumber(lineCount, 0))
+
+  lazy val accessToken: String = DigestUtil.sha1Base32(filename + size + time)
+
+  def prefixDownload(instance: DerivationJobInstance): DerivativeOutput = {
+    val timestamp = instance.info.finished.map(IOHelper.pathTimestamp).map(_ + "_")
+    prefixDownload(instance.conf.inputSpec.id + "_" + timestamp.getOrElse(""))
+  }
+}
+
+case class DerivativeOutputFile(
     filename: String,
     dir: String,
     fileType: String,
     mimeType: String,
-    downloadName: String) {
+    downloadName: String)
+    extends DerivativeOutput {
   import DerivativeOutput._
-
-  lazy val path: String = dir + "/" + filename
 
   lazy val (size, time) = Try {
     val status = HdfsIO.fs.getFileStatus(new Path(path))
     (status.getLen, status.getModificationTime)
   }.getOrElse((0L, 0L))
-  lazy val sizeStr: String = IOHelper.sizeStr(path)
 
   lazy val lineCount: Long = {
     val p = path + LineCountFileSuffix
     if (HdfsIO.exists(p)) Try(HdfsIO.lines(p).head.toLong).getOrElse(-1)
     else -1
   }
-
-  lazy val lineCountStr: Option[String] =
-    if (lineCount < 0) None else Some(StringUtil.formatNumber(lineCount, 0))
 
   lazy val checksums: Map[String, String] = {
     val p = path + ChecksumsFileSuffix
@@ -49,17 +73,8 @@ case class DerivativeOutput(
     else Map.empty
   }
 
-  lazy val timeStr: String = FormatUtil.instantTimeString(Instant.ofEpochMilli(time))
-
-  lazy val accessToken: String = DigestUtil.sha1Base32(filename + size + time)
-
   def prefixDownload(prefix: String): DerivativeOutput =
     copy(downloadName = IOHelper.escapePath(prefix) + filename)
-
-  def prefixDownload(instance: DerivationJobInstance): DerivativeOutput = {
-    val timestamp = instance.info.finished.map(IOHelper.pathTimestamp).map(_ + "_")
-    prefixDownload(instance.conf.inputSpec.id + "_" + timestamp.getOrElse(""))
-  }
 }
 
 object DerivativeOutput {
@@ -70,8 +85,8 @@ object DerivativeOutput {
       filename: String,
       dir: String,
       fileType: String,
-      mimeType: String): DerivativeOutput = {
-    DerivativeOutput(filename, dir, fileType, mimeType, filename)
+      mimeType: String): DerivativeOutputFile = {
+    DerivativeOutputFile(filename, dir, fileType, mimeType, filename)
   }
 
   def hashFile(in: InputStream): Map[String, String] = Map("md5" -> DigestUtil.md5Hex(in))

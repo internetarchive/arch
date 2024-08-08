@@ -89,8 +89,12 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
 
-  val hdfsDataPath: String =
-    confStrValue("ARCH_HDFS_DATA_PATH", "hdfsDataPath").getOrElse("data/data")
+  val hdfsJobArtifactPath: Option[String] =
+    confStrValue("ARCH_HDFS_JOB_ARTIFACT_PATH", "hdfsJobArtifactPath")
+
+  val jobArtifactUrl: String =
+    confStrValue("ARCH_JOB_ARTIFACT_URL", "jobArtifactUrl").getOrElse(
+      "http://nexus.us.archive.org/repository/raw-internal/arch-job-artifcats")
 
   val jobLoggingPath: String =
     confStrValue("ARCH_JOB_LOGGING_PATH", "jobLoggingPath").getOrElse("/var/log/arch")

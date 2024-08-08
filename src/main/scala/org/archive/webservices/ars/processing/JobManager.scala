@@ -7,7 +7,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark._
-import org.archive.webservices.ars.processing.jobs.archivespark.preset.{EntityExtraction, EntityExtractionChinese, WhisperEntityExtraction, WhisperTranscription}
+import org.archive.webservices.ars.processing.jobs.archivespark.preset.{EntityExtraction, WhisperEntityExtraction, WhisperTranscription}
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, MetadataSummary, UserDefinedQuery}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -29,7 +29,6 @@ object JobManager {
     ArchiveSparkFlexJob,
     ArchiveSparkNoop,
     EntityExtraction,
-    EntityExtractionChinese,
     WhisperTranscription,
     WhisperEntityExtraction,
     ArsLgaGeneration,
@@ -102,7 +101,7 @@ object JobManager {
               conf <- cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
             } yield {
               val instance = job.history(conf)
-              instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get(_))
+              instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get)
               instance
             }
           }

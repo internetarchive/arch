@@ -3,11 +3,13 @@ package org.archive.webservices.ars.processing
 import org.apache.hadoop.fs.Path
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollectionInfo, ArchConf, ArchJobInstanceInfo, DerivativeOutput}
+import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.util.UUID
 import org.archive.webservices.sparkling.io.HdfsIO
 
 import java.time.Instant
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object DerivationJobInstance {
   def uuid: String = uuid(false)
@@ -135,7 +137,11 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def stateStr: String = ProcessingState.Strings(state)
   def sampleVizData: Option[SampleVizData] = job.sampleVizData(conf)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
-  def outFiles: Iterator[DerivativeOutput] = job.outFiles(conf)
+  def outFiles: Iterator[DerivativeOutput] = job.outFilesCached(conf)
+  def lazyOutFilesCache: Option[Future[DerivativeOutputCache]] = job.lazyOutFilesCache(conf)
+  def lazyOutFiles: Option[Future[Iterator[DerivativeOutput]]] = lazyOutFilesCache.map { future =>
+    future.map(_.files)
+  }
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
   def onStateChanged(action: => Unit): Unit = _onStateChanged :+= (() => action)

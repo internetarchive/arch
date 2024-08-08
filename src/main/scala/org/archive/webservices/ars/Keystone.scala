@@ -4,6 +4,7 @@ import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.util.LazyCache
 
 import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
@@ -54,32 +55,22 @@ object Keystone {
       return
     }
 
-    val outputMetadata = Map(
-      "job_start_id" -> instance.uuid.asJson,
-      "output_bytes" -> instance.outputSize.asJson,
-      "created_at" -> Instant.now.toString.asJson,
-      "files" -> (
-        // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
-        // until peformance issue is resolved, see: WT-2870
-        if (
-          instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
-            || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
-            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
-            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese
-        )
-          Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
-        else
-          instance.outFiles
-          .map(DatasetFile.apply)
-          .map(_.toJson)
-          .toSeq
-          .asJson
-      )
-    ).asJson.noSpaces
+    LazyCache.lazyProcess(instance.lazyOutFiles, instance.outFiles) { outFiles =>
+      val outputMetadata = Map(
+        "job_start_id" -> instance.uuid.asJson,
+        "output_bytes" -> instance.outputSize.asJson,
+        "created_at" -> Instant.now.toString.asJson,
+        "files" -> (
+          outFiles
+            .map(DatasetFile.apply)
+            .map(_.toJson)
+            .toSeq
+            .asJson
+        )).asJson.noSpaces
 
-
-    val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
-    printHttpRequestOutput(result)
+      val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
+      printHttpRequestOutput(result)
+    }
   }
 
   def keystoneHttpRequest(endpoint: String, data: String): Try[String] = Try {

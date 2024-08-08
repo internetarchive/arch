@@ -9,6 +9,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapte
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 import java.io.File
+import java.net.URL
 
 abstract class ArchFileProcEnrichFuncBase[A]
     extends EnrichFunc[EnrichRoot with LocalFileCache, String, A]
@@ -36,6 +37,18 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   def copyFromHdfs(hdfsDir: String, file: String): String = {
     val in = HdfsIO.open(s"$hdfsDir/$file", decompress = false)
+    try {
+      val localFile = workingDir + "/" + file
+      val out = IOUtil.fileOut(localFile)
+      try {
+        IOUtil.copy(in, out)
+      } finally out.close()
+      localFile
+    } finally in.close()
+  }
+
+  def copyFromUrl(url: String, file: String): String = {
+    val in = new URL(url).openStream
     try {
       val localFile = workingDir + "/" + file
       val out = IOUtil.fileOut(localFile)

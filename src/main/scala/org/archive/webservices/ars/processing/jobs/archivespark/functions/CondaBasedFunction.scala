@@ -1,33 +1,50 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
-import org.archive.webservices.archivespark.model.Derivatives
+import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc}
 import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.processing.DerivationJobParameters
 
 import java.io.File
 
 abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   val AdditionalPackagesUnpackedExtension = ".unpacked"
 
-  def hdfsDataDir: String
+  def dataDir: String
   def condaEnv: String
   def pythonFile: String
   def additionalPackages: Seq[String] = Seq.empty
   def pythonArgumentFiles: Seq[String]
 
+  private var _additionalPythonArguments = Seq.empty[String]
+  def additionalPythonArguments(params: DerivationJobParameters): Seq[String] = Seq.empty
+
+  override def initFunc(params: DerivationJobParameters): EnrichFunc[_, String, _] = {
+    _additionalPythonArguments = additionalPythonArguments(params)
+    super.initFunc(params)
+  }
+
   val condaFile: String = condaEnv + ".tar.gz"
   val outputEndToken = "##"
 
-  val HdfsDir: String = ArchConf.hdfsDataPath + "/" + hdfsDataDir
+  val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
+  val artifactUrl: String = ArchConf.jobArtifactUrl.stripSuffix("/") + "/" + dataDir
 
-  override val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + hdfsDataDir
+  def copyFile(file: String): String = {
+    hdfsDir match {
+      case Some(dir) => copyFromHdfs(dir, file)
+      case None => copyFromUrl(artifactUrl, file)
+    }
+  }
+
+  override val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
 
   override def fields: Seq[String] = Seq("whisper")
 
   override def init(): Option[SystemProcess] = {
     make(condaEnv) { dir =>
       make(condaFile) { _ =>
-        copyFromHdfs(HdfsDir, condaFile)
+        copyFile(condaFile)
       }
       dir.mkdir()
       bash.exec(s"tar -xzf $condaFile -C $condaEnv")
@@ -39,7 +56,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     for (p <- additionalPackages) {
       val unpackedFlag = p + AdditionalPackagesUnpackedExtension
       make(unpackedFlag) { flag =>
-        copyFromHdfs(HdfsDir, p)
+        copyFile(p)
         try {
           bash.exec(s"tar -xzf $condaFile")
           flag.createNewFile()
@@ -50,16 +67,17 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     }
 
     make(pythonFile) { _ =>
-      copyFromHdfs(HdfsDir, pythonFile)
+      copyFile(pythonFile)
     }
 
     for (f <- pythonArgumentFiles) {
       make(f) { _ =>
-        copyFromHdfs(HdfsDir, f)
+        copyFile(f)
       }
     }
 
-    val arg = pythonArgumentFiles.mkString(" ")
+    val arg =
+      (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     Some(bash.subProcess(s"python $pythonFile $arg", waitForLine = Some(outputEndToken)))
   }
 

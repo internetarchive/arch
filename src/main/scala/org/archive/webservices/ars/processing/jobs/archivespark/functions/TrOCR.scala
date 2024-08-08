@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
 object TrOCR extends CondaBasedFunction[String] {
-  override val hdfsDataDir: String = "trocr"
+  override val dataDir: String = "trocr/20240807195100"
   override val condaEnv: String = "conda-trocr-env"
   override val pythonFile: String = "trocr-run.py"
   override val additionalPackages: Seq[String] =
