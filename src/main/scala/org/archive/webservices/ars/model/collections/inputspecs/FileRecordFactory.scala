@@ -23,13 +23,12 @@ trait FileFactoryCompanion {
 }
 
 object FileRecordFactory {
-  val factories: Seq[FileFactoryCompanion] = Seq(
+  var factories: Seq[FileFactoryCompanion] = Seq(
     S3FileRecordFactory,
     S3HttpFileRecordFactory,
     HttpFileRecordFactory,
     HdfsFileRecordFactory,
-    VaultFileRecordFactory,
-    PetaboxFileRecordFactory)
+    VaultFileRecordFactory)
 
   def apply(spec: InputSpec, default: FileFactoryCompanion): FileRecordFactory = {
     apply(spec, Some(default))

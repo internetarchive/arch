@@ -23,14 +23,13 @@ trait InputSpecLoader {
 }
 
 object InputSpecLoader {
-  val loaders: Seq[InputSpecLoader] = Seq(
+  var loaders: Seq[InputSpecLoader] = Seq(
     DatasetSpecLoader,
     ArchCollectionSpecLoader,
     FileSpecLoader,
     MetaRemoteSpecLoader,
     MetaFilesSpecLoader,
     MultiSpecLoader,
-    WaybackSpecLoader,
     CdxQuerySpecLoader)
 
   def get(spec: InputSpec): Option[InputSpecLoader] = {

@@ -15,16 +15,17 @@ object FileSpecLoader extends InputSpecLoader {
 
   val MimeKey = "data-mime"
 
+  var dataSourceLoaders: Map[String, (InputSpec, FileRecordFactory) => RDD[(String, String)]] = Map(
+    HdfsFileRecordFactory.dataSourceType -> loadHdfs,
+    VaultFileRecordFactory.dataSourceType -> loadVault)
+
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec, default = HdfsFileRecordFactory)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     val accessContext = FileAccessContext.fromLocalArchConf
-    (recordFactory.dataSourceType match {
-      case HdfsFileRecordFactory.dataSourceType => loadHdfs(spec, recordFactory)
-      case VaultFileRecordFactory.dataSourceType => loadVault(spec, recordFactory)
-      case PetaboxFileRecordFactory.dataSourceType => loadPetabox(spec, recordFactory)
-      case _ => throw new UnsupportedOperationException()
-    }).mapPartitions { partition =>
+    dataSourceLoaders.getOrElse(recordFactory.dataSourceType, {
+      throw new UnsupportedOperationException("No loader specified for data source type " + recordFactory.dataSourceType)
+    })(spec, recordFactory).mapPartitions { partition =>
       accessContext.init()
       val recordFactory = recordFactoryBc.value
       recordFactory.accessContext = accessContext
@@ -104,51 +105,6 @@ object FileSpecLoader extends InputSpecLoader {
         }
       }
     }
-  }
-
-  def loadPetabox(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
-    for {
-      itemName <- spec.str(InputSpec.DataLocationKey)
-      mime <- dataMime(spec)
-    } yield {
-      val source = Source.fromURL(ArchConf.iaBaseUrl + s"/metadata/$itemName/metadata/mediatype")
-      val isCollection =
-        try {
-          parse(source.mkString).toOption
-            .flatMap(_.hcursor.get[String]("result").toOption)
-            .contains("collection")
-        } finally source.close()
-      if (isCollection) {
-        // search items, foreach process item
-        val collectionSource = Source.fromURL(
-          ArchConf.iaBaseUrl + "/advancedsearch.php?rows=1000&output=json&q=collection:" + itemName)
-        try {
-          val items =
-            parse(collectionSource.mkString).toOption.map(_.hcursor).toSeq.flatMap { cursor =>
-              cursor
-                .downField("response")
-                .downField("docs")
-                .values
-                .toSeq
-                .flatten
-                .map(_.hcursor)
-                .flatMap { itemCursor =>
-                  itemCursor.get[String]("identifier").toOption
-                }
-            }
-          val rdd = RddUtil.parallelize(items)
-          val mimeBc = rdd.sparkContext.broadcast(mime)
-          rdd.flatMap(petaboxFiles).mapPartitions { partition =>
-            setMime(partition, mimeBc.value)
-          }
-        } finally collectionSource.close()
-      } else {
-        val files = setMime(petaboxFiles(itemName).toIterator, mime).toSeq
-        RddUtil.parallelize(files)
-      }
-    }
-  }.getOrElse {
-    throw new RuntimeException("No location and/or mime type(s) specified.")
   }
 
   def petaboxFiles(itemName: String): Seq[String] = {

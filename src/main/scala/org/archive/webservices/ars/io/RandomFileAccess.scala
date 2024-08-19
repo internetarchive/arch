@@ -5,7 +5,6 @@ import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
-import org.archive.webservices.sparkling.petabox.PetaBox
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 import java.net.URL
@@ -16,9 +15,10 @@ object RandomFileAccess {
   val HttpPrefix = "http"
   val HttpsPrefix = "https"
   val HdfsPrefix = "hdfs"
-  val PetaboxPrefix = "petabox"
 
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
+
+  var additionalPrefixHandlers: Map[String, (FileAccessContext, FilePointer, Long, Iterator[(Long, Long)]) => InputStream] = Map.empty
 
   def access(
       context: FileAccessContext,
@@ -54,13 +54,16 @@ object RandomFileAccess {
         }
       case HdfsPrefix | "" =>
         hdfsAccess(context, file, offset, positions)
-      case PetaboxPrefix | "" =>
-        petaboxAccess(context, file, offset, positions)
-      case _ =>
-        file.source match {
-          case s if ArchCollection.prefix(s).isDefined =>
-            collectionAccess(context, file, offset, positions)
-          case _ => throw new UnsupportedOperationException()
+      case p =>
+        additionalPrefixHandlers.get(p) match {
+          case Some(handler) =>
+            handler(context, file, offset, positions)
+          case None =>
+            file.source match {
+              case s if ArchCollection.prefix(s).isDefined =>
+                collectionAccess(context, file, offset, positions)
+              case _ => throw new UnsupportedOperationException()
+            }
         }
     }
   }
@@ -122,22 +125,6 @@ object RandomFileAccess {
       positions: Iterator[(Long, Long)]): InputStream = {
     val in = context.hdfsIO.open(file.path, offset)
     IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-  }
-
-  def petaboxAccess(
-      context: FileAccessContext,
-      file: FilePointer,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    val uncompressed =
-      file.filename.toLowerCase.stripSuffix(Sparkling.GzipExt).stripSuffix(Sparkling.ZstdExt)
-    if (uncompressed.endsWith(Sparkling.WarcExt) || uncompressed.endsWith(Sparkling.ArcExt)) {
-      PetaBox.requestWebdata(file.path, offset = offset, close = false) { in =>
-        IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-      }
-    } else {
-      httpAccessUrl(ArchConf.iaBaseUrl + "/serve/" + file.path, offset, positions)
-    }
   }
 
   def collectionAccess(

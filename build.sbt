@@ -1,6 +1,6 @@
 import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
 
-lazy val commonSettings = Seq(name := "arch", version := "2.0.0", scalaVersion := "2.12.8")
+lazy val commonSettings = Seq(name := "arch", organization := "org.archive.webservices", version := "2.1.1-SNAPSHOT", scalaVersion := "2.12.8")
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
@@ -23,7 +23,6 @@ val prodProvided = Seq(
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
-  "org.archive.webservices" %% "sparkling-internal" % "0.3.8-SNAPSHOT" % "provided",
   "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.json4s" %% "json4s-native" % "3.5.0",
@@ -55,6 +54,7 @@ val buildSettings = commonSettings ++ Seq(
   publishMavenStyle := false)
 
 lazy val root = (project in file("."))
+  .settings(buildSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
