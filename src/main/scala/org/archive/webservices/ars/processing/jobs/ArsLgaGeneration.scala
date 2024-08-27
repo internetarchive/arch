@@ -18,6 +18,9 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   val name = "Longitudinal graph"
   val uuid = "01895064-661c-79da-9ca7-cbf82507de61"
   val category: ArchJobCategory = ArchJobCategories.Network
+
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810412545172"
+
   def description =
     "All links between URLs in the collection over time. Output: one compressed TGZ file containing two compressed GZ files with data in JSON format representing, 1) a unique ID and SURT for each URL, and 2) the source URL ID, target URL ID, and timestamp for each link."
 

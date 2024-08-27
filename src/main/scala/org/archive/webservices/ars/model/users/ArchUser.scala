@@ -1,13 +1,17 @@
 package org.archive.webservices.ars.model.users
 
-import io.circe.{HCursor, Json, JsonObject, parser}
+import io.circe.HCursor
+import io.circe.syntax._
+import io.github.nremond.SecureHash
 import org.archive.webservices.ars.ait.{Ait, AitUser}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.util.DatafileUtil
 import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
 import org.scalatra.servlet.ServletApiImplicits._
 
 import java.util.Base64
+import java.util.UUID.randomUUID
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import scala.io.Source
 import scala.util.Try
@@ -21,50 +25,50 @@ trait ArchUser {
   def isUser: Boolean
   def aitUser: Option[AitUser] = None
   lazy val urlId: String = aitUser.map(_.id.toString).getOrElse(id)
+  lazy val datafileKey: String = id.stripPrefix("arch:")
   def option: Option[ArchUser] = if (isUser) Some(this) else None
 }
 
 object ArchUser {
-  val AitPrefix = "ait"
-  val ArchPrefix = "arch"
+  val None = DefaultArchUser("", "", "", scala.None, isAdmin = false, isUser = false)
   val PrefixNameSeparator = ":"
 
-  val UserSessionAttribute = "arch-user"
-
-  val None = DefaultArchUser("", "", "", scala.None, isAdmin = false, isUser = false)
-
   private var _archUsersCursor: Option[HCursor] = scala.None
+  private var _archAdminApiKeys: Set[String] = Set.empty
   private def archUsersCursor: HCursor = _archUsersCursor.getOrElse {
-    _archUsersCursor = Some(Try {
-      val source = Source.fromFile("data/arch-users.json", "utf-8")
-      try {
-        parser.parse(source.mkString).right.get.hcursor
-      } finally {
-        source.close()
-      }
-    }.getOrElse(Json.fromJsonObject(JsonObject.empty).hcursor))
-    _archUsersCursor.get
+    val cur = DatafileUtil.load("arch-users.json").hcursor
+    _archUsersCursor = Some(cur)
+    // Collect admin API keys.
+    _archAdminApiKeys = cur.keys
+      .getOrElse(Seq.empty)
+      .map { cur.downField(_) }
+      .filter { _.get[Boolean]("admin").getOrElse(false) }
+      .flatMap { _.get[String]("apiKey").toOption }
+      .toSet
+    cur
   }
+
+  private def isAdminApiKey(apiKey: String): Boolean =
+    _archAdminApiKeys.exists(SecureHash.validatePassword(apiKey, _))
+
+  private def isUserApiKey(username: String, apiKey: String): Boolean =
+    archUsersCursor
+      .downField(username)
+      .get[String]("apiKey")
+      .map(SecureHash.validatePassword(apiKey, _))
+      .getOrElse(false)
 
   private var _aitUserIds: Option[Set[Int]] = scala.None
   private def aitUserIds: Set[Int] = _aitUserIds.getOrElse {
-    _aitUserIds = Some(Try {
-      val source = Source.fromFile("data/ait-users.json", "utf-8")
-      try {
-        parser
-          .parse(source.mkString)
-          .right
-          .get
-          .hcursor
-          .downField("ids")
-          .values
-          .getOrElse(Iterator.empty)
-          .flatMap(_.asNumber.flatMap(_.toInt))
-          .toSet
-      } finally {
-        source.close()
-      }
-    }.getOrElse(Set.empty))
+    _aitUserIds = Some(
+      DatafileUtil
+        .load("ait-users.json")
+        .hcursor
+        .downField("ids")
+        .values
+        .getOrElse(Iterator.empty)
+        .flatMap(_.asNumber.flatMap(_.toInt))
+        .toSet)
     _aitUserIds.get
   }
 
@@ -73,16 +77,62 @@ object ArchUser {
     _aitUserIds = scala.None
   }
 
-  private def archUser(name: String, password: Option[String] = scala.None): Option[ArchUser] =
+  def create(name: String, admin: Boolean = false): String = {
+    val json = DatafileUtil.loadArchUsers
+    if (json.hcursor.keys.get.toSet.contains(name)) {
+      throw new Error(s"A user already exists with the name: $name")
+    }
+    // Generate an API key.
+    val apiKey = randomUUID.toString
+    DatafileUtil.storeArchUsers(
+      json.deepMerge(
+        Map(
+          name -> Map(
+            "name" -> name.asJson,
+            "admin" -> admin.asJson,
+            "apiKey" -> SecureHash.createHash(apiKey).toString.asJson)).asJson))
+    apiKey
+  }
+
+  def rollApiKey(name: String): String = {
+    val json = DatafileUtil.loadArchUsers
+    if (!json.hcursor.keys.get.toSet.contains(name)) {
+      throw new Error(s"No user exists with the name: $name")
+    }
+    // Generate a new API key.
+    val apiKey = randomUUID.toString
+    DatafileUtil.storeArchUsers(
+      json.hcursor
+        .downField(name)
+        .downField("apiKey")
+        .withFocus(_ => SecureHash.createHash(apiKey).toString.asJson)
+        .top
+        .get)
+    apiKey
+  }
+
+  def get(id: String, apiKey: Option[String] = scala.None): Option[ArchUser] = {
+    val (usersKey, finalId, username) =
+      if (!id.contains(":")) (id, s"arch:$id", id)
+      else
+        (
+          id.split(":", 2) match {
+            case Array("arch", name) => (name, id, name)
+            case Array(_, name) => (id, id, name)
+          }
+        )
+
     Some(archUsersCursor)
-      .map(_.downField(name.stripPrefix(ArchPrefix + "_")))
-      .filter(password.isEmpty || _.get[String]("password")
-        .contains("sha1:" + DigestUtil.sha1Base32(password.get)))
-      .map { cursor =>
+      .map(_.downField(usersKey))
+      .filter(u =>
+        apiKey.isEmpty
+          || isUserApiKey(usersKey, apiKey.get)
+          || isAdminApiKey(apiKey.get))
+      .map(cursor =>
         DefaultArchUser(
-          ArchPrefix + PrefixNameSeparator + name,
-          name,
-          cursor.get[String]("name").getOrElse(name),
+          finalId,
+          username,
+          cursor.get[String]("name").getOrElse(username),
           cursor.get[String]("email").toOption.map(_.trim).filter { email =>
             !email.contains(" ") && {
               val split = email.split("@")
@@ -92,89 +142,8 @@ object ArchUser {
               }
             }
           },
-          cursor.get[Boolean]("admin").getOrElse(false))
-      }
-
-  def login(username: String, password: String)(implicit
-      request: HttpServletRequest,
-      response: HttpServletResponse): Option[String] = {
-    val (prefix, name) =
-      if (username.contains(PrefixNameSeparator))
-        (
-          StringUtil.prefixBySeparator(username, PrefixNameSeparator),
-          StringUtil.stripPrefixBySeparator(username, PrefixNameSeparator))
-      else (ArchPrefix, username)
-    (if (ArchConf.forceKeystoneLogin) KeystoneUser.prefix else prefix) match {
-      case ArchPrefix =>
-        archUser(name, Some(password)) match {
-          case Some(user) =>
-            request.getSession.setAttribute(UserSessionAttribute, user)
-            scala.None
-          case scala.None =>
-            Some("Wrong username or password")
-        }
-      case AitPrefix =>
-        Ait.login(name, password, response).left.toOption
-      case KeystoneUser.prefix =>
-        KeystoneUser.login(name, password) match {
-          case Some(user) => {
-            request.getSession.setAttribute(UserSessionAttribute, user)
-            scala.None
-          }
-          case scala.None => Some("Wrong username or password")
-        }
-      case _ =>
-        Some("User not found.")
-    }
+          cursor.get[Boolean]("admin").getOrElse(false)))
   }
 
-  def logout()(implicit request: HttpServletRequest): Unit = {
-    get match {
-      case Some(u) =>
-        if (u.aitUser.isDefined) Ait.logout()
-        else request.getSession.removeAttribute(UserSessionAttribute)
-      case scala.None => // do nothing
-    }
-  }
-
-  def get(implicit request: HttpServletRequest): Option[ArchUser] = get(useSession = true)
-
-  def get(useSession: Boolean)(implicit request: HttpServletRequest): Option[ArchUser] = {
-    Option(request.getSession.getAttribute(UserSessionAttribute))
-      .map(_.asInstanceOf[ArchUser])
-      .orElse {
-        request
-          .header("Authorization")
-          .filter(_ != null)
-          .map(_.trim)
-          .filter(_.toLowerCase.startsWith("basic "))
-          .map(StringUtil.stripPrefixBySeparator(_, " "))
-          .flatMap { base64 =>
-            val userPassword = new String(Base64.getDecoder.decode(base64), "utf-8")
-            val Array(user, password) = userPassword
-              .stripPrefix(ArchPrefix + PrefixNameSeparator)
-              .split(PrefixNameSeparator, 2)
-            archUser(user, Some(password))
-          }
-      }
-  }
-
-  def get(id: String)(implicit
-      context: RequestContext = RequestContext.None): Option[ArchUser] = {
-    val (prefix, suffix) =
-      if (id.contains(PrefixNameSeparator))
-        (
-          StringUtil.prefixBySeparator(id, PrefixNameSeparator),
-          StringUtil.stripPrefixBySeparator(id, PrefixNameSeparator))
-      else (AitPrefix, id)
-    prefix match {
-      case ArchPrefix =>
-        archUser(suffix)
-      case AitPrefix =>
-        Try(suffix.toInt).toOption.flatMap(Ait.user(_)).map(AitArchUser(_))
-      case KeystoneUser.prefix => KeystoneUser.get(suffix)
-      case _ =>
-        scala.None
-    }
-  }
+  def get(id: String): Option[ArchUser] = get(id = id, apiKey = scala.None)
 }

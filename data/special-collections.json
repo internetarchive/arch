@@ -6,7 +6,10 @@
         }
     },
     "users" : {
-        "arch:test" : [
+        "test" : [
+            "test-collection"
+        ],
+        "ks:test" : [
             "test-collection"
         ]
     }

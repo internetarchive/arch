@@ -2,7 +2,9 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
@@ -22,23 +24,19 @@ object Keystone {
     if (!JobManager.jobs.contains(jobName)) {
       return
     }
-
-    // TODO: remove extra backslashes from params output
-    val params = Map(
-      "instance_hashcode" -> instance.hashCode.abs.toString,
-      "attempt" -> instance.attempt.toString,
-      "conf" -> instance.conf.serialize).asJson.noSpaces
-
     val inputMetadata = Map(
-      "id" -> instance.uuid,
-      "job_type_id" -> instance.job.uuid,
-      "username" -> instance.user.map(_.userName).getOrElse("").toString,
-      "input_bytes" -> instance.inputSize.toString,
-      "sample" -> instance.conf.isSample.toString,
-      "created_at" -> Instant.now.toString,
-      "parameters" -> params,
-      "commit_hash" -> ArchConf.version.getOrElse("")).asJson.noSpaces
-
+      "id" -> instance.uuid.asJson,
+      "job_type_id" -> instance.job.uuid.asJson,
+      "username" -> instance.user.map(_.userName).getOrElse("").toString.asJson,
+      "input_bytes" -> instance.inputSize.asJson,
+      "sample" -> instance.conf.isSample.asJson,
+      "parameters" -> Map(
+        "instance_hashcode" -> instance.hashCode.abs.toString.asJson,
+        "attempt" -> instance.attempt.asJson,
+        "conf" -> instance.conf.toJson).asJson,
+      "commit_hash" -> ArchConf.version.getOrElse("").asJson,
+      "created_at" -> Instant.now.toString.asJson).asJson
+      .noSpaces
     val result = retryHttpRequest(jobStartEndpoint, inputMetadata, maxRetries)
     printHttpRequestOutput(result)
   }
@@ -61,7 +59,26 @@ object Keystone {
     val outputMetadata = Map(
       "job_start_id" -> instance.uuid.asJson,
       "output_bytes" -> instance.outputSize.asJson,
-      "created_at" -> Instant.now.toString.asJson).asJson.noSpaces
+      "created_at" -> Instant.now.toString.asJson,
+      "files" -> (
+        // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
+        // until peformance issue is resolved, see: WT-2870
+        if (
+          instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
+            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese
+        )
+          Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
+        else
+          instance.outFiles
+          .map(DatasetFile.apply)
+          .map(_.toJson)
+          .toSeq
+          .asJson
+      )
+    ).asJson.noSpaces
+
 
     val result = retryHttpRequest(jobCompleteEndpoint, outputMetadata, maxRetries)
     printHttpRequestOutput(result)
@@ -87,7 +104,8 @@ object Keystone {
       }
 
       val responseCode = connection.getResponseCode
-      if (responseCode == HttpURLConnection.HTTP_OK) {
+      if (responseCode == HttpURLConnection.HTTP_OK
+        || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         val inputStream = connection.getInputStream
         val response = Source.fromInputStream(inputStream).mkString
 

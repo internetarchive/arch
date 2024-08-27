@@ -32,7 +32,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
 
   def collection(implicit context: RequestContext = RequestContext.None): Option[ArchCollection] =
     AitCollectionSpecifics
-      .fetchCollections(Seq(aitId), userId.flatMap(ArchUser.get(_)), foreignAccess)
+      .fetchCollections(Seq(aitId), userId.map(ArchUser.get(_).get), foreignAccess)
       .headOption
 
   override def stats(implicit
@@ -129,7 +129,7 @@ object AitCollectionSpecifics {
 
   private def foreignCollectionIds(user: ArchUser): Seq[Int] = {
     foreignCollectionsCursor
-      .downField(user.id)
+      .downField(user.datafileKey)
       .values
       .toSeq
       .flatten

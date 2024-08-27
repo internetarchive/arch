@@ -27,12 +27,13 @@ package object api {
           case ApiFieldType.Int => get[Int](field).asJson
           case ApiFieldType.Long => get[Long](field).asJson
           case ApiFieldType.String => get[String](field).asJson
+          case ApiFieldType.Json => get[Json](field).asJson
         })
       }: _*).asJson
   }
 
   object ApiFieldType extends Enumeration {
-    val Boolean, Int, Long, String = Value
+    val Boolean, Int, Long, String, Json = Value
   }
 
   private val TypeMap: Map[Type, ApiFieldType.Value] = Map(
@@ -40,7 +41,8 @@ package object api {
     classOf[java.lang.Boolean] -> ApiFieldType.Boolean,
     classOf[Int] -> ApiFieldType.Int,
     classOf[Long] -> ApiFieldType.Long,
-    classOf[String] -> ApiFieldType.String)
+    classOf[String] -> ApiFieldType.String,
+    classOf[Json] -> ApiFieldType.Json)
 
   class ApiResponseType[T <: ApiResponseObject[T]](classTag: ClassTag[T]) {
     private implicit val self: ApiResponseType[T] = this
@@ -67,6 +69,7 @@ package object api {
         case ApiFieldType.Int => Ordering.by(_.get[Int](field))
         case ApiFieldType.Long => Ordering.by(_.get[Long](field))
         case ApiFieldType.String => Ordering.by(_.get[String](field))
+        case ApiFieldType.Json => Ordering.by(_.get[String](field))
       }
       if (reverse) ordering.reverse else ordering
     }

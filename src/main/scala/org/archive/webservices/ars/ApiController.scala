@@ -5,12 +5,19 @@ import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model._
-import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, Collection, Dataset}
+import org.archive.webservices.ars.model.api.{
+  ApiFieldType,
+  ApiResponseObject,
+  ApiResponseType,
+  Collection,
+  Dataset,
+  DatasetFile,
+}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.util.FormatUtil
+import org.archive.webservices.ars.util.{DatasetUtil,FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 
@@ -174,7 +181,7 @@ class ApiController extends BaseController {
   }.getOrElse(NotFound())
 
   get("/runjob/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       runJob(
         ArchCollection.userCollectionId(params("collectionid"), context.user),
         params("jobid"),
@@ -184,7 +191,7 @@ class ApiController extends BaseController {
   }
 
   post("/runjob/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       DerivationJobParameters.fromJson(request.body) match {
         case Some(p) =>
           runJob(
@@ -200,7 +207,7 @@ class ApiController extends BaseController {
   }
 
   post("/runjob/:jobid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       parse(request.body).right.toOption.map(_.hcursor) match {
         case Some(cursor) =>
           JobManager
@@ -259,7 +266,7 @@ class ApiController extends BaseController {
   }
 
   get("/rerunjob/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       runJob(
         ArchCollection.userCollectionId(params("collectionid"), context.user),
         params("jobid"),
@@ -269,7 +276,7 @@ class ApiController extends BaseController {
   }
 
   get("/rerun-failed") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       if (context.isAdmin) {
         JobStateManager.rerunFailed()
         Found(ArchConf.baseUrl + "/admin/logs/running")
@@ -278,7 +285,7 @@ class ApiController extends BaseController {
   }
 
   get("/bypass-spark") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       if (context.isAdmin) {
         Ok(SparkJobManager.bypassJobs())
       } else Forbidden()
@@ -286,7 +293,7 @@ class ApiController extends BaseController {
   }
 
   get("/jobstate/:jobid/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       ArchCollection
         .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .flatMap { collection =>
@@ -301,52 +308,27 @@ class ApiController extends BaseController {
   }
 
   get("/available-jobs") {
-    ensureLogin(redirect = false, useSession = true) { _ =>
-      val categoryJobsMap = JobManager.userJobs.toSeq
-        .groupBy(_.category)
-        .map { case (category, jobs) =>
-          category -> jobs.sortBy(_.name.toLowerCase)
-        }
+    ensureAuth { _ =>
       Ok(
-        Seq(
-          (
-            ArchJobCategories.Collection,
-            "Discover domain-related patterns and high level information about the documents in a web archive.",
-            "/img/collection.png",
-            "collection"),
-          (
-            ArchJobCategories.Network,
-            "Explore connections in a web archive visually.",
-            "/img/network.png",
-            "network"),
-          (
-            ArchJobCategories.Text,
-            "Extract and analyze a web archive as text.",
-            "/img/text.png",
-            "text"),
-          (
-            ArchJobCategories.BinaryInformation,
-            "Find, describe, and use the files contained within a web archive, based on their format.",
-            "/img/file-formats.png",
-            "file-formats"))
-          .map({
-            case (category, categoryDescription, categoryImage, categoryId) => {
+        JobManager.jobs.values.toSeq
+          .groupBy(_.category)
+          .map { case (category, jobs) =>
               ListMap(
                 "categoryName" -> category.name.asJson,
-                "categoryDescription" -> categoryDescription.asJson,
-                "categoryImage" -> BaseController.staticPath(categoryImage).asJson,
-                "categoryId" -> categoryId.asJson,
-                "jobs" -> categoryJobsMap
-                  .get(category)
-                  .head
-                  .map(job =>
-                    ListMap(
-                      "id" -> job.id.asJson,
-                      "name" -> job.name.asJson,
-                      "description" -> job.description.asJson))
-                  .asJson)
-            }
-          })
+                "categoryDescription" -> category.description.asJson,
+                "jobs" -> jobs.sortBy(_.name.toLowerCase).map { job =>
+                  ListMap(
+                    "uuid" -> job.uuid.asJson,
+                    "name" -> job.name.asJson,
+                    "description" -> job.description.asJson,
+                    "publishable" -> (!PublishedDatasets.ProhibitedJobs.contains(job)).asJson,
+                    "internal" -> (category == ArchJobCategories.System).asJson,
+                    "codeUrl" -> job.codeUrl.asJson,
+                    "infoUrl" -> job.infoUrl.asJson)
+                  .asJson
+                }.asJson
+              ).asJson
+          }
           .asJson
           .spaces4,
         Map("Content-Type" -> "application/json"))
@@ -354,7 +336,7 @@ class ApiController extends BaseController {
   }
 
   get("/jobstates/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       ArchCollection
         .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .map { collection =>
@@ -390,7 +372,7 @@ class ApiController extends BaseController {
   }
 
   get("/jobstates") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       if (context.isAdmin) {
         val states = JobManager.registered.toSeq
           .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
@@ -401,7 +383,7 @@ class ApiController extends BaseController {
   }
 
   get("/collections") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       Ok(
         filterAndSerialize(ArchCollection.userCollections(context.user).map(Collection(_))),
         Map("Content-Type" -> "application/json"))
@@ -409,7 +391,7 @@ class ApiController extends BaseController {
   }
 
   get("/datasets") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val user = context.user
       val pathUserId = IOHelper.escapePath(user.id)
       val userFiles = HdfsIO.files(
@@ -439,14 +421,28 @@ class ApiController extends BaseController {
                 jobId,
                 DerivationJobConf.collection(collection, sample = sample, global = false),
                 Some(DerivationJobConf.collection(collection, sample = sample, global = true)))
+            if instance.job.category != ArchJobCategories.System
           } yield Dataset(collection, instance)
         }
       Ok(filterAndSerialize(datasets), Map("Content-Type" -> "application/json"))
     }
   }
 
+  get("/datasets/:datasetid/files") {
+    ensureAuth { implicit context =>
+      val user = context.user
+      (for {
+        (_, job) <- DatasetUtil.parseId(params("datasetid"), user)
+      } yield {
+        Ok(
+          filterAndSerialize(job.outFiles.map(DatasetFile.apply).toSeq),
+          Map("Content-Type" -> "application/json"))
+      }).getOrElse(NotFound())
+    }
+  }
+
   get("/collection/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
       (for {
         collection <- ArchCollection.get(collectionId)
@@ -479,7 +475,7 @@ class ApiController extends BaseController {
   }
 
   get("/petabox/:collectionid/metadata/:item") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val item = params("item")
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
       val collectionItems = ArchCollection.get(collectionId).toSet.flatMap { collection =>
@@ -504,7 +500,7 @@ class ApiController extends BaseController {
   }
 
   post("/petabox/:collectionid/metadata/:item") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val item = params("item")
       val collectionId = ArchCollection.userCollectionId(params("collectionid"), context.user)
       val collectionItems = ArchCollection.get(collectionId).toSet.flatMap { collection =>
@@ -528,10 +524,10 @@ class ApiController extends BaseController {
   }
 
   post("/petabox/:collectionid/delete/:item") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val item = params("item")
       ArchCollection
-        .get(params("collectionid"))
+        .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .filter { collection =>
           val collectionItems = PublishedDatasets.collectionItems(collection)
           collectionItems.contains(item)
@@ -553,7 +549,7 @@ class ApiController extends BaseController {
   }
 
   get("/petabox/:collectionid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       ArchCollection
         .get(ArchCollection.userCollectionId(params("collectionid"), context.user))
         .map { collection =>
@@ -566,7 +562,7 @@ class ApiController extends BaseController {
   }
 
   get("/petabox/:collectionid/:jobid") {
-    ensureLogin(redirect = false, useSession = true) { implicit context =>
+    ensureAuth { implicit context =>
       val jobId = params("jobid")
       val sample = params.get("sample").contains("true")
       ArchCollection

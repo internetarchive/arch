@@ -22,7 +22,7 @@ object SparkJobManager
 
   def context: Future[SparkContext] = {
     Future {
-      synchronized(_context.getOrElse {
+      synchronized(_context.filter(!_.isStopped).getOrElse {
         val context = SparkUtil.config(
           SparkSession.builder,
           appName = "ARCH",

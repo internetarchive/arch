@@ -76,8 +76,7 @@ class LocalArchConf extends ArchConf with Serializable {
       "https://wayback.archive-it.org")
 
   val vaultBaseUrl: String =
-    confStrValue("ARCH_VAULT_BASE_URL", "vaultBaseUrl").getOrElse(
-      "https://vault.archive-it.org")
+    confStrValue("ARCH_VAULT_BASE_URL", "vaultBaseUrl").getOrElse("https://vault.archive-it.org")
 
   val collectionCachePath: String =
     confStrValue("ARCH_COLLECTION_CACHE_PATH", "collectionCachePath").getOrElse("/data/cache")
@@ -169,6 +168,7 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val keystoneBaseUrl: Option[String] =
     confStrValue(envKey = "ARCH_KEYSTONE_BASE_URL", configKey = "keystoneBaseUrl")
+
   val keystonePublicBaseUrl: Option[String] =
     confStrValue(envKey = "ARCH_KEYSTONE_PUBLIC_BASE_URL", configKey = "keystonePublicBaseUrl")
   val keystonePrivateApiKey: Option[String] =

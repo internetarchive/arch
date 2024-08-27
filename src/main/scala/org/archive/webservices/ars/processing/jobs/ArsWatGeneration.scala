@@ -23,6 +23,9 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   val name = "Web archive transformation (WAT)"
   val uuid = "01895066-11f7-7c35-af62-603955c6c20f"
   val category: ArchJobCategory = ArchJobCategories.Collection
+
+  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810360339220"
+
   def description =
     "Metadata extracted from WARC-info and WARC record headers and HTML headers, meta tags, and anchor tags thoughout the collection. Output: one WAT file with data in JSON format for each WARC file."
 
