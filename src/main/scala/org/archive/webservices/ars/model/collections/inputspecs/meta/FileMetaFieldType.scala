@@ -21,7 +21,13 @@ object FileMetaFieldType {
   }
 
   case object Number extends FileMetaFieldType {
-    override def toJson(value: Any): Json = value.asInstanceOf[Long].asJson
+    override def toJson(value: Any): Json = {
+      value match {
+        case i: Int => i.asJson
+        case l: Long => l.asJson
+        case d: Double => d.asJson
+      }
+    }
   }
 
   case object Boolean extends FileMetaFieldType {

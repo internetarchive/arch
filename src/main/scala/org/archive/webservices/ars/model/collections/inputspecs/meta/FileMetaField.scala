@@ -23,6 +23,8 @@ object FileMetaField {
     FileMetaField(key, value, FileMetaFieldType.Number)
   def apply(key: String, value: Long): FileMetaField =
     FileMetaField(key, value, FileMetaFieldType.Number)
+  def apply(key: String, value: Double): FileMetaField =
+    FileMetaField(key, value, FileMetaFieldType.Number)
   def apply(key: String, value: Boolean): FileMetaField =
     FileMetaField(key, value, FileMetaFieldType.Boolean)
 }
