@@ -48,7 +48,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
   }
 
   def copyFromUrl(url: String, file: String): String = {
-    val in = new URL(s"$url/$file").openStream
+    val in = new URL(url).openStream
     try {
       val localFile = workingDir + "/" + file
       val out = IOUtil.fileOut(localFile)

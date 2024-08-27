@@ -33,7 +33,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   def copyFile(file: String): String = {
     hdfsDir match {
       case Some(dir) => copyFromHdfs(dir, file)
-      case None => copyFromUrl(artifactUrl, file)
+      case None => copyFromUrl(s"$artifactUrl/$file", file)
     }
   }
 
