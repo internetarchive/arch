@@ -10,6 +10,7 @@ import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.io._
+import org.archive.webservices.sparkling.util.IteratorUtil
 import org.archive.webservices.sparkling.warc.WarcRecord
 
 import scala.concurrent.Future
@@ -96,6 +97,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
     def run(conf: DerivationJobConf): Future[Boolean] = Future {
       val outDir = conf.outputPath + relativeOutPath + resultDir
       val outFile = conf.outputPath + relativeOutPath + resultFile
+
       IOHelper.concatHdfs(
         outDir,
         outFile,
@@ -105,7 +107,13 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
         deleteSrcPath = true) { in =>
         DerivativeOutput.hashFile(in, outFile)
       }
-      HdfsIO.exists(outFile)
+
+      HdfsIO.writeLines(
+        outFile + DerivativeOutput.LineCountFileSuffix,
+        Seq(IteratorUtil.count(HdfsIO.iterLines(outFile)).toString),
+        overwrite = true)
+
+      true
     }
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {

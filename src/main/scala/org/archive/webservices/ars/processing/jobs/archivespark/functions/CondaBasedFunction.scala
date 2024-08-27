@@ -27,8 +27,8 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   val condaFile: String = condaEnv + ".tar.gz"
   val outputEndToken = "##"
 
-  val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
-  val artifactUrl: String = ArchConf.jobArtifactUrl.stripSuffix("/") + "/" + dataDir
+  lazy val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
+  lazy val artifactUrl: String = ArchConf.jobArtifactUrl.stripSuffix("/") + "/" + dataDir
 
   def copyFile(file: String): String = {
     hdfsDir match {

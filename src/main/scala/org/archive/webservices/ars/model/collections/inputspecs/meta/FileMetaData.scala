@@ -6,8 +6,10 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
+import scala.collection.immutable.ListMap
+
 class FileMetaData(val fields: Seq[FileMetaField]) extends Serializable {
-  lazy val map: Map[String, FileMetaField] = fields.map(f => f.key -> f).toMap
+  lazy val map: Map[String, FileMetaField] = ListMap(fields.map(f => f.key -> f): _*)
   def str(key: String): Option[String] =
     map.get(key).flatMap(_.get[String]).orElse(strs(key).headOption)
   def strs(key: String): Seq[String] = map.get(key).toSeq.flatMap(_.gets[String])
@@ -15,7 +17,7 @@ class FileMetaData(val fields: Seq[FileMetaField]) extends Serializable {
     map.get(key).flatMap(_.get[Int]).orElse(ints(key).headOption)
   def ints(key: String): Seq[Int] = map.get(key).toSeq.flatMap(_.gets[Int])
   def keys: Set[String] = map.keySet
-  def toJson: Json = fields.map(_.toJson).asJson
+  def toJson: Json = map.mapValues(_.toJson).asJson
 }
 
 object FileMetaData {
