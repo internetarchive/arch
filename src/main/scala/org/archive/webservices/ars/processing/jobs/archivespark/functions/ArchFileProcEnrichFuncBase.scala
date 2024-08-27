@@ -71,6 +71,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
     if (!initialized) {
       try {
         initialized = true
+        println(s"Creating working directory: $workingDir")
         new File(workingDir).mkdirs()
         globalProcess = init()
       } catch {

@@ -37,9 +37,11 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     }
   }
 
-  override val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
+  override lazy val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
 
-  override def fields: Seq[String] = Seq("whisper")
+  def label: String
+
+  override def fields: Seq[String] = Seq(label)
 
   override def init(): Option[SystemProcess] = {
     make(condaEnv) { dir =>

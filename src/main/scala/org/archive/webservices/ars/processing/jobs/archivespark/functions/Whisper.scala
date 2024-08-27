@@ -3,9 +3,10 @@ import _root_.io.circe.parser._
 import io.circe.Json
 
 object Whisper extends CondaBasedFunction[Json] {
-  override val dataDir: String = "whisper/20240807195100"
-  override val condaEnv: String = "conda-whisper-env"
-  override val pythonFile: String = "whisper-run.py"
+  override val label: String = "whisper"
+  override val dataDir: String = s"$label/20240807195100"
+  override val condaEnv: String = s"conda-$label-env"
+  override val pythonFile: String = s"$label-run.py"
   override val pythonArgumentFiles: Seq[String] = Seq("base.en.pt")
 
   override def processOutput(output: String): Option[Json] = parse(output.trim).toOption
