@@ -24,7 +24,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     super.initFunc(params)
   }
 
-  val condaFile: String = condaEnv + ".tar.gz"
+  def condaFile: String = condaEnv + ".tar.gz"
   val outputEndToken = "##"
 
   lazy val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
@@ -44,6 +44,8 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   override def fields: Seq[String] = Seq(label)
 
   override def init(): Option[SystemProcess] = {
+    val condaFile = this.condaFile
+
     make(condaEnv) { dir =>
       make(condaFile) { _ =>
         copyFile(condaFile)
