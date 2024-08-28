@@ -25,24 +25,39 @@ package object api {
         field -> (fieldType match {
           case ApiFieldType.Boolean => get[Boolean](field).asJson
           case ApiFieldType.Int => get[Int](field).asJson
+          case ApiFieldType.Integer => get[Integer](field).asJson
           case ApiFieldType.Long => get[Long](field).asJson
           case ApiFieldType.String => get[String](field).asJson
           case ApiFieldType.Json => get[Json](field).asJson
+          case ApiFieldType.Seq =>
+            field match {
+              case "jobs" => get[Seq[AvailableJob]](field).get.map(_.toJson).asJson
+              case "files" => get[Seq[WasapiResponseFile]](field).get.map(_.toJson).asJson
+              case "locations" => get[Seq[String]](field).get.map(_.asJson).asJson
+            }
+          case ApiFieldType.Map =>
+            field match {
+              case "checksums" => get[Map[String, String]](field).get.asJson
+            }
         })
       }: _*).asJson
   }
 
   object ApiFieldType extends Enumeration {
-    val Boolean, Int, Long, String, Json = Value
+    val Boolean, Int, Integer, Long, String, Json, Map, Seq = Value
   }
 
   private val TypeMap: Map[Type, ApiFieldType.Value] = Map(
     classOf[Boolean] -> ApiFieldType.Boolean,
     classOf[java.lang.Boolean] -> ApiFieldType.Boolean,
     classOf[Int] -> ApiFieldType.Int,
+    classOf[Integer] -> ApiFieldType.Integer,
     classOf[Long] -> ApiFieldType.Long,
     classOf[String] -> ApiFieldType.String,
-    classOf[Json] -> ApiFieldType.Json)
+    classOf[Json] -> ApiFieldType.Json,
+    // classOf[Seq[A]] yields same as classOf[Seq[B]] - same for Map
+    classOf[Seq[_]] -> ApiFieldType.Seq,
+    classOf[Map[_, _]] -> ApiFieldType.Map)
 
   class ApiResponseType[T <: ApiResponseObject[T]](classTag: ClassTag[T]) {
     private implicit val self: ApiResponseType[T] = this
@@ -67,6 +82,7 @@ package object api {
       val ordering: Ordering[T] = fields.getOrElse(field, fields.head._2) match {
         case ApiFieldType.Boolean => Ordering.by(_.get[Boolean](field))
         case ApiFieldType.Int => Ordering.by(_.get[Int](field))
+        case ApiFieldType.Integer => Ordering.by(_.get[Integer](field))
         case ApiFieldType.Long => Ordering.by(_.get[Long](field))
         case ApiFieldType.String => Ordering.by(_.get[String](field))
         case ApiFieldType.Json => Ordering.by(_.get[String](field))

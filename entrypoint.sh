@@ -8,7 +8,7 @@ shopt -s nullglob
 for dir in /opt/arch/shared/in/collections/*; do
     collection_key=`basename $dir`;
     collection_name=`echo $collection_key | sed -r 's/(^|-)(\w)/ \U\2/g' | sed 's/^ //'`;
-    cat <<< $(jq ".collections |= if has(\"$collection_key\") then . else  .\"$collection_key\" = {name: \"$collection_name\", path: \"$dir\"} end | .users[\"arch:test\"] |= (.+ [\"$collection_key\"] | unique)" /opt/arch/data/special-collections.json) > /opt/arch/data/special-collections.json
+    cat <<< $(jq ".collections |= if has(\"$collection_key\") then . else  .\"$collection_key\" = {name: \"$collection_name\", path: \"$dir\"} end | .users[\"ks:system\"] |= (.+ [\"$collection_key\"] | unique)" /opt/arch/data/special-collections.json) > /opt/arch/data/special-collections.json
 done
 
 exec "$@"

@@ -1,6 +1,6 @@
 import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
 
-lazy val commonSettings = Seq(name := "arch", version := "0.1.0", scalaVersion := "2.12.8")
+lazy val commonSettings = Seq(name := "arch", version := "2.0.0", scalaVersion := "2.12.8")
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
@@ -25,9 +25,11 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
   "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
+  "org.json4s" %% "json4s-native" % "3.5.0",
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
   "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
+  "org.scalatra" %% "scalatra-swagger"  % "2.5.4",
   "org.scalamock" %% "scalamock" % "5.2.0" % "test",
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",

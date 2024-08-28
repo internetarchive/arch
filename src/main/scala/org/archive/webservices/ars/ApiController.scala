@@ -9,10 +9,14 @@ import org.archive.webservices.ars.model.api.{
   ApiFieldType,
   ApiResponseObject,
   ApiResponseType,
+  AvailableJobsCategory,
   Collection,
   Dataset,
   DatasetFile,
+  InputSpec,
+  JobState,
 }
+
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
@@ -20,44 +24,21 @@ import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 import org.archive.webservices.ars.util.{DatasetUtil,FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
+import org.scalatra.swagger._
 
 import scala.collection.immutable.{ListMap, Set}
 import scala.util.Try
 import scala.util.matching.Regex
 
 object ApiController {
-  def jobStateJson(instance: DerivationJobInstance): Json = {
-    ListMap(
-      "id" -> instance.job.id.asJson,
-      "uuid" -> instance.uuid.asJson,
-      "name" -> instance.job.name.asJson,
-      "sample" -> instance.conf.sample.asJson,
-      "state" -> instance.stateStr.asJson,
-      "started" -> (instance.state != ProcessingState.NotStarted).asJson,
-      "finished" -> (instance.state == ProcessingState.Finished).asJson,
-      "failed" -> (instance.state == ProcessingState.Failed).asJson) ++ {
-      val active = instance.active
-      Seq("activeStage" -> active.job.stage.asJson, "activeState" -> active.stateStr.asJson) ++ {
-        active.queue match {
-          case Some(queue) =>
-            Seq("queue" -> queue.name.asJson, "queuePos" -> active.queueIndex.asJson)
-          case None => Seq.empty
-        }
-      }
-    } ++ {
-      val info = instance.info
-      info.started.map(FormatUtil.instantTimeString).map("startTime" -> _.asJson).toSeq ++ {
-        info.finished.map(FormatUtil.instantTimeString).map("finishedTime" -> _.asJson).toSeq
-      }
-    }
-  }.asJson
-
   def jobStateResponse(instance: DerivationJobInstance): ActionResult = {
-    Ok(jobStateJson(instance).spaces4, Map("Content-Type" -> "application/json"))
+    Ok(JobState(instance).toJson, Map("Content-Type" -> "application/json"))
   }
 }
 
-class ApiController extends BaseController {
+class ApiController(implicit val swagger: Swagger) extends BaseController with ArchSwaggerSupport {
+  protected val applicationDescription = "General API"
+
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
 
   private def filterAndSerialize[T <: ApiResponseObject[T]](objs: Seq[T])(implicit
@@ -206,7 +187,19 @@ class ApiController extends BaseController {
     }
   }
 
-  post("/runjob/:jobid") {
+  val postRunJob =
+    (apiOp[JobState]("runJob")
+      summary "Run a job"
+      notes "Runs a job on a specified collection of input files."
+      parameter pathParam[String]("jobid").description("The UUID of the job type")
+      parameter queryParam[Option[Boolean]]("sample").description("Whether to process only a sample of the input records")
+      parameter bodyParam[InputSpec]("inputSpec").description("The job files input specification")
+      parameter bodyParam[Option[String]]("params").description("Any job-specific parameters")
+      responseMessage ResponseMessage(200, "The initial job state")
+      consumes "application/json"
+      produces "application/json")
+
+  post("/runjob/:jobid", operation(postRunJob)) {
     ensureAuth { implicit context =>
       parse(request.body).right.toOption.map(_.hcursor) match {
         case Some(cursor) =>
@@ -307,30 +300,21 @@ class ApiController extends BaseController {
     }
   }
 
-  get("/available-jobs") {
+  val getAvailableJobs =
+    (apiOp[List[AvailableJobsCategory]]("getAvailableJobs")
+      summary "List available jobs"
+      notes "List all available jobs, grouped by category"
+      responseMessage ResponseMessage(200, "The list of available jobs grouped by category")
+      consumes "nothing"
+      produces "application/json")
+
+  get("/available-jobs", operation(getAvailableJobs)) {
     ensureAuth { _ =>
       Ok(
         JobManager.jobs.values.toSeq
           .groupBy(_.category)
-          .map { case (category, jobs) =>
-              ListMap(
-                "categoryName" -> category.name.asJson,
-                "categoryDescription" -> category.description.asJson,
-                "jobs" -> jobs.sortBy(_.name.toLowerCase).map { job =>
-                  ListMap(
-                    "uuid" -> job.uuid.asJson,
-                    "name" -> job.name.asJson,
-                    "description" -> job.description.asJson,
-                    "publishable" -> (!PublishedDatasets.ProhibitedJobs.contains(job)).asJson,
-                    "internal" -> (category == ArchJobCategories.System).asJson,
-                    "codeUrl" -> job.codeUrl.asJson,
-                    "infoUrl" -> job.infoUrl.asJson)
-                  .asJson
-                }.asJson
-              ).asJson
-          }
-          .asJson
-          .spaces4,
+          .map { case (category, jobs) => AvailableJobsCategory(category, jobs).toJson }
+          .asJson,
         Map("Content-Type" -> "application/json"))
     }
   }
@@ -364,7 +348,7 @@ class ApiController extends BaseController {
           } else active
           val states = instances.toSeq
             .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
-            .map(ApiController.jobStateJson)
+            .map(JobState(_).toJson)
           Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
         }
         .getOrElse(NotFound())
@@ -376,7 +360,7 @@ class ApiController extends BaseController {
       if (context.isAdmin) {
         val states = JobManager.registered.toSeq
           .sortBy(instance => (instance.job.name.toLowerCase, instance.conf.serialize))
-          .map(ApiController.jobStateJson)
+          .map(JobState(_).toJson)
         Ok(states.asJson.spaces4, Map("Content-Type" -> "application/json"))
       } else Forbidden()
     }
