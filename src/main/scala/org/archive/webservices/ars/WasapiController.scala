@@ -5,6 +5,7 @@ import _root_.io.circe.syntax._
 import org.apache.http.client.utils.URIBuilder
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
+import org.archive.webservices.ars.model.api.{WasapiResponse, WasapiResponseFile}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager}
 import org.scalatra
 import org.scalatra.{ActionResult, NotFound, Ok}
@@ -43,39 +44,29 @@ object WasapiController {
     if (addSample && instance.conf.isSample)
       uriBuilder = uriBuilder.setParameter("sample", "true")
     Ok(
-      ListMap(
-        "count" -> count.asJson,
-        "next" -> (if (page < pages)
-                     uriBuilder
-                       .setParameter("page", (page + 1).toString)
-                       .build()
-                       .toString
-                       .asJson
-                   else Json.Null),
-        "previous" -> (if (page > 1)
-                         uriBuilder
-                           .setParameter("page", (page - 1).min(pages).toString)
-                           .build()
-                           .toString
-                           .asJson
-                       else Json.Null),
-        "files" -> files.map { file =>
-          val locationUrl =
-            downloadUrl + "/" + file.filename + (if (addSample && instance.conf.isSample)
-                                                   "?sample=true&access="
-                                                 else
-                                                   "?access=") + file.accessToken
-          (ListMap(
-            "filename" -> file.filename.asJson,
-            "filetype" -> file.fileType.asJson,
-            "checksums" -> file.checksums.asJson,
-            "locations" -> Seq(locationUrl).asJson,
-            "size" -> file.size.asJson) ++ {
-            if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
-              Seq("collection" -> instance.conf.inputSpec.collectionId.asJson)
-            } else Seq.empty
-          }).asJson
-        }.asJson).asJson.spaces4,
+      WasapiResponse(
+        count = count,
+        next = (
+          if (page < pages)
+            Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
+          else None),
+        previous = (
+          if (page > 1)
+            Some(uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
+          else None),
+        files = files.map(file =>
+          WasapiResponseFile(
+            filename = file.filename,
+            filetype = file.fileType,
+            checksums = file.checksums,
+            locations = Seq(downloadUrl + "/" + file.filename + (
+              if (addSample && instance.conf.isSample) "?sample=true&access=" else "?access="
+            ) + file.accessToken),
+            size = file.size,
+            collection = if (InputSpec.isCollectionBased(instance.conf.inputSpec)) Some(instance.conf.inputSpec.collectionId) else None
+          )
+        )
+      ).toJson,
       Map("Content-Type" -> "application/json"))
   }
 }
