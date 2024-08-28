@@ -12,13 +12,12 @@ ARG SPARK_TGZ_URL=https://archive.apache.org/dist/spark/spark-2.4.5/spark-2.4.5-
 ARG SPARK_TGZ_PATH=$ARCH_USER_HOME/spark-2.4.5-bin-without-hadoop-scala-2.12.tgz
 ARG SPARK_TGZ_CHECKSUM=aef59f0f9074a413461894601ac1714701f0eb486ce9721b5dacaa159d82fb60
 
-ARG CORENLP_ZIP_URL=https://huggingface.co/stanfordnlp/CoreNLP/resolve/v4.5.1/stanford-corenlp-latest.zip
-ARG CORENLP_ZIP_PATH=$ARCH_USER_HOME/stanford-corenlp-4.5.1.zip
-ARG CORENLP_ZIP_CHECKSUM=7d6f9d01a595d0f783ce805b9c32bcc8789cd2f299de719b2c71801bbd88605b
+ARG CORENLP_ZIP_URL=https://huggingface.co/stanfordnlp/CoreNLP/resolve/v4.5.6/stanford-corenlp-latest.zip
+ARG CORENLP_ZIP_PATH=$ARCH_USER_HOME/stanford-corenlp-4.5.6.zip
+ARG CORENLP_ZIP_CHECKSUM=9ed0f1eadf2f078f83e5fd55dc95c23a08a2f8af73a63428fb459be1e9d0fab3
 
-ARG CORENLP_CHINESE_JAR_URL=https://huggingface.co/stanfordnlp/corenlp-chinese/resolve/v4.3.1/stanford-corenlp-models-chinese.jar
-ARG CORENLP_CHINESE_JAR_CHECKSUM=3a7f4feafe5cb077f92973ccbe0cca383b851d921ae0948f067ab67ef2ef0237
-ARG CORENLP_CHINESE_JAR_PATH=$ARCH_USER_HOME/stanford-corenlp-models-chinese.jar
+ARG CORENLP_CHINESE_JAR_URL=https://huggingface.co/stanfordnlp/corenlp-chinese/resolve/v4.5.6/stanford-corenlp-models-chinese.jar
+ARG CORENLP_CHINESE_JAR_CHECKSUM=e624af936cda0373e20b6f44a65fdfb1bc196e8b56761dc9659728d98150d5e0
 
 ARG SPARKLING_GIT_REPO=https://github.com/internetarchive/Sparkling
 ARG SPARKLING_SHA1=d7264212eacc5df001bbec36a69b96aca4925d79
@@ -30,14 +29,16 @@ ARG ARCHIVESPARK_DIR=$ARCH_USER_HOME/archivespark
 
 ARG SPARKLING_JAR_PATH=$SPARKLING_DIR/target/scala-2.12/sparkling-assembly-0.3.8-SNAPSHOT.jar
 ARG ARCHIVESPARK_JAR_PATH=$ARCHIVESPARK_DIR/target/scala-2.12/archivespark-assembly-3.3.8-SNAPSHOT.jar
-ARG CORENLP_DIR=$ARCH_USER_HOME/stanford-corenlp-4.5.1
-ARG CORENLP_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.1.jar
-ARG CORENLP_MODELS_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.1-models.jar
+ARG CORENLP_DIR=$ARCH_USER_HOME/stanford-corenlp-4.5.6
+ARG CORENLP_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.6.jar
+ARG CORENLP_MODELS_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.6-models.jar
+ARG CORENLP_CHINESE_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.6-models-chinese.jar
+ARG JOLLYDAY_JAR_PATH=$CORENLP_DIR/jollyday.jar
 
 ARG TEST_WARC_URL=https://archive.org/download/sample-warc-file/IIPC-COVID-Announcement.warc.gz
 
 # Metadata
-LABEL maintainer="Nick Ruest <ruestn@gmail.com>, Helge Holzmann <helge@archive.org>"
+LABEL maintainer="Derek Enos <derekenos@archive.org>, Helge Holzmann <helge@archive.org>"
 LABEL description="Docker image for ARCH development"
 LABEL website="https://arch.archive-it.org"
 
@@ -109,6 +110,7 @@ RUN test -L $ARCH_INSTALL_DIR/lib/`basename $SPARKLING_JAR_PATH` || ( \
         && ln -s $CORENLP_CHINESE_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_CHINESE_JAR_PATH` \
         && ln -s $CORENLP_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_JAR_PATH` \
         && ln -s $CORENLP_MODELS_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_MODELS_JAR_PATH` \
+        && ln -s $JOLLYDAY_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $JOLLYDAY_JAR_PATH` \
     )
 
 # ARCH will happily create the job output directories as needed, but will fail if the log
