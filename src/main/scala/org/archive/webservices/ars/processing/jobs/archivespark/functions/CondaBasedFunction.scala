@@ -47,12 +47,12 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     val condaFile = this.condaFile
 
     make(condaEnv) { dir =>
-      make(condaFile) { _ =>
+      val f = make(condaFile) { _ =>
         copyFile(condaFile)
       }
       dir.mkdir()
       bash.exec(s"tar -xzf $condaFile -C $condaEnv")
-      new File(condaFile).delete()
+      f.delete()
     }
 
     bash.exec(s"source $condaEnv/bin/activate")

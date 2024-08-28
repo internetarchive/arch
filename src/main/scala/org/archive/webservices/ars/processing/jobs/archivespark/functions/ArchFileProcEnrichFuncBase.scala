@@ -28,11 +28,11 @@ abstract class ArchFileProcEnrichFuncBase[A]
     process
   }
 
-  def make(file: String)(make: File => Unit): String = {
+  def make(file: String)(make: File => Unit): File = {
     val f = new File(workingDir, file)
-    if (f.exists()) return f.getPath
+    if (f.exists()) return f
     make(f)
-    f.getPath
+    f
   }
 
   def copyFromHdfs(hdfsDir: String, file: String): String = {
