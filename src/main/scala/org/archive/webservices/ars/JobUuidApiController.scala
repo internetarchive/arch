@@ -3,11 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.model.api.{
-  DatasetFile,
-  JobState,
-  WasapiResponse,
-}
+import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.scalatra._
 import org.scalatra.util.NotNothing
@@ -15,7 +11,9 @@ import org.scalatra.swagger._
 
 import scala.util.Try
 
-class JobUuidApiController(implicit val swagger: Swagger) extends BaseController with ArchSwaggerSupport {
+class JobUuidApiController(implicit val swagger: Swagger)
+    extends BaseController
+    with ArchSwaggerSupport {
   protected val applicationDescription = "Jobs API"
 
   val UuidParam = "uuid"

@@ -6,7 +6,11 @@ import org.apache.http.client.utils.URIBuilder
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.model.api.{WasapiResponse, WasapiResponseFile}
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.processing.{
+  DerivationJobConf,
+  DerivationJobInstance,
+  JobManager
+}
 import org.scalatra
 import org.scalatra.{ActionResult, NotFound, Ok}
 
@@ -41,14 +45,15 @@ object WasapiController {
     Ok(
       WasapiResponse(
         count = count,
-        next = (
-          if (page < pages)
-            Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
-          else None),
-        previous = (
-          if (page > 1)
-            Some(uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
-          else None),
+        next =
+          (if (page < pages)
+             Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
+           else None),
+        previous =
+          (if (page > 1)
+             Some(
+               uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
+           else None),
         files = files.map(file => {
           val locationUriBuilder = new URIBuilder(s"${baseDownloadUrl}/${file.filename}")
           if (addSample && instance.conf.isSample)
@@ -60,10 +65,11 @@ object WasapiController {
             checksums = file.checksums,
             locations = Seq(locationUriBuilder.build.toString),
             size = file.size,
-            collection = if (InputSpec.isCollectionBased(instance.conf.inputSpec)) Some(instance.conf.inputSpec.collectionId) else None
-          )}
-        )
-      ).toJson,
+            collection =
+              if (InputSpec.isCollectionBased(instance.conf.inputSpec))
+                Some(instance.conf.inputSpec.collectionId)
+              else None)
+        })).toJson,
       Map("Content-Type" -> "application/json"))
   }
 }
