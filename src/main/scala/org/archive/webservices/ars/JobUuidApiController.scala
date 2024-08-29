@@ -3,17 +3,17 @@ package org.archive.webservices.ars
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
-import org.archive.webservices.ars.model.api.{
-  DatasetFile,
-  JobState,
-  WasapiResponse,
-}
+import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.scalatra._
 import org.scalatra.util.NotNothing
 import org.scalatra.swagger._
 
-class JobUuidApiController(implicit val swagger: Swagger) extends BaseController with ArchSwaggerSupport {
+import scala.util.Try
+
+class JobUuidApiController(implicit val swagger: Swagger)
+    extends BaseController
+    with ArchSwaggerSupport {
   protected val applicationDescription = "Jobs API"
 
   val UuidParam = "uuid"
@@ -63,10 +63,12 @@ class JobUuidApiController(implicit val swagger: Swagger) extends BaseController
     response { instance =>
       WasapiController.files(
         instance,
-        params.get("base_download_url").getOrElse(
-          ArchConf.baseUrl + "/api/job/" + params(UuidParam) + "/download"
-        ),
-        params,
+        baseDownloadUrl = s"${ArchConf.baseUrl}/api/job/${params(UuidParam)}/download",
+        page = params
+          .get("page")
+          .flatMap(p => Try(p.toInt).toOption)
+          .filter(_ >= 1)
+          .getOrElse(1),
         addSample = false)
     }
   }
@@ -83,12 +85,10 @@ class JobUuidApiController(implicit val swagger: Swagger) extends BaseController
       Ok(
         // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
         // until peformance issue is resolved, see: WT-2870
-        if (
-          instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
-            || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
-            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
-            || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese
-        )
+        if (instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
+          || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
+          || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
+          || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese)
           Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
         else
           instance.outFiles.map(DatasetFile.apply).map(_.toJson).toArray.asJson,
