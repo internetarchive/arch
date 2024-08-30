@@ -9,5 +9,8 @@ object Whisper extends CondaBasedFunction[Json] {
   override val pythonFile: String = s"$label-run.py"
   override val pythonArgumentFiles: Seq[String] = Seq("base.en.pt")
 
-  override def processOutput(output: String): Option[Json] = parse(output.trim).toOption
+  override def processOutput(output: String): Option[Json] = {
+    val trim = output.trim
+    if (trim.isEmpty) None else parse(trim).toOption
+  }
 }

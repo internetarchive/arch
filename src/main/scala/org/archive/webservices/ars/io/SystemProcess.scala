@@ -12,12 +12,15 @@ class SystemProcess private (
     val process: Process,
     val supportsEcho: Boolean,
     val in: BufferedReader,
-    val out: PrintStream) {
+    val out: PrintStream,
+    onError: Seq[String] => Unit = _ => {}) {
+  private var lastError = Seq.empty[String]
 
   val errorFuture = Future {
     val error = new BufferedReader(new InputStreamReader(process.getErrorStream))
     var line = error.readLine()
     while (line != null) {
+      synchronized(lastError :+= line)
       line = error.readLine()
     }
     true
@@ -37,7 +40,15 @@ class SystemProcess private (
     var stop = false
     IteratorUtil.whileDefined {
       if (!stop) {
-        val line = in.readLine()
+        val lineFuture = Future(in.readLine())
+        while (!lineFuture.isCompleted) {
+          if (lastError.nonEmpty) synchronized {
+            onError(lastError)
+            lastError = Seq.empty
+          }
+          Thread.`yield`()
+        }
+        val line = lineFuture.value.get.get
         if (line == null) None
         else {
           stop = if (prefix) line.startsWith(endLine) else line == endLine
@@ -61,10 +72,11 @@ class SystemProcess private (
       clearInput: Boolean = true,
       supportsEcho: Boolean = false,
       waitForLine: Option[String],
-      waitForPrefix: Boolean = false): SystemProcess = {
+      waitForPrefix: Boolean = false,
+      onError: Seq[String] => Unit = _ => {}): SystemProcess = {
     exec(cmd, clearInput)
     for (waitLine <- waitForLine) consumeToLine(waitLine, waitForPrefix)
-    new SystemProcess(process, supportsEcho, in, out)
+    new SystemProcess(process, supportsEcho, in, out, onError)
   }
 }
 

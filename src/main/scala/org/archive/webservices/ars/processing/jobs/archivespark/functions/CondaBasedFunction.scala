@@ -82,7 +82,11 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
     val arg =
       (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
-    Some(bash.subProcess(s"python $pythonFile $arg", waitForLine = Some(outputEndToken)))
+    Some(bash.subProcess(s"python $pythonFile $arg", waitForLine = Some(outputEndToken), onError = onError))
+  }
+
+  def onError(error: Seq[String]): Unit = {
+    throw new RuntimeException(error.mkString("\n"))
   }
 
   override def cmd(file: String): String = file
