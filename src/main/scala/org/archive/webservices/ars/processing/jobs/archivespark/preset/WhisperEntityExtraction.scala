@@ -22,7 +22,7 @@ object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
   }
 
   override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("audio/")
+    record => record.mime.startsWith("audio/") || record.mime.startsWith("video/")
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
