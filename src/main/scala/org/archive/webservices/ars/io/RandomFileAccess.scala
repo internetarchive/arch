@@ -1,9 +1,8 @@
 package org.archive.webservices.ars.io
 
 import com.amazonaws.services.s3.model.GetObjectRequest
+import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
-import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
