@@ -4,6 +4,7 @@ import _root_.io.sentry.protocol.Message
 import _root_.io.sentry.{Sentry, SentryEvent, SentryLevel}
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.JobStateManager
+import org.archive.webservices.ars.util.AddonUtil
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.util.RddUtil
@@ -76,6 +77,7 @@ object Arch {
   def main(args: Array[String]): Unit = {
     IOUtil.memoryBuffer = 1.mb.toInt
     RddUtil.saveRecordTimeoutMillis = -1
+    AddonUtil.initializePackage("org.archive.webservices.arch.addons")
     JobStateManager.init()
     initSentry()
     start(ArchConf.basePath, ArchConf.internalPort)
