@@ -26,6 +26,7 @@ object FileSpecLoader extends InputSpecLoader {
       val recordFactory = recordFactoryBc.value
       recordFactory.accessContext = accessContext
       partition.map { case (path, mime) =>
+        println(s"Processing $path ($mime)...")
         recordFactory.get(
           path,
           mime,
