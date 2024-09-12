@@ -89,10 +89,10 @@ class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
 }
 
 object InputSpec {
-  val DataSourceKey = "data-source"
-  val MetaSourceKey = "meta-source"
-  val DataLocationKey = "data-location"
-  val MetaLocationKey = "meta-location"
+  val DataSourceKey = "dataSource"
+  val MetaSourceKey = "metaSource"
+  val DataLocationKey = "dataLocation"
+  val MetaLocationKey = "metaLocation"
 
   object InputType {
     val Files = "files"

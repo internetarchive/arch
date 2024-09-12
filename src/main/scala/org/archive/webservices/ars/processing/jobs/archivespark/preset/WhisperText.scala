@@ -5,14 +5,13 @@ import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
-import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
 
-object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
-  val uuid: String = "018f7b09-f7ca-756d-a4ca-69cea914185d"
+object WhisperText extends ArchiveSparkEnrichJob {
+  val uuid: String = "0191e26a-056c-77e2-8fe0-dfba9928b3e2"
 
-  val name: String = "Named entities from Whisper transcript"
+  val name: String = "Whisper transcription text"
   val description: String =
-    "Names of persons, organizations, and geographic locations detected in each transcribed audio document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Whisper-powered transcript in each audio document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
@@ -26,8 +25,6 @@ object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
-    val whisperText = archivespark.functions.WhisperText.withParams(conf.params)
-    val entities = EntitiesAdapter.noParams(on = EntitiesAdapter.toDependencyPointer(whisperText))
-    Seq(whisperText, entities)
+    Seq(archivespark.functions.WhisperText.withParams(conf.params))
   }
 }

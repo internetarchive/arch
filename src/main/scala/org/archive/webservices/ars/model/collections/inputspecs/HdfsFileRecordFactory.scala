@@ -45,7 +45,7 @@ object HdfsFileRecordFactory extends FileFactoryCompanion {
   val dataSourceType: String = "hdfs"
 
   def apply(spec: InputSpec): HdfsFileRecordFactory = new HdfsFileRecordFactory(
-    spec.str("meta-suffix"))
+    spec.str("metaSuffix"))
 
   def apply(): HdfsFileRecordFactory = new HdfsFileRecordFactory()
 }

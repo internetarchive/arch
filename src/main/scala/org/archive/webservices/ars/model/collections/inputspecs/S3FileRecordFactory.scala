@@ -75,7 +75,7 @@ object S3FileRecordFactory extends FileFactoryCompanion {
 
   def apply(spec: InputSpec): S3FileRecordFactory = {
     for {
-      endpoint <- spec.str("s3-endpoint")
+      endpoint <- spec.str("s3Endpoint")
       (accessKey, secretKey) <- FileAccessKeyRing
         .forUrl(endpoint)
         .flatMap {
@@ -85,14 +85,14 @@ object S3FileRecordFactory extends FileFactoryCompanion {
         }
         .orElse {
           for {
-            accessKey <- spec.str("s3-accessKey")
-            secretKey <- spec.str("s3-secretKey")
+            accessKey <- spec.str("s3AccessKey")
+            secretKey <- spec.str("s3SecretKey")
           } yield (accessKey, secretKey)
         }
-      bucket <- spec.str("s3-bucket")
+      bucket <- spec.str("s3Bucket")
       location <- spec.str(InputSpec.DataLocationKey)
     } yield {
-      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+      val longestPrefixMapping = spec.str("dataPathMapping").contains("longest-prefix")
       new S3FileRecordFactory(
         location,
         endpoint,

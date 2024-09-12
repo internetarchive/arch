@@ -6,6 +6,7 @@ import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.LocalFileCache
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunction
+import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 import java.io.File
@@ -65,18 +66,21 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   def init(): Option[SystemProcess] = None
 
-  @transient private var globalProcess: Option[SystemProcess] = None
-  @transient private var initialized = false
-  private def doInit(): Unit = if (!initialized) synchronized {
-    if (!initialized) {
-      try {
-        initialized = true
-        println(s"Creating working directory: $workingDir")
-        new File(workingDir).mkdirs()
-        globalProcess = init()
-      } catch {
-        case e: Exception => e.printStackTrace()
-      }
+  private val globalProcessKey = "globalProcess"
+  private val initializedKey = "initialized"
+  private def globalProcess: Option[SystemProcess] =
+    Sparkling.taskStore.get(globalProcessKey).map(_.asInstanceOf[SystemProcess])
+  private def initialized: Boolean =
+    Sparkling.taskStore.get(initializedKey).exists(_.asInstanceOf[Boolean])
+
+  private def doInit(): Unit = if (!initialized) {
+    try {
+      println(s"Creating working directory: $workingDir")
+      new File(workingDir).mkdirs()
+      for (process <- init()) Sparkling.taskStore.update(globalProcessKey, process)
+      Sparkling.taskStore.update(initializedKey, true)
+    } catch {
+      case e: Exception => e.printStackTrace()
     }
   }
 

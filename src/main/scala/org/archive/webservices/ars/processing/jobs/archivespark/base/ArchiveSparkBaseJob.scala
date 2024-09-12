@@ -20,7 +20,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
 
   val relativeOutPath = s"/$id"
   val resultDir = "/out.json.gz"
-  val resultFile = "/result.json.gz"
+  val resultFile = "/result.jsonl.gz"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(ArchiveSparkProcessor, PostProcessor)
 
@@ -135,12 +135,23 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
       Seq("resultSize" -> size)
     }
 
-    override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
-      Iterator(
+    override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = {
+      val outPath = conf.outputPath + relativeOutPath
+      val outFiles = Seq(
+        resultDir + "/*.gz",
+        resultFile,
+        "/result.json.gz"
+      ) // a list for backward compatibility
+      outFiles.map(outPath + _).toIterator.flatMap(HdfsIO.files(_)).map { file =>
+        val lastSlashIdx = file.lastIndexOf("/")
+        val (path, filename) = file.splitAt(lastSlashIdx)
+        val outPathIdx = path.indexOf(outPath)
         DerivativeOutput(
-          resultFile.stripPrefix("/"),
-          conf.outputPath + relativeOutPath,
+          filename.stripPrefix("/"),
+          outPath.drop(outPathIdx),
           "ArchiveSpark/jsonl",
-          "application/gzip"))
+          "application/gzip")
+      }
+    }
   }
 }

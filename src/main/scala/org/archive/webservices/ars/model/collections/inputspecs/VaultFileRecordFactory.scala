@@ -99,10 +99,10 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
   val dataSourceType: String = "vault"
 
   def apply(spec: InputSpec): VaultFileRecordFactory = {
-    val userOpt = spec.str("vault-username")
+    val userOpt = spec.str("vaultUsername")
     for {
       collectionTreenode <- spec
-        .str("vault-collection-treenode")
+        .str("vaultCollectionTreenode")
         .flatMap(id => Try(id.toInt).toOption)
       (username, password) <- FileAccessKeyRing
         .forUrl(VaultUrl)
@@ -116,11 +116,11 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
         .orElse {
           for {
             user <- userOpt
-            pw <- spec.str("vault-password")
+            pw <- spec.str("vaultPassword")
           } yield (user, pw)
         }
     } yield {
-      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+      val longestPrefixMapping = spec.str("dataPathMapping").contains("longest-prefix")
       new VaultFileRecordFactory(
         spec.str(InputSpec.DataLocationKey).getOrElse(""),
         collectionTreenode,

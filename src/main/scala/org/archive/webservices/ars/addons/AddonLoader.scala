@@ -17,10 +17,17 @@ object AddonLoader {
     val systemResources = systemClassLoader.getResources(packagePath).asScala
     val contextClassLoader = Thread.currentThread.getContextClassLoader
     val threadResources = contextClassLoader.getResources(packagePath).asScala
-    val jarEntries = (systemResources ++ threadResources).filter(_.getProtocol == "jar").flatMap { jar =>
-      jar.getPath.stripPrefix("file:").split('!').headOption
-    }.flatMap(path => new JarFile(path).entries().asScala).map(_.toString)
-    val objects = jarEntries.filter(_.startsWith(packagePath)).filter(_.endsWith("$.class")).map(_.stripSuffix(".class").replace('/', '.'))
+    val jarEntries = (systemResources ++ threadResources)
+      .filter(_.getProtocol == "jar")
+      .flatMap { jar =>
+        jar.getPath.stripPrefix("file:").split('!').headOption
+      }
+      .flatMap(path => new JarFile(path).entries().asScala)
+      .map(_.toString)
+    val objects = jarEntries
+      .filter(_.startsWith(packagePath))
+      .filter(_.endsWith("$.class"))
+      .map(_.stripSuffix(".class").replace('/', '.'))
     for (objectClass <- objects) {
       try {
         Class.forName(objectClass, true, systemClassLoader)
@@ -30,7 +37,7 @@ object AddonLoader {
       }
     }
     for (addon <- init.values) {
-      println(s"Loading add-on ${addon.getClass.getName}...")
+      println(s"Loading add-on ${addon.getClass.getName.stripSuffix("$")}...")
       addon.initAddon()
     }
     println(s"Initialized add-ons of package $packageName.")

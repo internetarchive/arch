@@ -9,15 +9,15 @@ import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{RddUtil, StringUtil}
 
 object MetaFilesSpecLoader extends InputSpecLoader {
-  val specType = "meta-files"
+  val specType = "metaFiles"
 
-  val MetaGlobKey = "meta-glob"
+  val MetaGlobKey = "metaGlob"
 
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
-      mimeKey <- spec.str("meta-mime-key")
+      mimeKey <- spec.str("metaMimeKey")
     } yield {
       val mapFile = pathMapping(spec)
       val accessContext = FileAccessContext.fromLocalArchConf
@@ -42,10 +42,10 @@ object MetaFilesSpecLoader extends InputSpecLoader {
 
   def pathMapping(spec: InputSpec): String => String = {
     spec
-      .str("data-path-mapping")
-      .map { case "same-prefix" =>
+      .str("dataPath<apping")
+      .map { case "samePrefix" =>
         spec
-          .str("meta-suffix")
+          .str("metaSuffix")
           .map { suffix =>
             (_: String).stripSuffix(suffix) + "*"
           }
@@ -86,7 +86,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
             vault.glob(g)
           }
         }
-        val excludePrefix = spec.str("meta-exclude-prefix")
+        val excludePrefix = spec.str("metaExcludePrefix")
         val filtered = {
           if (excludePrefix.isEmpty) files
           else files.filter(!_._2.name.startsWith(excludePrefix.get))
@@ -115,7 +115,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
       .str(MetaGlobKey)
       .map { glob =>
         val files = RddUtil.loadFilesLocality(glob)
-        val excludePrefix = spec.str("meta-exclude-prefix")
+        val excludePrefix = spec.str("metaExcludePrefix")
         val filtered = {
           if (excludePrefix.isEmpty) files
           else files.filter(!_.split('/').last.startsWith(excludePrefix.get))
@@ -132,12 +132,12 @@ object MetaFilesSpecLoader extends InputSpecLoader {
   }
 
   def parseMeta(spec: InputSpec, rdd: RDD[(String, String)]): RDD[(String, FileMetaData)] = {
-    spec.str("meta-format") match {
+    spec.str("metaFormat") match {
       case Some(format) if format.startsWith("json") =>
         parseJson(rdd: RDD[(String, String)], format.endsWith("-fuzzy"))
-      case Some("key-value") =>
+      case Some("keyValue") =>
         spec
-          .str("meta-kv-separator")
+          .str("metaKeyValueSeparator")
           .map { separator =>
             val parsed = rdd.map { case (file, lines) =>
               (
@@ -155,7 +155,7 @@ object MetaFilesSpecLoader extends InputSpecLoader {
                   }
                   .toMap)
             }
-            spec.str("meta-value-format") match {
+            spec.str("metaValueFormat") match {
               case Some("json") =>
                 val jsonRdd = parsed.map { case (file, map) =>
                   val jsonBody = map

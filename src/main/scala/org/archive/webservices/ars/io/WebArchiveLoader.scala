@@ -362,34 +362,6 @@ object WebArchiveLoader {
     }
   }
 
-  def randomAccessPetabox(
-      context: FileAccessContext,
-      itemFilePath: String,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    val url = ArchConf.iaBaseUrl + "/serve/" + itemFilePath
-    HttpClient.rangeRequest(
-      url,
-      headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
-      offset = offset) { in =>
-      IOHelper.splitMergeInputStreams(in, positions)
-    }
-  }
-
-  def loadWarcFilesViaCdxFromPetabox(cdxPath: String): RDD[(String, InputStream)] = {
-    val accessContext = FileAccessContext.fromLocalArchConf
-    loadWarcFilesViaCdx(cdxPath) { partition =>
-      accessContext.init()
-      partition.map { case ((pointer, initialOffset), positions) =>
-        randomAccessPetabox(
-          accessContext,
-          pointer.filename,
-          initialOffset,
-          positions.map { case (_, o, l) => (o, l) })
-      }
-    }
-  }
-
   def randomAccessHdfs(
       context: FileAccessContext,
       filePath: String,

@@ -7,14 +7,14 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 
 object MetaRemoteSpecLoader extends InputSpecLoader {
-  val specType = "meta-remote"
+  val specType = "metaRemote"
 
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     for {
-      filenameKey <- spec.str("meta-filename-key")
-      mimeKey <- spec.str("meta-mime-key")
+      filenameKey <- spec.str("metaFilenameKey")
+      mimeKey <- spec.str("metaMimeKey")
     } yield {
       val accessContext = FileAccessContext.fromLocalArchConf
       Sparkling.initPartitions(loadMeta(spec)).mapPartitions { partition =>

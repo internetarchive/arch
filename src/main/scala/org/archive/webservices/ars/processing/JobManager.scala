@@ -7,7 +7,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark._
-import org.archive.webservices.ars.processing.jobs.archivespark.preset.{EntityExtraction, TrOcrEntityExtraction, TrOcrProcessing, WhisperEntityExtraction, WhisperTranscription}
+import org.archive.webservices.ars.processing.jobs.archivespark.preset._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, MetadataSummary, UserDefinedQuery}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -30,6 +30,7 @@ object JobManager {
     ArchiveSparkNoop,
     EntityExtraction,
     WhisperTranscription,
+    WhisperText,
     WhisperEntityExtraction,
     TrOcrProcessing,
     TrOcrEntityExtraction,

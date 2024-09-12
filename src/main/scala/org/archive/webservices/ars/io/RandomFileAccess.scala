@@ -17,7 +17,9 @@ object RandomFileAccess {
 
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
 
-  var additionalPrefixHandlers: Map[String, (FileAccessContext, FilePointer, Long, Iterator[(Long, Long)]) => InputStream] = Map.empty
+  var additionalPrefixHandlers: Map[
+    String,
+    (FileAccessContext, FilePointer, Long, Iterator[(Long, Long)]) => InputStream] = Map.empty
 
   def access(
       context: FileAccessContext,

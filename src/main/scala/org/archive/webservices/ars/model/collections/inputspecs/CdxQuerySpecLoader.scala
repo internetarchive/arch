@@ -5,7 +5,7 @@ import org.archive.webservices.ars.io.WebArchiveLoader
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
 
 object CdxQuerySpecLoader extends InputSpecLoader {
-  override def specType: String = "cdx-query"
+  override def specType: String = "cdxQuery"
 
   def input(spec: InputSpec): InputSpec = {
     spec.cursor
