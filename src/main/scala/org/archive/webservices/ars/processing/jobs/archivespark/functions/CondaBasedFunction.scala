@@ -4,11 +4,17 @@ import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc}
 import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File
 
 abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val AdditionalPackagesUnpackedExtension = ".unpacked"
+
+  override def sharedGlobalProcess: Boolean = true
 
   def dataDir: String
   def condaEnv: String
@@ -97,7 +103,11 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override def process(proc: SystemProcess, derivatives: Derivatives): Unit = {
     val output = proc.readToLine(outputEndToken, includeEnd = false).mkString
-    for (a <- processOutput(output)) derivatives << a
+    Log.info(s"Output read...")
+    for (a <- processOutput(output)) {
+      Log.info(s"Output written...")
+      derivatives << a
+    }
   }
 
   def processOutput(output: String): Option[A]

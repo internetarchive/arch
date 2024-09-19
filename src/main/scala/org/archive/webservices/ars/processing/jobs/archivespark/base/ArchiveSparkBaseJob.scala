@@ -148,7 +148,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
         val outPathIdx = path.indexOf(outPath)
         DerivativeOutput(
           filename.stripPrefix("/"),
-          outPath.drop(outPathIdx),
+          path.drop(outPathIdx),
           "ArchiveSpark/jsonl",
           "application/gzip")
       }

@@ -9,23 +9,35 @@ import org.archive.webservices.archivespark.specific.warc.WarcLikeRecord
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileCache, ArchWarcPayload}
 import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.warc.WarcRecord
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 
 class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] with WarcLikeRecord {
+  implicit private val logContext: LogContext = LogContext(this)
+
   override def companion: EnrichRootCompanion[ArchWarcRecord] = ArchWarcRecord
 
-  override lazy val get: CdxRecord =
+  override lazy val get: CdxRecord = {
     warc.toCdx(0L, handleRevisits = true, handleOthers = true).get
+  }
 
   def mime: String = warc.http.flatMap(_.mime).getOrElse("/")
-
-  override def payloadAccess: InputStream = warc.http.map(_.payload).getOrElse(warc.payload)
 
   override lazy val meta: FileMetaData = FileMetaData.fromCdx(get)
 
   override def metaToJson: Json = meta.toJson
+
+  override def payloadAccess: InputStream = {
+    Log.info(s"Accessing ${warc.url.getOrElse("N/A")}...")
+    warc.http.map(_.payload).getOrElse(warc.payload)
+  }
+
+  override def cacheLocal(): File = {
+    Log.info(s"Caching ${warc.url.getOrElse("N/A")}...")
+    super.cacheLocal()
+  }
 }
 
 object ArchWarcRecord extends EnrichRootCompanion[ArchWarcRecord] {

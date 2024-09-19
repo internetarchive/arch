@@ -9,12 +9,16 @@ import org.archive.webservices.archivespark.util.Json.json
 import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileBytes, ArchFileCache}
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import scala.collection.immutable.ListMap
 import scala.util.Try
 
 class ArchFileRecord(record: FileRecord) extends ArchEnrichRoot[FileRecord] {
+  implicit private val logContext: LogContext = LogContext(this)
+
   override def companion: EnrichRootCompanion[ArchFileRecord] = ArchFileRecord
   override def get: FileRecord = record
 
@@ -30,7 +34,15 @@ class ArchFileRecord(record: FileRecord) extends ArchEnrichRoot[FileRecord] {
 
   def meta: FileMetaData = record.meta
 
-  override def payloadAccess: InputStream = record.access
+  override def payloadAccess: InputStream = {
+    Log.info(s"Accessing ${record.filename}...")
+    record.access
+  }
+
+  override def cacheLocal(): File = {
+    Log.info(s"Caching ${record.filename}...")
+    super.cacheLocal()
+  }
 }
 
 object ArchFileRecord extends EnrichRootCompanion[ArchFileRecord] {

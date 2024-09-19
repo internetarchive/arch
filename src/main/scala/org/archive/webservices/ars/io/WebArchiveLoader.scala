@@ -59,7 +59,7 @@ object WebArchiveLoader {
       val accessContext = FileAccessContext.fromLocalArchConf
       action({
         spec.inputType match {
-          case InputSpec.InputType.WARC =>
+          case InputSpec.InputType.WARC | InputSpec.InputType.Files =>
             rdd.mapPartitions { partition =>
               accessContext.init()
               partition.filter(_.mime == WarcMime)
@@ -91,7 +91,7 @@ object WebArchiveLoader {
       action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
     loadWarc(inputSpec) { rdd =>
       action(rdd.map { file =>
-        val in = file.access
+        val in = IOUtil.supportMark(file.access)
         val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
         (
           file.pointer,

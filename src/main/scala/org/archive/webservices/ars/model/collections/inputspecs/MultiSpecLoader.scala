@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.sparkling.util.RddUtil
 
 object MultiSpecLoader extends InputSpecLoader {
-  override def specType: String = "multiSpecs"
+  override def specType: String = "multi-specs"
 
   def multiSpecs(spec: InputSpec): Iterator[InputSpec] = {
     spec.cursor

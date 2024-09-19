@@ -8,14 +8,19 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.LocalFileCa
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunction
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
-import java.io.File
+import java.io.{File, PrintWriter, StringWriter}
 import java.net.URL
 
 abstract class ArchFileProcEnrichFuncBase[A]
     extends EnrichFunc[EnrichRoot with LocalFileCache, String, A]
     with ArchArchiveSparkFunction[String] {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
+
+  def sharedGlobalProcess: Boolean = false
 
   def suppresInOutSh(script: String): String = {
     Seq("{", script, "} < /dev/null 1>&2").mkString("\n")
@@ -68,19 +73,34 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   private val globalProcessKey = "globalProcess"
   private val initializedKey = "initialized"
-  private def globalProcess: Option[SystemProcess] =
-    Sparkling.taskStore.get(globalProcessKey).map(_.asInstanceOf[SystemProcess])
-  private def initialized: Boolean =
-    Sparkling.taskStore.get(initializedKey).exists(_.asInstanceOf[Boolean])
+  private var _sharedGlobalProcess: Option[SystemProcess] = None
+  private var _sharedInitialized: Boolean = false
 
-  private def doInit(): Unit = if (!initialized) {
-    try {
-      println(s"Creating working directory: $workingDir")
-      new File(workingDir).mkdirs()
-      for (process <- init()) Sparkling.taskStore.update(globalProcessKey, process)
-      Sparkling.taskStore.update(initializedKey, true)
-    } catch {
-      case e: Exception => e.printStackTrace()
+  private def globalProcess: Option[SystemProcess] = {
+    if (sharedGlobalProcess) _sharedGlobalProcess
+    else Sparkling.taskStore.get(globalProcessKey).map(_.asInstanceOf[SystemProcess])
+  }
+
+  private def initialized: Boolean = {
+    if (sharedGlobalProcess) _sharedInitialized
+    else Sparkling.taskStore.get(initializedKey).exists(_.asInstanceOf[Boolean])
+  }
+
+  private def doInit(): Unit = if (!initialized) synchronized {
+    if (!initialized) {
+      try {
+        Log.info(s"Creating working directory: $workingDir...")
+        new File(workingDir).mkdirs()
+        if (sharedGlobalProcess) {
+          _sharedGlobalProcess = init()
+          _sharedInitialized = true
+        } else {
+          for (process <- init()) Sparkling.taskStore.update(globalProcessKey, process)
+          Sparkling.taskStore.update(initializedKey, true)
+        }
+      } catch {
+        case e: Exception => e.printStackTrace()
+      }
     }
   }
 
@@ -99,12 +119,20 @@ abstract class ArchFileProcEnrichFuncBase[A]
         scriptFile.getPath
       }
       .getOrElse(inFile)
-    val proc = globalProcess match {
+    globalProcess match {
       case Some(proc) =>
-        proc.exec(cmd(file))
-        proc
-      case None => SystemProcess.exec(cmd(file))
+        if (sharedGlobalProcess) synchronized {
+          Log.info(s"Processing file $file...")
+          proc.exec(cmd(file))
+          process(proc, derivatives)
+        } else {
+          Log.info(s"Processing file $file...")
+          proc.exec(cmd(file))
+          process(proc, derivatives)
+        }
+      case None =>
+        Log.info(s"Processing file $file...")
+        process(SystemProcess.exec(cmd(file)), derivatives)
     }
-    process(proc, derivatives)
   }
 }
