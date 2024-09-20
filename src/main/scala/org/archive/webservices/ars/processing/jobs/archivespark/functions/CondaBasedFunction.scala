@@ -4,7 +4,6 @@ import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc}
 import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
-import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File

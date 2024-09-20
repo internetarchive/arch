@@ -9,7 +9,6 @@ import org.archive.webservices.archivespark.util.Json.json
 import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileBytes, ArchFileCache}
-import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.{File, InputStream}

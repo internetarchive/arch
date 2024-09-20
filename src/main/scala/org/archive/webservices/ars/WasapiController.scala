@@ -1,21 +1,14 @@
 package org.archive.webservices.ars
 
-import _root_.io.circe._
-import _root_.io.circe.syntax._
 import org.apache.http.client.utils.URIBuilder
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.model.api.{WasapiResponse, WasapiResponseFile}
-import org.archive.webservices.ars.processing.{
-  DerivationJobConf,
-  DerivationJobInstance,
-  JobManager
-}
-import org.scalatra
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput, DerivativeOutputCache}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager}
+import org.archive.webservices.ars.util.LazyCache
 import org.scalatra.{ActionResult, NotFound}
 
 import javax.servlet.http.HttpServletRequest
-import scala.collection.immutable.ListMap
 import scala.util.Try
 
 object WasapiController {
@@ -26,12 +19,6 @@ object WasapiController {
       baseDownloadUrl: String,
       page: Int,
       addSample: Boolean = true)(implicit request: HttpServletRequest): ActionResult = {
-    val page = params
-      .get("page")
-      .flatMap(p => Try(p.toInt).toOption)
-      .filter(_ >= 1)
-      .getOrElse(1)
-
     LazyCache.lazyJsonResponse[DerivativeOutputCache, (Int, Seq[DerivativeOutput])](
       instance.lazyOutFilesCache,
       { cache =>
@@ -56,39 +43,33 @@ object WasapiController {
         }
         if (addSample && instance.conf.isSample)
           uriBuilder = uriBuilder.setParameter("sample", "true")
-        ListMap(
-          "count" -> count.asJson,
-          "next" -> (if (page < pages)
-                       uriBuilder
-                         .setParameter("page", (page + 1).toString)
-                         .build()
-                         .toString
-                         .asJson
-                     else Json.Null),
-          "previous" -> (if (page > 1)
-                           uriBuilder
-                             .setParameter("page", (page - 1).min(pages).toString)
-                             .build()
-                             .toString
-                             .asJson
-                         else Json.Null),
-          "files" -> files.map { file =>
-            val locationUrl =
-              downloadUrl + "/" + file.filename + (if (addSample && instance.conf.isSample)
-                                                     "?sample=true&access="
-                                                   else
-                                                     "?access=") + file.accessToken
-            (ListMap(
-              "filename" -> file.filename.asJson,
-              "filetype" -> file.fileType.asJson,
-              "checksums" -> file.checksums.asJson,
-              "locations" -> Seq(locationUrl).asJson,
-              "size" -> file.size.asJson) ++ {
-              if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
-                Seq("collection" -> instance.conf.inputSpec.collectionId.asJson)
-              } else Seq.empty
-            }).asJson
-          }.asJson).asJson
+        WasapiResponse(
+          count = count,
+          next =
+            (if (page < pages)
+               Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
+             else None),
+          previous =
+            (if (page > 1)
+               Some(
+                 uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
+             else None),
+          files = files.map { file =>
+            val locationUriBuilder = new URIBuilder(s"${baseDownloadUrl}/${file.filename}")
+            if (addSample && instance.conf.isSample)
+              locationUriBuilder.setParameter("sample", "true")
+            locationUriBuilder.setParameter("access", file.accessToken)
+            WasapiResponseFile(
+              filename = file.filename,
+              filetype = file.fileType,
+              checksums = file.checksums,
+              locations = Seq(locationUriBuilder.build.toString),
+              size = file.size,
+              collection =
+                if (InputSpec.isCollectionBased(instance.conf.inputSpec))
+                  Some(instance.conf.inputSpec.collectionId)
+                else None)
+          }).toJson
       })
   }
 }

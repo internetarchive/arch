@@ -10,7 +10,7 @@ import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
-import java.io.{File, PrintWriter, StringWriter}
+import java.io.File
 import java.net.URL
 
 abstract class ArchFileProcEnrichFuncBase[A]
@@ -125,7 +125,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
           Log.info(s"Processing file $file...")
           proc.exec(cmd(file))
           process(proc, derivatives)
-        } else {
+        }
+        else {
           Log.info(s"Processing file $file...")
           proc.exec(cmd(file))
           process(proc, derivatives)

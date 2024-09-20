@@ -17,7 +17,10 @@ class FileAccessKeyRing private (secrets: Map[String, String]) extends Serializa
       .split('/')
       .find(_.nonEmpty)
       .flatMap { host =>
-        secrets.get(secretKey(protocol, (if (host.contains("@")) host.split('@').last else host).split(':').head))
+        secrets.get(
+          secretKey(
+            protocol,
+            (if (host.contains("@")) host.split('@').last else host).split(':').head))
       }
       .toArray
       .flatMap(_.split(SecretSeparator))

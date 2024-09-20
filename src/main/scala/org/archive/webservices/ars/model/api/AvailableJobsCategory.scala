@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.model.api
 
-import org.archive.webservices.ars.model.{ArchJobCategory, ArchJobCategories}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJob
 
 case class AvailableJobsCategory(

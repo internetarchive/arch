@@ -2,14 +2,13 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.ApiController.jobStateJson
-import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
+import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
 import org.archive.webservices.ars.util.LazyCache
 import org.scalatra._
-import org.scalatra.util.NotNothing
 import org.scalatra.swagger._
+import org.scalatra.util.NotNothing
 
 import scala.util.Try
 
