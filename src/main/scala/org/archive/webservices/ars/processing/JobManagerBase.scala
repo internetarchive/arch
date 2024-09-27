@@ -37,6 +37,7 @@ class JobManagerBase(
   def priorityRunningCount: Int = priorityRunning.size
   def isPriority: Boolean = _isPriority == _currentPriority
   def freeSlots: Int = slots - priorityRunning.map(_.slots).sum
+  def numQueued: Int = queues.map(_.size).sum
 
   def newPriority(priority: Int): Unit = synchronized {
     if (!priorities.contains(priority)) {
@@ -70,7 +71,7 @@ class JobManagerBase(
   }
 
   def checkTimeout(): Unit = synchronized {
-    if (timeoutSecondsMinMax.isDefined && queues.exists(_.nonEmpty) && freeSlots == 0) {
+    if (timeoutSecondsMinMax.isDefined) {
       val (timeoutSecondsMin, timeoutSecondsMax) = timeoutSecondsMinMax.get
       val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
       val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax

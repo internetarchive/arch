@@ -10,6 +10,7 @@ import org.archive.webservices.sparkling.{Sparkling, _}
 
 import java.io.File
 import scala.concurrent.Future
+import java.time.Instant
 
 object SparkJobManager
     extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
@@ -39,6 +40,7 @@ object SparkJobManager
         context.setLogLevel("INFO")
         _context = Some(context)
         Sparkling.resetSparkContext(Some(context))
+        context.addSparkListener(SparkJobListener)
         println("New Spark context initialized: " + context.applicationId)
         context
       })
@@ -68,9 +70,20 @@ object SparkJobManager
 
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
     super.onTimeout(instances)
-//    stopContext()
-//    for (instance <- instances) instance.job.reset(instance.conf)
-    bypassJobs()
+    if (timeoutSecondsMinMax.isDefined) {
+      val (timeoutSecondsMin, timeoutSecondsMax) = timeoutSecondsMinMax.get
+      val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
+      val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax
+      val startTimes = SparkJobListener.taskStartTimes.values
+      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold)) {
+        SparkJobListener.synchronized {
+          SparkJobListener.reset()
+          stopContext()
+          return
+        }
+      }
+    }
+    if (numQueued > 0 && freeSlots == 0) bypassJobs()
   }
 
   def bypassJobs(): Boolean = synchronized {

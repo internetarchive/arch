@@ -285,6 +285,14 @@ class ApiController(implicit val swagger: Swagger) extends BaseController with A
     }
   }
 
+  get("/stop-spark") {
+    ensureAuth { implicit context =>
+      if (context.isAdmin) {
+        Ok(SparkJobManager.stopContext())
+      } else Forbidden()
+    }
+  }
+
   get("/jobstate/:jobid/:collectionid") {
     ensureAuth { implicit context =>
       ArchCollection
