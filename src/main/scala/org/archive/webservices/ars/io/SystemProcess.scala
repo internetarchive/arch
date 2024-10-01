@@ -13,10 +13,13 @@ class SystemProcess private (
     val supportsEcho: Boolean,
     val in: BufferedReader,
     val out: PrintStream,
-    onError: Seq[String] => Unit = _ => {}) {
+    onError: Seq[String] => Unit = _ => {},
+    parent: Option[SystemProcess] = None) {
+  private lazy val topProcess: SystemProcess = parent.map(_.topProcess).getOrElse(this)
+
   private var lastError = Seq.empty[String]
 
-  val errorFuture = Future {
+  val errorFuture = if (parent.isDefined) None else Some(Future {
     val error = new BufferedReader(new InputStreamReader(process.getErrorStream))
     var line = error.readLine()
     while (line != null) {
@@ -24,7 +27,7 @@ class SystemProcess private (
       line = error.readLine()
     }
     true
-  }
+  })
 
   def consumeAllInput(): Unit = if (supportsEcho) {
     val rnd = Random.nextString(10)
@@ -42,9 +45,9 @@ class SystemProcess private (
       if (!stop) {
         val lineFuture = Future(in.readLine())
         while (!lineFuture.isCompleted) {
-          if (lastError.nonEmpty) synchronized {
+          if (topProcess.lastError.nonEmpty) topProcess.synchronized {
             onError(lastError)
-            lastError = Seq.empty
+            topProcess.lastError = Seq.empty
           }
           Thread.`yield`()
         }
@@ -76,7 +79,7 @@ class SystemProcess private (
       onError: Seq[String] => Unit = _ => {}): SystemProcess = {
     exec(cmd, clearInput)
     for (waitLine <- waitForLine) consumeToLine(waitLine, waitForPrefix)
-    new SystemProcess(process, supportsEcho, in, out, onError)
+    new SystemProcess(process, supportsEcho, in, out, onError, Some(this))
   }
 }
 
