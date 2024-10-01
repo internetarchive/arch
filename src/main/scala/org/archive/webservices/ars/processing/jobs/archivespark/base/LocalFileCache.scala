@@ -1,13 +1,13 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import io.circe.Json
-import org.archive.webservices.archivespark.model.EnrichRoot
+import org.archive.webservices.archivespark.model.{EnrichRoot, TypedEnrichRoot}
 import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
 
-trait LocalFileCache { this: EnrichRoot =>
+trait LocalFileCache extends EnrichRoot { self: TypedEnrichRoot[_] =>
   implicit private val logContext: LogContext = LogContext(this)
 
   @transient private var _localCacheFile: Option[File] = None
@@ -30,11 +30,12 @@ trait LocalFileCache { this: EnrichRoot =>
   }
 
   override def toJson: Map[String, Json] = {
+    val json = super.toJson
     synchronized {
       for (file <- _localCacheFile) file.delete()
       _localCacheFile = None
     }
-    this.toJson
+    json
   }
 
   def localFileCache: Option[InputStream] = _localCacheFile.map { file =>
