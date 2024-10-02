@@ -23,7 +23,10 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
       conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
     var enriched = rdd
     for (func <- functions(conf)) enriched = enriched.enrich(func)
-    enriched
+    enriched.map { r =>
+      r.clearCache()
+      r
+    }
   }
 }
 

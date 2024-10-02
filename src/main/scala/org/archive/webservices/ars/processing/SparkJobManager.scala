@@ -26,7 +26,7 @@ object SparkJobManager
       synchronized(_context.filter(!_.isStopped).getOrElse {
         val context = SparkUtil.config(
           SparkSession.builder,
-          appName = "ARCH",
+          appName = s"ARCH ${ArchConf.deploymentEnvironment}",
           executors = 15,
           executorCores = 4,
           executorMemory = "16g",
