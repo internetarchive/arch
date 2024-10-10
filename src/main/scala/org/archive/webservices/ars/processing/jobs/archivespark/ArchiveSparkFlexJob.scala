@@ -3,7 +3,7 @@ package org.archive.webservices.ars.processing.jobs.archivespark
 import io.circe.{HCursor, Json}
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}

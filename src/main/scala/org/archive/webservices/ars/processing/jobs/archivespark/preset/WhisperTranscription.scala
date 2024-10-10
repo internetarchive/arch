@@ -4,7 +4,7 @@ import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.Whisper
 
 object WhisperTranscription extends AiJob {

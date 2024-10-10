@@ -18,7 +18,7 @@ import java.time.Instant
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.HttpServletRequest
 import scala.io.Source
-import scala.util.{Random, Try}
+import scala.util.Try
 
 object FilesController {
   private val NotebooksTemplatesDir = "templates/notebooks"
@@ -165,7 +165,12 @@ object FilesController {
             val nowStr = java.time.Instant.now.toString
             val dateStr = StringUtil.prefixBySeparator(nowStr, "T")
             cleanGists(GistIdPrefix + " " + dateStr)
-            val gistId = Seq(GistIdPrefix, nowStr, instance.uuid, filename, Instant.now.toEpochMilli.toString)
+            val gistId = Seq(
+              GistIdPrefix,
+              nowStr,
+              instance.uuid,
+              filename,
+              Instant.now.toEpochMilli.toString)
               .mkString(" ")
             val postBody = Map(
               "description" -> gistId.asJson,

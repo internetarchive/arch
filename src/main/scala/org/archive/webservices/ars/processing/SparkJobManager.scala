@@ -9,8 +9,8 @@ import org.archive.webservices.sparkling.util.SparkUtil
 import org.archive.webservices.sparkling.{Sparkling, _}
 
 import java.io.File
-import scala.concurrent.Future
 import java.time.Instant
+import scala.concurrent.Future
 
 object SparkJobManager
     extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {

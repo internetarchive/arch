@@ -29,10 +29,12 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   def maxInputSize: Int = -1
 
   def enrichSave(rdd: RDD[ArchEnrichRoot[_]], conf: DerivationJobConf): Unit = {
-    val input = if (maxInputSize < 0) rdd else {
-      val perPartition = (maxInputSize.toDouble / rdd.getNumPartitions).ceil.toInt
-      rdd.mapPartitions(_.take(perPartition))
-    }
+    val input =
+      if (maxInputSize < 0) rdd
+      else {
+        val perPartition = (maxInputSize.toDouble / rdd.getNumPartitions).ceil.toInt
+        rdd.mapPartitions(_.take(perPartition))
+      }
     enrich(input, conf).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
   }
 

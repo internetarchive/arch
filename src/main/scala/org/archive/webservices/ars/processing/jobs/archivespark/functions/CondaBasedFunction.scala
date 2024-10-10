@@ -1,10 +1,10 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
 import org.archive.webservices.archivespark.model.Derivatives
-import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.sparkling._
+import org.archive.webservices.sparkling.io.SystemProcess
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File
@@ -56,41 +56,40 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     val arg = {
       (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     }
-    exec(s"python $pythonFile $arg", { (shell, cmd) =>
-      val condaActivate = s"$condaEnv/bin/activate"
-      make(condaActivate) { _ =>
-        val f = ensureFile(condaFile)
-        make(condaEnv) { dir =>
-          dir.mkdir()
+    exec(
+      s"python $pythonFile $arg",
+      { (shell, cmd) =>
+        val condaActivate = s"$condaEnv/bin/activate"
+        make(condaActivate) { _ =>
+          val f = ensureFile(condaFile)
+          make(condaEnv) { dir =>
+            dir.mkdir()
+          }
+          shell.exec(s"tar -xzf $condaFile -C $condaEnv", blocking = true)
+          f.delete()
         }
-        shell.exec(s"tar -xzf $condaFile -C $condaEnv", blocking = true)
-        f.delete()
-      }
 
-      shell.exec(s"source $condaActivate")
+        shell.exec(s"source $condaActivate")
 
-      for (p <- additionalPackages) {
-        val unpackedFlag = p + AdditionalPackagesUnpackedExtension
-        make(unpackedFlag) { flag =>
-          ensureFile(p)
-          try {
-            shell.exec(s"tar -xzf $p", blocking = true)
-            flag.createNewFile()
-          } finally {
-            new File(p).delete()
+        for (p <- additionalPackages) {
+          val unpackedFlag = p + AdditionalPackagesUnpackedExtension
+          make(unpackedFlag) { flag =>
+            ensureFile(p)
+            try {
+              shell.exec(s"tar -xzf $p", blocking = true)
+              flag.createNewFile()
+            } finally {
+              new File(p).delete()
+            }
           }
         }
-      }
 
-      ensureFile(pythonFile)
+        ensureFile(pythonFile)
 
-      for (f <- pythonArgumentFiles) ensureFile(f)
+        for (f <- pythonArgumentFiles) ensureFile(f)
 
-      shell.exec(
-        cmd,
-        waitForLine = Some(outputEndToken),
-        supportsEcho = false)
-    })
+        shell.exec(cmd, waitForLine = Some(outputEndToken), supportsEcho = false)
+      })
   }
 
   override def onError(error: Seq[String]): Unit = {
@@ -100,7 +99,8 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   override def cmd(file: String): String = file
 
   override def process(proc: SystemProcess, derivatives: Derivatives): Unit = {
-    val output = proc.readToLine(outputEndToken, includeEnd = false, keepMaxBytes = 1.mb.toInt).mkString
+    val output =
+      proc.readToLine(outputEndToken, includeEnd = false, keepMaxBytes = 1.mb.toInt).mkString
     for (a <- processOutput(output)) derivatives << a
   }
 

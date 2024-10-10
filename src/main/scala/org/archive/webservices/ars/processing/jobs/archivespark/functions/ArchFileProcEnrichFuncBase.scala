@@ -2,14 +2,12 @@ package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, EnrichRoot, TypedEnrichable}
-import org.archive.webservices.ars.io.SystemProcess
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.LocalFileCache
-import org.archive.webservices.ars.util.StageSyncManager
-import org.archive.webservices.sparkling.util.Common
 import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil, StageSyncManager, SystemProcess}
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
+import org.archive.webservices.sparkling.util.Common
 
 import java.io.{File, InputStream}
 import java.net.URL
@@ -135,11 +133,11 @@ abstract class ArchFileProcEnrichFuncBase[A]
             proc.exec(cmd(file))
             process(proc, derivatives)
           }
-        }
-        else proc.synchronized {
-          proc.exec(cmd(file))
-          process(proc, derivatives)
-        }
+        } else
+          proc.synchronized {
+            proc.exec(cmd(file))
+            process(proc, derivatives)
+          }
       case None =>
         process(SystemProcess.exec(cmd(file)), derivatives)
     }
