@@ -3,11 +3,12 @@ package org.archive.webservices.ars.processing.jobs.archivespark.preset
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.TrOCR
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
 
-object TrOcrEntityExtraction extends ArchiveSparkEnrichJob {
+object TrOcrEntityExtraction extends AiJob {
   val uuid: String = "019078a8-7b16-7a87-8b50-a30166e547dd"
 
   val name: String = "Named entities from TrOCR text"

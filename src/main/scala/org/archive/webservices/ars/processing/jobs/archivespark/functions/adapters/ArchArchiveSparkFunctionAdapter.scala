@@ -40,8 +40,3 @@ trait ArchArchiveSparkFunctionAdapter[Source] {
     func.asInstanceOf[FieldPointer[ArchEnrichRoot[_], Source]]
   }.toOption
 }
-
-trait ArchArchiveSparkFunction[Source] extends ArchArchiveSparkFunctionAdapter[Source] {
-  this: EnrichFunc[_, Source, _] =>
-  override def baseFunc: EnrichFunc[_, Source, _] = this
-}

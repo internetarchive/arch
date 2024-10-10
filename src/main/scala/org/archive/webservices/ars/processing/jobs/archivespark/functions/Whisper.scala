@@ -1,8 +1,14 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
+
 import _root_.io.circe.parser._
 import io.circe.Json
+import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.CondaBasedArchiveSparkFunctionAdapter
 
-object Whisper extends CondaBasedFunction[Json] {
+object Whisper extends CondaBasedArchiveSparkFunctionAdapter[Json] {
+  override def func: CondaBasedFunction[Json] = new Whisper
+}
+
+class Whisper extends CondaBasedFunction[Json] {
   override val label: String = "whisper"
   override val dataDir: String = s"$label/20240807195100"
   override val condaEnv: String = s"conda-$label-env"

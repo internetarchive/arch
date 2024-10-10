@@ -35,7 +35,8 @@ object SparkJobManager
             "spark.master" -> ArchConf.sparkMaster,
             "spark.scheduler.mode" -> "FAIR",
             "spark.yarn.executor.memoryOverhead" -> (4.gb / 1.mb).toString, // off-heap memory in MiB
-            "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath),
+            "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath,
+            "spark.yarn.am.memory" -> "4096m"),
           verbose = true)
         context.setLogLevel("INFO")
         _context = Some(context)

@@ -9,7 +9,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisp
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 import org.archive.webservices.sparkling.util.StringUtil
 
-object ArchiveSparkFlexJob extends ArchiveSparkEnrichJob {
+object ArchiveSparkFlexJob extends AiJob {
   val uuid: String = "018f52cc-d917-71ac-9e64-19fb219114a4"
 
   val name: String = id

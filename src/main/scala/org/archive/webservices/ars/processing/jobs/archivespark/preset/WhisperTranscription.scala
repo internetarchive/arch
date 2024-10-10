@@ -3,10 +3,11 @@ package org.archive.webservices.ars.processing.jobs.archivespark.preset
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.Whisper
 
-object WhisperTranscription extends ArchiveSparkEnrichJob {
+object WhisperTranscription extends AiJob {
   val uuid: String = "018f7b0a-4f3c-7846-862a-ff1ae26ce139"
 
   val name: String = "Whisper transcription"

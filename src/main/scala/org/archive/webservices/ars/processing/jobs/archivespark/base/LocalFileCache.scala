@@ -23,6 +23,7 @@ trait LocalFileCache {
         IOUtil.copy(payloadAccess, out)
       } finally out.close()
       _localCacheFile = Some(file)
+      Log.info(s"Cached ${file.getPath}.")
       file
     })
   }

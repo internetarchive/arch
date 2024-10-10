@@ -14,6 +14,7 @@ import org.scalatra._
 
 import java.io.{File, PrintWriter}
 import java.net.URL
+import java.time.Instant
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.HttpServletRequest
 import scala.io.Source
@@ -164,7 +165,7 @@ object FilesController {
             val nowStr = java.time.Instant.now.toString
             val dateStr = StringUtil.prefixBySeparator(nowStr, "T")
             cleanGists(GistIdPrefix + " " + dateStr)
-            val gistId = Seq(GistIdPrefix, nowStr, instance.uuid, filename, Random.nextString(10))
+            val gistId = Seq(GistIdPrefix, nowStr, instance.uuid, filename, Instant.now.toEpochMilli.toString)
               .mkString(" ")
             val postBody = Map(
               "description" -> gistId.asJson,

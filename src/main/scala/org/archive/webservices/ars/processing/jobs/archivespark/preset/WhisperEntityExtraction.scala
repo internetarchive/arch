@@ -4,10 +4,11 @@ import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark
+import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
 
-object WhisperEntityExtraction extends ArchiveSparkEnrichJob {
+object WhisperEntityExtraction extends AiJob {
   val uuid: String = "018f7b09-f7ca-756d-a4ca-69cea914185d"
 
   val name: String = "Named entities from Whisper transcript"

@@ -1,6 +1,12 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
-object TrOCR extends CondaBasedFunction[String] {
+import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.CondaBasedArchiveSparkFunctionAdapter
+
+object TrOCR extends CondaBasedArchiveSparkFunctionAdapter[String] {
+  override def func: CondaBasedFunction[String] = new TrOCR
+}
+
+class TrOCR extends CondaBasedFunction[String] {
   override val label: String = "trocr"
   override val dataDir: String = s"$label/20240807195100"
   override val condaEnv: String = s"conda-$label-env"

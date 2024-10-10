@@ -17,7 +17,9 @@ trait FileMetaFieldMultiType extends FileMetaFieldType {
 
 object FileMetaFieldType {
   case object String extends FileMetaFieldType {
-    override def toJson(value: Any): Json = value.asInstanceOf[String].asJson
+    override def toJson(value: Any): Json = {
+      if (value == null) Json.Null else value.asInstanceOf[String].asJson
+    }
   }
 
   case object Number extends FileMetaFieldType {

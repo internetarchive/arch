@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.processing
 
-import org.apache.spark.scheduler.{SparkListener, SparkListenerTaskEnd, SparkListenerTaskStart, TaskInfo}
+import org.apache.spark.scheduler.{SparkListener, SparkListenerStageCompleted, SparkListenerTaskEnd, SparkListenerTaskStart, TaskInfo}
+import org.archive.webservices.ars.util.StageSyncManager
 
 import java.time.Instant
 
@@ -17,6 +18,10 @@ object SparkJobListener extends SparkListener {
 
   override def onTaskEnd(taskEnd: SparkListenerTaskEnd): Unit = synchronized {
     _taskStartTimes.remove(id(taskEnd.taskInfo))
+  }
+
+  override def onStageCompleted(stageCompleted: SparkListenerStageCompleted): Unit = {
+    StageSyncManager.cleanup(StageSyncManager.stageId(stageCompleted.stageInfo.stageId))
   }
 
   def reset(): Unit = synchronized(_taskStartTimes.clear())
