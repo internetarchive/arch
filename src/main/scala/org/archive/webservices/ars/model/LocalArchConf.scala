@@ -182,4 +182,9 @@ class LocalArchConf extends ArchConf with Serializable {
       envKey = "ARCH_FORCE_KEYSTONE_LOGIN",
       configKey = "forceKeystoneLogin",
       default = false)
+
+  val publicSuffixListUrl: String =
+    confStrValue(envKey = "ARCH_PUBLIC_SUFFIX_LIST_URL", configKey = "publicSuffixListUrl")
+      .getOrElse("https://publicsuffix.org/list/public_suffix_list.dat")
+
 }
