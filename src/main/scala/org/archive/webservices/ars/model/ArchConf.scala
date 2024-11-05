@@ -45,6 +45,7 @@ trait ArchConf {
   def deploymentEnvironment: String
   def isDev: Boolean
   def forceKeystoneLogin: Boolean
+  def publicSuffixListUrl: String
 }
 
 object ArchConf extends ArchConf {
@@ -93,4 +94,5 @@ object ArchConf extends ArchConf {
   def deploymentEnvironment: String = conf.deploymentEnvironment
   def isDev: Boolean = conf.isDev
   def forceKeystoneLogin: Boolean = conf.forceKeystoneLogin
+  def publicSuffixListUrl: String = conf.publicSuffixListUrl
 }
