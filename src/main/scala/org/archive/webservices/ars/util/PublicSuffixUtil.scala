@@ -5,6 +5,8 @@ import org.apache.spark.broadcast.Broadcast
 
 import scala.io.Source
 
+import org.archive.webservices.ars.model.ArchConf
+
 object PublicSuffixUtil {
   private var _broadcast: Option[(String, Broadcast[Set[String]])] = None
 
@@ -20,7 +22,7 @@ object PublicSuffixUtil {
 
   lazy val Suffixes: Set[String] = {
     val source = Source
-      .fromURL("https://publicsuffix.org/list/public_suffix_list.dat", "utf-8")
+      .fromURL(ArchConf.publicSuffixListUrl, "utf-8")
     try {
       source.getLines
         .map(_.trim)
