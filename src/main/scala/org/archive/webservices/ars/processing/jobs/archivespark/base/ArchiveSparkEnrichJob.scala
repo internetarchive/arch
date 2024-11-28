@@ -4,10 +4,11 @@ import org.apache.spark.rdd.RDD
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.archivespark.model.dataloads.ByteLoad
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
+import org.archive.webservices.archivespark.util.Bytes
 import org.archive.webservices.ars.processing.DerivationJobConf
 
 abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
-  def byteLoad: DataLoadPointer[ArchEnrichRoot[_], Array[Byte]] =
+  def byteLoad: DataLoadPointer[ArchEnrichRoot[_], Bytes] =
     ArchiveSparkEnrichJob.byteLoad
 
   def fileLoad: DataLoadPointer[ArchEnrichRoot[_], String] =
@@ -31,7 +32,7 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
 }
 
 object ArchiveSparkEnrichJob {
-  val byteLoad: DataLoadPointer[ArchEnrichRoot[_], Array[Byte]] =
+  val byteLoad: DataLoadPointer[ArchEnrichRoot[_], Bytes] =
     DataLoadPointer(ByteLoad)
 
   val fileLoad: DataLoadPointer[ArchEnrichRoot[_], String] =

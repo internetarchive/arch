@@ -1,16 +1,14 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
-import org.apache.commons.io.input.BoundedInputStream
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, TypedEnrichable}
 import org.archive.webservices.archivespark.specific.warc.functions._
+import org.archive.webservices.archivespark.util.Bytes
 import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchWarcRecord
-import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.cdx.CdxRecord
-import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil}
 
 class ArchWarcPayload private (http: Boolean = true)
-    extends EnrichFunc[ArchWarcRecord, CdxRecord, Array[Byte]] {
+    extends EnrichFunc[ArchWarcRecord, CdxRecord, Bytes] {
   import WarcPayloadFields._
 
   val source: FieldPointer[ArchWarcRecord, CdxRecord] =
@@ -31,14 +29,10 @@ class ArchWarcPayload private (http: Boolean = true)
       for (msg <- warc.http) {
         derivatives << msg.statusLine
         derivatives << msg.headers
-        val in = record.localFileCache.getOrElse(msg.payload)
-        val bounded = new BoundedInputStream(in, HttpUtil.MaxContentLength)
-        derivatives << IOUtil.bytes(new CleanupInputStream(bounded, in.close))
+        derivatives << record.cachedPayload
       }
     } else {
-      val in = record.localFileCache.getOrElse(warc.payload)
-      val bounded = new BoundedInputStream(in, ArchFileBytes.MaxContentLength)
-      derivatives << IOUtil.bytes(new CleanupInputStream(bounded, in.close))
+      derivatives << record.cachedPayload
     }
   }
 }

@@ -31,7 +31,7 @@ class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] wit
 
   override def payloadAccess: InputStream = {
     Log.info(s"Accessing ${warc.url.getOrElse("N/A")}...")
-    warc.http.map(_.payload).getOrElse(warc.payload)
+    warc.http.map(_.body).getOrElse(warc.payload)
   }
 
   override def cacheLocal(): File = {

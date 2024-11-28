@@ -17,6 +17,9 @@ class Whisper extends CondaBasedFunction[Json] {
 
   override def processOutput(output: String): Option[Json] = {
     val trim = output.trim
-    if (trim.isEmpty) None else parse(trim).toOption
+    if (trim.isEmpty) None else parse(trim).toOption match {
+      case None =>
+      case some: _ => some
+    }
   }
 }
