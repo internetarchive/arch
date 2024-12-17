@@ -3,6 +3,7 @@ package org.archive.webservices.ars.io
 import _root_.io.circe.parser._
 import io.circe.HCursor
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.util.IteratorUtil
 
@@ -131,7 +132,7 @@ object Vault {
   }
 
   def access(url: String, sessionId: String): InputStream = {
-    val connection = new URL(url).openConnection.asInstanceOf[HttpsURLConnection]
+    val connection = HttpUtil.openConnection(url)
     connection.setRequestProperty("Accept", "*/*")
     connection.setRequestProperty("Cookie", s"$SessionIdCookie=$sessionId")
     connection.getInputStream

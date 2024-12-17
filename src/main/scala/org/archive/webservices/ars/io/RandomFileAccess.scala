@@ -3,6 +3,7 @@ package org.archive.webservices.ars.io
 import com.amazonaws.services.s3.model.GetObjectRequest
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -108,7 +109,7 @@ object RandomFileAccess {
       positions: Iterator[(Long, Long)],
       basicUserPw: Option[(String, String)] = None,
       cookie: Option[(String, String)] = None): InputStream = {
-    val connection = new URL(url).openConnection
+    val connection = HttpUtil.openConnection(url)
     for ((user, pw) <- basicUserPw) {
       val authString = Base64.getEncoder.encodeToString(s"$user:$pw".getBytes)
       connection.setRequestProperty("Authorization", "Basic " + authString)

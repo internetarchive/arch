@@ -4,7 +4,7 @@ import _root_.io.circe.syntax._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.api.DatasetFile
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager}
-import org.archive.webservices.ars.util.LazyCache
+import org.archive.webservices.ars.util.{HttpUtil, LazyCache}
 
 import java.io.DataOutputStream
 import java.net.{HttpURLConnection, URL}
@@ -75,9 +75,7 @@ object Keystone {
 
   def keystoneHttpRequest(endpoint: String, data: String): Try[String] = Try {
     val keystoneBaseUrl = ArchConf.keystoneBaseUrl.getOrElse("")
-    val connection =
-      new URL(keystoneBaseUrl + endpoint).openConnection.asInstanceOf[HttpURLConnection]
-
+    val connection = HttpUtil.openConnection(keystoneBaseUrl + endpoint)
     try {
       connection.setRequestMethod("POST")
       connection.setDoOutput(true)

@@ -7,6 +7,7 @@ import org.archive.webservices.ars.model.collections.AitCollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
@@ -83,9 +84,7 @@ object FilesController {
       postBody: Option[String] = None,
       delete: Option[String] = None): Option[HCursor] = ArchConf.githubBearer.flatMap {
     githubBearer =>
-      val ait =
-        new URL("https://api.github.com/gists" + delete.map("/" + _).getOrElse("")).openConnection
-          .asInstanceOf[HttpsURLConnection]
+      val ait = HttpUtil.openConnection("https://api.github.com/gists" + delete.map("/" + _).getOrElse(""))
       try {
         ait.setRequestProperty("Accept", "application/vnd.github+json")
         ait.setRequestProperty("Authorization", "Bearer " + githubBearer)

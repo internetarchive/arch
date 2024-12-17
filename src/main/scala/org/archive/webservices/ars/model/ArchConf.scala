@@ -49,6 +49,8 @@ trait ArchConf {
   def isDev: Boolean
   def forceKeystoneLogin: Boolean
   def publicSuffixListUrl: String
+  def httpProxy: String
+  def httpProxyHosts: Set[String]
 }
 
 object ArchConf extends ArchConf {
@@ -101,4 +103,6 @@ object ArchConf extends ArchConf {
   def isDev: Boolean = conf.isDev
   def forceKeystoneLogin: Boolean = conf.forceKeystoneLogin
   def publicSuffixListUrl: String = conf.publicSuffixListUrl
+  def httpProxy: String = conf.httpProxy
+  def httpProxyHosts: Set[String] = conf.httpProxyHosts
 }

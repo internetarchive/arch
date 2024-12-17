@@ -9,7 +9,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{Common, HttpUtil}
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
 
@@ -158,7 +158,7 @@ object PublishedDatasets {
     .map { iaAuthHeader =>
       val url = (if (s3) ArchConf.pboxS3Url else ArchConf.iaBaseUrl) + "/" + path
         .stripPrefix("/")
-      val connection = new URL(url).openConnection.asInstanceOf[HttpURLConnection]
+      val connection = HttpUtil.openConnection(url)
       try {
         connection.setRequestProperty("Authorization", iaAuthHeader)
         connection.setDoInput(true)
@@ -227,8 +227,7 @@ object PublishedDatasets {
     .getOrElse(Left(-1, ""))
 
   def ark(itemName: String): Option[String] = ArchConf.arkMintBearer.flatMap { arkMintBearer =>
-    val connection =
-      new URL(ArchConf.arkMintUrl).openConnection.asInstanceOf[HttpURLConnection]
+    val connection = HttpUtil.openConnection(ArchConf.arkMintUrl)
     try {
       connection.setRequestMethod("POST")
       connection.setRequestProperty("Authorization", "Bearer " + arkMintBearer)

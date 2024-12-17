@@ -198,4 +198,11 @@ class LocalArchConf extends ArchConf with Serializable {
     confStrValue(envKey = "ARCH_PUBLIC_SUFFIX_LIST_URL", configKey = "publicSuffixListUrl")
       .getOrElse("https://publicsuffix.org/list/public_suffix_list.dat")
 
+  val httpProxy: String =
+    confStrValue(envKey = "ARCH_HTTP_PROXY", configKey = "httpProxy")
+      .getOrElse("http-proxy.us.archive.org:8080")
+
+  val httpProxyHosts: Set[String] =
+    confStrValue(envKey = "ARCH_HTTP_PROXY_HOSTS", configKey = "httpProxyHosts")
+      .getOrElse("publicsuffix.org,api.github.com").split(',').map(_.trim).filter(_.nonEmpty).toSet
 }
