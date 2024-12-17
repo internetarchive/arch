@@ -10,9 +10,9 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.TrOCR
 object TrOcrProcessing extends AiJob {
   val uuid: String = "019078a5-c6f3-7051-bb71-5b1f135307df"
 
-  val name: String = "TrOCR image processing"
+  val name: String = "Text recognition"
   val description: String =
-    "OCR image processing using TrOCR. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text recognized and transcribed from images in a collection, including handwriting. Output: one or more JSONL files comprising a JSON object for each input record."
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 

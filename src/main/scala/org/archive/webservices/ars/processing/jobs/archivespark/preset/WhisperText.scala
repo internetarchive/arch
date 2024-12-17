@@ -10,9 +10,9 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrich
 object WhisperText extends AiJob {
   val uuid: String = "0191e26a-056c-77e2-8fe0-dfba9928b3e2"
 
-  val name: String = "Whisper transcription text"
+  val name: String = "Speech recognition"
   val description: String =
-    "Whisper-powered transcript in each audio document in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text transcribed from speech recognized in collection audio and video documents. Output: one or more JSONL files comprising a JSON object for each input record."
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 

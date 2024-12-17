@@ -11,9 +11,9 @@ import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapte
 object TrOcrEntityExtraction extends AiJob {
   val uuid: String = "019078a8-7b16-7a87-8b50-a30166e547dd"
 
-  val name: String = "Named entities from TrOCR text"
+  val name: String = "Named entities from text recognition"
   val description: String =
-    "Names of persons, organizations, and geographic locations detected in each TrOCR processed image in the collection. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Names of persons, organizations, geographic locations, and dates from text recognized in collection images. Output: one or more JSONL files comprising a JSON object for each input record."
 
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
