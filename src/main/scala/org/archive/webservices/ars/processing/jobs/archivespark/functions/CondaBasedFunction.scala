@@ -4,8 +4,8 @@ import org.archive.webservices.archivespark.model.Derivatives
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.io.SystemProcess
-import org.archive.webservices.sparkling.logging.{Log, LogContext}
+import org.archive.webservices.sparkling.io.{StageSyncManager, SystemProcess}
+import org.archive.webservices.sparkling.logging.LogContext
 
 import java.io.File
 
@@ -13,8 +13,6 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   implicit private val logContext: LogContext = LogContext(this)
 
   val AdditionalPackagesUnpackedExtension = "._unpacked"
-
-  override def sharedGlobalProcess: Boolean = true
 
   def dataDir: String
   def condaEnv: String
@@ -52,13 +50,13 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override def fields: Seq[String] = Seq(label)
 
-  override def init(): Option[SystemProcess] = Some {
+  override def init(): SystemProcess = {
     val arg = {
       (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     }
     exec(
       s"python $pythonFile $arg",
-      { (shell, cmd) =>
+      { (shell, pid, cmd) =>
         val condaActivate = s"$condaEnv/bin/activate"
         make(condaActivate) { _ =>
           val f = ensureFile(condaFile)
@@ -88,19 +86,30 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
         for (f <- pythonArgumentFiles) ensureFile(f)
 
-        shell.exec(cmd, waitForLine = Some(outputEndToken), supportsEcho = false)
-      })
-  }
+        val pipePath = pidPipe(pid)
+        shell.exec(s"mkfifo $pipePath", blocking = true)
 
-  override def onError(error: Seq[String]): Unit = {
-    Log.error(error.mkString("\n"))
+        val pipe = StageSyncManager.claimFileIn(pipePath)
+        shell.exec(
+          cmd,
+          waitForLine = Some(outputEndToken),
+          supportsEcho = false,
+          pipe = Some(pipe))
+      })
   }
 
   override def cmd(file: String): String = file
 
-  override def process(proc: SystemProcess, derivatives: Derivatives): Unit = {
+  override def process(proc: SystemProcess, pid: Int, derivatives: Derivatives): Unit = {
+    val pipe = StageSyncManager.claimFileIn(pidPipe(pid))
     val output =
-      proc.readToLine(outputEndToken, includeEnd = false, keepMaxBytes = 1.mb.toInt).mkString
+      proc
+        .readToLine(
+          outputEndToken,
+          includeEnd = false,
+          keepMaxBytes = 1.mb.toInt,
+          pipe = Some(pipe))
+        .mkString
     for (a <- processOutput(output)) derivatives << a
   }
 

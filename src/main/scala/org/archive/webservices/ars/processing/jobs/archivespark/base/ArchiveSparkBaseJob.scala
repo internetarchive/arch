@@ -19,7 +19,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   override def id: String = "ArchiveSpark" + super.id
 
   val relativeOutPath = s"/$id"
-  val resultDir = "/out.json.gz"
+  val resultDir = "/out.jsonl.gz"
   val resultFile = "/result.jsonl.gz"
 
   lazy val children: Seq[PartialDerivationJob] = Seq(ArchiveSparkProcessor, PostProcessor)

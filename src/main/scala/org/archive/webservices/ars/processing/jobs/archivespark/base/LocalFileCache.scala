@@ -18,6 +18,8 @@ trait LocalFileCache {
   @transient private var _memoryCache: Option[Array[Byte]] = None
   @transient private var _localCacheFile: Option[File] = None
 
+  @transient var cacheEnabled = false
+
   def isLocalCached: Boolean = _localCacheFile.isDefined
 
   def localCacheFile: Option[File] = _localCacheFile
@@ -52,6 +54,7 @@ trait LocalFileCache {
     for (file <- _localCacheFile) file.delete()
     _localCacheFile = None
     _memoryCache = None
+    System.gc()
   }
 
   def localFileCache: Option[InputStream] = _localCacheFile.map { file =>
@@ -60,7 +63,7 @@ trait LocalFileCache {
 
   def cachedPayload: Bytes = Bytes.either(_memoryCache.map(Left(_)).getOrElse {
     _localCacheFile.map(file => Right(new FileInputStream(file))).getOrElse {
-      synchronized {
+      if (cacheEnabled) synchronized {
         _memoryCache.map(Left(_)).getOrElse {
           _localCacheFile.map(file => Right(new FileInputStream(file))).getOrElse {
             val in = payloadAccess
@@ -78,6 +81,7 @@ trait LocalFileCache {
           }
         }
       }
+      else Right(payloadAccess)
     }
   })
 

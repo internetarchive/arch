@@ -2,6 +2,7 @@ package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
 import _root_.io.circe.parser._
 import io.circe.Json
+import org.archive.webservices.ars.Arch
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.CondaBasedArchiveSparkFunctionAdapter
 
 object Whisper extends CondaBasedArchiveSparkFunctionAdapter[Json] {
@@ -17,9 +18,16 @@ class Whisper extends CondaBasedFunction[Json] {
 
   override def processOutput(output: String): Option[Json] = {
     val trim = output.trim
-    if (trim.isEmpty) None else parse(trim).toOption match {
-      case None =>
-      case some: _ => some
-    }
+    if (trim.isEmpty) None
+    else
+      parse(trim) match {
+        case Left(failure) =>
+          Arch.reportError(
+            s"ArchiveSpark Whisper Output JSON Parsing Error",
+            failure.getMessage(),
+            Map("output" -> output))
+          None
+        case Right(json) => Some(json)
+      }
   }
 }

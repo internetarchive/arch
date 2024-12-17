@@ -70,14 +70,14 @@ class JobManagerBase(
     } else None
   }
 
-  def checkTimeout(): Unit = synchronized {
-    if (timeoutSecondsMinMax.isDefined) {
-      val (timeoutSecondsMin, timeoutSecondsMax) = timeoutSecondsMinMax.get
+  def checkTimeout(): Unit = {
+    for ((timeoutSecondsMin, timeoutSecondsMax) <- timeoutSecondsMinMax) synchronized {
       val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
       val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax
       val startTimes = priorityRunning.map(running)
-      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold))
+      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold)) {
         onTimeout(priorityRunning)
+      }
     }
   }
 

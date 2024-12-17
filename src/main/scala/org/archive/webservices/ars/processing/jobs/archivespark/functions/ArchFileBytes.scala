@@ -19,6 +19,7 @@ object ArchFileBytes
   val fields: Seq[String] = Seq("bytes")
 
   override def derive(source: TypedEnrichable[FileRecord], derivatives: Derivatives): Unit = {
-    Try(source.asInstanceOf[LocalFileCache].cachedPayload).toOption.getOrElse(Bytes(source.get.access))
+    Try(source.asInstanceOf[LocalFileCache].cachedPayload).toOption
+      .getOrElse(Bytes(source.get.access))
   }
 }

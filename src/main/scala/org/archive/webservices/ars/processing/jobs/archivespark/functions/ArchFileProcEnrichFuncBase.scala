@@ -18,21 +18,15 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
 
-  def sharedGlobalProcess: Boolean = false
-
-  def suppresInOutSh(script: String): String = {
-    Seq("{", script, "} < /dev/null 1>&2").mkString("\n")
-  }
-
   def workingDir: String = ArchConf.hadoopNodeLocalTempPath
+
+  def pidPipe(pid: Int): String = workingDir + "/" + pid + ".pipe"
 
   def bash: SystemProcess = {
     val process = SystemProcess.bash
-    process.exec(s"cd $workingDir", onError = Some(onError))
+    process.exec(s"cd $workingDir")
     process
   }
-
-  def onError(error: Seq[String]): Unit = {}
 
   def make(file: String)(make: File => Unit): File = {
     val f = new File(workingDir, file)
@@ -68,48 +62,36 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   def script(file: String): Option[String] = None
 
-  def init(): Option[SystemProcess] = None
+  def init(): SystemProcess
 
-  private val globalProcessKey = "globalProcess"
-  private val initializedKey = "initialized"
-  private var _sharedGlobalProcess: Option[SystemProcess] = None
-
-  private def globalProcess: Option[SystemProcess] = {
-    if (sharedGlobalProcess) _sharedGlobalProcess.filter(!_.destroyed)
-    else Sparkling.taskStore.get(globalProcessKey).map(_.asInstanceOf[SystemProcess])
-  }
-
-  private def initialized: Boolean = {
-    if (sharedGlobalProcess) _sharedGlobalProcess.exists(!_.destroyed)
-    else Sparkling.taskStore.get(initializedKey).exists(_.asInstanceOf[Boolean])
-  }
+  private var _process: Option[SystemProcess] = None
+  private def initialized: Boolean = _process.exists(!_.destroyed)
 
   private def doInit(): Unit = if (!initialized) synchronized {
     if (!initialized) {
       val dir = new File(workingDir)
       dir.mkdirs()
       Common.sync(new File(dir, Sparkling.appId + "._initializing")) {
-        if (sharedGlobalProcess) {
-          _sharedGlobalProcess = init()
-        } else {
-          for (process <- init()) Sparkling.taskStore.update(globalProcessKey, process)
-          Sparkling.taskStore.update(initializedKey, true)
-        }
+        _process = Some(init())
       }
     }
   }
 
-  def exec(cmd: String, exec: (SystemProcess, String) => Unit): SystemProcess = {
-    if (sharedGlobalProcess) {
-      StageSyncManager.syncProcess(cmd, workingDir, bash, exec)
-    } else {
-      val p = bash
-      exec(bash, cmd)
-      p
-    }
+  def exec(cmd: String, exec: (SystemProcess, Int, String) => Unit): SystemProcess = {
+    StageSyncManager
+      .syncProcess(
+        cmd,
+        workingDir,
+        bash,
+        exec,
+        cleanup = { (p, pid) =>
+          val pipe = new File(pidPipe(pid))
+          if (pipe.exists()) pipe.delete()
+        })
+      ._1
   }
 
-  def process(process: SystemProcess, derivatives: Derivatives): Unit
+  def process(process: SystemProcess, pid: Int, derivatives: Derivatives): Unit
 
   override def derive(source: TypedEnrichable[String], derivatives: Derivatives): Unit = {
     doInit()
@@ -125,21 +107,10 @@ abstract class ArchFileProcEnrichFuncBase[A]
       }
       .getOrElse(inFile)
     Log.info(s"Processing file $file...")
-    globalProcess match {
-      case Some(proc) =>
-        if (sharedGlobalProcess) {
-          StageSyncManager.claimProcess(workingDir, proc)
-          proc.synchronized {
-            proc.exec(cmd(file))
-            process(proc, derivatives)
-          }
-        } else
-          proc.synchronized {
-            proc.exec(cmd(file))
-            process(proc, derivatives)
-          }
-      case None =>
-        process(SystemProcess.exec(cmd(file)), derivatives)
+    val (proc, pid) = StageSyncManager.claimProcess(workingDir)
+    proc.synchronized {
+      proc.exec(cmd(file))
+      process(proc, pid, derivatives)
     }
   }
 }

@@ -168,9 +168,10 @@ object Ait {
       sessionId: Option[String] = None,
       basicAuth: Option[String] = None,
       close: Boolean = true)(action: InputStream => Option[R]): Either[Int, R] = {
-    val ait = new URL(
+    val url =
       if (path.matches("^https?://.+$")) path
-      else ArchConf.aitBaseUrl + path).openConnection
+      else ArchConf.aitBaseUrl + path
+    val ait = new URL(url).openConnection
       .asInstanceOf[HttpURLConnection]
     ait.setInstanceFollowRedirects(true)
     try {

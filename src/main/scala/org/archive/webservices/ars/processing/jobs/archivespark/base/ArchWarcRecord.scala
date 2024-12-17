@@ -29,10 +29,7 @@ class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] wit
 
   override def metaToJson: Json = meta.toJson
 
-  override def payloadAccess: InputStream = {
-    Log.info(s"Accessing ${warc.url.getOrElse("N/A")}...")
-    warc.http.map(_.body).getOrElse(warc.payload)
-  }
+  override def payloadAccess: InputStream = warc.http.map(_.body).getOrElse(warc.payload)
 
   override def cacheLocal(): File = {
     Log.info(s"Caching ${warc.url.getOrElse("N/A")}...")
@@ -41,7 +38,7 @@ class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] wit
 }
 
 object ArchWarcRecord extends EnrichRootCompanion[ArchWarcRecord] {
-  override def dataLoad[T](load: DataLoad[T]): Option[FieldPointer[ArchWarcRecord, T]] =
+  override def dataLoad[T](load: DataLoad[T]): Option[FieldPointer[ArchWarcRecord, T]] = {
     (load match {
       case FileLoad => Some(ArchFileCache)
       case ByteLoad => Some(ArchWarcPayload)
@@ -49,4 +46,5 @@ object ArchWarcRecord extends EnrichRootCompanion[ArchWarcRecord] {
       case PlainTextLoad => Some(HtmlText)
       case _ => None
     }).map(_.asInstanceOf[FieldPointer[ArchWarcRecord, T]])
+  }
 }

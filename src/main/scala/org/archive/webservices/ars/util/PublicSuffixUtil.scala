@@ -2,10 +2,9 @@ package org.archive.webservices.ars.util
 
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
+import org.archive.webservices.ars.model.ArchConf
 
 import scala.io.Source
-
-import org.archive.webservices.ars.model.ArchConf
 
 object PublicSuffixUtil {
   private var _broadcast: Option[(String, Broadcast[Set[String]])] = None

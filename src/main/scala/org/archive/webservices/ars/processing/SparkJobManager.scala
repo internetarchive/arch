@@ -14,6 +14,7 @@ import scala.concurrent.Future
 
 object SparkJobManager
     extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
+  val taskTimeoutSeconds = 60 * 60 * 12 // 12 hours
   val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128
@@ -70,18 +71,13 @@ object SparkJobManager
   }
 
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
-    super.onTimeout(instances)
-    if (timeoutSecondsMinMax.isDefined) {
-      val (timeoutSecondsMin, timeoutSecondsMax) = timeoutSecondsMinMax.get
-      val minThreshold = Instant.now.getEpochSecond - timeoutSecondsMin
-      val maxThreshold = Instant.now.getEpochSecond - timeoutSecondsMax
-      val startTimes = SparkJobListener.taskStartTimes.values
-      if (startTimes.forall(_ < minThreshold) && startTimes.exists(_ < maxThreshold)) {
-        SparkJobListener.synchronized {
-          SparkJobListener.reset()
-          stopContext()
-          return
-        }
+    val threshold = Instant.now.getEpochSecond - taskTimeoutSeconds
+    val startTimes = SparkJobListener.taskStartTimes.values
+    if (startTimes.forall(_ < threshold)) {
+      SparkJobListener.synchronized {
+        SparkJobListener.reset()
+        stopContext()
+        return
       }
     }
     if (numQueued > 0 && freeSlots == 0) bypassJobs()

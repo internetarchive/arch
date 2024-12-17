@@ -22,8 +22,13 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
   override def enrich(
       rdd: RDD[ArchEnrichRoot[_]],
       conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
-    var enriched = rdd
-    for (func <- functions(conf)) enriched = enriched.enrich(func)
+    val funcs = functions(conf)
+    var enriched = if (funcs.size > 1) rdd.map { r =>
+      r.cacheEnabled = true
+      r
+    }
+    else rdd
+    for (func <- funcs) enriched = enriched.enrich(func)
     enriched.map { r =>
       r.clearCache()
       r
