@@ -14,6 +14,8 @@ object TrOcrProcessing extends AiJob {
   val description: String =
     "Text recognized and transcribed from images in a collection, including handwriting. Output: one or more JSONL files comprising a JSON object for each input record."
 
+  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
+
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
   override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {

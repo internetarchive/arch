@@ -15,6 +15,8 @@ object TrOcrEntityExtraction extends AiJob {
   val description: String =
     "Names of persons, organizations, geographic locations, and dates from text recognized in collection images. Output: one or more JSONL files comprising a JSON object for each input record."
 
+  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
   override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {

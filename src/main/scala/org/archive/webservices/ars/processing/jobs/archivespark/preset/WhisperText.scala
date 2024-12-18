@@ -14,6 +14,8 @@ object WhisperText extends AiJob {
   val description: String =
     "Text transcribed from speech recognized in collection audio and video documents. Output: one or more JSONL files comprising a JSON object for each input record."
 
+  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
+
   override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
 
   override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
