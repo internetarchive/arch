@@ -9,6 +9,7 @@ import org.archive.webservices.archivespark.util.Json.json
 import org.archive.webservices.ars.model.collections.inputspecs.FileRecord
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileBytes, ArchFileCache}
+import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.{File, InputStream}
@@ -35,7 +36,7 @@ class ArchFileRecord(record: FileRecord) extends ArchEnrichRoot[FileRecord] {
 
   override def payloadAccess: InputStream = {
     Log.info(s"Accessing ${record.filename}...")
-    record.access
+    IOUtil.supportMark(record.access)
   }
 
   override def cacheLocal(): File = {

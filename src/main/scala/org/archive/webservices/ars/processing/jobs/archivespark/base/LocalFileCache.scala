@@ -7,6 +7,7 @@ import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
+import scala.util.Try
 
 object LocalFileCache {
   val MaxMemoryCacheSize: Long = 1.mb
@@ -50,38 +51,42 @@ trait LocalFileCache {
 
   def cacheLocal(): File = cacheLocal(if (_memoryCache.isDefined) None else Some(payloadAccess))
 
-  def clearCache(): Unit = synchronized {
+  def clearCache(): Unit = if (_localCacheFile.isDefined || _memoryCache.isDefined) synchronized {
     for (file <- _localCacheFile) file.delete()
     _localCacheFile = None
     _memoryCache = None
-    System.gc()
   }
 
   def localFileCache: Option[InputStream] = _localCacheFile.map { file =>
     new BufferedInputStream(new FileInputStream(file))
   }
 
-  def cachedPayload: Bytes = Bytes.either(_memoryCache.map(Left(_)).getOrElse {
-    _localCacheFile.map(file => Right(new FileInputStream(file))).getOrElse {
-      if (cacheEnabled) synchronized {
-        _memoryCache.map(Left(_)).getOrElse {
-          _localCacheFile.map(file => Right(new FileInputStream(file))).getOrElse {
-            val in = payloadAccess
-            try {
-              val bounded = new BoundedInputStream(in, LocalFileCache.MaxMemoryCacheSize + 1)
-              val array = IOUtil.bytes(bounded)
-              _memoryCache = Some(array)
-              if (array.length > LocalFileCache.MaxMemoryCacheSize) {
-                val file = cacheLocal(Some(in))
-                Right(new FileInputStream(file))
-              } else Left(array)
-            } finally {
-              in.close()
-            }
-          }
+  def cachePayload(): Unit = if (_memoryCache.isEmpty && _localCacheFile.isEmpty) {
+    synchronized {
+      if (_memoryCache.isEmpty && _localCacheFile.isEmpty) {
+        val in = payloadAccess
+        try {
+          val bounded = new BoundedInputStream(in, LocalFileCache.MaxMemoryCacheSize + 1)
+          val array = IOUtil.bytes(bounded)
+          _memoryCache = Some(array)
+          if (array.length > LocalFileCache.MaxMemoryCacheSize) cacheLocal(Some(in))
+        } catch {
+          case e: Exception =>
+            // skip if payload can't be read, e.g. malformed HTTP stream / decoding error
+            Log.error(e.getMessage)
+        } finally {
+          Try(in.close())
         }
       }
-      else Right(payloadAccess)
+    }
+  }
+
+  def cachedPayload: Bytes = Bytes.either({
+    if (cacheEnabled) cachePayload()
+    _memoryCache.map(Left(_)).getOrElse {
+      _localCacheFile.map(file => Right(new FileInputStream(file))).getOrElse {
+        Right(payloadAccess)
+      }
     }
   })
 

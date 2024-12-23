@@ -23,11 +23,13 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
       rdd: RDD[ArchEnrichRoot[_]],
       conf: DerivationJobConf): RDD[ArchEnrichRoot[_]] = {
     val funcs = functions(conf)
-    var enriched = if (funcs.size > 1) rdd.map { r =>
-      r.cacheEnabled = true
-      r
+    var enriched = if (funcs.length <= 1) rdd else {
+      val (longest, longestPath) = funcs.map(f => (f, f.dependencyPath.toSet)).maxBy(_._2.size)
+      if (funcs.exists(f => f != longest && !longestPath.contains(f))) rdd.map { r =>
+        r.cacheEnabled = true
+        r
+      } else rdd
     }
-    else rdd
     for (func <- funcs) enriched = enriched.enrich(func)
     enriched.map { r =>
       r.clearCache()

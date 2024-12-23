@@ -9,6 +9,7 @@ import org.archive.webservices.archivespark.specific.warc.WarcLikeRecord
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{ArchFileCache, ArchWarcPayload}
 import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.sparkling.io.IOUtil
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.warc.WarcRecord
 
@@ -29,7 +30,7 @@ class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] wit
 
   override def metaToJson: Json = meta.toJson
 
-  override def payloadAccess: InputStream = warc.http.map(_.body).getOrElse(warc.payload)
+  override def payloadAccess: InputStream = IOUtil.supportMark(warc.http.map(_.body).getOrElse(warc.payload))
 
   override def cacheLocal(): File = {
     Log.info(s"Caching ${warc.url.getOrElse("N/A")}...")
