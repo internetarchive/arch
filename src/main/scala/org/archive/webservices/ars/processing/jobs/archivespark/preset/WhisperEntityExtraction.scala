@@ -17,7 +17,7 @@ object WhisperEntityExtraction extends AiJob {
 
   override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
-  override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
+  override val category: ArchJobCategory = ArchJobCategories.Text
 
   override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
     val superFilter = super.warcPredicate(conf)

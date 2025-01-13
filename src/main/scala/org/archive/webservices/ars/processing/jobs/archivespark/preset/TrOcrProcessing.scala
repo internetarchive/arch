@@ -16,7 +16,7 @@ object TrOcrProcessing extends AiJob {
 
   override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
 
-  override val category: ArchJobCategory = ArchJobCategories.BinaryInformation
+  override val category: ArchJobCategory = ArchJobCategories.Text
 
   override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
     val superFilter = super.warcPredicate(conf)
