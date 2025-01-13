@@ -153,27 +153,27 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
 
   override def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] =
     checkFinishedState(conf.outputPath + relativeOutPath) match {
-      case Some(ProcessingState.Finished) => Some(
-        SampleVizData(
-          HdfsIO
-            .lines(conf.outputPath + relativeOutPath + "/" + MimeTypeCountFile, n = 5)
-            .flatMap { line =>
-              val comma = line.lastIndexOf(',')
-              if (comma < 0) None
-              else
-                Some {
-                  val (mimeType, count) =
-                    (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
-                  (mimeType, count)
-                }
-            }
-        )
-      )
+      case Some(ProcessingState.Finished) =>
+        Some(
+          SampleVizData(
+            HdfsIO
+              .lines(conf.outputPath + relativeOutPath + "/" + MimeTypeCountFile, n = 5)
+              .flatMap { line =>
+                val comma = line.lastIndexOf(',')
+                if (comma < 0) None
+                else
+                  Some {
+                    val (mimeType, count) =
+                      (line.take(comma).stripPrefix("\"").stripSuffix("\""), line.drop(comma + 1))
+                    (mimeType, count)
+                  }
+              }))
       case _ => None
     }
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = {
-    super.templateVariables(conf) ++ Seq("mimeCount" ->
-      sampleVizData(conf).map(_.nodes).getOrElse(Seq.empty))
+    super.templateVariables(conf) ++ Seq(
+      "mimeCount" ->
+        sampleVizData(conf).map(_.nodes).getOrElse(Seq.empty))
   }
 }

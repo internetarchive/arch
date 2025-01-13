@@ -2,11 +2,8 @@ package org.archive.webservices.ars
 
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf}
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
-
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 class BaseController extends ScalatraServlet with ScalateSupport {
   // Report and rethrow any Exceptions.

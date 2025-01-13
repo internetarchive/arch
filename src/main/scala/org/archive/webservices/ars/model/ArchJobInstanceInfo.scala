@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model
 
 import _root_.io.circe.syntax._
+import io.circe.Json
 import io.circe.parser.parse
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.io.HdfsIO
@@ -15,19 +16,20 @@ class ArchJobInstanceInfo private () {
   var started: Option[Instant] = None
   var finished: Option[Instant] = None
 
+  def toJson: Json = {
+    (ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
+      conf.map("conf" -> _.toJson)
+    } ++ {
+      started.map("started" -> _.getEpochSecond.asJson)
+    } ++ {
+      finished.map("finished" -> _.getEpochSecond.asJson)
+    }).asJson
+  }
+
   def save(jobOutPath: String): Unit = {
     val file = ArchJobInstanceInfo.infoFile(jobOutPath)
     GuavaCache.put(ArchJobInstanceInfo.CachePrefix + file, this, None)
-    HdfsIO.writeLines(
-      file,
-      Seq((ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
-        conf.map("conf" -> _.toJson)
-      } ++ {
-        started.map("started" -> _.getEpochSecond.asJson)
-      } ++ {
-        finished.map("finished" -> _.getEpochSecond.asJson)
-      }).asJson.spaces4),
-      overwrite = true)
+    HdfsIO.writeLines(file, Seq(toJson.spaces4), overwrite = true)
   }
 }
 

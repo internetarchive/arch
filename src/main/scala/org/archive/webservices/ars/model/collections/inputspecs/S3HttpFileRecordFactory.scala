@@ -40,7 +40,7 @@ object S3HttpFileRecordFactory extends FileFactoryCompanion {
     spec
       .str(InputSpec.DataLocationKey)
       .map { location =>
-        val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+        val longestPrefixMapping = spec.str("dataPathMapping").contains("longest-prefix")
         new S3HttpFileRecordFactory(location, longestPrefixMapping)
       }
       .getOrElse {

@@ -9,10 +9,12 @@ import org.archive.webservices.sparkling.util.SparkUtil
 import org.archive.webservices.sparkling.{Sparkling, _}
 
 import java.io.File
+import java.time.Instant
 import scala.concurrent.Future
 
 object SparkJobManager
     extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
+  val taskTimeoutSeconds = 60 * 60 * 12 // 12 hours
   val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128
@@ -25,7 +27,7 @@ object SparkJobManager
       synchronized(_context.filter(!_.isStopped).getOrElse {
         val context = SparkUtil.config(
           SparkSession.builder,
-          appName = "ARCH",
+          appName = s"ARCH ${ArchConf.deploymentEnvironment}",
           executors = 15,
           executorCores = 4,
           executorMemory = "16g",
@@ -34,11 +36,13 @@ object SparkJobManager
             "spark.master" -> ArchConf.sparkMaster,
             "spark.scheduler.mode" -> "FAIR",
             "spark.yarn.executor.memoryOverhead" -> (4.gb / 1.mb).toString, // off-heap memory in MiB
-            "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath),
+            "spark.scheduler.allocation.file" -> new File(SparkAllocationFile).getAbsolutePath,
+            "spark.yarn.am.memory" -> "4096m"),
           verbose = true)
         context.setLogLevel("INFO")
         _context = Some(context)
         Sparkling.resetSparkContext(Some(context))
+        context.addSparkListener(SparkJobListener)
         println("New Spark context initialized: " + context.applicationId)
         context
       })
@@ -67,10 +71,16 @@ object SparkJobManager
   }
 
   override protected def onTimeout(instances: Seq[DerivationJobInstance]): Unit = synchronized {
-    super.onTimeout(instances)
-//    stopContext()
-//    for (instance <- instances) instance.job.reset(instance.conf)
-    bypassJobs()
+    val threshold = Instant.now.getEpochSecond - taskTimeoutSeconds
+    val startTimes = SparkJobListener.taskStartTimes.values
+    if (startTimes.forall(_ < threshold)) {
+      SparkJobListener.synchronized {
+        SparkJobListener.reset()
+        stopContext()
+        return
+      }
+    }
+    if (numQueued > 0 && freeSlots == 0) bypassJobs()
   }
 
   def bypassJobs(): Boolean = synchronized {

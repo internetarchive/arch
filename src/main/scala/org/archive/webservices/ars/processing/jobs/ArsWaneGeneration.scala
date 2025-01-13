@@ -75,6 +75,7 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
             RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
               for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }
+            lazyOutFilesCache(conf) // trigger lazy outfile caching
             processed >= 0
           }
       }
@@ -98,6 +99,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
       val (path, name) = file.splitAt(file.lastIndexOf('/'))
       DerivativeOutput(name.stripPrefix("/"), path, "wane", "application/gzip")
     }
+
+  override val outputScalesWithInput: Boolean = true
 
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 

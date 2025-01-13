@@ -2,6 +2,7 @@ package org.archive.webservices.ars
 
 import _root_.io.sentry.protocol.Message
 import _root_.io.sentry.{Sentry, SentryEvent, SentryLevel}
+import org.archive.webservices.ars.addons.AddonLoader
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.JobStateManager
 import org.archive.webservices.sparkling._
@@ -12,7 +13,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
 import java.io.File
-import scala.collection.JavaConversions._ // For SentryEvent.setExtras
+import scala.collection.JavaConverters._ // For SentryEvent.setExtras
 
 object Arch {
   def start(contextPath: String, port: Int): Unit = {
@@ -63,7 +64,7 @@ object Arch {
     _message.setMessage(title)
     event.setMessage(_message)
     event.setLevel(level)
-    event.setExtras(Map("details" -> message) ++ extraContext)
+    event.setExtras((Map("details" -> message) ++ extraContext).asJava)
     Sentry.captureEvent(event)
   }
 
@@ -76,6 +77,7 @@ object Arch {
   def main(args: Array[String]): Unit = {
     IOUtil.memoryBuffer = 1.mb.toInt
     RddUtil.saveRecordTimeoutMillis = -1
+    AddonLoader.initializePackage("org.archive.webservices.arch.addons")
     JobStateManager.init()
     initSentry()
     start(ArchConf.basePath, ArchConf.internalPort)

@@ -10,10 +10,12 @@ class FileAccessContext(
     val keyRing: FileAccessKeyRing,
     val keyValueCache: Map[String, java.io.Serializable])
     extends Serializable {
-  @transient lazy val hdfsIO: HdfsIO = if (useAitHdfsIO) aitHdfsIO.get else HdfsIO
-  @transient lazy val aitHdfsIO: Option[HdfsIO] =
+  @transient lazy val hdfsIO: HdfsIO = if (useAitHdfsIO) aitHdfsIO else HdfsIO
+  @transient lazy val aitHdfsIOopt: Option[HdfsIO] =
     conf.aitCollectionHdfsHostPort
       .map { case (host, port) => HdfsIO(host, port) }
+
+  def aitHdfsIO: HdfsIO = aitHdfsIOopt.getOrElse(hdfsIO)
 
   @transient private var initialized: Boolean = false
   def init(): Unit = if (!initialized) {

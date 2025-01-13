@@ -1,29 +1,21 @@
 package org.archive.webservices.ars.processing.jobs.system
 
 import io.circe.{HCursor, parser}
+import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.WebArchiveLoader
-import org.archive.webservices.ars.model.collections.CustomCollectionSpecifics
-import org.archive.webservices.ars.model.{
-  ArchCollection,
-  ArchJobCategories,
-  ArchJobCategory,
-  DerivativeOutput
-}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.util.CacheUtil
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.cdx.CdxLoader
+import org.archive.webservices.sparkling.cdx.{CdxLoader, CdxRecord}
 import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{RddUtil, SurtUtil, Time14Util}
 
 import scala.concurrent.Future
 import scala.util.Try
 
 object UserDefinedQuery extends SparkJob {
-  implicit val logContext: LogContext = LogContext(this)
-
   val CdxDir = "index.cdx.gz"
   val InfoFile = "info.json"
 
@@ -96,58 +88,70 @@ object UserDefinedQuery extends SparkJob {
 
   override def validateParams(conf: DerivationJobConf): Option[String] = {
     super.validateParams(conf).orElse {
-      validateFields[String](
-        conf.params,
-        Seq("surtPrefix", "surtPrefixes"),
-        addOperators = true) { v =>
-        if (v.contains(")")) SurtUtil.validateHost(v) match {
+      validateQuery(conf.params)
+    }
+  }
+
+  def validateQuery(query: DerivationJobParameters): Option[String] = {
+    validateFields[String](query, Seq("surtPrefix", "surtPrefixes"), addOperators = true) { v =>
+      if (v.contains(")")) SurtUtil.validateHost(v) match {
+        case Some(_) => None
+        case None => Some("Invalid host in " + v)
+      }
+      else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
+      else None
+    }.orElse {
+      validateFields[String](query, Seq("timestampFrom", "timestampTo")) { v =>
+        Time14Util.validate(v) match {
           case Some(_) => None
-          case None => Some("Invalid host in " + v)
-        }
-        else if (v.contains(".") || v.contains(" ")) Some("Invalid SURT prefix: " + v)
-        else None
-      }.orElse {
-        validateFields[String](conf.params, Seq("timestampFrom", "timestampTo")) { v =>
-          Time14Util.validate(v) match {
-            case Some(_) => None
-            case None => Some("Invalid timestamp: " + v)
-          }
+          case None => Some("Invalid timestamp: " + v)
         }
       }
     }
+  }
+
+  def filterQuery(cdx: CdxRecord, query: DerivationJobParameters): Boolean = {
+    {
+      checkFieldOperators[String](query, Seq("surtPrefix", "surtPrefixes"))(
+        cdx.surtUrl.startsWith)
+    } && {
+      query.get[String]("timestampFrom").forall(cdx.timestamp >= _)
+    } && {
+      query
+        .get[String]("timestampTo")
+        .forall(t => cdx.timestamp <= t || cdx.timestamp.startsWith(t))
+    } && {
+      checkFieldOperators[Int](query, "status")(cdx.status == _)
+    } && {
+      checkFieldOperators[Int](query, Seq("statusPrefix", "statusPrefixes"))(s =>
+        cdx.status.toString.startsWith(s.toString))
+    } && {
+      checkFieldOperators[String](query, Seq("mime", "mimes"))(cdx.mime == _)
+    } && {
+      checkFieldOperators[String](query, Seq("mimePrefix", "mimePrefixes"))(cdx.mime.startsWith)
+    }
+  }
+
+  def filterQuery(
+      records: Iterator[CdxRecord],
+      query: DerivationJobParameters): Iterator[CdxRecord] = {
+    records.filter(filterQuery(_, query))
+  }
+
+  def filterQuery(rdd: RDD[CdxRecord], query: DerivationJobParameters): RDD[CdxRecord] = {
+    val queryBc = rdd.sparkContext.broadcast(query)
+    rdd
+      .mapPartitions { partition =>
+        val query = queryBc.value
+        filterQuery(partition, query)
+      }
   }
 
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, UserDefinedQuery, conf)
       WebArchiveLoader.loadCdx(conf.inputSpec) { rdd =>
-        val paramsBc = sc.broadcast(conf.params)
-        val filtered = rdd
-          .mapPartitions { partition =>
-            val params = paramsBc.value
-            partition.filter { cdx =>
-              {
-                checkFieldOperators[String](params, Seq("surtPrefix", "surtPrefixes"))(
-                  cdx.surtUrl.startsWith)
-              } && {
-                params.get[String]("timestampFrom").forall(cdx.timestamp >= _)
-              } && {
-                params
-                  .get[String]("timestampTo")
-                  .forall(t => cdx.timestamp <= t || cdx.timestamp.startsWith(t))
-              } && {
-                checkFieldOperators[Int](params, "status")(cdx.status == _)
-              } && {
-                checkFieldOperators[Int](params, Seq("statusPrefix", "statusPrefixes"))(s =>
-                  cdx.status.toString.startsWith(s.toString))
-              } && {
-                checkFieldOperators[String](params, Seq("mime", "mimes"))(cdx.mime == _)
-              } && {
-                checkFieldOperators[String](params, Seq("mimePrefix", "mimePrefixes"))(
-                  cdx.mime.startsWith)
-              }
-            }
-          }
+        val filtered = filterQuery(rdd, conf.params)
         val cdxPath = conf.outputPath + "/" + CdxDir
         RddUtil.saveAsTextFile(
           filtered.map(_.toCdxString),

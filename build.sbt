@@ -1,6 +1,6 @@
 import sbtassembly.AssemblyPlugin.autoImport.{assemblyMergeStrategy, assemblyOption}
 
-lazy val commonSettings = Seq(name := "arch", version := "2.0.0", scalaVersion := "2.12.8")
+lazy val commonSettings = Seq(name := "arch", organization := "org.archive.webservices", version := "2.1.1-SNAPSHOT", scalaVersion := "2.12.8")
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
@@ -54,6 +54,7 @@ val buildSettings = commonSettings ++ Seq(
   publishMavenStyle := false)
 
 lazy val root = (project in file("."))
+  .settings(buildSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",

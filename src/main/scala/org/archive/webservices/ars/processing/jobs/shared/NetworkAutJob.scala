@@ -132,17 +132,20 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
           edges.flatMap { case (src, dst) => Iterator(src, dst) }.distinct.sorted.zipWithIndex
         val nodeMap = nodes.toMap
 
-        Some(SampleVizData(
-          nodes.map { case (node, id) =>
-            (node.split(',').reverse.mkString("."), id.toString)
-          },
-          Some(edges.map { case (src, dst) => (nodeMap(src).toString, nodeMap(dst).toString) })
-        ))
+        Some(
+          SampleVizData(
+            nodes.map { case (node, id) =>
+              (node.split(',').reverse.mkString("."), id.toString)
+            },
+            Some(edges.map { case (src, dst) =>
+              (nodeMap(src).toString, nodeMap(dst).toString)
+            })))
       }
       case _ => None
     }
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =
-    super.templateVariables(conf) ++ sampleVizData(conf).map(
-      x => Seq(("nodes", x.nodes), ("edges", x.edges.get))).getOrElse(Seq.empty)
+    super.templateVariables(conf) ++ sampleVizData(conf)
+      .map(x => Seq(("nodes", x.nodes), ("edges", x.edges.get)))
+      .getOrElse(Seq.empty)
 }

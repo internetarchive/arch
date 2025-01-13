@@ -2,10 +2,10 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import io.circe.parser.parse
 import io.circe.syntax._
-import io.circe.{Decoder, HCursor}
+import io.circe.{Decoder, HCursor, Json}
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.FileCollectionSpecifics
-import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, ProcessingState}
+import org.archive.webservices.ars.processing.{DerivationJobInstance, DerivationJobParameters, JobManager, ProcessingState}
 
 import scala.util.Try
 
@@ -14,6 +14,9 @@ trait InputSpec {
   def specType: String
   def inputType: String
   def cursor: HCursor
+  def downField(key: String): Option[Json] = cursor.downField(key).focus
+  def params(key: String): Option[DerivationJobParameters] =
+    downField(key).flatMap(DerivationJobParameters.fromJson)
   def str(key: String): Option[String] = get[String](key)
   def int(key: String): Option[Int] = get[Int](key)
   def get[A: Decoder](key: String): Option[A] = cursor.get[A](key).toOption
@@ -29,7 +32,9 @@ class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[
     cursor.get[String]("id").getOrElse(specType + ":" + cursor.focus.get.noSpaces.hashCode)
   }
   override lazy val inputType: String =
-    cursor.get[String]("inputType").getOrElse(InputSpec.InputType.Files)
+    cursor
+      .get[String]("inputType")
+      .getOrElse(loader.inputType(this).getOrElse(InputSpec.InputType.Files))
 }
 
 class CollectionBasedInputSpec(
@@ -84,10 +89,10 @@ class DatasetBasedInputSpec(val uuid: String, cursorOpt: Option[HCursor] = None)
 }
 
 object InputSpec {
-  val DataSourceKey = "data-source"
-  val MetaSourceKey = "meta-source"
-  val DataLocationKey = "data-location"
-  val MetaLocationKey = "meta-location"
+  val DataSourceKey = "dataSource"
+  val MetaSourceKey = "metaSource"
+  val DataLocationKey = "dataLocation"
+  val MetaLocationKey = "metaLocation"
 
   object InputType {
     val Files = "files"

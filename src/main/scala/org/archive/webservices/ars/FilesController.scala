@@ -7,6 +7,7 @@ import org.archive.webservices.ars.model.collections.AitCollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance}
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.StringUtil
@@ -14,10 +15,11 @@ import org.scalatra._
 
 import java.io.{File, PrintWriter}
 import java.net.URL
+import java.time.Instant
 import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.HttpServletRequest
 import scala.io.Source
-import scala.util.{Random, Try}
+import scala.util.Try
 
 object FilesController {
   private val NotebooksTemplatesDir = "templates/notebooks"
@@ -82,9 +84,7 @@ object FilesController {
       postBody: Option[String] = None,
       delete: Option[String] = None): Option[HCursor] = ArchConf.githubBearer.flatMap {
     githubBearer =>
-      val ait =
-        new URL("https://api.github.com/gists" + delete.map("/" + _).getOrElse("")).openConnection
-          .asInstanceOf[HttpsURLConnection]
+      val ait = HttpUtil.openConnection("https://api.github.com/gists" + delete.map("/" + _).getOrElse(""))
       try {
         ait.setRequestProperty("Accept", "application/vnd.github+json")
         ait.setRequestProperty("Authorization", "Bearer " + githubBearer)
@@ -164,7 +164,12 @@ object FilesController {
             val nowStr = java.time.Instant.now.toString
             val dateStr = StringUtil.prefixBySeparator(nowStr, "T")
             cleanGists(GistIdPrefix + " " + dateStr)
-            val gistId = Seq(GistIdPrefix, nowStr, instance.uuid, filename, Random.nextString(10))
+            val gistId = Seq(
+              GistIdPrefix,
+              nowStr,
+              instance.uuid,
+              filename,
+              Instant.now.toEpochMilli.toString)
               .mkString(" ")
             val postBody = Map(
               "description" -> gistId.asJson,
@@ -212,7 +217,8 @@ class FilesController extends BaseController {
       case None =>
         ensureAuth { implicit context =>
           (for {
-            collection <- ArchCollection.get(ArchCollection.userCollectionId(collectionId, context.user))
+            collection <- ArchCollection.get(
+              ArchCollection.userCollectionId(collectionId, context.user))
             instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
           } yield {
             instance.outFiles.find(_.filename == filename) match {
@@ -233,7 +239,8 @@ class FilesController extends BaseController {
     ensureAuth { implicit context =>
       val jobId = params("job_id")
       (for {
-        collection <- ArchCollection.get(ArchCollection.userCollectionId(collectionId, context.user))
+        collection <- ArchCollection.get(
+          ArchCollection.userCollectionId(collectionId, context.user))
         instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)
       } yield FilesController.preview(instance, filename)).getOrElse(NotFound())
     }
@@ -246,9 +253,10 @@ class FilesController extends BaseController {
     val sample = params.get("sample").contains("true")
     params.get("access") match {
       case Some(accessToken) => {
-        val fileUrl = params.get("file_download_url").getOrElse(
-          s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}"
-        )
+        val fileUrl = params
+          .get("file_download_url")
+          .getOrElse(
+            s"${ArchConf.baseUrl}/files/download/$collectionId/$jobId/$filename?sample=${sample}&access=${accessToken}")
         (for {
           collection <- ArchCollection.get(collectionId)
           instance <- DerivationJobConf.collectionInstance(jobId, collection, sample)

@@ -5,9 +5,8 @@ import _root_.io.circe.syntax._
 import io.circe.Json
 import org.apache.hadoop.util.ShutdownHookManager
 import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
+import org.archive.webservices.ars.util.FormatUtil
 import org.archive.webservices.ars.{Arch, Keystone}
 import org.archive.webservices.sparkling.io.IOUtil
 

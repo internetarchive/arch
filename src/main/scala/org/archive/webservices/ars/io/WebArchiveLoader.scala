@@ -59,7 +59,7 @@ object WebArchiveLoader {
       val accessContext = FileAccessContext.fromLocalArchConf
       action({
         spec.inputType match {
-          case InputSpec.InputType.WARC =>
+          case InputSpec.InputType.WARC | InputSpec.InputType.Files =>
             rdd.mapPartitions { partition =>
               accessContext.init()
               partition.filter(_.mime == WarcMime)
@@ -91,7 +91,7 @@ object WebArchiveLoader {
       action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
     loadWarc(inputSpec) { rdd =>
       action(rdd.map { file =>
-        val in = file.access
+        val in = IOUtil.supportMark(file.access)
         val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
         (
           file.pointer,
@@ -151,7 +151,8 @@ object WebArchiveLoader {
       var success = false
       while (!success && apiFileCount < 0) {
         attempts += 1
-        if (attempts > WasapiAttempts) throw new RuntimeException("WASAPI error (AIT collection " + aitId + ")")
+        if (attempts > WasapiAttempts)
+          throw new RuntimeException("WASAPI error (AIT collection " + aitId + ")")
         Ait
           .getJsonWithAuth(wasapiUrl + 1, basicAuth = basicAuth) { json =>
             json.get[Int]("count").toOption
@@ -259,7 +260,9 @@ object WebArchiveLoader {
                     }
                     .map { case (originalPath, path, ait) =>
                       for (s <- prev) s.close()
-                      val in = (if (ait) aitHdfsIO.get else HdfsIO).open(path, decompress = false)
+                      val in =
+                        if (ait) aitHdfsIO.get.open(path, decompress = false)
+                        else HdfsIO.open(path, decompress = false)
                       prev = Some(in)
                       (originalPath, in)
                     } ++ IteratorUtil.noop {
@@ -359,34 +362,6 @@ object WebArchiveLoader {
     }
   }
 
-  def randomAccessPetabox(
-      context: FileAccessContext,
-      itemFilePath: String,
-      offset: Long,
-      positions: Iterator[(Long, Long)]): InputStream = {
-    val url = ArchConf.iaBaseUrl + "/serve/" + itemFilePath
-    HttpClient.rangeRequest(
-      url,
-      headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
-      offset = offset) { in =>
-      IOHelper.splitMergeInputStreams(in, positions)
-    }
-  }
-
-  def loadWarcFilesViaCdxFromPetabox(cdxPath: String): RDD[(String, InputStream)] = {
-    val accessContext = FileAccessContext.fromLocalArchConf
-    loadWarcFilesViaCdx(cdxPath) { partition =>
-      accessContext.init()
-      partition.map { case ((pointer, initialOffset), positions) =>
-        randomAccessPetabox(
-          accessContext,
-          pointer.filename,
-          initialOffset,
-          positions.map { case (_, o, l) => (o, l) })
-      }
-    }
-  }
-
   def randomAccessHdfs(
       context: FileAccessContext,
       filePath: String,
@@ -423,8 +398,8 @@ object WebArchiveLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    if (context.aitHdfsIO.exists(_.exists(filePath))) {
-      val in = context.aitHdfsIO.get.open(
+    if (context.aitHdfsIOopt.exists(_.exists(filePath))) {
+      val in = context.aitHdfsIOopt.get.open(
         filePath,
         offset = offset,
         decompress = false,

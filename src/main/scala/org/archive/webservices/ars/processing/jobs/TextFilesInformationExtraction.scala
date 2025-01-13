@@ -35,7 +35,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
   val name = "Text file information"
   val uuid = "01895069-6750-73bb-b758-a64b417097f0"
 
-  override val infoUrl = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#textfiles"
+  override val infoUrl =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#textfiles"
 
   val description =
     "Locations, metadata, and the extracted text contents for CSS, JSON, XML, plain text, JS, and HTML documents in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, MD5 and SHA1 hash values, and content."

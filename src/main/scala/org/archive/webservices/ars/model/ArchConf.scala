@@ -17,9 +17,12 @@ trait ArchConf {
   def globalJobOutPath: String
   def jobOutPath: String
   def uuidJobOutPath: Option[String]
+  def hdfsJobArtifactPath: Option[String]
+  def jobArtifactUrl: String
   def jobLoggingPath: String
   def customCollectionPath: String
   def localTempPath: String
+  def hadoopNodeLocalTempPath: String
   def sparkMaster: String
   def baseDir: String
   def basePath: String
@@ -46,6 +49,8 @@ trait ArchConf {
   def isDev: Boolean
   def forceKeystoneLogin: Boolean
   def publicSuffixListUrl: String
+  def httpProxy: String
+  def httpProxyHosts: Set[String]
 }
 
 object ArchConf extends ArchConf {
@@ -66,9 +71,12 @@ object ArchConf extends ArchConf {
   def globalJobOutPath: String = conf.globalJobOutPath
   def jobOutPath: String = conf.jobOutPath
   def uuidJobOutPath: Option[String] = conf.uuidJobOutPath
+  def hdfsJobArtifactPath: Option[String] = conf.hdfsJobArtifactPath
+  def jobArtifactUrl: String = conf.jobArtifactUrl
   def jobLoggingPath: String = conf.jobLoggingPath
   def customCollectionPath: String = conf.customCollectionPath
   def localTempPath: String = conf.localTempPath
+  def hadoopNodeLocalTempPath: String = conf.hadoopNodeLocalTempPath
   def sparkMaster: String = conf.sparkMaster
   def baseDir: String = conf.baseDir
   def basePath: String = conf.basePath
@@ -95,4 +103,6 @@ object ArchConf extends ArchConf {
   def isDev: Boolean = conf.isDev
   def forceKeystoneLogin: Boolean = conf.forceKeystoneLogin
   def publicSuffixListUrl: String = conf.publicSuffixListUrl
+  def httpProxy: String = conf.httpProxy
+  def httpProxyHosts: Set[String] = conf.httpProxyHosts
 }

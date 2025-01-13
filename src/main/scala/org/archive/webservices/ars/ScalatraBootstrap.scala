@@ -3,7 +3,6 @@ package org.archive.webservices.ars
 import org.scalatra.LifeCycle
 import org.scalatra.swagger.ApiKey
 
-
 import javax.servlet.ServletContext
 
 class ScalatraBootstrap extends LifeCycle {

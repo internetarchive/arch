@@ -5,14 +5,11 @@ import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling.executionContext
-import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.RddUtil
 
 import scala.concurrent.Future
 
 object DatasetPublication extends SparkJob {
-  implicit val logContext: LogContext = LogContext(this)
-
   val name = "Dataset publication"
   val uuid = "018950a2-21cb-7034-8d2a-03dff990cc1a"
   val category: ArchJobCategory = ArchJobCategories.System

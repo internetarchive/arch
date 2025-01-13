@@ -2,49 +2,95 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.FileAccessContext
+import org.archive.webservices.ars.model.collections.inputspecs.meta.{FileMetaData, FileMetaField}
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
 object FileSpecLoader extends InputSpecLoader {
   val specType = "files"
 
-  val MimeKey = "data-mime"
+  val MimeKey = "dataMime"
+
+  var dataSourceLoaders: Map[String, (InputSpec, FileRecordFactory) => RDD[(String, String)]] =
+    Map(
+      HdfsFileRecordFactory.dataSourceType -> loadHdfs,
+      VaultFileRecordFactory.dataSourceType -> loadVault)
 
   override def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = action({
     val recordFactory = FileRecordFactory(spec, default = HdfsFileRecordFactory)
     val recordFactoryBc = Sparkling.sc.broadcast(recordFactory)
     val accessContext = FileAccessContext.fromLocalArchConf
-    (recordFactory.dataSourceType match {
-      case HdfsFileRecordFactory.dataSourceType => loadHdfs(spec, recordFactory)
-      case VaultFileRecordFactory.dataSourceType => loadVault(spec, recordFactory)
-      case _ => throw new UnsupportedOperationException()
-    }).mapPartitions { partition =>
-      accessContext.init()
-      val recordFactory = recordFactoryBc.value
-      recordFactory.accessContext = accessContext
-      val meta = FileMeta.empty
-      partition.map { case (path, mime) =>
-        recordFactory.get(path, mime, meta)
+    dataSourceLoaders
+      .getOrElse(
+        recordFactory.dataSourceType, {
+          throw new UnsupportedOperationException(
+            "No loader specified for data source type " + recordFactory.dataSourceType)
+        })(spec, recordFactory)
+      .mapPartitions { partition =>
+        accessContext.init()
+        val recordFactory = recordFactoryBc.value
+        recordFactory.accessContext = accessContext
+        partition.map { case (path, mime) =>
+          recordFactory.get(
+            path,
+            mime,
+            FileMetaData(FileMetaField("path", path), FileMetaField("mime", mime)))
+        }
       }
-    }
   })
+
+  def dataMime(spec: InputSpec): Option[Either[String, Map[String, String]]] = {
+    spec.str(MimeKey) match {
+      case Some(mime) => Some(Left(mime))
+      case None =>
+        val cursor = spec.cursor.downField(MimeKey)
+        val map = cursor.keys.toSeq.flatten.flatMap { key =>
+          cursor.get[String](key).toOption.map(key -> _)
+        }.toMap
+        if (map.isEmpty) None else Some(Right(map))
+    }
+  }
+
+  def setMime(
+      files: Iterator[String],
+      mime: Either[String, Map[String, String]]): Iterator[(String, String)] = {
+    mime match {
+      case Left(m) => files.map((_, m))
+      case Right(map) =>
+        files.flatMap { path =>
+          path
+            .split('/')
+            .last
+            .split('.')
+            .drop(1)
+            .tails
+            .map(_.mkString("."))
+            .find(map.contains)
+            .map { ext =>
+              (path, map(ext))
+            }
+        }
+    }
+  }
 
   def loadHdfs(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
     for {
       location <- spec.str(InputSpec.DataLocationKey)
-      mime <- spec.str(MimeKey)
+      mime <- dataMime(spec)
     } yield {
-      RddUtil.loadFilesLocality(location, setPartitionFiles = false).mapPartitions { partition =>
-        partition.map((_, mime))
+      val rdd = RddUtil.loadFilesLocality(location, setPartitionFiles = false)
+      val mimeBc = rdd.sparkContext.broadcast(mime)
+      rdd.mapPartitions { partition =>
+        setMime(partition, mimeBc.value)
       }
     }
   }.getOrElse {
-    throw new RuntimeException("No location and/or mime type specified.")
+    throw new RuntimeException("No location and/or mime type(s) specified.")
   }
 
   def loadVault(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
     val vault = recordFactory.asInstanceOf[VaultFileRecordFactory]
-    val (resolved, remaining) = vault.iterateGlob(Set(spec.str("file-glob").getOrElse("**")))
+    val (resolved, remaining) = vault.iterateGlob(Set(spec.str("fileGlob").getOrElse("**")))
     val partitions =
       (resolved.map { case (p, n) => (p, n.fileType) } ++ remaining.map { p => (p, None) }).toSeq
     val vaultBc = Sparkling.sc.broadcast(vault)

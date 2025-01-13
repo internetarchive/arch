@@ -2,6 +2,7 @@ package org.archive.webservices.ars.util
 
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
+import org.archive.webservices.ars.model.ArchConf
 
 import scala.io.Source
 

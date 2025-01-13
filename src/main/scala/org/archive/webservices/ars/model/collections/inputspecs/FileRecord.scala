@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.FilePointer
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
 
@@ -12,7 +13,7 @@ trait FileRecord {
   }
   def filePath: String = FileRecordFactory.filePath(path, filename)
   def mime: String
-  def meta: FileMeta
+  def meta: FileMetaData
   def access: InputStream
   def pointer: FilePointer = FilePointer(filePath, filename)
 
@@ -22,7 +23,7 @@ trait FileRecord {
       override def filename: String = origin.filename
       override def mime: String = origin.mime
       override def path: String = origin.path
-      override def meta: FileMeta = origin.meta
+      override def meta: FileMetaData = origin.meta
       override def access: InputStream = in
     }
   }

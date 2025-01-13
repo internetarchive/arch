@@ -2,12 +2,13 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
+import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
+import org.archive.webservices.ars.util.LazyCache
 import org.scalatra._
-import org.scalatra.util.NotNothing
 import org.scalatra.swagger._
+import org.scalatra.util.NotNothing
 
 import scala.util.Try
 
@@ -52,6 +53,12 @@ class JobUuidApiController(implicit val swagger: Swagger)
     response(ApiController.jobStateResponse)
   }
 
+  get(UuidPattern + "info") {
+    response { instance =>
+      Ok(instance.info.toJson.spaces4, Map("Content-Type" -> "application/json"))
+    }
+  }
+
   def getResult =
     (jobApiOp[WasapiResponse]("getResult")
       summary "Get the job's WASAPI output listing"
@@ -82,17 +89,9 @@ class JobUuidApiController(implicit val swagger: Swagger)
 
   get(UuidPattern + "files", operation(listFiles)) {
     response { instance =>
-      Ok(
-        // Temporarily skip retrieving files for WAT/WANE and ArchiveSpark* job types
-        // until peformance issue is resolved, see: WT-2870
-        if (instance.job == org.archive.webservices.ars.processing.jobs.ArsWatGeneration
-          || instance.job == org.archive.webservices.ars.processing.jobs.ArsWaneGeneration
-          || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtraction
-          || instance.job == org.archive.webservices.ars.processing.jobs.archivespark.ArchiveSparkEntityExtractionChinese)
-          Seq.empty.asInstanceOf[Seq[_root_.io.circe.Json]].asJson
-        else
-          instance.outFiles.map(DatasetFile.apply).map(_.toJson).toArray.asJson,
-        Map("Content-Type" -> "application/json"))
+      LazyCache.lazyJsonResponse(instance.lazyOutFiles)(
+        instance.outFiles,
+        _.map(DatasetFile.apply).map(_.toJson).toArray.asJson)
     }
   }
 
