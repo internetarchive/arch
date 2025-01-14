@@ -147,6 +147,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
       val outPath = conf.outputPath + relativeOutPath
       val outFiles = Seq(
         resultDir + "/*.gz",
+        "/out.json.gz/*.gz",
         resultFile,
         "/result.json.gz"
       ) // a list for backward compatibility
