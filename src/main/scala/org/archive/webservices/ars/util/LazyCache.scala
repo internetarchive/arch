@@ -11,31 +11,35 @@ import scala.concurrent.Future
 object LazyCache {
   val writingSuffix = "_writing"
 
-  private var lazyFuture = Future(true)
+  private var lazyFuture = Future.successful(true)
   private var processing = Map.empty[String, Future[Boolean]]
 
   def getOrCache[A](
       cacheFile: String)(parse: String => Option[A], write: String => Unit): Future[A] =
     synchronized {
       val parsed = getIfCached(cacheFile)(parse)
-      if (parsed.isDefined) return Future(parsed.get)
-      processing
-        .getOrElse(
-          cacheFile, {
-            lazyFuture = lazyFuture.map(_ => {
-              val tmpFilePath = cacheFile + writingSuffix
-              write(tmpFilePath)
-              HdfsIO.rename(tmpFilePath, cacheFile)
-              true
-            })
-            processing += cacheFile -> lazyFuture
-            lazyFuture
-          })
-        .map { _ =>
-          processing -= cacheFile
-          parse(cacheFile).get
-        }
+      if (parsed.isDefined) return Future.successful(parsed.get)
+      overwriteCache(cacheFile, write).map(_ => parse(cacheFile).get)
     }
+
+  def overwriteCache(cacheFile: String, write: String => Unit): Future[Boolean] = {
+    processing
+      .getOrElse(
+        cacheFile, {
+          lazyFuture = lazyFuture.map(_ => {
+            val tmpFilePath = cacheFile + writingSuffix
+            write(tmpFilePath)
+            HdfsIO.rename(tmpFilePath, cacheFile)
+            true
+          })
+          processing += cacheFile -> lazyFuture
+          lazyFuture
+        })
+      .map { v =>
+        processing -= cacheFile
+        v
+      }
+  }
 
   def getIfCached[A](cacheFile: String)(parse: String => Option[A]): Option[A] = {
     if (HdfsIO.exists(cacheFile)) parse(cacheFile) else None

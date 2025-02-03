@@ -5,13 +5,12 @@ import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
-import org.archive.webservices.ars.processing.jobs.archivespark.functions.CoreNlpEntities
 
 import java.util.Properties
 import scala.collection.JavaConverters.asScalaSetConverter
 
 object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String] {
-  override lazy val baseFunc: Entities = new CoreNlpEntities()
+  override lazy val baseFunc: Entities = Entities
 
   override def defaultDependency: Option[DataLoadPointer[ArchEnrichRoot[_], String]] = Some(
     ArchiveSparkEnrichJob.plainTextLoad)
@@ -19,8 +18,8 @@ object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String] {
   override def initFunc(params: DerivationJobParameters): EnrichFunc[_, String, _] = {
     val langParam = params.get[String]("lang").map(_.toLowerCase)
     langParam match {
-      case Some("chinese") => new CoreNlpEntities(properties(langParam))
-      case _ => new CoreNlpEntities(properties(langParam), filterLatin = true)
+      case Some("chinese") => Entities.apply(properties(langParam))
+      case _ => Entities.onLatin(properties(langParam))
     }
   }
 

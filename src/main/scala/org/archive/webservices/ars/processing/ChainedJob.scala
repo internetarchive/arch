@@ -35,8 +35,6 @@ abstract class ChainedJob extends DerivationJob {
   override def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] =
     children.toIterator.flatMap(_.outFiles(conf))
 
-  override def outputScalesWithInput: Boolean = children.exists(_.outputScalesWithInput)
-
   private def onChildComplete(
       instance: DerivationJobInstance,
       idx: Int,
@@ -102,4 +100,6 @@ abstract class ChainedJob extends DerivationJob {
       }
     } else None
   }
+
+  override def isResumable(conf: DerivationJobConf): Boolean = false
 }

@@ -10,9 +10,8 @@ import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}
 
 import java.io.{InputStream, PrintWriter}
-import java.net.{HttpURLConnection, URL, URLEncoder}
+import java.net.{URL, URLEncoder}
 import java.util.Base64
-import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import scala.collection.JavaConverters._
 import scala.io.Source

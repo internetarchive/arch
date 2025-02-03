@@ -1,15 +1,11 @@
 package org.archive.webservices.ars.processing
 
-import _root_.io.circe.parser._
-import _root_.io.circe.syntax._
-import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing.jobs._
 import org.archive.webservices.ars.processing.jobs.archivespark._
 import org.archive.webservices.ars.processing.jobs.archivespark.preset._
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, MetadataSummary, UserDefinedQuery}
-import org.archive.webservices.sparkling.io.HdfsIO
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
@@ -17,7 +13,6 @@ import scala.collection.mutable
 object JobManager {
   var MaxAttempts = 3
   var MaxSlots = 3
-  val InstanceUuidFileSuffix = ".uuid.json"
 
   private val confInstances =
     mutable.Map.empty[DerivationJobConf.Identifier, mutable.Map[String, DerivationJobInstance]]
@@ -73,43 +68,15 @@ object JobManager {
     collectionInstances.get(collectionId).map(_.toSet).getOrElse(Set.empty)
   }
 
-  def registerUuid(instance: DerivationJobInstance): Unit =
+  def registerUuid(instance: DerivationJobInstance): Unit = {
     if (instance.job.partialOf.isEmpty) {
       uuidInstances(instance.uuid) = instance
-      val uuidPath = instance.conf.outputPath + "/" + instance.uuid + InstanceUuidFileSuffix
-      HdfsIO.writeLines(
-        uuidPath,
-        Seq(
-          (ListMap(
-            "jobUuid" -> instance.job.uuid.asJson,
-            "jobId" -> instance.job.id.asJson,
-            "conf" -> instance.conf.toJson) ++ {
-            instance.user.map("user" -> _.id.asJson)
-          }).asJson.spaces4),
-        overwrite = true)
+      UuidManager.saveUuidInfo(instance)
     }
+  }
 
   def getInstance(uuid: String): Option[DerivationJobInstance] = {
-    uuidInstances.get(uuid).orElse {
-      ArchConf.uuidJobOutPath
-        .map(_ + "/" + uuid)
-        .map { uuidPath =>
-          uuidPath + "/" + uuid + InstanceUuidFileSuffix
-        }
-        .filter(HdfsIO.exists)
-        .flatMap { uuidFilePath =>
-          parse(HdfsIO.lines(uuidFilePath).mkString).toOption.map(_.hcursor).flatMap { cursor =>
-            for {
-              job <- cursor.get[String]("jobUuid").toOption.flatMap(uuidLookup.get)
-              conf <- cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
-            } yield {
-              val instance = job.history(conf)
-              instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get)
-              instance
-            }
-          }
-        }
-    }
+    uuidInstances.get(uuid).orElse(UuidManager.getInstance(uuid))
   }
 
   def registered: Set[DerivationJobInstance] = collectionInstances.values.flatten.toSet
@@ -148,16 +115,20 @@ object JobManager {
     instance.registered = false
     JobStateManager.logUnregister(instance)
     instance.unregistered()
-    if (instance.job.partialOf.isEmpty && instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
-      instance.job.reset(instance.conf)
-      instance.job.enqueue(
-        instance.conf,
-        { newInstance =>
-          newInstance.predefUuid = Some(instance.uuid)
-          newInstance.user = instance.user
-          newInstance.attempt = instance.attempt + 1
-          if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
-        })
+    if (instance.job.partialOf.isEmpty) {
+      if (instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
+        if (!instance.isResumable) instance.job.reset(instance.conf)
+        instance.job.enqueue(
+          instance.conf,
+          { newInstance =>
+            newInstance.predefUuid = Some(instance.uuid)
+            newInstance.user = instance.user
+            newInstance.attempt = instance.attempt + 1
+            if (instance.slots < MaxSlots) newInstance.slots = instance.slots + 1
+          })
+      } else if (instance.state == ProcessingState.Finished) {
+        UuidManager.finalizeUuid(instance)
+      }
     }
   }
 

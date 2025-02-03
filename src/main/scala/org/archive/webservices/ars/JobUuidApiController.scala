@@ -2,6 +2,7 @@ package org.archive.webservices.ars
 
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
+import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model.api.{DatasetFile, JobState, WasapiResponse}
 import org.archive.webservices.ars.model.{ArchConf, PublishedDatasets}
 import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager, SampleVizData}
@@ -92,6 +93,20 @@ class JobUuidApiController(implicit val swagger: Swagger)
       LazyCache.lazyJsonResponse(instance.lazyOutFiles)(
         instance.outFiles,
         _.map(DatasetFile.apply).map(_.toJson).toArray.asJson)
+    }
+  }
+
+  get(UuidPattern + "cache-files") {
+    response { instance =>
+      UuidManager.writeOutFilesCache(instance, {
+        for {
+          glob <- params.get("glob")
+          mime <- params.get("mime")
+          t <- params.get("type")
+        } yield (glob, mime, t)
+      }).map { _ =>
+        Ok()
+      }.getOrElse(BadRequest())
     }
   }
 
