@@ -15,30 +15,29 @@ object LazyCache {
   private var processing = Map.empty[String, Future[Boolean]]
 
   def getOrCache[A](
-      cacheFile: String)(parse: String => Option[A], write: String => Unit): Future[A] =
-    synchronized {
-      val parsed = getIfCached(cacheFile)(parse)
-      if (parsed.isDefined) return Future.successful(parsed.get)
-      overwriteCache(cacheFile, write).map(_ => parse(cacheFile).get)
-    }
+      cacheFile: String)(parse: String => Option[A], write: String => Unit): Future[A] = {
+    val parsed = getIfCached(cacheFile)(parse)
+    if (parsed.isDefined) return Future.successful(parsed.get)
+    overwriteCache(cacheFile, write).map(_ => parse(cacheFile).get)
+  }
 
   def overwriteCache(cacheFile: String, write: String => Unit): Future[Boolean] = {
     processing
       .getOrElse(
-        cacheFile, {
-          lazyFuture = lazyFuture.map(_ => {
-            val tmpFilePath = cacheFile + writingSuffix
-            write(tmpFilePath)
-            HdfsIO.rename(tmpFilePath, cacheFile)
-            true
+        cacheFile, synchronized {
+          processing.getOrElse(cacheFile, {
+            lazyFuture = lazyFuture.map(_ => {
+              val tmpFilePath = cacheFile + writingSuffix
+              write(tmpFilePath)
+              if (HdfsIO.exists(cacheFile)) HdfsIO.delete(cacheFile)
+              HdfsIO.rename(tmpFilePath, cacheFile)
+              synchronized(processing -= cacheFile)
+              true
+            })
+            processing += cacheFile -> lazyFuture
+            lazyFuture
           })
-          processing += cacheFile -> lazyFuture
-          lazyFuture
         })
-      .map { v =>
-        processing -= cacheFile
-        v
-      }
   }
 
   def getIfCached[A](cacheFile: String)(parse: String => Option[A]): Option[A] = {
