@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.Vault.TreeNode
 import org.archive.webservices.ars.io._
+import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
@@ -45,9 +46,7 @@ class VaultFileRecordFactory(
   }
 
   def accessContentUrl(contentUrl: String): InputStream = {
-    // for later when changed to Vault content URL instead of public archive.org
-    // Vault.access(contentUrl, sessionId)
-    new URL(contentUrl).openStream
+    Vault.access(ArchConf.vaultBaseUrl ++ contentUrl, sessionId)
   }
 
   def contentUrl(file: String, resolve: Boolean = true): String = {
@@ -99,8 +98,6 @@ class VaultFileRecordFactory(
 }
 
 object VaultFileRecordFactory extends FileFactoryCompanion {
-  val VaultUrl = "https://vault.archive-it.org"
-
   val dataSourceType: String = "vault"
 
   def apply(spec: InputSpec): VaultFileRecordFactory = {
@@ -131,7 +128,7 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
         .str("vaultCollectionTreenode")
         .flatMap(id => Try(id.toInt).toOption).orElse(dataCollection)
       (username, password) <- FileAccessKeyRing
-        .forUrl(VaultUrl)
+        .forUrl(ArchConf.vaultBaseUrl)
         .flatMap {
           case (FileAccessKeyRing.AccessMethodVault, Array(user, pw)) =>
             Some((user, pw))
