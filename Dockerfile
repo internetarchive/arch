@@ -1,7 +1,99 @@
 # Ubuntu (Focal) based image
-FROM ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:20.04
 
-# Build using the command: docker build --build-arg UID=$UID . -t arch
+# Build using the command: docker build --build-arg UID=$UID . -t ait-arch
+
+
+###############################################################################
+# Miniconda build stage
+###############################################################################
+
+FROM $BASE_IMAGE AS build-miniconda
+
+ARG CONDA_INSTALL_SCRIPT=Miniconda3-py310_25.1.1-2-Linux-x86_64.sh
+ARG CONDA_INSTALL_SCRIPT_SHA256=7f298109ab95b5436632973a04189a125282cc948f1dd1b03fa9cb6c71443915
+ARG CONDA_INSTALL_SCRIPT_URL=https://repo.anaconda.com/miniconda/$CONDA_INSTALL_SCRIPT
+ARG CONDA_DIR=/root/miniconda3
+ARG WHISPER_MODEL_URL=https://openaipublic.azureedge.net/main/whisper/models/25a8566e1d0c1e2231d1c762132cd20e0f96a85d16145c3a00adf5d1ac670ead/base.en.pt
+
+# Install system packages
+RUN apt update && apt install -y \
+    curl \
+    git
+
+WORKDIR /root
+
+# Install Miniconda
+RUN curl --silent --remote-name $CONDA_INSTALL_SCRIPT_URL
+RUN echo "$CONDA_INSTALL_SCRIPT_SHA256 $CONDA_INSTALL_SCRIPT" | sha256sum --check
+RUN bash $CONDA_INSTALL_SCRIPT -b -p $CONDA_DIR
+ENV PATH="/root/miniconda3/bin:$PATH"
+RUN conda install --yes --channel conda-forge conda-pack
+RUN conda init
+
+
+###############################################################################
+# Whisper job artifacts build stage
+###############################################################################
+
+FROM build-miniconda AS build-whisper-artifacts
+
+# Build the conda env.
+RUN . ./.bashrc \
+    && conda create --yes --name whisper-env python=3.10 \
+    && conda activate whisper-env \
+    && conda install --yes 'numpy<2' pytorch==2.0.0 torchaudio==2.0.0 pytorch-cuda=11.8 -c pytorch -c nvidia \
+    && pip install git+https://github.com/openai/whisper.git \
+    && conda install --yes --channel conda-forge ffmpeg \
+    && conda pack -n whisper-env -o conda-whisper-env.tar.gz
+
+# Download the transcription model
+RUN curl --silent $WHISPER_MODEL_URL -o base.en.pt
+
+
+###############################################################################
+# TrOCR job artifacts build stage
+###############################################################################
+
+FROM build-miniconda AS build-trocr-artifacts
+
+# Build the conda env.
+RUN . ./.bashrc \
+    && conda create --yes --name trocr-env python=3.10 \
+    && conda activate trocr-env \
+    && conda install --yes 'numpy<2' pytorch==1.11.0 torchvision==0.12.0 pytorch-cuda=11.8 -c pytorch -c nvidia \
+    && pip install opencv-python==4.10.0.84 scikit-image==0.24.0 transformers==4.43.4 \
+    && conda pack -n trocr-env -o conda-trocr-env.tar.gz
+
+# Create trocr-models.tar.gz
+## Download craft_mlt_25k.pth
+WORKDIR /root/trocr-models/weights
+RUN curl -OJs 'https://drive.usercontent.google.com/download?id=1Jk4eGD7crsqCCg9C9VjCLkMN3ze8kutZ&confirm=t'
+## Download craft_refiner_CTW1500.pth
+RUN curl -OJs 'https://drive.usercontent.google.com/download?id=1XSaFwBkOaFOdtk4Ane3DFyJGPRw6v5bO&confirm=t'
+## Install git lfs
+RUN curl -L --silent --remote-name https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/git-lfs-linux-amd64-v3.6.1.tar.gz \
+    && tar xf git-lfs-linux-amd64-v3.6.1.tar.gz \
+    && git-lfs-3.6.1/install.sh \
+    && git lfs install \
+    && rm -rf ./git-lfs-3.6.1 git-lfs-linux-amd64-v3.6.1.tar.gz
+## Clone trocr-base-handwritten repo
+WORKDIR /root/trocr-models
+RUN git clone https://huggingface.co/microsoft/trocr-base-handwritten
+## Create the trocr-models.tar.gz archive
+WORKDIR /root
+RUN tar -czvf trocr-models.tar.gz -C trocr-models .
+
+# Create craft-pytorch.tar.gz
+RUN git clone https://github.com/clovaai/CRAFT-pytorch.git
+RUN tar -czvf craft-pytorch.tar.gz -C CRAFT-pytorch .
+
+
+###############################################################################
+# Final build stage
+###############################################################################
+
+FROM $BASE_IMAGE
 
 ARG UID
 ARG DEBIAN_FRONTEND=noninteractive
@@ -20,11 +112,11 @@ ARG CORENLP_CHINESE_JAR_URL=https://huggingface.co/stanfordnlp/corenlp-chinese/r
 ARG CORENLP_CHINESE_JAR_CHECKSUM=e624af936cda0373e20b6f44a65fdfb1bc196e8b56761dc9659728d98150d5e0
 
 ARG SPARKLING_GIT_REPO=https://github.com/internetarchive/Sparkling
-ARG SPARKLING_SHA1=d7264212eacc5df001bbec36a69b96aca4925d79
+ARG SPARKLING_SHA1=a5fd21586bef6799630250c7b2625ea36ad5e5ba
 ARG SPARKLING_DIR=$ARCH_USER_HOME/sparkling
 
 ARG ARCHIVESPARK_GIT_REPO=https://github.com/internetarchive/ArchiveSpark
-ARG ARCHIVESPARK_SHA1=abb7b03603b48ec6e60b97e2c006f224ab95fa85
+ARG ARCHIVESPARK_SHA1=853ff1db7b8b57858cbb652ef8788deca5b65d2c
 ARG ARCHIVESPARK_DIR=$ARCH_USER_HOME/archivespark
 
 ARG SPARKLING_JAR_PATH=$SPARKLING_DIR/target/scala-2.12/sparkling-assembly-0.3.8-SNAPSHOT.jar
@@ -36,6 +128,13 @@ ARG CORENLP_CHINESE_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.6-models-chinese.
 ARG JOLLYDAY_JAR_PATH=$CORENLP_DIR/jollyday.jar
 
 ARG TEST_WARC_URL=https://archive.org/download/sample-warc-file/IIPC-COVID-Announcement.warc.gz
+
+ARG HADOOP_NODE_LOCAL_TEMP_PATH=/arch-tmp
+ARG HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER=$HADOOP_NODE_LOCAL_TEMP_PATH/whisper/20240807195100
+ARG HADOOP_NODE_LOCAL_TEMP_PATH_TROCR=$HADOOP_NODE_LOCAL_TEMP_PATH/trocr/20240807195100
+ARG HDFS_JOB_ARTIFACT_PATH=/user/helge/arch-data
+ARG HDFS_JOB_ARTIFACT_PATH_WHISPER=$HDFS_JOB_ARTIFACT_PATH/whisper
+ARG HDFS_JOB_ARTIFACT_PATH_TROCR=$HDFS_JOB_ARTIFACT_PATH/trocr
 
 # Metadata
 LABEL maintainer="Derek Enos <derekenos@archive.org>, Helge Holzmann <helge@archive.org>"
@@ -49,7 +148,8 @@ RUN apt update && apt install -y \
     openjdk-8-jdk \
     git \
     unzip \
-    jq
+    jq \
+    tmux
 
 # Install maven after java 8
 RUN apt install -y maven
@@ -128,10 +228,48 @@ RUN mkdir -p /user/helge/arch-test-collection \
     && curl -sL --output /user/helge/arch-test-collection/test.warc.gz $TEST_WARC_URL \
     && chown --recursive arch:arch /user
 
+# Ensure that the default config hadoopNodeLocalTempPath path exists, to which
+# we will symlink the required AI-job-related assets.
+RUN mkdir $HADOOP_NODE_LOCAL_TEMP_PATH && chown arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH
+
+# Copy in the Whisper job artifacts.
+WORKDIR $HDFS_JOB_ARTIFACT_PATH_WHISPER
+COPY --from=build-whisper-artifacts /root/conda-whisper-env.tar.gz .
+COPY --from=build-whisper-artifacts /root/base.en.pt .
+COPY ./job_scripts/whisper-run.py .
+RUN chown --recursive arch:arch $HDFS_JOB_ARTIFACT_PATH_WHISPER
+
+# Symlink whisper assets into expected HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER path to prevent
+# ARCH from creating a copy of the files on first run.
+RUN mkdir -p $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER
+RUN chown arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_WHISPER/conda-whisper-env.tar.gz $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER/conda-whisper-env.tar.gz
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_WHISPER/whisper-run.py $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER/whisper-run.py
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_WHISPER/base.en.pt $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER/base.en.pt
+
+# Copy in the TrOCR job artifacts.
+WORKDIR $HDFS_JOB_ARTIFACT_PATH_TROCR
+COPY --from=build-trocr-artifacts /root/conda-trocr-env.tar.gz .
+COPY --from=build-trocr-artifacts /root/trocr-models.tar.gz .
+COPY --from=build-trocr-artifacts /root/craft-pytorch.tar.gz .
+COPY ./job_scripts/trocr-run.py .
+RUN chown --recursive arch:arch .
+
+# Symlink trocr assets into expected HADOOP_NODE_LOCAL_TEMP_PATH_TROCR path to prevent
+# ARCH from creating a copy of the files on first run.
+RUN mkdir -p $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR
+RUN chown arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_TROCR/conda-trocr-env.tar.gz $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR/conda-trocr-env.tar.gz
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_TROCR/trocr-models.tar.gz $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR/trocr-models.tar.gz
+RUN ln -s $HDFS_JOB_ARTIFACT_PATH_TROCR/craft-pytorch.tar.gz $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR/craft-pytorch.tar.gz
+# Have to actually copy the python script which attempts to do a local python module import
+RUN cp $HDFS_JOB_ARTIFACT_PATH_TROCR/trocr-run.py $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR/
+
 # Copy entrypoint script.
 COPY --chown=arch entrypoint.sh /entrypoint.sh
 
 USER arch
+WORKDIR $ARCH_INSTALL_DIR
 
 RUN ["sbt", "dev/clean", "dev/update", "dev/compile"]
 

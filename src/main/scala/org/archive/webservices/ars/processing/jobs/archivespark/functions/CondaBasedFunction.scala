@@ -91,7 +91,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
         val pipe = StageSyncManager.claimFileIn(pipePath)
         shell.exec(
-          cmd,
+          cmd ++ s" $pipePath",
           waitForLine = Some(outputEndToken),
           supportsEcho = false,
           pipe = Some(pipe))

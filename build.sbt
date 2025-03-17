@@ -54,7 +54,6 @@ val buildSettings = commonSettings ++ Seq(
   publishMavenStyle := false)
 
 lazy val root = (project in file("."))
-  .settings(buildSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
