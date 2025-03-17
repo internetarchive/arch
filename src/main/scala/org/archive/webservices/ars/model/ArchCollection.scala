@@ -88,9 +88,9 @@ object ArchCollection {
   }
 
   def stripIdUser(idWithPrefix: String): String =
-    prefix(idWithPrefix).map(p =>
-      p + ArchCollection.splitIdUserCollection(idWithPrefix.stripPrefix(p))._2
-    ).getOrElse(idWithPrefix)
+    prefix(idWithPrefix)
+      .map(p => p + ArchCollection.splitIdUserCollection(idWithPrefix.stripPrefix(p))._2)
+      .getOrElse(idWithPrefix)
 
   def prependUserId(idWithoutPrefix: String, userId: String): String = {
     userId + ArchCollection.UserIdSeparator + idWithoutPrefix

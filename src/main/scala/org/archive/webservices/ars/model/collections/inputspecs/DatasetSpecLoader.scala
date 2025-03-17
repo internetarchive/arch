@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 import org.apache.spark.rdd.RDD
 import org.archive.webservices.ars.io.FileAccessContext
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.util.RddUtil
 
@@ -19,7 +20,7 @@ object DatasetSpecLoader extends InputSpecLoader {
           accessContext.init()
           val recordFactory = recordFactoryBc.value
           recordFactory.accessContext = accessContext
-          val meta = FileMeta.empty
+          val meta = FileMetaData.empty
           partition.map { file =>
             recordFactory.get(file.path, file.mimeType, meta)
           }

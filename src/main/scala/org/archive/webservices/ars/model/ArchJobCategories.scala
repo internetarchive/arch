@@ -11,15 +11,10 @@ object ArchJobCategories {
     "Collection",
     "Discover domain-related patterns and high level information about the documents in a web archive.")
 
-  val Network = ArchJobCategory(
-    "Network",
-    "Explore connections in a web archive visually.")
+  val Network = ArchJobCategory("Network", "Explore connections in a web archive visually.")
 
-  val Text = ArchJobCategory(
-    "Text",
-    "Extract and analyze a web archive as text.")
+  val Text = ArchJobCategory("Text", "Extract and analyze a web archive as text.")
 
-  val System = ArchJobCategory(
-    "System",
-    "Internal system jobs that are not meant to be exposed to users.")
+  val System =
+    ArchJobCategory("System", "Internal system jobs that are not meant to be exposed to users.")
 }

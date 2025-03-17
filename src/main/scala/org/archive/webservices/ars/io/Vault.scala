@@ -3,8 +3,9 @@ package org.archive.webservices.ars.io
 import _root_.io.circe.parser._
 import io.circe.HCursor
 import org.archive.webservices.ars.model.ArchConf
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.html.HtmlProcessor
-import org.archive.webservices.sparkling.util.{IteratorUtil, StringUtil}
+import org.archive.webservices.sparkling.util.IteratorUtil
 
 import java.io.InputStream
 import java.net.URL
@@ -27,14 +28,15 @@ object Vault {
         val get = requests.get(LoginUrl)
         val csrfToken = get.cookies(CsrfTokenCookie).getValue
         val loginPage = get.text
-        val csrfMiddleWareToken = HtmlProcessor.tag(loginPage, "input").find { tag =>
-          HtmlProcessor.attributeValue(tag, "name").contains("csrfmiddlewaretoken")
-        }.flatMap(HtmlProcessor.attributeValue(_, "value"))
+        val csrfMiddleWareToken = HtmlProcessor
+          .tag(loginPage, "input")
+          .find { tag =>
+            HtmlProcessor.attributeValue(tag, "name").contains("csrfmiddlewaretoken")
+          }
+          .flatMap(HtmlProcessor.attributeValue(_, "value"))
         val post = requests.post(
           LoginUrl,
-          data = Map(
-            "username" -> username,
-            "password" -> password) ++ {
+          data = Map("username" -> username, "password" -> password) ++ {
             csrfMiddleWareToken.map("csrfmiddlewaretoken" -> _)
           },
           headers = Seq("Referer" -> LoginUrl),
@@ -130,7 +132,7 @@ object Vault {
   }
 
   def access(url: String, sessionId: String): InputStream = {
-    val connection = new URL(url).openConnection.asInstanceOf[HttpsURLConnection]
+    val connection = HttpUtil.openConnection(url)
     connection.setRequestProperty("Accept", "*/*")
     connection.setRequestProperty("Cookie", s"$SessionIdCookie=$sessionId")
     connection.getInputStream

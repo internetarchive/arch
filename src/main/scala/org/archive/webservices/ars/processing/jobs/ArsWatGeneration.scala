@@ -10,7 +10,6 @@ import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.ars.WAT
 import org.archive.webservices.sparkling.compression._
 import org.archive.webservices.sparkling.io._
-import org.archive.webservices.sparkling.logging.LogContext
 import org.archive.webservices.sparkling.util.{IteratorUtil, RddUtil, StringUtil}
 
 import java.io.InputStream
@@ -18,8 +17,6 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object ArsWatGeneration extends SparkJob with ArsJob {
-  implicit val logContext: LogContext = LogContext(this)
-
   val name = "Web archive transformation (WAT)"
   val uuid = "01895066-11f7-7c35-af62-603955c6c20f"
   val category: ArchJobCategory = ArchJobCategories.Collection
@@ -70,6 +67,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
           RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
             for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
+          lazyOutFilesCache(conf) // trigger lazy outfile caching
           processed >= 0
         }
       }
@@ -93,6 +91,8 @@ object ArsWatGeneration extends SparkJob with ArsJob {
       val (path, name) = file.splitAt(file.lastIndexOf('/'))
       DerivativeOutput(name.stripPrefix("/"), path, "wat", "application/gzip")
     }
+
+  override val outputScalesWithInput: Boolean = true
 
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 

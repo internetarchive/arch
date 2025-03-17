@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.{FileAccessContext, FileAccessKeyRing, FilePointer, IOHelper}
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -19,7 +20,7 @@ class S3FileRecordFactory(
   class S3FileRecord private[S3FileRecordFactory] (
       file: String,
       val mime: String,
-      val meta: FileMeta)
+      val meta: FileMetaData)
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     override def access: InputStream = accessFile(filePath, resolve = false)
@@ -27,7 +28,7 @@ class S3FileRecordFactory(
       FilePointer(IOHelper.concatPaths(endpoint, bucket, filePath), filename)
   }
 
-  override def get(file: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(file: String, mime: String, meta: FileMetaData): FileRecord =
     new S3FileRecord(file, mime, meta)
 
   private def s3[R](action: S3Client => R): R = {
@@ -74,7 +75,7 @@ object S3FileRecordFactory extends FileFactoryCompanion {
 
   def apply(spec: InputSpec): S3FileRecordFactory = {
     for {
-      endpoint <- spec.str("s3-endpoint")
+      endpoint <- spec.str("s3Endpoint")
       (accessKey, secretKey) <- FileAccessKeyRing
         .forUrl(endpoint)
         .flatMap {
@@ -84,14 +85,14 @@ object S3FileRecordFactory extends FileFactoryCompanion {
         }
         .orElse {
           for {
-            accessKey <- spec.str("s3-accessKey")
-            secretKey <- spec.str("s3-secretKey")
+            accessKey <- spec.str("s3AccessKey")
+            secretKey <- spec.str("s3SecretKey")
           } yield (accessKey, secretKey)
         }
-      bucket <- spec.str("s3-bucket")
+      bucket <- spec.str("s3Bucket")
       location <- spec.str(InputSpec.DataLocationKey)
     } yield {
-      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+      val longestPrefixMapping = spec.str("dataPathMapping").contains("longest-prefix")
       new S3FileRecordFactory(
         location,
         endpoint,

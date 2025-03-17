@@ -5,6 +5,7 @@ import org.archive.webservices.ars.io.WebArchiveLoader
 
 trait InputSpecLoader {
   def specType: String
+  def inputType(spec: InputSpec): Option[String] = None
   def size(spec: InputSpec): Long = spec.get[Long]("size").getOrElse(-1)
   def loadFilesSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R
   def loadSpark[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
@@ -22,13 +23,14 @@ trait InputSpecLoader {
 }
 
 object InputSpecLoader {
-  val loaders: Seq[InputSpecLoader] = Seq(
+  var loaders: Seq[InputSpecLoader] = Seq(
     DatasetSpecLoader,
     ArchCollectionSpecLoader,
     FileSpecLoader,
     MetaRemoteSpecLoader,
     MetaFilesSpecLoader,
-    MultiSpecLoader)
+    MultiSpecLoader,
+    CdxQuerySpecLoader)
 
   def get(spec: InputSpec): Option[InputSpecLoader] = {
     loaders.find(_.specType == spec.specType)

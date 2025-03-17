@@ -5,23 +5,12 @@ import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model._
-import org.archive.webservices.ars.model.api.{
-  ApiFieldType,
-  ApiResponseObject,
-  ApiResponseType,
-  AvailableJobsCategory,
-  Collection,
-  Dataset,
-  DatasetFile,
-  InputSpec,
-  JobState,
-}
-
+import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, AvailableJobsCategory, Collection, Dataset, DatasetFile, InputSpec, JobState}
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.model.users.ArchUser
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.system.UserDefinedQuery
-import org.archive.webservices.ars.util.{DatasetUtil,FormatUtil}
+import org.archive.webservices.ars.util.{DatasetUtil, FormatUtil}
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.scalatra._
 import org.scalatra.swagger._
@@ -36,7 +25,9 @@ object ApiController {
   }
 }
 
-class ApiController(implicit val swagger: Swagger) extends BaseController with ArchSwaggerSupport {
+class ApiController(implicit val swagger: Swagger)
+    extends BaseController
+    with ArchSwaggerSupport {
   protected val applicationDescription = "General API"
 
   private val ReservedParams = Set("distinct", "limit", "offset", "search", "sort")
@@ -192,7 +183,8 @@ class ApiController(implicit val swagger: Swagger) extends BaseController with A
       summary "Run a job"
       notes "Runs a job on a specified collection of input files."
       parameter pathParam[String]("jobid").description("The UUID of the job type")
-      parameter queryParam[Option[Boolean]]("sample").description("Whether to process only a sample of the input records")
+      parameter queryParam[Option[Boolean]]("sample")
+        .description("Whether to process only a sample of the input records")
       parameter bodyParam[InputSpec]("inputSpec").description("The job files input specification")
       parameter bodyParam[Option[String]]("params").description("Any job-specific parameters")
       responseMessage ResponseMessage(200, "The initial job state")
@@ -281,6 +273,14 @@ class ApiController(implicit val swagger: Swagger) extends BaseController with A
     ensureAuth { implicit context =>
       if (context.isAdmin) {
         Ok(SparkJobManager.bypassJobs())
+      } else Forbidden()
+    }
+  }
+
+  get("/stop-spark") {
+    ensureAuth { implicit context =>
+      if (context.isAdmin) {
+        Ok(SparkJobManager.stopContext())
       } else Forbidden()
     }
   }

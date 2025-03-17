@@ -55,8 +55,6 @@ class CustomCollectionSpecifics(val id: String)
               location.toLowerCase,
               CustomCollectionSpecifics.LocationIdSeparator)
           locationId match {
-            case "petabox" =>
-              WebArchiveLoader.loadWarcFilesViaCdxFromPetabox(cdxPath)
             case "hdfs" | "ait-hdfs" =>
               val warcPath = StringUtil
                 .stripPrefixBySeparator(location, CustomCollectionSpecifics.LocationIdSeparator)

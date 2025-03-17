@@ -2,6 +2,7 @@ package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.Vault.TreeNode
 import org.archive.webservices.ars.io._
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
 import java.net.URL
@@ -20,7 +21,7 @@ class VaultFileRecordFactory(
   class VaultFileRecord private[VaultFileRecordFactory] (
       file: String,
       val mime: String,
-      val meta: FileMeta)
+      val meta: FileMetaData)
       extends FileRecord {
     override lazy val filePath: String = locateFile(file)
     lazy val url: String = contentUrl(filePath, resolve = false)
@@ -32,7 +33,7 @@ class VaultFileRecordFactory(
     }
   }
 
-  override def get(file: String, mime: String, meta: FileMeta): FileRecord =
+  override def get(file: String, mime: String, meta: FileMetaData): FileRecord =
     new VaultFileRecord(file, mime, meta)
 
   def accessFile(
@@ -98,10 +99,10 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
   val dataSourceType: String = "vault"
 
   def apply(spec: InputSpec): VaultFileRecordFactory = {
-    val userOpt = spec.str("vault-username")
+    val userOpt = spec.str("vaultUsername")
     for {
       collectionTreenode <- spec
-        .str("vault-collection-treenode")
+        .str("vaultCollectionTreenode")
         .flatMap(id => Try(id.toInt).toOption)
       (username, password) <- FileAccessKeyRing
         .forUrl(VaultUrl)
@@ -115,11 +116,11 @@ object VaultFileRecordFactory extends FileFactoryCompanion {
         .orElse {
           for {
             user <- userOpt
-            pw <- spec.str("vault-password")
+            pw <- spec.str("vaultPassword")
           } yield (user, pw)
         }
     } yield {
-      val longestPrefixMapping = spec.str("data-path-mapping").contains("longest-prefix")
+      val longestPrefixMapping = spec.str("dataPathMapping").contains("longest-prefix")
       new VaultFileRecordFactory(
         spec.str(InputSpec.DataLocationKey).getOrElse(""),
         collectionTreenode,

@@ -1,9 +1,9 @@
 package org.archive.webservices.ars.model.api
 
-import java.time.Instant
-
 import org.archive.webservices.ars.model.DerivativeOutput
 import org.archive.webservices.ars.util.FormatUtil
+
+import java.time.Instant
 
 case class DatasetFile(
     filename: String,

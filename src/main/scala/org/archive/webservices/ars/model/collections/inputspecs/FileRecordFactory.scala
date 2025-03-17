@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.model.collections.inputspecs
 
 import org.archive.webservices.ars.io.{FileAccessContext, IOHelper}
+import org.archive.webservices.ars.model.collections.inputspecs.meta.FileMetaData
 
 import java.io.InputStream
 
@@ -9,7 +10,7 @@ trait FileRecordFactory extends Serializable {
   def dataSourceType: String = companion.dataSourceType
   @transient var accessContext: FileAccessContext =
     FileAccessContext.fromLocalArchConf
-  def get(file: String, mime: String, meta: FileMeta): FileRecord
+  def get(file: String, mime: String, meta: FileMetaData): FileRecord
   def accessFile(
       file: String,
       resolve: Boolean = true,
@@ -22,7 +23,7 @@ trait FileFactoryCompanion {
 }
 
 object FileRecordFactory {
-  val factories: Seq[FileFactoryCompanion] = Seq(
+  var factories: Seq[FileFactoryCompanion] = Seq(
     S3FileRecordFactory,
     S3HttpFileRecordFactory,
     HttpFileRecordFactory,

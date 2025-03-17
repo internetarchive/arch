@@ -3,18 +3,10 @@ package org.archive.webservices.ars.model.users
 import io.circe.HCursor
 import io.circe.syntax._
 import io.github.nremond.SecureHash
-import org.archive.webservices.ars.ait.{Ait, AitUser}
-import org.archive.webservices.ars.model.ArchConf
-import org.archive.webservices.ars.model.app.RequestContext
+import org.archive.webservices.ars.ait.AitUser
 import org.archive.webservices.ars.util.DatafileUtil
-import org.archive.webservices.sparkling.util.{DigestUtil, StringUtil}
-import org.scalatra.servlet.ServletApiImplicits._
 
-import java.util.Base64
 import java.util.UUID.randomUUID
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import scala.io.Source
-import scala.util.Try
 
 trait ArchUser {
   def id: String

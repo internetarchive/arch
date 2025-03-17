@@ -74,7 +74,7 @@ sed -i 's|}$|, "basePath": "'$arch_api_docs_url'"}|g' apis.json
 npx api-spec-converter -f swagger_1 -t swagger_2 apis.json --syntax yaml > swagger.yaml
 printf 'swagger2markup.markupLanguage=ASCIIDOC\nswagger2markup.outputLanguage=EN\nswagger2markup.pathsGroupedBy=TAGS\n' > config.properties
 docker run --rm -v $(pwd):/opt swagger2markup/swagger2markup convert -i /opt/swagger.yaml -f /opt/swagger -c /opt/config.properties
-sed -i '1s/= localhost:12341/= ARCH API\n:toc: left\n:toclevels: 3/' swagger.adoc
+sed '1s/= localhost:12341/= ARCH API\n:toc: left\n:toclevels: 3/' swagger.adoc > API.adoc
 ```
 
 Note that though `Swagger2Markup` supports `*OrderBy=AS_IS` configuration options, `api-spec-converter` does not support `as-is` ordering of properties, etc.

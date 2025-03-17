@@ -3,6 +3,7 @@ package org.archive.webservices.ars.io
 import com.amazonaws.services.s3.model.GetObjectRequest
 import org.archive.webservices.ars.model.ArchCollection
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -11,7 +12,15 @@ import java.util.Base64
 import scala.collection.mutable
 
 object RandomFileAccess {
+  val HttpPrefix = "http"
+  val HttpsPrefix = "https"
+  val HdfsPrefix = "hdfs"
+
   lazy val collectionSpecificsCache = mutable.Map.empty[String, Option[CollectionSpecifics]]
+
+  var additionalPrefixHandlers: Map[
+    String,
+    (FileAccessContext, FilePointer, Long, Iterator[(Long, Long)]) => InputStream] = Map.empty
 
   def access(
       context: FileAccessContext,
@@ -19,7 +28,7 @@ object RandomFileAccess {
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
     file.source.toLowerCase match {
-      case "http" | "https" =>
+      case HttpPrefix | HttpsPrefix =>
         context.keyRing.forUrl(file.url) match {
           case Some((FileAccessKeyRing.AccessMethodS3, Array(accessKey, secretKey))) =>
             s3Access(context, file, offset, positions, accessKey, secretKey)
@@ -45,13 +54,18 @@ object RandomFileAccess {
             vaultAccess(context, file, offset, positions, password = Some(pw))
           case None => httpAccess(context, file, offset, positions)
         }
-      case "hdfs" | "" =>
+      case HdfsPrefix | "" =>
         hdfsAccess(context, file, offset, positions)
-      case _ =>
-        file.source match {
-          case s if ArchCollection.prefix(s).isDefined =>
-            collectionAccess(context, file, offset, positions)
-          case _ => throw new UnsupportedOperationException()
+      case p =>
+        additionalPrefixHandlers.get(p) match {
+          case Some(handler) =>
+            handler(context, file, offset, positions)
+          case None =>
+            file.source match {
+              case s if ArchCollection.prefix(s).isDefined =>
+                collectionAccess(context, file, offset, positions)
+              case _ => throw new UnsupportedOperationException()
+            }
         }
     }
   }
@@ -95,7 +109,7 @@ object RandomFileAccess {
       positions: Iterator[(Long, Long)],
       basicUserPw: Option[(String, String)] = None,
       cookie: Option[(String, String)] = None): InputStream = {
-    val connection = new URL(url).openConnection
+    val connection = HttpUtil.openConnection(url)
     for ((user, pw) <- basicUserPw) {
       val authString = Base64.getEncoder.encodeToString(s"$user:$pw".getBytes)
       connection.setRequestProperty("Authorization", "Basic " + authString)

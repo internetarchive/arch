@@ -87,7 +87,14 @@ class LocalArchConf extends ArchConf with Serializable {
   val jobOutPath: String =
     confStrValue("ARCH_JOB_OUTPUT_PATH", "jobOutPath").getOrElse(globalJobOutPath + "-users")
 
-  def uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
+  val uuidJobOutPath: Option[String] = confStrValue("ARCH_UUID_JOB_OUTPUT_PATH", "uuidJobOutPath")
+
+  val hdfsJobArtifactPath: Option[String] =
+    confStrValue("ARCH_HDFS_JOB_ARTIFACT_PATH", "hdfsJobArtifactPath")
+
+  val jobArtifactUrl: String =
+    confStrValue("ARCH_JOB_ARTIFACT_URL", "jobArtifactUrl").getOrElse(
+      "http://nexus.us.archive.org/repository/raw-internal/arch-job-artifcats")
 
   val jobLoggingPath: String =
     confStrValue("ARCH_JOB_LOGGING_PATH", "jobLoggingPath").getOrElse("/var/log/arch")
@@ -98,6 +105,10 @@ class LocalArchConf extends ArchConf with Serializable {
 
   val localTempPath: String =
     confStrValue("ARCH_LOCAL_TEMP_PATH", "localTempPath").getOrElse("data/tmp")
+
+  val hadoopNodeLocalTempPath: String =
+    confStrValue("ARCH_HADOOP_NODE_LOCAL_TEMP_PATH", "hadoopNodeLocalTempPath").getOrElse(
+      "/arch-tmp")
 
   val sparkMaster: String =
     confStrValue("ARCH_SPARK_MASTER", "sparkMaster").getOrElse("local[*]")
@@ -182,4 +193,16 @@ class LocalArchConf extends ArchConf with Serializable {
       envKey = "ARCH_FORCE_KEYSTONE_LOGIN",
       configKey = "forceKeystoneLogin",
       default = false)
+
+  val publicSuffixListUrl: String =
+    confStrValue(envKey = "ARCH_PUBLIC_SUFFIX_LIST_URL", configKey = "publicSuffixListUrl")
+      .getOrElse("https://publicsuffix.org/list/public_suffix_list.dat")
+
+  val httpProxy: String =
+    confStrValue(envKey = "ARCH_HTTP_PROXY", configKey = "httpProxy")
+      .getOrElse("http-proxy.us.archive.org:8080")
+
+  val httpProxyHosts: Set[String] =
+    confStrValue(envKey = "ARCH_HTTP_PROXY_HOSTS", configKey = "httpProxyHosts")
+      .getOrElse("publicsuffix.org,api.github.com").split(',').map(_.trim).filter(_.nonEmpty).toSet
 }

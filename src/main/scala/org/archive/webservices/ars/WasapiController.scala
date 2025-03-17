@@ -1,17 +1,14 @@
 package org.archive.webservices.ars
 
-import _root_.io.circe._
-import _root_.io.circe.syntax._
 import org.apache.http.client.utils.URIBuilder
-import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
-import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput}
 import org.archive.webservices.ars.model.api.{WasapiResponse, WasapiResponseFile}
+import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
+import org.archive.webservices.ars.model.{ArchCollection, ArchConf, DerivativeOutput, DerivativeOutputCache}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, JobManager}
-import org.scalatra
-import org.scalatra.{ActionResult, NotFound, Ok}
+import org.archive.webservices.ars.util.LazyCache
+import org.scalatra.{ActionResult, NotFound}
 
 import javax.servlet.http.HttpServletRequest
-import scala.collection.immutable.ListMap
 import scala.util.Try
 
 object WasapiController {
@@ -19,55 +16,61 @@ object WasapiController {
 
   def files(
       instance: DerivationJobInstance,
-      downloadUrl: String,
-      params: scalatra.Params,
+      baseDownloadUrl: String,
+      page: Int,
       addSample: Boolean = true)(implicit request: HttpServletRequest): ActionResult = {
-    val page = params
-      .get("page")
-      .flatMap(p => Try(p.toInt).toOption)
-      .filter(_ >= 1)
-      .getOrElse(1)
-    var files = Seq.empty[DerivativeOutput]
-    val count = instance.outFiles
-      .grouped(WasapiController.FixedPageSize)
-      .zipWithIndex
-      .map { case (pageItems, idx) =>
-        if (idx == page - 1) files = pageItems
-        pageItems.toIterator.size
-      }
-      .sum
-    val pages = (count.toDouble / WasapiController.FixedPageSize).ceil.toInt
-    var uriBuilder = new URIBuilder(request.getRequestURI)
-    if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
-      uriBuilder = uriBuilder.setParameter("collection", instance.conf.inputSpec.collectionId)
-    }
-    if (addSample && instance.conf.isSample)
-      uriBuilder = uriBuilder.setParameter("sample", "true")
-    Ok(
-      WasapiResponse(
-        count = count,
-        next = (
-          if (page < pages)
-            Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
-          else None),
-        previous = (
-          if (page > 1)
-            Some(uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
-          else None),
-        files = files.map(file =>
-          WasapiResponseFile(
-            filename = file.filename,
-            filetype = file.fileType,
-            checksums = file.checksums,
-            locations = Seq(downloadUrl + "/" + file.filename + (
-              if (addSample && instance.conf.isSample) "?sample=true&access=" else "?access="
-            ) + file.accessToken),
-            size = file.size,
-            collection = if (InputSpec.isCollectionBased(instance.conf.inputSpec)) Some(instance.conf.inputSpec.collectionId) else None
-          )
-        )
-      ).toJson,
-      Map("Content-Type" -> "application/json"))
+    LazyCache.lazyJsonResponse[DerivativeOutputCache, (Int, Seq[DerivativeOutput])](
+      instance.lazyOutFilesCache,
+      { cache =>
+        (cache.count, cache.files.drop((page - 1) * FixedPageSize).take(FixedPageSize).toSeq)
+      }, {
+        var files = Seq.empty[DerivativeOutput]
+        val count = instance.outFiles
+          .grouped(WasapiController.FixedPageSize)
+          .zipWithIndex
+          .map { case (pageItems, idx) =>
+            if (idx == page - 1) files = pageItems
+            pageItems.toIterator.size
+          }
+          .sum
+        (count, files)
+      },
+      { case (count, files) =>
+        val pages = (count.toDouble / WasapiController.FixedPageSize).ceil.toInt
+        var uriBuilder = new URIBuilder(request.getRequestURI)
+        if (InputSpec.isCollectionBased(instance.conf.inputSpec)) {
+          uriBuilder = uriBuilder.setParameter("collection", instance.conf.inputSpec.collectionId)
+        }
+        if (addSample && instance.conf.isSample)
+          uriBuilder = uriBuilder.setParameter("sample", "true")
+        WasapiResponse(
+          count = count,
+          next =
+            (if (page < pages)
+               Some(uriBuilder.setParameter("page", (page + 1).toString).build().toString)
+             else None),
+          previous =
+            (if (page > 1)
+               Some(
+                 uriBuilder.setParameter("page", (page - 1).min(pages).toString).build().toString)
+             else None),
+          files = files.map { file =>
+            val locationUriBuilder = new URIBuilder(s"${baseDownloadUrl}/${file.filename}")
+            if (addSample && instance.conf.isSample)
+              locationUriBuilder.setParameter("sample", "true")
+            locationUriBuilder.setParameter("access", file.accessToken)
+            WasapiResponseFile(
+              filename = file.filename,
+              filetype = file.fileType,
+              checksums = file.checksums,
+              locations = Seq(locationUriBuilder.build.toString),
+              size = file.size,
+              collection =
+                if (InputSpec.isCollectionBased(instance.conf.inputSpec))
+                  Some(instance.conf.inputSpec.collectionId)
+                else None)
+          }).toJson
+      })
   }
 }
 
@@ -89,8 +92,13 @@ class WasapiController extends BaseController {
             case Some(instance) =>
               WasapiController.files(
                 instance,
-                ArchConf.baseUrl + "/files/download/" + collection.id + "/" + instance.job.id,
-                params)
+                baseDownloadUrl =
+                  s"${ArchConf.baseUrl}/files/download/${collection.id}/${instance.job.id}",
+                page = params
+                  .get("page")
+                  .flatMap(p => Try(p.toInt).toOption)
+                  .filter(_ >= 1)
+                  .getOrElse(1))
             case None =>
               NotFound()
           }

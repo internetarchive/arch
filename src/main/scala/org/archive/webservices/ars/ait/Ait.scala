@@ -4,7 +4,7 @@ import io.circe.HCursor
 import io.circe.parser._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
-import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}
@@ -85,8 +85,7 @@ object Ait {
 
   def login(username: String, password: String)(implicit
       request: HttpServletRequest): Either[String, String] = {
-    val ait = new URL(ArchConf.aitBaseUrl + ArchConf.aitLoginPath).openConnection
-      .asInstanceOf[HttpsURLConnection]
+    val ait = HttpUtil.openConnection(ArchConf.aitBaseUrl + ArchConf.aitLoginPath)
     try {
       ait.setRequestMethod("POST")
       ait.setDoInput(true)
@@ -169,10 +168,10 @@ object Ait {
       sessionId: Option[String] = None,
       basicAuth: Option[String] = None,
       close: Boolean = true)(action: InputStream => Option[R]): Either[Int, R] = {
-    val ait = new URL(
+    val url =
       if (path.matches("^https?://.+$")) path
-      else ArchConf.aitBaseUrl + path).openConnection
-      .asInstanceOf[HttpURLConnection]
+      else ArchConf.aitBaseUrl + path
+    val ait = HttpUtil.openConnection(url)
     ait.setInstanceFollowRedirects(true)
     try {
       for (sid <- sessionId if basicAuth.isEmpty)

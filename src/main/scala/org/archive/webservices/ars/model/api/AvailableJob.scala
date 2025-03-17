@@ -1,9 +1,8 @@
 package org.archive.webservices.ars.model.api
 
-import org.scalatra.swagger.annotations.ApiModelProperty
-
 import org.archive.webservices.ars.model.PublishedDatasets
 import org.archive.webservices.ars.processing.DerivationJob
+import org.scalatra.swagger.annotations.ApiModelProperty
 
 case class AvailableJob(
     @ApiModelProperty(description = "Unique job type identifier") uuid: String,
