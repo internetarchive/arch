@@ -9,19 +9,10 @@ class FileAccessKeyRing private (secrets: Map[String, String]) extends Serializa
   import FileAccessKeyRing._
 
   def forUrl(url: String): Option[(String, Array[String])] = {
-    val (protocol, path) = {
-      val splitAt = url.lastIndexOf(":")
-      if (splitAt < 0) ("", url) else (url.take(splitAt), url.drop(splitAt + 1))
-    }
-    val secretSplit = path
-      .split('/')
-      .find(_.nonEmpty)
-      .flatMap { host =>
-        secrets.get(
-          secretKey(
-            protocol,
-            (if (host.contains("@")) host.split('@').last else host).split(':').head))
-      }
+    val uri = new java.net.URI(url)
+    val protocol = uri.getScheme
+    val path = uri.getPath
+    val secretSplit = secrets.get(secretKey(uri.getScheme, uri.getHost))
       .toArray
       .flatMap(_.split(SecretSeparator))
     secretSplit.headOption.filter(SupportedAccessMethods.contains).map((_, secretSplit.drop(1)))

@@ -125,6 +125,9 @@ object Vault {
         .map { item =>
           treeNode(item)
         }
+        .filter{ item =>
+          !item.isFile || item.contentUrl.isDefined
+        }
         .toSeq
     } finally {
       source.close()
