@@ -2,7 +2,8 @@ package org.archive.webservices.ars.processing.jobs.archivespark.functions.adapt
 
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import org.archive.webservices.archivespark.functions.{Entities, EntitiesConstants}
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
+import org.archive.webservices.archivespark.model.dataloads.ByteLoad
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
