@@ -11,7 +11,7 @@ object AddonLoader {
   }
 
   def initializePackage(packageName: String): Unit = {
-    println(s"Initializing add-ons of package $packageName...")
+    val initialized = init.keySet
     val packagePath = packageName.replace('.', '/') + "/"
     val systemClassLoader = ClassLoader.getSystemClassLoader
     val systemResources = systemClassLoader.getResources(packagePath).asScala
@@ -36,10 +36,14 @@ object AddonLoader {
           Class.forName(objectClass, true, contextClassLoader)
       }
     }
-    for (addon <- init.values) {
-      println(s"Loading add-on ${addon.getClass.getName.stripSuffix("$")}...")
-      addon.initAddon()
+    val initializing = (init -- initialized).values
+    if (initializing.nonEmpty) {
+      println(s"Initializing add-ons of package $packageName...")
+      for (addon <- (init -- initialized).values) {
+        println(s"Loading add-on ${addon.getClass.getName.stripSuffix("$")}...")
+        addon.initAddon()
+      }
+      println(s"Initialized add-ons of package $packageName.")
     }
-    println(s"Initialized add-ons of package $packageName.")
   }
 }

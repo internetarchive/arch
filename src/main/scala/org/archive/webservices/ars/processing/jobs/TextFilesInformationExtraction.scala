@@ -136,6 +136,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         val filename = FilenameUtils.getName(jUrl.getPath)
         val extension = GetExtensionMIME(jUrl.getPath, tikaMime)
 
+        println("#### ROW DONE: " + url)
+
         Row(
           crawlDate,
           lastModifiedDate,

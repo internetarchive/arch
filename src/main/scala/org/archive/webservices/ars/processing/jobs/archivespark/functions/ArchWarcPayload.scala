@@ -8,11 +8,10 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchWarcRec
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
 class ArchWarcPayload private (http: Boolean = true)
-    extends EnrichFunc[ArchWarcRecord, CdxRecord, Bytes] {
+    extends EnrichFunc.Root[ArchWarcRecord, CdxRecord, Bytes] {
   import WarcPayloadFields._
 
-  val source: FieldPointer[ArchWarcRecord, CdxRecord] =
-    FieldPointer.root[ArchWarcRecord, CdxRecord]
+  val source: FieldPointer[ArchWarcRecord, CdxRecord] = FieldPointer.root
 
   val fields: Seq[String] = {
     if (http) Seq(RecordHeader, HttpStatusLine, HttpHeader, Payload)

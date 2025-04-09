@@ -269,7 +269,7 @@ object IOHelper {
       positions: Iterator[(Long, Long)],
       buffered: Boolean = true): InputStream = {
     val split = IOUtil.splitStream(in, positions)
-    val merged = new ChainedInputStream(split, nextOnError = true)
+    val merged = new ChainedInputStream(split, nextOnError = false) // ### changed true --> false
     if (buffered) {
       val buffer = IOUtil.copyToBuffer(merged)
       in.close()

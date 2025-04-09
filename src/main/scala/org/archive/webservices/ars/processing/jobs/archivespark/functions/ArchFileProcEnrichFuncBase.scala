@@ -13,10 +13,10 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 abstract class ArchFileProcEnrichFuncBase[A]
-    extends EnrichFunc[EnrichRoot with LocalFileCache, String, A] {
+    extends EnrichFunc[EnrichRoot with LocalFileCache, EnrichRoot with LocalFileCache, String, A] {
   implicit private val logContext: LogContext = LogContext(this)
 
-  val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
+  final val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
 
   def workingDir: String = ArchConf.hadoopNodeLocalTempPath
 
@@ -93,6 +93,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   def process(process: SystemProcess, pid: Int, derivatives: Derivatives): Unit
 
+  def waitForProc(proc: SystemProcess, pid: Int): Unit = {}
+
   override def derive(source: TypedEnrichable[String], derivatives: Derivatives): Unit = {
     doInit()
     val inFile = source.get
@@ -107,8 +109,9 @@ abstract class ArchFileProcEnrichFuncBase[A]
       }
       .getOrElse(inFile)
     Log.info(s"Processing file $file...")
-    val (proc, pid) = StageSyncManager.claimProcess(workingDir)
+    val (proc, pid, reclaimed) = StageSyncManager.claimProcess(workingDir)
     proc.synchronized {
+      if (reclaimed) waitForProc(proc, pid)
       proc.exec(cmd(file))
       process(proc, pid, derivatives)
     }

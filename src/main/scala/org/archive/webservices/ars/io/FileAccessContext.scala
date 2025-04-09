@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.io
 
 import org.archive.webservices.ars.Arch
+import org.archive.webservices.ars.addons.AddonLoader
 import org.archive.webservices.ars.model.{ArchConf, LocalArchConf}
 import org.archive.webservices.sparkling.io.HdfsIO
 
@@ -22,6 +23,7 @@ class FileAccessContext(
     initialized = true
     ArchConf.set(conf)
     Arch.initSentry()
+    AddonLoader.initializePackage(Arch.ArchAddonPackageNamespace)
   }
 }
 

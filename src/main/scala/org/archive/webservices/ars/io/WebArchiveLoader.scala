@@ -5,6 +5,7 @@ import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
+import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
@@ -92,22 +93,20 @@ object WebArchiveLoader {
     loadWarc(inputSpec) { rdd =>
       action(rdd.map { file =>
         val in = IOUtil.supportMark(file.access)
-        val warcs = WarcLoader.load(in).filter(r => r.isResponse || r.isRevisit)
+        val warcs = WarcLoader.load(in).filter {
+          r => r.isResponse || r.isRevisit
+        }
         (
           file.pointer,
           IteratorUtil.cleanup(
-            IteratorUtil.whileDefined {
-              Try {
-                if (warcs.hasNext) Try(warcs.next).toOption else None
-              }.toOption.flatten
-            },
+            IteratorUtil.tryCatch(warcs),
             in.close))
       })
     }
   }
 
   def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R = {
-    loadWarcsRecords(spec)(rdd => action(rdd.mapPartitions(_.flatMap(_._2))))
+    loadWarcsRecords(spec)(rdd => action(rdd.flatMap(_._2)))
   }
 
   def loadWarcFiles[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(

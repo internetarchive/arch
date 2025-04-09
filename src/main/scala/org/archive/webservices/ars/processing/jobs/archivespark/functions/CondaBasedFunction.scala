@@ -28,6 +28,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   }
 
   def condaFile: String = condaEnv + ".tar.gz"
+  val outputStartToken = ">>"
   val outputEndToken = "##"
 
   lazy val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
@@ -100,8 +101,14 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override def cmd(file: String): String = file
 
+  override def waitForProc(proc: SystemProcess, pid: Int): Unit = {
+    val pipe = StageSyncManager.claimFileIn(pidPipe(pid))
+    proc.demandLine("", outputEndToken, pipe = Some(pipe))
+  }
+
   override def process(proc: SystemProcess, pid: Int, derivatives: Derivatives): Unit = {
     val pipe = StageSyncManager.claimFileIn(pidPipe(pid))
+    proc.consumeToLine(outputStartToken, pipe = Some(pipe))
     val output =
       proc
         .readToLine(
@@ -110,7 +117,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
           keepMaxBytes = 1.mb.toInt,
           pipe = Some(pipe))
         .mkString
-    for (a <- processOutput(output)) derivatives << a
+    derivatives <<? processOutput(output)
   }
 
   def processOutput(output: String): Option[A]
