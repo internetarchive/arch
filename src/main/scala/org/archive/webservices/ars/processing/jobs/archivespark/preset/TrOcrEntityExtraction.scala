@@ -25,7 +25,7 @@ object TrOcrEntityExtraction extends AiJob {
   }
 
   override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("image/") || record.mime == "application/pdf"
+    _.mime.startsWith("image/")
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

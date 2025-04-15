@@ -180,7 +180,7 @@ object WebArchiveLoader {
                 }
               }
             } else loadWarcFiles(cachePath)(action)
-          } else
+          } else {
             action {
               RddUtil
                 .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
@@ -269,6 +269,7 @@ object WebArchiveLoader {
                   }
                 }
             }
+          }
         }
       }
     } else {
