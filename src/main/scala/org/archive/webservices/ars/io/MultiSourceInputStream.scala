@@ -61,7 +61,7 @@ abstract class MultiSourceInputStream extends InputStream {
   override def skip(n: Long): Long = tryOrNext(in.skip(n), 0)
   override def available(): Int = tryOrNext(in.available(), 0)
   override def close(): Unit = {
-    in.close()
+    Try(in.close())
     closed = true
   }
   override def markSupported(): Boolean = false
