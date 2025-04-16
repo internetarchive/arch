@@ -138,6 +138,26 @@ object WebArchiveLoader {
     }
   }
 
+  def aitWarcUrl(filename: String): String = {
+    ArchConf.aitWarcsBaseUrl + "/webdatafile/" + filename
+  }
+
+  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[InputStream] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean = false): InputStream = {
+    new CacheBackedInputStream(
+      source = {
+        Ait
+          .getWithAuth(
+            location.getOrElse(aitWarcUrl(filename)),
+            contentType = "*/*",
+            basicAuth = basicAuth,
+            close = false)(Some(_)).toOption.get
+      },
+      cachePath = Some(cachePath + "/" + filename),
+      direct = direct,
+      rewriteCache = rewriteCache
+    )
+  }
+
   def loadAitWarcFiles[R](aitId: Int, inputPath: String, cacheId: String)(
       action: RDD[(String, InputStream)] => R): R = {
     val basicAuth = ArchConf.foreignAitAuthHeader
@@ -167,19 +187,45 @@ object WebArchiveLoader {
           HdfsIO(host, port).files(inputPath + "/*arc.gz", recursive = false).size
         }
         .getOrElse(0)
-      if (hdfsFileCount == apiFileCount) {
-        loadWarcFiles(inputPath, hdfsHostPort)(action)
-      } else {
-        CollectionCache.cache(cacheId) { cachePath =>
+      CollectionCache.cache(cacheId) { cachePath =>
+        if (hdfsFileCount == apiFileCount) {
+          loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
+            action(rdd.map { case (filename, in) =>
+              (
+                filename,
+                aitCacheBackedInputStream(filename, cachePath, basicAuth = basicAuth, direct = Some(in))
+              )
+            })
+          }
+        } else {
           val cacheFileCount = HdfsIO.files(cachePath + "/*arc.gz", recursive = false).size
           if (hdfsFileCount + cacheFileCount == apiFileCount) {
             if (hdfsHostPort.isDefined) {
               loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
                 loadWarcFiles(cachePath) { cachedRdd =>
-                  action(rdd.union(cachedRdd))
+                  action(rdd.map { case (filename, in) =>
+                    (
+                      filename,
+                      aitCacheBackedInputStream(filename, cachePath, basicAuth = basicAuth, direct = Some(in))
+                    )
+                  }.union(cachedRdd.map { case (filename, in) =>
+                    (
+                      filename,
+                      aitCacheBackedInputStream(filename, cachePath, basicAuth = basicAuth, direct = Some(in), rewriteCache = true)
+                    )
+                  }))
                 }
               }
-            } else loadWarcFiles(cachePath)(action)
+            } else {
+              loadWarcFiles(cachePath) { rdd =>
+                action(rdd.map { case (filename, in) =>
+                  (
+                    filename,
+                    aitCacheBackedInputStream(filename, cachePath, basicAuth = basicAuth, direct = Some(in), rewriteCache = true)
+                  )
+                })
+              }
+            }
           } else {
             action {
               RddUtil
@@ -219,51 +265,21 @@ object WebArchiveLoader {
                   var prev: Option[InputStream] = None
                   val aitHdfsIO = hdfsHostPort.map { case (host, port) => HdfsIO(host, port) }
                   partition
-                    .flatMap { case (file, location) =>
+                    .map { case (file, location) =>
                       val inputFilePath = inputPath + "/" + file
                       if (aitHdfsIO.exists(_.exists(inputFilePath))) {
-                        Some((inputFilePath, inputFilePath, true))
+                        (file, location, Some(inputFilePath))
                       } else {
-                        val cacheFilePath = cachePath + "/" + file
-                        if (HdfsIO.exists(cacheFilePath)) {
-                          Some((inputFilePath, cacheFilePath, false))
-                        } else {
-                          IOHelper.syncHdfs(cacheFilePath + "_caching") {
-                            if (HdfsIO.exists(cacheFilePath))
-                              Some((inputFilePath, cacheFilePath, false))
-                            else {
-                              Ait
-                                .getWithAuth(
-                                  location,
-                                  contentType = "*/*",
-                                  basicAuth = basicAuth) { in =>
-                                  val out =
-                                    HdfsIO.out(
-                                      cacheFilePath,
-                                      compress = false,
-                                      overwrite = true,
-                                      useWriter = false)
-                                  try {
-                                    IOUtil.copy(in, out)
-                                  } finally {
-                                    out.close()
-                                  }
-                                  while (!HdfsIO.exists(cacheFilePath)) Thread.`yield`()
-                                  Some((inputFilePath, cacheFilePath, false))
-                                }
-                                .toOption
-                            }
-                          }
-                        }
+                        (file, location, None)
                       }
                     }
-                    .map { case (originalPath, path, ait) =>
+                    .map { case (filename, location, directPath) =>
                       for (s <- prev) s.close()
-                      val in =
-                        if (ait) aitHdfsIO.get.open(path, decompress = false)
-                        else HdfsIO.open(path, decompress = false)
+                      val in = aitCacheBackedInputStream(filename, cachePath, direct = directPath.map { p =>
+                        aitHdfsIO.get.open(p, decompress = false)
+                      }, basicAuth, Some(location))
                       prev = Some(in)
-                      (originalPath, in)
+                      (filename, in)
                     } ++ IteratorUtil.noop {
                     for (s <- prev) s.close()
                   }
@@ -417,7 +433,7 @@ object WebArchiveLoader {
         IOHelper.splitMergeInputStreams(in, positions, buffered = false)
       } else {
         HttpClient.rangeRequest(
-          ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file,
+          aitWarcUrl(file),
           headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
           offset = offset) { in =>
           IOHelper.splitMergeInputStreams(in, positions)
