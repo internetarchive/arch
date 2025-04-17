@@ -10,7 +10,7 @@ import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
-import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, RddUtil}
+import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, ManagedVal, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
@@ -109,32 +109,43 @@ object WebArchiveLoader {
     loadWarcsRecords(spec)(rdd => action(rdd.flatMap(_._2)))
   }
 
-  def loadWarcFiles[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
-      action: RDD[(String, InputStream)] => R): R = action {
-    (hdfsHostPort match {
+  def loadWarcFilesLazy[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
+      action: RDD[(String, ManagedVal[InputStream])] => R): R = action {
+    hdfsHostPort match {
       case Some((host, port)) =>
         val files = HdfsIO(host, port).files(inputPath + "/*arc.gz", recursive = false).toSeq
         RddUtil
           .parallelize(files.grouped(WarcFilesPerPartition).toSeq)
           .mapPartitions { paths =>
             val hdfsIO = HdfsIO(host, port)
-            paths.flatten.map(p => (p, hdfsIO.open(p, decompress = false)))
+            paths.flatten.map { p =>
+              (p.split('/').last, ManagedVal(hdfsIO.open(p, decompress = false)))
+            }
           }
       case None =>
         val numFiles = HdfsIO.files(inputPath + "/*arc.gz", recursive = false).size
         RddUtil
           .loadFilesLocality(inputPath + "/*arc.gz")
           .coalesce(numFiles / WarcFilesPerPartition + 1)
-          .map(p => (p, HdfsIO.open(p, decompress = false)))
-    }).mapPartitions { partition =>
-      var prev: Option[InputStream] = None
-      partition.map { case (p, in) =>
-        for (s <- prev) s.close()
-        prev = Some(in)
-        (p.split('/').last, prev.get)
-      } ++ IteratorUtil.noop {
-        for (s <- prev) s.close()
-      }
+          .map { p =>
+            (p.split('/').last, ManagedVal(HdfsIO.open(p, decompress = false)))
+          }
+    }
+  }
+
+  def loadWarcFiles[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
+    action: RDD[(String, InputStream)] => R): R = {
+    loadWarcFilesLazy[R](inputPath, hdfsHostPort) { rdd =>
+      action(rdd.mapPartitions { partition =>
+        var prev: Option[InputStream] = None
+        partition.map { case (p, in) =>
+          for (s <- prev) s.close()
+          prev = Some(in.get)
+          (p, prev.get)
+        } ++ IteratorUtil.noop {
+          for (s <- prev) s.close()
+        }
+      })
     }
   }
 
@@ -142,30 +153,32 @@ object WebArchiveLoader {
     ArchConf.aitWarcsBaseUrl + "/webdatafile/" + filename
   }
 
-  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[InputStream] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
+  def aitSourceStream(location: String, basicAuth: Option[String]): InputStream = {
+    Ait
+      .getWithAuth(
+        location,
+        contentType = "*/*",
+        basicAuth = basicAuth,
+        close = false)(Some(_)).toOption.get
+  }
+
+  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
     new CacheBackedInputStream(
-      source = {
-        Ait
-          .getWithAuth(
-            location.getOrElse(aitWarcUrl(filename)),
-            contentType = "*/*",
-            basicAuth = basicAuth,
-            close = false)(Some(_)).toOption.get
-      },
+      source = aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth),
       cachePath = Some(cachePath + "/" + filename),
-      direct = direct,
+      direct = direct.map(_.get),
       rewriteCache = rewriteCache
     )
   }
 
-  def aitCacheBasedRdd(rdd: RDD[(String, Option[InputStream], Option[String], Boolean)], cachePath: String, basicAuth: Option[String]): RDD[(String, InputStream)] = {
+  def aitCacheBasedRdd(rdd: RDD[(String, Option[ManagedVal[InputStream]], Option[String], Boolean)], cachePath: String, basicAuth: Option[String]): RDD[(String, InputStream)] = {
     rdd.map { case (filename, stream, location, isCache) =>
       (filename, aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache))
     }.mapPartitions { partition =>
       var prev: Option[InputStream] = None
       partition.map { case (f, in) =>
         for (s <- prev) s.close()
-        prev = Some(in)
+        prev = Some(IOUtil.supportMark(in))
         (f, prev.get)
       } ++ IteratorUtil.noop {
         for (s <- prev) s.close()
@@ -173,8 +186,8 @@ object WebArchiveLoader {
     }
   }
 
-  def aitAccessTuple(filename: String, in: InputStream, isCache: Boolean): (String, Option[InputStream], Option[String], Boolean) = {
-    (filename, Some(in), None, isCache)
+  def aitAccessTuple(filename: String, in: Option[ManagedVal[InputStream]] = None, location: Option[String] = None, isCache: Boolean): (String, Option[ManagedVal[InputStream]], Option[String], Boolean) = {
+    (filename, in, location, isCache)
   }
 
   def loadAitWarcFiles[R](aitId: Int, inputPath: String, cacheId: String)(
@@ -208,80 +221,79 @@ object WebArchiveLoader {
         .getOrElse(0)
       CollectionCache.cache(cacheId) { cachePath =>
         if (hdfsFileCount == apiFileCount) {
-          loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
-            action(aitCacheBasedRdd(rdd.map(t => aitAccessTuple(t._1, t._2, isCache = false)), cachePath, basicAuth))
+          loadWarcFilesLazy(inputPath, hdfsHostPort) { rdd =>
+            action(aitCacheBasedRdd(rdd.map(t => aitAccessTuple(t._1, Some(t._2), isCache = false)), cachePath, basicAuth))
           }
         } else {
           val cacheFileCount = HdfsIO.files(cachePath + "/*arc.gz", recursive = false).size
           if (hdfsFileCount + cacheFileCount == apiFileCount) {
             if (hdfsHostPort.isDefined) {
-              loadWarcFiles(inputPath, hdfsHostPort) { rdd =>
-                loadWarcFiles(cachePath) { cachedRdd =>
+              loadWarcFilesLazy(inputPath, hdfsHostPort) { rdd =>
+                loadWarcFilesLazy(cachePath) { cachedRdd =>
                   action(aitCacheBasedRdd(rdd.map { case (filename, in) =>
-                    aitAccessTuple(filename, in, isCache = false)
+                    aitAccessTuple(filename, Some(in), isCache = false)
                   }.union(cachedRdd.map { case (filename, in) =>
-                    aitAccessTuple(filename, in, isCache = true)
+                    aitAccessTuple(filename, Some(in), isCache = true)
                   }), cachePath, basicAuth))
                 }
               }
             } else {
-              loadWarcFiles(cachePath) { rdd =>
-                action(aitCacheBasedRdd(rdd.map(t => aitAccessTuple(t._1, t._2, isCache = true)), cachePath, basicAuth))
+              loadWarcFilesLazy(cachePath) { rdd =>
+                action(aitCacheBasedRdd(rdd.map(t => aitAccessTuple(t._1, Some(t._2), isCache = true)), cachePath, basicAuth))
               }
             }
           } else {
-            action {
-              RddUtil
-                .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
-                .flatMap { idx =>
-                  var wasapiOpt: Option[Iterable[(String, String)]] = None
-                  while (wasapiOpt.isEmpty) {
-                    Ait
-                      .getJsonWithAuth(
-                        wasapiUrl + WasapiPageSize + "&page=" + (idx + 1),
-                        basicAuth = basicAuth) { json =>
-                        json
-                          .downField("files")
-                          .values
-                          .map(_.flatMap { fileJson =>
-                            val fileCursor = fileJson.hcursor
-                            for {
-                              filename <- fileCursor.get[String]("filename").toOption
-                              location <- fileCursor
-                                .downField("locations")
-                                .values
-                                .flatMap(_.flatMap(_.asString).find(
-                                  _.startsWith(ArchConf.aitWarcsBaseUrl)))
-                            } yield (filename, location)
-                          })
-                      } match {
-                      case Right(iter) => wasapiOpt = Some(iter)
-                      case Left(status) =>
-                        if (status / 100 == 5) Thread.sleep(RetrySleepMillis)
-                        else wasapiOpt = Some(Iterable.empty[(String, String)])
+            val rdd = RddUtil
+              .parallelize((apiFileCount.toDouble / WasapiPageSize).ceil.toInt)
+              .flatMap { idx =>
+                var wasapiOpt: Option[Iterable[(String, String)]] = None
+                while (wasapiOpt.isEmpty) {
+                  Ait
+                    .getJsonWithAuth(
+                      wasapiUrl + WasapiPageSize + "&page=" + (idx + 1),
+                      basicAuth = basicAuth) { json =>
+                      json
+                        .downField("files")
+                        .values
+                        .map(_.flatMap { fileJson =>
+                          val fileCursor = fileJson.hcursor
+                          for {
+                            filename <- fileCursor.get[String]("filename").toOption
+                            location <- fileCursor
+                              .downField("locations")
+                              .values
+                              .flatMap(_.flatMap(_.asString).find(
+                                _.startsWith(ArchConf.aitWarcsBaseUrl)))
+                          } yield (filename, location)
+                        })
+                    } match {
+                    case Right(iter) => wasapiOpt = Some(iter)
+                    case Left(status) =>
+                      if (status / 100 == 5) Thread.sleep(RetrySleepMillis)
+                      else wasapiOpt = Some(Iterable.empty[(String, String)])
+                  }
+                }
+                wasapiOpt.get
+              }
+              .repartition(apiFileCount / WarcFilesPerPartition + 1)
+              .mapPartitions { partition =>
+                val aitHdfsIO = hdfsHostPort.map { case (host, port) => HdfsIO(host, port) }
+                partition
+                  .map { case (file, location) =>
+                    val inputFilePath = inputPath + "/" + file
+                    if (aitHdfsIO.exists(_.exists(inputFilePath))) {
+                      (file, location, Some(inputFilePath))
+                    } else {
+                      (file, location, None)
                     }
                   }
-                  wasapiOpt.get
-                }
-                .repartition(apiFileCount / WarcFilesPerPartition + 1)
-                .mapPartitions { partition =>
-                  val aitHdfsIO = hdfsHostPort.map { case (host, port) => HdfsIO(host, port) }
-                  partition
-                    .map { case (file, location) =>
-                      val inputFilePath = inputPath + "/" + file
-                      if (aitHdfsIO.exists(_.exists(inputFilePath))) {
-                        (file, location, Some(inputFilePath))
-                      } else {
-                        (file, location, None)
-                      }
-                    }
-                    .map { case (filename, location, directPath) =>
-                      (filename, aitCacheBackedInputStream(filename, cachePath, direct = directPath.map { p =>
-                        aitHdfsIO.get.open(p, decompress = false)
-                      }, basicAuth, Some(location), rewriteCache = false))
-                    }
-                }
-            }
+                  .map { case (filename, location, directPath) =>
+                    aitAccessTuple(filename, directPath.map { p =>
+                      ManagedVal(aitHdfsIO.get.open(p, decompress = false))
+                    }, Some(location), isCache = false)
+                  }
+              }
+            action(aitCacheBasedRdd(rdd, cachePath, basicAuth))
           }
         }
       }
