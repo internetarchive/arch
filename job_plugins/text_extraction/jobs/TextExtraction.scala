@@ -1,18 +1,18 @@
-package org.archive.webservices.ars.processing.jobs.archivespark.preset
+package jobs
 
 import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.ExtractedText
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
-object QualityTextExtraction extends ArchiveSparkEnrichJob {
-  val name: String = "High-quality extracted text"
+object TextExtraction extends ArchiveSparkEnrichJob {
+  val name: String = "Extracted text"
   val description: String =
-    "Extract high-quality text from almost any text document. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Extract text from almost any text document. Output: one or more JSONL files comprising a JSON object for each input record."
 
-  val uuid: String = "01961978-1c2a-7c05-9464-866fab2ab856"
+  val uuid: String = "01961974-d4a5-7c2b-822c-b07b68fd66ed"
 
   val category: ArchJobCategory = ArchJobCategories.Text
 
@@ -26,6 +26,6 @@ object QualityTextExtraction extends ArchiveSparkEnrichJob {
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
-    Seq(new ExtractedText(true))
+    Seq(ExtractedText.withParams(conf.params))
   }
 }

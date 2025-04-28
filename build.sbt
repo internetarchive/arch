@@ -4,22 +4,15 @@ lazy val commonSettings = Seq(name := "arch", organization := "org.archive.webse
 
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
-val tikaDependencies = Seq(
-  "net.sourceforge.nekohtml" % "nekohtml" % "1.9.13",
-  "xerces" % "xercesImpl" % "2.9.1",
-  "com.syncthemall" % "boilerpipe" % "1.2.2",
-  "org.apache.tika" % "tika-core" % "2.9.2",
-  "org.apache.tika" % "tika-parsers-standard-package" % "2.9.2"
-    excludeAll ExclusionRule(organization = "com.fasterxml.jackson.core"),
-  "org.apache.commons" % "commons-compress" % "1.26.1",
-  "com.optimaize.languagedetector" % "language-detector" % "0.6",
-  "org.apache.tika" % "tika-langdetect" % "1.22"
-    exclude(org = "com.optimaize.languagedetector", name = "language-detector")
-)
-
-val guavaDependent = tikaDependencies ++ Seq(
+val guavaDependent = Seq(
   "org.scalatra" %% "scalatra-cache-guava" % "2.5.4",
-  "io.archivesunleashed" % "aut" % "0.90.0" intransitive ())
+  "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
+  "com.optimaize.languagedetector" % "language-detector" % "0.6",
+  "org.apache.tika" % "tika-core" % "2.9.2" % "provided",
+  "org.apache.tika" % "tika-langdetect" % "2.9.2" % "provided" exclude (org = "com.optimaize.languagedetector",
+    name = "language-detector"),
+  "org.apache.tika" % "tika-parsers" % "2.9.2" % "provided" excludeAll ExclusionRule(
+    organization = "com.fasterxml.jackson.core"))
 
 val prodProvided = Seq(
   "org.apache.hadoop" % "hadoop-common" % "2.6.0",
@@ -28,8 +21,7 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-sql" % "2.4.5",
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
-val dependencies = prodProvided.map(_ % "provided") ++ guavaDependent.map(
-  _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
+val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
   "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
@@ -50,34 +42,33 @@ val dependencies = prodProvided.map(_ % "provided") ++ guavaDependent.map(
   "io.sentry" % "sentry" % "6.28.0",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "edu.stanford.nlp" % "stanford-corenlp" % "4.3.1" % "provided",
-  "io.github.nremond" %% "pbkdf2-scala" % "0.7.0") ++ Seq(
+  "io.github.nremond" %% "pbkdf2-scala" % "0.7.0") ++ guavaDependent.map(
+  _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",
   "io.circe" %% "circe-parser").map(_ % "0.13.0")
 
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),
+  assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
+  Compile / unmanagedJars ++=
+    (baseDirectory.value / "job_plugins" ** "target" / "scala-2.12" * "*-assembly-*.jar").classpath,
+  test in assembly := {},
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
-lazy val root = (project in file("."))
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided") ++ dependencies)
-
-lazy val dev = (project in file("build/dev"))
-  .dependsOn(root)
-  .settings(libraryDependencies ++= prodProvided)
+lazy val dev = (project in file("."))
+  .settings(target := baseDirectory.value / "build/dev/target")
+  .settings(libraryDependencies ++= dependencies ++ prodProvided)
   .settings(buildSettings: _*)
   .settings(
     fork in run := true,
     outputStrategy := Some(StdoutOutput),
     baseDirectory in run := file("."))
 
-lazy val prod = (project in file("build/prod"))
-  .dependsOn(root)
-  .settings(libraryDependencies += guava)
+lazy val prod = (project in file("."))
+  .settings(target := baseDirectory.value / "build/prod/target")
+  .settings(libraryDependencies ++= dependencies :+ guava)
   .settings(buildSettings: _*)
   .settings(
     assemblyShadeRules in assembly := Seq(
@@ -89,7 +80,11 @@ lazy val prod = (project in file("build/prod"))
     assemblyOption in assembly := (assemblyOption in assembly).value
       .copy(includeScala = false, includeDependency = false),
     assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case PathList("META-INF", xs@_*) =>
+        xs.map(_.toLowerCase) match {
+          case "services" :: xs => MergeStrategy.filterDistinctLines
+          case _ => MergeStrategy.discard
+        }
       case _ => MergeStrategy.first
     })
 

@@ -1,0 +1,4 @@
+target/
+project/*
+!project/assembly.sbt
+!project/build.properties

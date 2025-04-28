@@ -73,10 +73,9 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
           val crawlDate = AutUtil.timestamp(r)
-          if (crawlDate.nonEmpty) Some {
-            row(url, http, body, tikaMime, crawlDate, lastModifiedDate)
-          }
-          else None
+          if (crawlDate.nonEmpty) {
+            Some(row(url, http, body, tikaMime, crawlDate, lastModifiedDate))
+          } else None
         } else None
       }
     }

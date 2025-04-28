@@ -4,13 +4,12 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import org.scalatra.test.scalatest._
 
-import org.archive.webservices.ars.{ApiController, DefaultController, JobUuidApiController}
+import org.archive.webservices.ars.{ApiController, JobUuidApiController}
 import org.archive.webservices.ars.processing.jobs.DomainFrequencyExtraction
 
 import Fixtures._
 
 class JobUuidApiControllerSpec extends UnitSpec {
-  addServlet(classOf[DefaultController], "/*")
   addServlet(classOf[JobUuidApiController], "/api/job/*")
   addServlet(classOf[ApiController], "/api/*")
 

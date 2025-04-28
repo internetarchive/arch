@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.processing.jobs.archivespark.functions
+package functions
 
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import org.apache.tika.Tika
@@ -12,10 +12,13 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichR
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunctionAdapter
 import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.http.HttpMessage
-import org.archive.webservices.sparkling.util.RegexUtil
+import org.archive.webservices.sparkling.io.IOUtil
+import org.archive.webservices.sparkling.util.{RegexUtil, StringUtil}
+
+import java.io.ByteArrayInputStream
 
 object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
-  lazy val tika = new Tika()
+  @transient lazy val tika = new Tika()
 
   override def baseFunc: EnrichFunc[ArchEnrichRoot[_], EnrichRoot, Bytes, String] = new ExtractedText
 
@@ -26,7 +29,7 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
 
   val PageMime: String = "text/html"
   val SupportedMimes: Set[String] = Set(
-    PageMime, 
+    PageMime,
     "application/atom+xml",
     "application/vnd.openxmlformats-officedocument.presentationml.slide",
     "application/x-xliff+xml",
