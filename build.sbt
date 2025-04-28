@@ -74,8 +74,7 @@ lazy val prod = (project in file("."))
     assemblyShadeRules in assembly := Seq(
       ShadeRule
         .rename("com.google.common.**" -> (name.value + ".shade.@0"))
-        .inLibrary(guava)
-        .inLibrary(guavaDependent: _*)
+        .inLibrary(Seq(guava) ++ guavaDependent: _*)
         .inProject),
     assemblyOption in assembly := (assemblyOption in assembly).value
       .copy(includeScala = false, includeDependency = false),
