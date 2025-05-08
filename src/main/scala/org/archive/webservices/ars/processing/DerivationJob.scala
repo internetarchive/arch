@@ -1,21 +1,20 @@
 package org.archive.webservices.ars.processing
 
-import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput, DerivativeOutputCache}
-import org.archive.webservices.ars.util.LazyCache
+import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.StringUtil
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 trait DerivationJob {
-  val OutFilesCacheFile = "outfiles.cached.jsonl"
-
   val partialOf: Option[DerivationJob] = None
 
   private val _id: String = getClass.getSimpleName.stripSuffix("$")
   def id: String = _id
+
+  val revision: Int = 0
 
   def name: String
 
@@ -39,6 +38,8 @@ trait DerivationJob {
 
   def run(conf: DerivationJobConf): Future[Boolean]
 
+  def isResumable(conf: DerivationJobConf): Boolean = conf.inputSpec.isResumableInput
+
   def enqueue(
       conf: DerivationJobConf,
       get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
@@ -61,8 +62,6 @@ trait DerivationJob {
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
 
-  def outputScalesWithInput = false
-
   def datasetGlobMime(conf: DerivationJobConf): Option[(String, String)] = None
 
   def outFiles(conf: DerivationJobConf): Iterator[DerivativeOutput] = {
@@ -72,31 +71,6 @@ trait DerivationJob {
         DerivativeOutput(name.stripPrefix("/"), path, mime.split('/').last, mime)
       }
     }
-  }
-
-  def outFilesCacheFile(conf: DerivationJobConf): String = {
-    IOHelper.concatPaths(conf.outputPath, relativeOutPath, OutFilesCacheFile)
-  }
-
-  def outFilesCache(conf: DerivationJobConf): Option[DerivativeOutputCache] = {
-    val cacheFile = outFilesCacheFile(conf)
-    LazyCache.getIfCached(cacheFile)(DerivativeOutputCache.parse)
-  }
-
-  def lazyOutFilesCache(conf: DerivationJobConf): Option[Future[DerivativeOutputCache]] = {
-    outFilesCache(conf).map(Future(_)).orElse {
-      if (outputScalesWithInput) Some {
-        val cacheFile = outFilesCacheFile(conf)
-        LazyCache.getOrCache(cacheFile)(
-          DerivativeOutputCache.parse,
-          DerivativeOutputCache.write(outFiles(conf), _))
-      }
-      else None
-    }
-  }
-
-  def outFilesCached(conf: DerivationJobConf): Iterator[DerivativeOutput] = {
-    outFilesCache(conf).map(_.files).getOrElse(outFiles(conf))
   }
 
   def reset(conf: DerivationJobConf): Unit = {}
@@ -118,7 +92,7 @@ trait DerivationJob {
   }
 
   def outputSize(conf: DerivationJobConf): Long = {
-    outFilesCache(conf).map(_.size).getOrElse {
+    UuidManager.outFilesCache(conf).map(_.size).getOrElse {
       outFiles(conf).map(_.size).foldLeft(0L)(_ + _)
     }
   }

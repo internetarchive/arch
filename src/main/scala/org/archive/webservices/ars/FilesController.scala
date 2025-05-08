@@ -14,9 +14,7 @@ import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra._
 
 import java.io.{File, PrintWriter}
-import java.net.URL
 import java.time.Instant
-import javax.net.ssl.HttpsURLConnection
 import javax.servlet.http.HttpServletRequest
 import scala.io.Source
 import scala.util.Try

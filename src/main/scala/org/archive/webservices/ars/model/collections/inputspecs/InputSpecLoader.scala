@@ -20,6 +20,8 @@ trait InputSpecLoader {
       action(filtered)
     }
   }
+  def isResumableInput: Boolean = false
+  def revision = 0
 }
 
 object InputSpecLoader {

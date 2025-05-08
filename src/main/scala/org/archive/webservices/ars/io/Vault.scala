@@ -8,8 +8,6 @@ import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.util.IteratorUtil
 
 import java.io.InputStream
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 import scala.io.Source
 
 object Vault {

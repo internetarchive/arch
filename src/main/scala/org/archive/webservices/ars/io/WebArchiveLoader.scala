@@ -404,7 +404,7 @@ object WebArchiveLoader {
         offset = offset,
         decompress = false,
         strategy = HdfsIO.LoadingStrategy.Remote)
-      IOHelper.splitMergeInputStreams(in, positions)
+      IOHelper.splitMergeInputStreams(in, positions, buffered = false)
     } else {
       val file = filePath.split('/').last
       val cachePath = CollectionCache.cachePath(sourceId, file)
@@ -414,7 +414,7 @@ object WebArchiveLoader {
           offset = offset,
           decompress = false,
           strategy = HdfsIO.LoadingStrategy.Remote)
-        IOHelper.splitMergeInputStreams(in, positions)
+        IOHelper.splitMergeInputStreams(in, positions, buffered = false)
       } else {
         HttpClient.rangeRequest(
           ArchConf.aitWarcsBaseUrl + "/webdatafile/" + file,

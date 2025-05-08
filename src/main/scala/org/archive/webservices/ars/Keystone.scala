@@ -7,7 +7,7 @@ import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager
 import org.archive.webservices.ars.util.{HttpUtil, LazyCache}
 
 import java.io.DataOutputStream
-import java.net.{HttpURLConnection, URL}
+import java.net.HttpURLConnection
 import java.time.Instant
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
