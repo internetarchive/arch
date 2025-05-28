@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.archivespark
 
 import io.circe.{HCursor, Json}
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
@@ -52,20 +52,20 @@ object ArchiveSparkFlexJob extends AiJob {
     }
   }
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     conf.params.values.get("functions").toSeq.flatMap(_.asArray.toSeq.flatten).map { function =>
       ArchiveSparkFlexJob.initFunction(function)
     }
   }
 
-  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_]] =
+  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_, _]] =
     Seq(EntitiesAdapter, Whisper, WhisperText).flatMap { adapter =>
       Iterator(adapter.name -> adapter, adapter.name.toLowerCase -> adapter)
     }.toMap
 
   private def initFunction[A](
-      func: ArchArchiveSparkFunctionAdapter[A],
-      cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], A, _] = {
+      func: ArchArchiveSparkFunctionAdapter[A, _],
+      cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], EnrichRoot, A, _] = {
     val dependency =
       cursor.downField("on").focus.map(initFunction).flatMap(func.toDependencyPointer)
     cursor.downField("params").focus.flatMap(DerivationJobParameters.fromJson) match {
@@ -74,7 +74,7 @@ object ArchiveSparkFlexJob extends AiJob {
     }
   }
 
-  def initFunction(definition: Json): EnrichFunc[ArchEnrichRoot[_], _, _] = {
+  def initFunction(definition: Json): EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _] = {
     if (definition.isString) {
       adapters.get(definition.asString.get).map(_.noParams)
     } else if (definition.isObject) {

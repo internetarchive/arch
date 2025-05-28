@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
@@ -25,10 +25,10 @@ object TrOcrEntityExtraction extends AiJob {
   }
 
   override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("image/")
+    _.mime.startsWith("image/")
   }
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     val text = TrOCR.noParams
     val entities = EntitiesAdapter.noParams(on = EntitiesAdapter.toDependencyPointer(text))
     Seq(text, entities)

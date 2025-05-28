@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.archivespark.model.dataloads.ByteLoad
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.archivespark.util.Bytes
@@ -20,7 +20,7 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
   def plainTextLoad: DataLoadPointer[ArchEnrichRoot[_], String] =
     ArchiveSparkEnrichJob.plainTextLoad
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]]
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]]
 
   override def enrich(
       rdd: RDD[ArchEnrichRoot[_]],

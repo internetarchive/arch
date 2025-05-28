@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark
@@ -28,9 +28,9 @@ object WhisperEntityExtraction extends AiJob {
     record => record.mime.startsWith("audio/") || record.mime.startsWith("video/")
   }
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     val whisperText = archivespark.functions.WhisperText.withParams(conf.params)
-    val entities = EntitiesAdapter.noParams(on = EntitiesAdapter.toDependencyPointer(whisperText))
+    val entities = EntitiesAdapter.noParams(on = Some(whisperText))
     Seq(whisperText, entities)
   }
 }

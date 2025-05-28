@@ -241,10 +241,11 @@ object IOHelper {
 
   def sizeStr(path: String): String = FormatUtil.formatBytes(size(path))
 
-  def syncHdfs[R](path: String)(action: => R): R = {
+  def syncHdfs[R](path: String)(action: Boolean => R): R = {
     val p = new Path(path)
     var out: Option[OutputStream] = None
     var exists: Boolean = true
+    var waited = false
     while (out.isEmpty) {
       try {
         out = Some(if (exists) HdfsIO.fs.append(p) else HdfsIO.fs.create(p, false))
@@ -252,12 +253,13 @@ object IOHelper {
         case _: FileNotFoundException =>
           exists = false
         case _: Exception =>
+          waited = true
           exists = true
           Thread.sleep(1000)
       }
     }
     try {
-      action
+      action(waited)
     } finally {
       Try(out.get.close())
       Try(HdfsIO.delete(path))
@@ -269,7 +271,7 @@ object IOHelper {
       positions: Iterator[(Long, Long)],
       buffered: Boolean = true): InputStream = {
     val split = IOUtil.splitStream(in, positions)
-    val merged = new ChainedInputStream(split, nextOnError = true)
+    val merged = new ChainedInputStream(split, nextOnError = false) // ### changed true --> false
     if (buffered) {
       val buffer = IOUtil.copyToBuffer(merged)
       in.close()

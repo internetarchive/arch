@@ -16,6 +16,8 @@ import java.io.File
 import scala.collection.JavaConverters._ // For SentryEvent.setExtras
 
 object Arch {
+  val ArchAddonPackageNamespace = "org.archive.webservices.arch.addons"
+
   def start(contextPath: String, port: Int): Unit = {
     val server = new Server(port)
 
@@ -77,9 +79,9 @@ object Arch {
   def main(args: Array[String]): Unit = {
     IOUtil.memoryBuffer = 1.mb.toInt
     RddUtil.saveRecordTimeoutMillis = -1
-    AddonLoader.initializePackage("org.archive.webservices.arch.addons")
-    JobStateManager.init()
     initSentry()
+    AddonLoader.initializePackage(ArchAddonPackageNamespace)
+    JobStateManager.init()
     start(ArchConf.basePath, ArchConf.internalPort)
   }
 

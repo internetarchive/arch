@@ -1,21 +1,24 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters
+
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import org.archive.webservices.archivespark.functions.{Entities, EntitiesConstants}
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.jobs.archivespark.functions.CoreNlpEntities
 
 import java.util.Properties
 import scala.collection.JavaConverters.asScalaSetConverter
 
-object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String] {
-  override lazy val baseFunc: Entities = Entities
+object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String, Seq[String]] {
+  override lazy val baseFunc: EnrichFunc[_, _, String, Seq[String]] = new CoreNlpEntities()
 
-  override def defaultDependency: Option[DataLoadPointer[ArchEnrichRoot[_], String]] = Some(
-    ArchiveSparkEnrichJob.plainTextLoad)
+  override def defaultDependency: Option[DataLoadPointer[ArchEnrichRoot[_], String]] = {
+    Some(ArchiveSparkEnrichJob.plainTextLoad)
+  }
 
-  override def initFunc(params: DerivationJobParameters): EnrichFunc[_, String, _] = {
+  override def initFunc(params: DerivationJobParameters): EnrichFunc[_, _, String, Seq[String]] = {
     val langParam = params.get[String]("lang").map(_.toLowerCase)
     langParam match {
       case Some("chinese") => Entities.apply(properties(langParam))

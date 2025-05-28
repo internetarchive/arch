@@ -1,6 +1,6 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
@@ -27,11 +27,7 @@ object EntityExtraction extends ArchiveSparkEnrichJob {
     record => record.mime.startsWith("text/")
   }
 
-  def entitiesFunc(params: DerivationJobParameters): EnrichFunc[ArchEnrichRoot[_], _, _] = {
-    EntitiesAdapter.withParams(params)
-  }
-
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
-    Seq(entitiesFunc(conf.params))
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
+    Seq(EntitiesAdapter.withParams(conf.params))
   }
 }

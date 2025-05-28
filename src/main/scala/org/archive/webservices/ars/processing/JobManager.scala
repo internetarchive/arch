@@ -24,6 +24,8 @@ object JobManager {
     ArchiveSparkFlexJob,
     ArchiveSparkNoop,
     EntityExtraction,
+    TextExtraction,
+    QualityTextExtraction,
     WhisperTranscription,
     WhisperText,
     WhisperEntityExtraction,
