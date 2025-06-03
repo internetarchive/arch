@@ -58,6 +58,7 @@ object Keystone {
     LazyCache.lazyProcess(instance.lazyOutFiles, instance.outFiles) { outFiles =>
       val outputMetadata = Map(
         "job_start_id" -> instance.uuid.asJson,
+        "event_type" -> instance.stateStr.toUpperCase.asJson,
         "output_bytes" -> instance.outputSize.asJson,
         "created_at" -> Instant.now.toString.asJson,
         "files" -> (
