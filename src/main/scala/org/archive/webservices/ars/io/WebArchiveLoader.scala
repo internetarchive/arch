@@ -5,7 +5,7 @@ import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{Common, MultiSourceSplitInputStream}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
@@ -423,31 +423,36 @@ object WebArchiveLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    if (context.aitHdfsIOopt.exists(_.exists(filePath))) {
-      val in = context.aitHdfsIOopt.get.open(
-        filePath,
-        offset = offset,
-        decompress = false,
-        strategy = HdfsIO.LoadingStrategy.Remote)
-      IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-    } else {
-      val file = filePath.split('/').last
-      val cachePath = CollectionCache.cachePath(sourceId, file)
-      if (HdfsIO.exists(cachePath)) {
-        val in = HdfsIO.open(
-          cachePath,
+    new MultiSourceSplitInputStream(
+      offset,
+      positions,
+      (offset, positions) => if (context.aitHdfsIOopt.exists(_.exists(filePath))) Some {
+        val in = context.aitHdfsIOopt.get.open(
+          filePath,
           offset = offset,
           decompress = false,
           strategy = HdfsIO.LoadingStrategy.Remote)
         IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-      } else {
+      } else None,
+      (offset, positions) => {
+        val cachePath = CollectionCache.cachePath(sourceId, filePath.split('/').last)
+        if (HdfsIO.exists(cachePath)) Some {
+          val in = HdfsIO.open(
+            cachePath,
+            offset = offset,
+            decompress = false,
+            strategy = HdfsIO.LoadingStrategy.Remote)
+          IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+        } else None
+      },
+      (offset, positions) => {
         HttpClient.rangeRequest(
-          aitWarcUrl(file),
+          aitWarcUrl(filePath.split('/').last),
           headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
           offset = offset) { in =>
-          IOHelper.splitMergeInputStreams(in, positions)
+          Some(IOHelper.splitMergeInputStreams(in, positions))
         }
       }
-    }
+    )
   }
 }
