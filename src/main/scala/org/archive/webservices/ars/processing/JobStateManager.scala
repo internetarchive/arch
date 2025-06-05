@@ -105,6 +105,7 @@ object JobStateManager {
       (id, conf, meta) <- jobs
       job <- JobManager.get(id)
     } {
+      job.reset(conf)
       job.enqueue(
         conf,
         { instance =>
