@@ -110,10 +110,22 @@ abstract class ArchFileProcEnrichFuncBase[A]
       .getOrElse(inFile)
     Log.info(s"Processing file $file...")
     val (proc, pid, reclaimed) = StageSyncManager.claimProcess(workingDir)
-    proc.synchronized {
-      if (reclaimed) waitForProc(proc, pid)
-      proc.exec(cmd(file))
-      process(proc, pid, derivatives)
+    Log.info(s"Process claimed: $workingDir (reclaimed: $reclaimed), synchronizing...")
+    val input = cmd(file)
+    Common.timeoutWithReporter(600000) { reporter => // 10 minutes
+      reporter.idling = true
+      proc.synchronized {
+        reporter.alive()
+        if (reclaimed) {
+          Log.info(s"Synchronized, waiting for process $pid...")
+          waitForProc(proc, pid)
+        }
+        Log.info(s"Processing input $input...")
+        proc.exec(input)
+        Log.info(s"Processed input, processing output...")
+        process(proc, pid, derivatives)
+        Log.info(s"Done $input.")
+      }
     }
   }
 }

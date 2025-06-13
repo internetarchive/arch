@@ -119,7 +119,7 @@ object JobManager {
     instance.unregistered()
     if (instance.job.partialOf.isEmpty) {
       if (instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
-        if (!instance.isResumable) instance.job.reset(instance.conf)
+        if (!instance.isResumable) DerivationJob.reset(instance.job, instance.conf)
         instance.job.enqueue(
           instance.conf,
           { newInstance =>

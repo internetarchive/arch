@@ -5,11 +5,12 @@ import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.util.{Common, MultiSourceSplitInputStream}
+import org.archive.webservices.ars.util.{HttpUtil, MultiSourceSplitInputStream}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, ManagedVal, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
@@ -17,6 +18,8 @@ import java.io.{BufferedInputStream, InputStream}
 import scala.util.Try
 
 object WebArchiveLoader {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val WasapiPageSize = 100
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
@@ -154,12 +157,14 @@ object WebArchiveLoader {
   }
 
   def aitSourceStream(location: String, basicAuth: Option[String]): InputStream = {
-    Ait
-      .getWithAuth(
-        location,
-        contentType = "*/*",
-        basicAuth = basicAuth,
-        close = false)(Some(_)).toOption.get
+    HttpUtil.syncHost(location) {
+      Ait
+        .getWithAuth(
+          location,
+          contentType = "*/*",
+          basicAuth = basicAuth,
+          close = false)(Some(_)).toOption.get
+    }
   }
 
   def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
@@ -423,10 +428,16 @@ object WebArchiveLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
+    val positionsSeq = positions.toSeq
+    val (lastOffset, lastLength) = positionsSeq.lastOption.getOrElse((0L, 0L))
+    val minLength = offset + lastOffset + lastLength
     new MultiSourceSplitInputStream(
       offset,
-      positions,
-      (offset, positions) => if (context.aitHdfsIOopt.exists(_.exists(filePath))) Some {
+      positionsSeq.toIterator,
+      (offset, positions) => if (context.aitHdfsIOopt.exists(_.exists(filePath)) && {
+        context.aitHdfsIOopt.exists(_.length(filePath) >= minLength)
+      }) Some {
+        Log.info(s"Accessing $sourceId:$filePath ($offset), direct...")
         val in = context.aitHdfsIOopt.get.open(
           filePath,
           offset = offset,
@@ -436,7 +447,10 @@ object WebArchiveLoader {
       } else None,
       (offset, positions) => {
         val cachePath = CollectionCache.cachePath(sourceId, filePath.split('/').last)
-        if (HdfsIO.exists(cachePath)) Some {
+        if (HdfsIO.exists(cachePath) && {
+          HdfsIO.length(cachePath) >= minLength
+        }) Some {
+          Log.info(s"Accessing $sourceId:$filePath ($offset), via cache...")
           val in = HdfsIO.open(
             cachePath,
             offset = offset,
@@ -446,11 +460,20 @@ object WebArchiveLoader {
         } else None
       },
       (offset, positions) => {
-        HttpClient.rangeRequest(
-          aitWarcUrl(filePath.split('/').last),
-          headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
-          offset = offset) { in =>
-          Some(IOHelper.splitMergeInputStreams(in, positions))
+        Log.info(s"Accessing $sourceId:$filePath ($offset), via AIT...")
+        val url = aitWarcUrl(filePath.split('/').last)
+        HttpUtil.syncHost(url) {
+          Log.info(s"Requesting $url...")
+          HttpClient.rangeRequest(
+            url,
+            headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
+            offset = offset,
+            timeoutMillis = 10000) { in =>
+            Log.info(s"Storing $sourceId:$filePath ($offset) to buffer...")
+            val b = Some(IOHelper.splitMergeInputStreams(in, positions))
+            Log.info(s"Stored $sourceId:$filePath ($offset) to buffer.")
+            b
+          }
         }
       }
     )

@@ -7,6 +7,7 @@ import org.archive.webservices.archivespark.model.pointers.{DataLoadPointer, Fie
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, EnrichRoot, TypedEnrichable}
 import org.archive.webservices.archivespark.specific.warc.functions.WarcPayloadFields
 import org.archive.webservices.archivespark.util.Bytes
+import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunctionAdapter
 import org.archive.webservices.sparkling.html.HtmlProcessor
@@ -17,6 +18,11 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
   lazy val tika = new Tika()
 
   override def baseFunc: EnrichFunc[ArchEnrichRoot[_], EnrichRoot, Bytes, String] = new ExtractedText
+
+  override def initFunc(params: DerivationJobParameters): EnrichFunc[_, _, Bytes, String] = {
+    val qualityFilter = params.get[Boolean]("quality-filter").getOrElse(false)
+    new ExtractedText(qualityFilter)
+  }
 
   val PageMime: String = "text/html"
   val SupportedMimes: Set[String] = Set(

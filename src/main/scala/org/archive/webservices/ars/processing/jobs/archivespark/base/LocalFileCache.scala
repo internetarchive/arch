@@ -52,7 +52,10 @@ trait LocalFileCache {
   def cacheLocal(): File = cacheLocal(if (_memoryCache.isDefined) None else Some(payloadAccess))
 
   def clearCache(): Unit = if (_localCacheFile.isDefined || _memoryCache.isDefined) synchronized {
-    for (file <- _localCacheFile) file.delete()
+    for (file <- _localCacheFile) {
+      Log.info(s"Deleting ${file.getPath}.")
+      file.delete()
+    }
     _localCacheFile = None
     _memoryCache = None
   }

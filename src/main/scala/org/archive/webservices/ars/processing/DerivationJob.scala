@@ -8,6 +8,14 @@ import org.archive.webservices.sparkling.util.StringUtil
 
 import scala.concurrent.Future
 
+object DerivationJob {
+  def reset(job: DerivationJob, conf: DerivationJobConf): Unit = {
+    job.reset(conf)
+    val outFilesCacheFile = UuidManager.outFilesCacheFile(conf.outputPath)
+    if (HdfsIO.exists(outFilesCacheFile)) HdfsIO.delete(outFilesCacheFile)
+  }
+}
+
 trait DerivationJob {
   val partialOf: Option[DerivationJob] = None
 
