@@ -62,22 +62,23 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   def script(file: String): Option[String] = None
 
-  def init(): SystemProcess
+  def init(restart: Boolean = false): SystemProcess
 
   private var _process: Option[SystemProcess] = None
   private def initialized: Boolean = _process.exists(!_.destroyed)
 
-  private def doInit(): Unit = if (!initialized) synchronized {
+  private def doInit(restart: Boolean = false): Unit = if (!initialized) synchronized {
+    if (restart) for (p <- _process) p.destroy()
     if (!initialized) {
       val dir = new File(workingDir)
       dir.mkdirs()
       Common.sync(new File(dir, Sparkling.appId + "._initializing")) {
-        _process = Some(init())
+        _process = Some(init(restart))
       }
     }
   }
 
-  def exec(cmd: String, exec: (SystemProcess, Int, String) => Unit): SystemProcess = {
+  def exec(cmd: String, exec: (SystemProcess, Int, String) => Unit, restart: Boolean = false): SystemProcess = {
     StageSyncManager
       .syncProcess(
         cmd,
@@ -87,7 +88,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
         cleanup = { (p, pid) =>
           val pipe = new File(pidPipe(pid))
           if (pipe.exists()) pipe.delete()
-        })
+        },
+        restart)
       ._1
   }
 
@@ -97,34 +99,50 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   override def derive(source: TypedEnrichable[String], derivatives: Derivatives): Unit = {
     doInit()
-    val inFile = source.get
-    val file = script(inFile)
-      .map { script =>
-        val scriptFile = IOUtil.tmpFile
-        val scriptOut = IOUtil.print(IOUtil.fileOut(scriptFile))
-        try {
-          scriptOut.print(script)
-        } finally scriptOut.close()
-        scriptFile.getPath
-      }
-      .getOrElse(inFile)
-    Log.info(s"Processing file $file...")
-    val (proc, pid, reclaimed) = StageSyncManager.claimProcess(workingDir)
-    Log.info(s"Process claimed: $workingDir (reclaimed: $reclaimed), synchronizing...")
-    val input = cmd(file)
-    Common.timeoutWithReporter(600000) { reporter => // 10 minutes
-      reporter.idling = true
-      proc.synchronized {
-        reporter.alive()
-        if (reclaimed) {
-          Log.info(s"Synchronized, waiting for process $pid...")
-          waitForProc(proc, pid)
+    var firstAttempt = true
+    var retry = false
+    while (firstAttempt || retry) {
+      firstAttempt = false
+      val inFile = source.get
+      val file = script(inFile)
+        .map { script =>
+          val scriptFile = IOUtil.tmpFile
+          val scriptOut = IOUtil.print(IOUtil.fileOut(scriptFile))
+          try {
+            scriptOut.print(script)
+          } finally scriptOut.close()
+          scriptFile.getPath
         }
-        Log.info(s"Processing input $input...")
-        proc.exec(input)
-        Log.info(s"Processed input, processing output...")
-        process(proc, pid, derivatives)
-        Log.info(s"Done $input.")
+        .getOrElse(inFile)
+      if (retry) Log.info(s"Retrying $file...")
+      Log.info(s"Processing file $file...")
+      val (proc, pid, reclaimed) = StageSyncManager.claimProcess(workingDir)
+      Log.info(s"Process claimed: $workingDir (reclaimed: $reclaimed), synchronizing...")
+      val input = cmd(file)
+      proc.lock {
+        try {
+          if (!proc.destroyed) {
+            Common.timeout(600000) { // 10 minutes
+              if (reclaimed) {
+                Log.info(s"Synchronized, waiting for process $pid...")
+                waitForProc(proc, pid)
+              }
+              Log.info(s"Processing input $input...")
+              proc.exec(input)
+              Log.info(s"Processed input, processing output...")
+              process(proc, pid, derivatives)
+              Log.info(s"Done $input.")
+            }
+          } else {
+            retry = true
+          }
+        } catch {
+          case e: Exception =>
+            Log.info(s"Restarting process $workingDir...")
+            doInit(true)
+            retry = !retry
+            if (!retry) throw e
+        }
       }
     }
   }

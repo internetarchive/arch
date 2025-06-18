@@ -51,7 +51,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override def fields: Seq[String] = Seq(label)
 
-  override def init(): SystemProcess = {
+  override def init(restart: Boolean = false): SystemProcess = {
     val arg = {
       (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     }
@@ -97,7 +97,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
           waitForLine = Some(outputEndToken),
           supportsEcho = false,
           pipe = Some(pipe))
-      })
+      }, restart)
   }
 
   override def cmd(file: String): String = file

@@ -7,6 +7,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
+import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object WhisperEntityExtraction extends AiJob {
   val uuid: String = "018f7b09-f7ca-756d-a4ca-69cea914185d"
@@ -19,13 +20,13 @@ object WhisperEntityExtraction extends AiJob {
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
+    cdx => superFilter(cdx) && cdx.status == 200
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("audio/") || record.mime.startsWith("video/")
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    mime => mime.startsWith("audio/") || mime.startsWith("video/")
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

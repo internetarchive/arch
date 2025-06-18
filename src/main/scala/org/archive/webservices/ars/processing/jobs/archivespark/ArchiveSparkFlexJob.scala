@@ -7,6 +7,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrich
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
+import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.util.StringUtil
 
 object ArchiveSparkFlexJob extends AiJob {
@@ -16,7 +17,7 @@ object ArchiveSparkFlexJob extends AiJob {
   val description: String = "ArchiveSpark flex job "
   val category: ArchJobCategory = ArchJobCategories.None
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
     val mime = conf.params.values
       .get("mime")
       .toSeq
@@ -27,14 +28,14 @@ object ArchiveSparkFlexJob extends AiJob {
       }
       .toSet
     if (mime.isEmpty) {
-      super.genericPredicate(conf)
-    } else { record =>
-      mime.contains(record.mime) || mime.contains(StringUtil.prefixToSeparator(record.mime, "/"))
+      super.mimePrefilter(conf)
+    } else { m =>
+      mime.contains(m) || mime.contains(StringUtil.prefixToSeparator(m, "/"))
     }
   }
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
     val status = conf.params.values.get("status").toSeq.flatMap { status =>
       if (status.isNumber) status.asNumber.flatMap(_.toInt).toSeq
       else if (status.isArray)
@@ -43,10 +44,10 @@ object ArchiveSparkFlexJob extends AiJob {
     }
     if (status.isEmpty) {
       superFilter
-    } else { warc =>
-      superFilter(warc) && {
+    } else { cdx =>
+      superFilter(cdx) && {
         status.exists { s =>
-          warc.status == s || (s < 100 && (warc.status / 10 == s || (s < 10 && warc.status / 100 == s)))
+          cdx.status == s || (s < 100 && (cdx.status / 10 == s || (s < 10 && cdx.status / 100 == s)))
         }
       }
     }

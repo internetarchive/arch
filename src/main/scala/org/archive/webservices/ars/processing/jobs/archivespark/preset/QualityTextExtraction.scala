@@ -5,6 +5,7 @@ import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.ExtractedText
+import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object QualityTextExtraction extends ArchiveSparkEnrichJob {
   val name: String = "High-quality extracted text"
@@ -15,13 +16,13 @@ object QualityTextExtraction extends ArchiveSparkEnrichJob {
 
   val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
+    cdx => superFilter(cdx) && cdx.status == 200
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => ExtractedText.SupportedMimes.contains(record.mime)
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    mime => ExtractedText.SupportedMimes.contains(mime)
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

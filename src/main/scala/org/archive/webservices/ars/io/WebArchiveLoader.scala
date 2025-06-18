@@ -58,7 +58,7 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarc[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+  def loadWarcFileRecords[R](spec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(action: RDD[FileRecord] => R): R = {
     InputSpecLoader.loadSpark(spec) { rdd =>
       val accessContext = FileAccessContext.fromLocalArchConf
       action({
@@ -72,7 +72,7 @@ object WebArchiveLoader {
             rdd.mapPartitions { partition =>
               accessContext.init()
               partition.filter(_.mime == CdxMime).map { f =>
-                val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString)
+                val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString).filter(cdxPrefilter)
                 val in = warcFilesViaCdx(cdx) { pointers =>
                   randomAccess(
                     accessContext,
@@ -91,9 +91,9 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarcsRecords[R](inputSpec: InputSpec)(
+  def loadWarcsRecords[R](inputSpec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(
       action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
-    loadWarc(inputSpec) { rdd =>
+    loadWarcFileRecords(inputSpec, cdxPrefilter) { rdd =>
       action(rdd.map { file =>
         val in = IOUtil.supportMark(file.access)
         val warcs = WarcLoader.load(in).filter {
@@ -108,8 +108,8 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R = {
-    loadWarcsRecords(spec)(rdd => action(rdd.flatMap(_._2)))
+  def loadWarcs[R](spec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(action: RDD[WarcRecord] => R): R = {
+    loadWarcsRecords(spec, cdxPrefilter)(rdd => action(rdd.flatMap(_._2)))
   }
 
   def loadWarcFilesLazy[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
@@ -469,10 +469,7 @@ object WebArchiveLoader {
             headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
             offset = offset,
             timeoutMillis = 10000) { in =>
-            Log.info(s"Storing $sourceId:$filePath ($offset) to buffer...")
-            val b = Some(IOHelper.splitMergeInputStreams(in, positions))
-            Log.info(s"Stored $sourceId:$filePath ($offset) to buffer.")
-            b
+            Some(IOHelper.splitMergeInputStreams(in, positions))
           }
         }
       }

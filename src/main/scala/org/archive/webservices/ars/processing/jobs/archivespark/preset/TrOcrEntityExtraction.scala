@@ -7,6 +7,7 @@ import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.TrOCR
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
+import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object TrOcrEntityExtraction extends AiJob {
   val uuid: String = "019078a8-7b16-7a87-8b50-a30166e547dd"
@@ -19,13 +20,13 @@ object TrOcrEntityExtraction extends AiJob {
 
   override val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
+    cdx => superFilter(cdx) && cdx.status == 200
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    _.mime.startsWith("image/")
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    _.startsWith("image/")
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

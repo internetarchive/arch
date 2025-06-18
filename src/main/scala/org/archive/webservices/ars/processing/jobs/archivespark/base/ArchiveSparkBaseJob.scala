@@ -9,6 +9,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, Inp
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
+import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.io._
 import org.archive.webservices.sparkling.util.IteratorUtil
 import org.archive.webservices.sparkling.warc.WarcRecord
@@ -38,14 +39,17 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
     enrich(input, conf).saveAsJson(conf.outputPath + relativeOutPath + resultDir)
   }
 
-  def warcSpec(rdd: RDD[WarcRecord]): DataSpec[_, ArchWarcRecord] = ArchWarcSpec(rdd)
-
-  def fileSpec(rdd: RDD[FileRecord]): DataSpec[_, ArchFileRecord] = ArchFileSpec(rdd)
-
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 
   override def reset(conf: DerivationJobConf): Unit =
     HdfsIO.delete(conf.outputPath + relativeOutPath)
+
+  def mimePrefilter(conf: DerivationJobConf): String => Boolean = _ => true
+
+  def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val mimeFilter = mimePrefilter(conf)
+    cdx => mimeFilter(cdx.mime)
+  }
 
   def filePredicate(conf: DerivationJobConf): ArchFileRecord => Boolean = genericPredicate(conf)
 
@@ -61,22 +65,34 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
         SparkJobManager.initThread(sc, ArchiveSparkBaseJob.this, conf)
         conf.inputSpec.inputType match {
           case InputSpec.InputType.Files =>
+            val prefilter = mimePrefilter(conf)
             val filter = filePredicate(conf)
             InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
-              val asRdd = ArchiveSpark.load(fileSpec(rdd))
-              IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
-                val filtered = sample.filter(filter)
-                enrichSave(filtered.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
+              val prefiltered = rdd.filter(r => prefilter(r.mime))
+              val filtered = ArchiveSpark.load(ArchFileSpec(prefiltered)).filter(filter)
+              IOHelper.sample(filtered, conf.sample) { sample =>
+                enrichSave(sample.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
+                true
+              }
+            }
+          case InputSpec.InputType.CDX =>
+            val prefilter = cdxPrefilter(conf)
+            val filter = warcPredicate(conf)
+            WebArchiveLoader.loadWarcs(conf.inputSpec, prefilter) { prefiltered =>
+              val filtered = ArchiveSpark.load(ArchWarcSpec(prefiltered)).filter(filter)
+              IOHelper.sample(filtered, conf.sample) { sample =>
+                enrichSave(sample.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
                 true
               }
             }
           case t if InputSpec.InputType.warc(t) =>
+            val prefilter = cdxPrefilter(conf)
             val filter = warcPredicate(conf)
             WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
-              val asRdd = ArchiveSpark.load(warcSpec(rdd))
-              IOHelper.sample(asRdd, conf.sample, samplingConditions = Seq(filter)) { sample =>
-                val filtered = sample.filter(filter)
-                enrichSave(filtered.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
+              val as = ArchiveSpark.load(ArchWarcSpec(rdd))
+              val filtered = as.filter(r => prefilter(r.get)).filter(filter)
+              IOHelper.sample(filtered, conf.sample) { sample =>
+                enrichSave(sample.map(_.asInstanceOf[ArchEnrichRoot[_]]), conf)
                 true
               }
             }
