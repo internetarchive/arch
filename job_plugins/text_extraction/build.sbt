@@ -16,7 +16,8 @@ val dependencies = Seq(
   "com.syncthemall" % "boilerpipe" % "1.2.2",
   "org.apache.tika" % "tika-core" % "2.9.2",
   "org.apache.tika" % "tika-parsers-standard-package" % "2.9.2",
-  "org.apache.commons" % "commons-compress" % "1.26.1")
+  "org.apache.commons" % "commons-compress" % "1.26.1",
+  "io.circe" %% "circe-core" % "0.13.0")
 
 val shaded = Seq(
   "org.apache.commons",

@@ -6,7 +6,6 @@ import jobs._
 
 object Addon extends ArchAddon {
   def initAddon(): Unit = {
-    JobManager.userJobs += QualityTextExtraction
     JobManager.userJobs += TextExtraction
     JobManager.userJobs += TextExtractionEntities
   }

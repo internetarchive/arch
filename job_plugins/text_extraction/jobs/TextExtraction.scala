@@ -1,10 +1,11 @@
 package jobs
 
+import functions.ExtractedText
+
 import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
-import org.archive.webservices.ars.processing.jobs.archivespark.functions.ExtractedText
 import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object TextExtraction extends ArchiveSparkEnrichJob {
