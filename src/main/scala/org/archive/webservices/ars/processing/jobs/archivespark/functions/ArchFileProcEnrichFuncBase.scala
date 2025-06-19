@@ -67,13 +67,15 @@ abstract class ArchFileProcEnrichFuncBase[A]
   private var _process: Option[SystemProcess] = None
   private def initialized: Boolean = _process.exists(!_.destroyed)
 
-  private def doInit(restart: Boolean = false): Unit = if (!initialized) synchronized {
+  private def doInit(restart: Boolean = false): Unit = {
     if (restart) for (p <- _process) p.destroy()
-    if (!initialized) {
-      val dir = new File(workingDir)
-      dir.mkdirs()
-      Common.sync(new File(dir, Sparkling.appId + "._initializing")) {
-        _process = Some(init(restart))
+    if (!initialized) synchronized {
+      if (!initialized) {
+        val dir = new File(workingDir)
+        dir.mkdirs()
+        Common.sync(new File(dir, Sparkling.appId + "._initializing")) {
+          _process = Some(init(restart))
+        }
       }
     }
   }
@@ -120,10 +122,10 @@ abstract class ArchFileProcEnrichFuncBase[A]
       Log.info(s"Process claimed: $workingDir (reclaimed: $reclaimed), synchronizing...")
       val input = cmd(file)
       proc.lock {
-        try {
-          if (!proc.destroyed) {
+        if (!proc.destroyed) {
+          try {
             Common.timeout(600000) { // 10 minutes
-              if (reclaimed) {
+              if (reclaimed || retry) {
                 Log.info(s"Synchronized, waiting for process $pid...")
                 waitForProc(proc, pid)
               }
@@ -133,15 +135,15 @@ abstract class ArchFileProcEnrichFuncBase[A]
               process(proc, pid, derivatives)
               Log.info(s"Done $input.")
             }
-          } else {
-            retry = true
+          } catch {
+            case e: Exception =>
+              Log.info(s"Restarting process $workingDir...")
+              doInit(true)
+              retry = !retry
+              if (!retry) throw e
           }
-        } catch {
-          case e: Exception =>
-            Log.info(s"Restarting process $workingDir...")
-            doInit(true)
-            retry = !retry
-            if (!retry) throw e
+        } else {
+          retry = true
         }
       }
     }
