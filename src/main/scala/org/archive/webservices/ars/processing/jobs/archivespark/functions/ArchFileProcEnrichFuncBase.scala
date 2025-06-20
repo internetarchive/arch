@@ -133,6 +133,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
               proc.exec(input)
               Log.info(s"Processed input, processing output...")
               process(proc, pid, derivatives)
+              retry = false
               Log.info(s"Done $input.")
             }
           } catch {
