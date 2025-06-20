@@ -4,9 +4,8 @@ import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.Whisper
-import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object WhisperTranscription extends AiJob {
   val uuid: String = "018f7b0a-4f3c-7846-862a-ff1ae26ce139"
@@ -22,11 +21,6 @@ object WhisperTranscription extends AiJob {
     "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperTranscription.scala"
 
   override val category: ArchJobCategory = ArchJobCategories.Speech
-
-  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
-    val superFilter = super.cdxPrefilter(conf)
-    cdx => superFilter(cdx) && cdx.status == 200
-  }
 
   override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
     mime => mime.startsWith("audio/") || mime.startsWith("video/")

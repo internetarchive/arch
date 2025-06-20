@@ -51,6 +51,7 @@ trait ArchConf {
   def publicSuffixListUrl: String
   def httpProxy: String
   def httpProxyHosts: Set[String]
+  def pypiIndexUrl: Option[String]
 }
 
 object ArchConf extends ArchConf {
@@ -105,4 +106,5 @@ object ArchConf extends ArchConf {
   def publicSuffixListUrl: String = conf.publicSuffixListUrl
   def httpProxy: String = conf.httpProxy
   def httpProxyHosts: Set[String] = conf.httpProxyHosts
+  def pypiIndexUrl: Option[String] = conf.pypiIndexUrl
 }

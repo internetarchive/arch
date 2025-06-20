@@ -9,13 +9,13 @@ import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File
 
-abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
+abstract class PythonFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   implicit private val logContext: LogContext = LogContext(this)
 
   val AdditionalPackagesUnpackedExtension = "._unpacked"
 
+  def label: String
   def dataDir: String
-  def condaEnv: String
   def pythonFile: String
   def additionalPackages: Seq[String] = Seq.empty
   def pythonArgumentFiles: Seq[String]
@@ -27,7 +27,6 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     _additionalPythonArguments = additionalPythonArguments(params)
   }
 
-  def condaFile: String = condaEnv + ".tar.gz"
   val outputStartToken = ">>"
   val outputEndToken = "##"
 
@@ -47,9 +46,9 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override lazy val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
 
-  def label: String
-
   override def fields: Seq[String] = Seq(label)
+
+  def initVenv(shell: SystemProcess): Unit
 
   override def init(restart: Boolean = false): SystemProcess = {
     val arg = {
@@ -58,18 +57,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     exec(
       s"python $pythonFile $arg",
       { (shell, pid, cmd) =>
-        val condaActivate = s"$condaEnv/bin/activate"
-        make(condaActivate) { _ =>
-          val f = ensureFile(condaFile)
-          make(condaEnv) { dir =>
-            dir.mkdir()
-          }
-          shell.exec(s"tar -xzf $condaFile -C $condaEnv", blocking = true)
-          f.delete()
-        }
-
-        shell.exec(s"source $condaActivate")
-        shell.exec("conda-unpack")
+        initVenv(shell)
 
         for (p <- additionalPackages) {
           val unpackedFlag = p + AdditionalPackagesUnpackedExtension

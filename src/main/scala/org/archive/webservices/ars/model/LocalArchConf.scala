@@ -205,4 +205,7 @@ class LocalArchConf extends ArchConf with Serializable {
   val httpProxyHosts: Set[String] =
     confStrValue(envKey = "ARCH_HTTP_PROXY_HOSTS", configKey = "httpProxyHosts")
       .getOrElse("publicsuffix.org,api.github.com").split(',').map(_.trim).filter(_.nonEmpty).toSet
+
+  val pypiIndexUrl: Option[String] =
+    confStrValue(envKey = "ARCH_PYPI_INDEX_URL", configKey = "pypiIndexUrl")
 }

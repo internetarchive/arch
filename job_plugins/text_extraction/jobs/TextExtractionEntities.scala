@@ -7,7 +7,6 @@ import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
-import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object TextExtractionEntities extends ArchiveSparkEnrichJob {
   val name: String = "Named entities from extracted text"
@@ -19,13 +18,8 @@ object TextExtractionEntities extends ArchiveSparkEnrichJob {
 
   val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
-    val superFilter = super.cdxPrefilter(conf)
-    cdx => superFilter(cdx) && cdx.status == 200
-  }
-
   override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
-    mime => ExtractedText.SupportedMimes.contains(mime)
+    TextExtraction.mimePrefilter(conf)
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

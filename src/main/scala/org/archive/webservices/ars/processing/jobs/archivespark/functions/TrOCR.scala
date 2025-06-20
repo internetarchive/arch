@@ -1,15 +1,14 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
-import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.CondaBasedArchiveSparkFunctionAdapter
+import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.PythonFunctionAdapter
 
-object TrOCR extends CondaBasedArchiveSparkFunctionAdapter[String] {
-  override def func: CondaBasedFunction[String] = new TrOCR
+object TrOCR extends PythonFunctionAdapter[String] {
+  override def func: PythonFunction[String] = new TrOCR
 }
 
-class TrOCR extends CondaBasedFunction[String] {
+class TrOCR extends PythonUvFunction[String] {
   override val label: String = "trocr"
   override val dataDir: String = s"$label/20240807195100"
-  override val condaEnv: String = s"conda-$label-env"
   override val pythonFile: String = s"$label-run.py"
   override val additionalPackages: Seq[String] =
     Seq(s"$label-models.tar.gz", "craft-pytorch.tar.gz")
