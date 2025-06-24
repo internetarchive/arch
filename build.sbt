@@ -50,12 +50,16 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
 
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),
-  assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
-  scalaSource in Compile := baseDirectory.value.getParentFile.getParentFile / "src" / "main" / "scala",
-  scalaSource in Test := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "scala",
+  Compile / scalaSource := baseDirectory.value.getParentFile.getParentFile / "src" / "main" / "scala",
+  Test / scalaSource := (Compile / scalaSource).value,
+  Compile / unmanagedJars ++=
+    (baseDirectory.value.getParentFile.getParentFile / "lib" * "*.jar").classpath,
+  Test / unmanagedJars := (Compile / unmanagedJars).value,
   Compile / unmanagedJars ++=
     (baseDirectory.value / "job_plugins" ** "target" / "scala-2.12" * "*-assembly-*.jar").classpath,
-  test in assembly := {},
+  Test / unmanagedJars := (Compile / unmanagedJars).value,
+  assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
+  assembly / test  := {},
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
