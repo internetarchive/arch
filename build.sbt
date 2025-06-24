@@ -54,9 +54,9 @@ val buildSettings = commonSettings ++ Seq(
   Test / scalaSource := (Compile / scalaSource).value,
   Compile / unmanagedJars ++=
     (baseDirectory.value.getParentFile.getParentFile / "lib" * "*.jar").classpath,
-  Test / unmanagedJars := (Compile / unmanagedJars).value,
   Compile / unmanagedJars ++=
-    (baseDirectory.value / "job_plugins" ** "target" / "scala-2.12" * "*-assembly-*.jar").classpath,
+    (baseDirectory.value.getParentFile.getParentFile / "job_plugins" ** "target" /
+      "scala-2.12" * "*-assembly-*.jar").classpath,
   Test / unmanagedJars := (Compile / unmanagedJars).value,
   assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
   assembly / test  := {},
