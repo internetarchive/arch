@@ -51,14 +51,15 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),
   assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
+  scalaSource in Compile := baseDirectory.value.getParentFile.getParentFile / "src" / "main" / "scala",
+  scalaSource in Test := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "scala",
   Compile / unmanagedJars ++=
     (baseDirectory.value / "job_plugins" ** "target" / "scala-2.12" * "*-assembly-*.jar").classpath,
   test in assembly := {},
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
-lazy val dev = (project in file("."))
-  .settings(target := baseDirectory.value / "build/dev/target")
+lazy val dev = (project in file("build/dev"))
   .settings(libraryDependencies ++= dependencies ++ prodProvided)
   .settings(buildSettings: _*)
   .settings(
@@ -66,8 +67,7 @@ lazy val dev = (project in file("."))
     outputStrategy := Some(StdoutOutput),
     baseDirectory in run := file("."))
 
-lazy val prod = (project in file("."))
-  .settings(target := baseDirectory.value / "build/prod/target")
+lazy val prod = (project in file("build/prod"))
   .settings(libraryDependencies ++= dependencies :+ guava)
   .settings(buildSettings: _*)
   .settings(
