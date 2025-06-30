@@ -141,13 +141,13 @@ object WebArchiveLoader {
     loadWarcFilesLazy[R](inputPath, hdfsHostPort) { rdd =>
       action(rdd.mapPartitions { partition =>
         var prev: Option[InputStream] = None
-        partition.map { case (p, in) =>
+        IteratorUtil.tryFinally(partition.map { case (p, in) =>
           for (s <- prev) s.close()
           prev = Some(in.get)
           (p, prev.get)
-        } ++ IteratorUtil.noop {
+        }, {
           for (s <- prev) s.close()
-        }
+        })
       })
     }
   }
@@ -181,13 +181,13 @@ object WebArchiveLoader {
       (filename, aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache))
     }.mapPartitions { partition =>
       var prev: Option[InputStream] = None
-      partition.map { case (f, in) =>
+      IteratorUtil.tryFinally(partition.map { case (f, in) =>
         for (s <- prev) s.close()
         prev = Some(IOUtil.supportMark(in))
         (f, prev.get)
-      } ++ IteratorUtil.noop {
+      }, {
         for (s <- prev) s.close()
-      }
+      })
     }
   }
 

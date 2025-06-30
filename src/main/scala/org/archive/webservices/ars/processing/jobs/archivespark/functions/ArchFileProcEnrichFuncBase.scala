@@ -71,11 +71,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
     if (restart) for (p <- _process) p.destroy()
     if (!initialized) synchronized {
       if (!initialized) {
-        val dir = new File(workingDir)
-        dir.mkdirs()
-        Common.sync(new File(dir, Sparkling.appId + "._initializing")) {
-          _process = Some(init(restart))
-        }
+        _process = Some(init(restart))
       }
     }
   }
@@ -89,7 +85,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
         exec,
         cleanup = { (p, pid) =>
           val pipe = new File(pidPipe(pid))
-          if (pipe.exists()) pipe.delete()
+          IOUtil.delete(pipe)
         },
         restart)
       ._1

@@ -36,12 +36,12 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
     for (func <- funcs) enriched = enriched.enrich(func)
     enriched.mapPartitions { partition =>
       StageSyncManager.lockMutex(blocking = Sparkling.taskContext.exists(_.attemptNumber > 0))
-      partition.map { r =>
+      IteratorUtil.tryFinally(partition.map { r =>
         r.clearCache()
         r
-      } ++ IteratorUtil.noop {
+      }, {
         StageSyncManager.unlockMutex()
-      }
+      })
     }
   }
 }
