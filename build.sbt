@@ -9,7 +9,7 @@ val guavaDependent = Seq(
   "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
   "com.optimaize.languagedetector" % "language-detector" % "0.6",
   "org.apache.tika" % "tika-core" % "2.9.2" % "provided",
-  "org.apache.tika" % "tika-langdetect" % "2.9.2" % "provided" exclude (org = "com.optimaize.languagedetector",
+  "org.apache.tika" % "tika-langdetect" % "1.22" exclude (org = "com.optimaize.languagedetector",
     name = "language-detector"),
   "org.apache.tika" % "tika-parsers" % "2.9.2" % "provided" excludeAll ExclusionRule(
     organization = "com.fasterxml.jackson.core"))

@@ -156,29 +156,33 @@ object WebArchiveLoader {
     ArchConf.aitWarcsBaseUrl + "/webdatafile/" + filename
   }
 
-  def aitSourceStream(location: String, basicAuth: Option[String]): InputStream = {
+  def aitSourceStream(location: String, basicAuth: Option[String]): Option[InputStream] = {
     HttpUtil.syncHost(location) {
       Ait
         .getWithAuth(
           location,
           contentType = "*/*",
           basicAuth = basicAuth,
-          close = false)(Some(_)).toOption.get
+          close = false)(Some(_)).toOption
     }
   }
 
-  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
-    new CacheBackedInputStream(
-      source = aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth),
-      cachePath = Some(cachePath + "/" + filename),
-      direct = direct.map(_.get),
-      rewriteCache = rewriteCache
-    )
+  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): Option[InputStream] = {
+    aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth).map { source =>
+      new CacheBackedInputStream(
+        source = source,
+        cachePath = Some(cachePath + "/" + filename),
+        direct = direct.map(_.get),
+        rewriteCache = rewriteCache
+      )
+    }
   }
 
   def aitCacheBasedRdd(rdd: RDD[(String, Option[ManagedVal[InputStream]], Option[String], Boolean)], cachePath: String, basicAuth: Option[String]): RDD[(String, InputStream)] = {
-    rdd.map { case (filename, stream, location, isCache) =>
-      (filename, aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache))
+    rdd.flatMap { case (filename, stream, location, isCache) =>
+      aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache).map { in =>
+        (filename, in)
+      }
     }.mapPartitions { partition =>
       var prev: Option[InputStream] = None
       IteratorUtil.tryFinally(partition.map { case (f, in) =>
