@@ -167,22 +167,18 @@ object WebArchiveLoader {
     }
   }
 
-  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): Option[InputStream] = {
-    aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth).map { source =>
-      new CacheBackedInputStream(
-        source = source,
-        cachePath = Some(cachePath + "/" + filename),
-        direct = direct.map(_.get),
-        rewriteCache = rewriteCache
-      )
-    }
+  def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
+    new CacheBackedInputStream(
+      source = aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth).get,
+      cachePath = Some(cachePath + "/" + filename),
+      direct = direct.map(_.get),
+      rewriteCache = rewriteCache
+    )
   }
 
   def aitCacheBasedRdd(rdd: RDD[(String, Option[ManagedVal[InputStream]], Option[String], Boolean)], cachePath: String, basicAuth: Option[String]): RDD[(String, InputStream)] = {
-    rdd.flatMap { case (filename, stream, location, isCache) =>
-      aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache).map { in =>
-        (filename, in)
-      }
+    rdd.map { case (filename, stream, location, isCache) =>
+      (filename, aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache))
     }.mapPartitions { partition =>
       var prev: Option[InputStream] = None
       IteratorUtil.tryFinally(partition.map { case (f, in) =>
