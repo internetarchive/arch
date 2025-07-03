@@ -47,6 +47,7 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
     "text/x-groovy",
     "application/vnd.oasis.opendocument.chart-template",
     "application/rtf",
+    "text/rtf",
     "application/vnd.oasis.opendocument.text",
     "application/vnd.ms-powerpoint.template.macroenabled.12",
     "application/vnd.ms-word.template.macroenabled.12",
@@ -81,7 +82,8 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
     "application/vnd.oasis.opendocument.flat.text",
     "text/tsv",
     "application/vnd.ms-visio.drawing.macroenabled.12",
-    "application/vnd.openxmlformats-officedocument.presentationml.slideshow"
+    "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+    "application/vnd.ms-excel"
   )
 
   val MinTextLength = 300
