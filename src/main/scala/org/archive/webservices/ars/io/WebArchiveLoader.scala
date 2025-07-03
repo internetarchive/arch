@@ -15,6 +15,7 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, Ma
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
+import javax.management.RuntimeErrorException
 import scala.util.Try
 
 object WebArchiveLoader {
@@ -156,20 +157,29 @@ object WebArchiveLoader {
     ArchConf.aitWarcsBaseUrl + "/webdatafile/" + filename
   }
 
-  def aitSourceStream(location: String, basicAuth: Option[String]): Option[InputStream] = {
+  def aitSourceStream(location: String, basicAuth: Option[String]): InputStream = {
     HttpUtil.syncHost(location) {
       Ait
         .getWithAuth(
           location,
           contentType = "*/*",
           basicAuth = basicAuth,
-          close = false)(Some(_)).toOption
+          close = false)(Some(_)) match {
+        case Left(_) =>
+          Log.info(s"Error accessing $location.")
+          throw new RuntimeException(s"No valid source for $location.")
+        case Right (in) => in
+      }
     }
   }
 
   def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
     new CacheBackedInputStream(
-      source = aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth).get,
+      source = {
+        val url = location.getOrElse(aitWarcUrl(filename))
+        Log.info(s"Loading $url...")
+        aitSourceStream(url, basicAuth)
+      },
       cachePath = Some(cachePath + "/" + filename),
       direct = direct.map(_.get),
       rewriteCache = rewriteCache

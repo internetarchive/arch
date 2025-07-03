@@ -5,6 +5,7 @@ import io.circe.parser._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}
@@ -18,6 +19,8 @@ import scala.io.Source
 import scala.util.Try
 
 object Ait {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val AitSessionRequestAttribute = "AIT-sessionid"
   val AitSessionCookie = "sessionid"
   val UserSessionAttribute = "ait-user"
@@ -191,6 +194,8 @@ object Ait {
       } else Left(status)
     } catch {
       case e: Exception =>
+        Log.info(s"Error accessing $url.")
+        Log.error(e)
         e.printStackTrace()
         throw e
     } finally {
