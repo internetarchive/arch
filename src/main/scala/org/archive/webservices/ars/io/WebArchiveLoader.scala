@@ -165,9 +165,9 @@ object WebArchiveLoader {
           contentType = "*/*",
           basicAuth = basicAuth,
           close = false)(Some(_)) match {
-        case Left(_) =>
-          Log.info(s"Error accessing $location.")
-          throw new RuntimeException(s"No valid source for $location.")
+        case Left(status) =>
+          Log.info(s"Error accessing $location - status: $status")
+          throw new RuntimeException(s"No valid source for $location - status: $status")
         case Right (in) => in
       }
     }
@@ -226,7 +226,7 @@ object WebArchiveLoader {
           case Right(i) =>
             success = true
             apiFileCount = i
-          case Left(status) => Thread.sleep(RetrySleepMillis)
+          case Left(_) => Thread.sleep(RetrySleepMillis)
         }
       }
       val hdfsFileCount = hdfsHostPort

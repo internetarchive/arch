@@ -1,6 +1,7 @@
 package org.archive.webservices.ars.io
 
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.util.Common
 
 import java.io.InputStream
 
@@ -45,6 +46,7 @@ class CacheBackedInputStream(
                 out.close()
               }
               HdfsIO.rename(tmp, c)
+              while (HdfsIO.exists(tmp) || !HdfsIO.exists(c)) Thread.`yield`()
             }
           }
         } finally {
