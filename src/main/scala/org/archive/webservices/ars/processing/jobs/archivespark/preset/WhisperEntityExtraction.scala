@@ -12,13 +12,17 @@ import org.archive.webservices.sparkling.cdx.CdxRecord
 object WhisperEntityExtraction extends AiJob {
   val uuid: String = "018f7b09-f7ca-756d-a4ca-69cea914185d"
 
-  val name: String = "Named entities from speech recognition"
+  val name: String = "Speech recognition with named entities"
   val description: String =
-    "Names of persons, organizations, geographic locations, and dates in text transcribed from collection audio and video documents. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text, names of persons, organizations, geographic locations, and dates transcribed from collection audio and video documents. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, transcription, persons, organizations, locations, and dates."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperEntityExtraction.scala"
+
+  override val category: ArchJobCategory = ArchJobCategories.Speech
 
   override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
     val superFilter = super.cdxPrefilter(conf)

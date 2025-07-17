@@ -12,13 +12,17 @@ import org.archive.webservices.sparkling.cdx.CdxRecord
 object TrOcrEntityExtraction extends AiJob {
   val uuid: String = "019078a8-7b16-7a87-8b50-a30166e547dd"
 
-  val name: String = "Named entities from text recognition"
+  val name: String = "Text recognition with named entities"
   val description: String =
-    "Names of persons, organizations, geographic locations, and dates from text recognized in collection images. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text, names of persons, organizations, geographic locations, and dates transcribed from collection images. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, transcription, persons, organizations, locations, and dates."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/TrOcrEntityExtraction.scala"
+
+  override val category: ArchJobCategory = ArchJobCategories.Images
 
   override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
     val superFilter = super.cdxPrefilter(conf)

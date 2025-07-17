@@ -13,11 +13,15 @@ object WhisperText extends AiJob {
 
   val name: String = "Speech recognition"
   val description: String =
-    "Text transcribed from speech recognized in collection audio and video documents. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text transcribed from speech recognized in collection audio and video documents. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and transcription."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperText.scala"
+
+  override val category: ArchJobCategory = ArchJobCategories.Speech
 
   override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
     val superFilter = super.cdxPrefilter(conf)

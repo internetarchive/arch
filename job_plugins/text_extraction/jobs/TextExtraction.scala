@@ -11,7 +11,13 @@ import org.archive.webservices.sparkling.cdx.CdxRecord
 object TextExtraction extends ArchiveSparkEnrichJob {
   val name: String = "Extracted text"
   val description: String =
-    "Extract text from almost any text document. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text extracted from collection documents in PDF, DOC, TXT, or other text-bearing file formats. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and extracted text."
+
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/sections/14410598107028-ARCH-Datasets"
+
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/arch/addons/jobs/text_extraction/jobs/TextExtraction.scala"
 
   val uuid: String = "01961974-d4a5-7c2b-822c-b07b68fd66ed"
 

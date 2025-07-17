@@ -13,11 +13,15 @@ object TrOcrProcessing extends AiJob {
 
   val name: String = "Text recognition"
   val description: String =
-    "Text recognized and transcribed from images in a collection, including handwriting. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text recognized and transcribed from images in a collection, including handwriting. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and transcription."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/TrOcrProcessing.scala"
+
+  override val category: ArchJobCategory = ArchJobCategories.Images
 
   override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
     val superFilter = super.cdxPrefilter(conf)

@@ -15,6 +15,10 @@ object ArchJobCategories {
 
   val Text = ArchJobCategory("Text", "Extract and analyze a web archive as text.")
 
+  val Images = ArchJobCategory("Images", "Extract and analyze images.")
+
+  val Speech = ArchJobCategory("Speech", "Extract and analyze speech as text.")
+
   val System =
     ArchJobCategory("System", "Internal system jobs that are not meant to be exposed to users.")
 }
