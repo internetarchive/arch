@@ -63,6 +63,9 @@ val buildSettings = commonSettings ++ Seq(
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
+lazy val arch = (project in file("."))
+  .settings(libraryDependencies ++= dependencies)
+
 lazy val dev = (project in file("build/dev"))
   .settings(libraryDependencies ++= dependencies ++ prodProvided)
   .settings(buildSettings: _*)

@@ -53,6 +53,7 @@ trait DerivationJob {
       get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
     val instance = DerivationJobInstance(this, conf)
     get(instance)
+    conf.inputSpec.jobInfo.attempt = instance.attempt
     Some(instance)
   }
 
