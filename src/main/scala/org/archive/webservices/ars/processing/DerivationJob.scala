@@ -4,7 +4,6 @@ import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.StringUtil
 
 import scala.concurrent.Future
 

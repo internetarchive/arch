@@ -15,7 +15,6 @@ import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, Ma
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
 import java.io.{BufferedInputStream, InputStream}
-import javax.management.RuntimeErrorException
 import scala.util.Try
 
 object WebArchiveLoader {
@@ -327,9 +326,12 @@ object WebArchiveLoader {
         (cdx, path, offset, length)
       }.toOption
     }
+    val sorted = IteratorUtil.groupSortedBy(pointers)(_._2).flatMap { case (_, group) =>
+      group.toSeq.sortBy(_._3)
+    }
     var prevGroup: Option[(String, Long, (String, Long))] = None
     val groups = IteratorUtil
-      .groupSortedBy(pointers) { case (_, path, offset, _) =>
+      .groupSortedBy(sorted) { case (_, path, offset, _) =>
         val group = prevGroup
           .filter { case (p, o, _) =>
             p == path && offset > o && offset <= o + CdxSkipDistance

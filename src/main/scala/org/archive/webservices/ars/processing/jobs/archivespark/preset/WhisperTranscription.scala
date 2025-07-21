@@ -17,7 +17,7 @@ object WhisperTranscription extends AiJob {
 
   override def infoUrl: String =
     "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
-  
+
   override def codeUrl: String =
     "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperTranscription.scala"
 
