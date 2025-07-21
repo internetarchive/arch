@@ -134,7 +134,7 @@ class ApiController(implicit val swagger: Swagger)
       conf <- conf(job, collection, sample, params)
     } yield {
       job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
-        if (rerun) job.reset(conf)
+        if (rerun) DerivationJob.reset(job, conf)
         val history = job.history(conf)
         val queued =
           if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
@@ -222,7 +222,7 @@ class ApiController(implicit val swagger: Swagger)
                   }
                   .getOrElse {
                     val history = job.history(uuid, conf)
-                    if (rerun && (!resume || !history.isResumable)) job.reset(conf)
+                    if (rerun && (!resume || !history.isResumable)) DerivationJob.reset(job, conf)
                     val queued =
                       if (history.state == ProcessingState.NotStarted || (rerun && history.state > ProcessingState.Running)) {
                         job.enqueue(

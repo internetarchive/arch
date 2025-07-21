@@ -4,9 +4,16 @@ import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, InputSpecLoader}
 import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
-import org.archive.webservices.sparkling.util.StringUtil
 
 import scala.concurrent.Future
+
+object DerivationJob {
+  def reset(job: DerivationJob, conf: DerivationJobConf): Unit = {
+    job.reset(conf)
+    val outFilesCacheFile = UuidManager.outFilesCacheFile(conf.outputPath)
+    if (HdfsIO.exists(outFilesCacheFile)) HdfsIO.delete(outFilesCacheFile)
+  }
+}
 
 trait DerivationJob {
   val partialOf: Option[DerivationJob] = None
@@ -45,6 +52,7 @@ trait DerivationJob {
       get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
     val instance = DerivationJobInstance(this, conf)
     get(instance)
+    conf.inputSpec.jobInfo.attempt = instance.attempt
     Some(instance)
   }
 

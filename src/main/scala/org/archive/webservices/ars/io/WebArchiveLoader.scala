@@ -5,11 +5,12 @@ import org.archive.webservices.ars.ait.Ait
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.collections.CollectionSpecifics
 import org.archive.webservices.ars.model.collections.inputspecs.{FileRecord, InputSpec, InputSpecLoader}
-import org.archive.webservices.ars.util.Common
+import org.archive.webservices.ars.util.{HttpUtil, MultiSourceSplitInputStream}
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.cdx.{CdxRecord, CdxUtil}
 import org.archive.webservices.sparkling.http.HttpClient
 import org.archive.webservices.sparkling.io.{ChainedInputStream, HdfsIO, IOUtil}
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.{CleanupIterator, IteratorUtil, ManagedVal, RddUtil}
 import org.archive.webservices.sparkling.warc.{WarcLoader, WarcRecord}
 
@@ -17,6 +18,8 @@ import java.io.{BufferedInputStream, InputStream}
 import scala.util.Try
 
 object WebArchiveLoader {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val WasapiPageSize = 100
   val WarcFilesPerPartition = 5
   val RetrySleepMillis = 5000
@@ -55,7 +58,7 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarc[R](spec: InputSpec)(action: RDD[FileRecord] => R): R = {
+  def loadWarcFileRecords[R](spec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(action: RDD[FileRecord] => R): R = {
     InputSpecLoader.loadSpark(spec) { rdd =>
       val accessContext = FileAccessContext.fromLocalArchConf
       action({
@@ -69,7 +72,7 @@ object WebArchiveLoader {
             rdd.mapPartitions { partition =>
               accessContext.init()
               partition.filter(_.mime == CdxMime).map { f =>
-                val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString)
+                val cdx = IOUtil.lines(f.access).flatMap(CdxRecord.fromString).filter(cdxPrefilter)
                 val in = warcFilesViaCdx(cdx) { pointers =>
                   randomAccess(
                     accessContext,
@@ -88,9 +91,9 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarcsRecords[R](inputSpec: InputSpec)(
+  def loadWarcsRecords[R](inputSpec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(
       action: RDD[(FilePointer, CleanupIterator[WarcRecord])] => R): R = {
-    loadWarc(inputSpec) { rdd =>
+    loadWarcFileRecords(inputSpec, cdxPrefilter) { rdd =>
       action(rdd.map { file =>
         val in = IOUtil.supportMark(file.access)
         val warcs = WarcLoader.load(in).filter {
@@ -105,8 +108,8 @@ object WebArchiveLoader {
     }
   }
 
-  def loadWarcs[R](spec: InputSpec)(action: RDD[WarcRecord] => R): R = {
-    loadWarcsRecords(spec)(rdd => action(rdd.flatMap(_._2)))
+  def loadWarcs[R](spec: InputSpec, cdxPrefilter: CdxRecord => Boolean = _ => true)(action: RDD[WarcRecord] => R): R = {
+    loadWarcsRecords(spec, cdxPrefilter)(rdd => action(rdd.flatMap(_._2)))
   }
 
   def loadWarcFilesLazy[R](inputPath: String, hdfsHostPort: Option[(String, Int)] = None)(
@@ -138,13 +141,13 @@ object WebArchiveLoader {
     loadWarcFilesLazy[R](inputPath, hdfsHostPort) { rdd =>
       action(rdd.mapPartitions { partition =>
         var prev: Option[InputStream] = None
-        partition.map { case (p, in) =>
+        IteratorUtil.tryFinally(partition.map { case (p, in) =>
           for (s <- prev) s.close()
           prev = Some(in.get)
           (p, prev.get)
-        } ++ IteratorUtil.noop {
+        }, {
           for (s <- prev) s.close()
-        }
+        })
       })
     }
   }
@@ -154,17 +157,28 @@ object WebArchiveLoader {
   }
 
   def aitSourceStream(location: String, basicAuth: Option[String]): InputStream = {
-    Ait
-      .getWithAuth(
-        location,
-        contentType = "*/*",
-        basicAuth = basicAuth,
-        close = false)(Some(_)).toOption.get
+    HttpUtil.syncHost(location) {
+      Ait
+        .getWithAuth(
+          location,
+          contentType = "*/*",
+          basicAuth = basicAuth,
+          close = false)(Some(_)) match {
+        case Left(status) =>
+          Log.info(s"Error accessing $location - status: $status")
+          throw new RuntimeException(s"No valid source for $location - status: $status")
+        case Right (in) => in
+      }
+    }
   }
 
   def aitCacheBackedInputStream(filename: String, cachePath: String, direct: Option[ManagedVal[InputStream]] = None, basicAuth: Option[String], location: Option[String] = None, rewriteCache: Boolean): InputStream = {
     new CacheBackedInputStream(
-      source = aitSourceStream(location.getOrElse(aitWarcUrl(filename)), basicAuth),
+      source = {
+        val url = location.getOrElse(aitWarcUrl(filename))
+        Log.info(s"Loading $url...")
+        aitSourceStream(url, basicAuth)
+      },
       cachePath = Some(cachePath + "/" + filename),
       direct = direct.map(_.get),
       rewriteCache = rewriteCache
@@ -176,13 +190,13 @@ object WebArchiveLoader {
       (filename, aitCacheBackedInputStream(filename, cachePath, stream, basicAuth, location, isCache))
     }.mapPartitions { partition =>
       var prev: Option[InputStream] = None
-      partition.map { case (f, in) =>
+      IteratorUtil.tryFinally(partition.map { case (f, in) =>
         for (s <- prev) s.close()
         prev = Some(IOUtil.supportMark(in))
         (f, prev.get)
-      } ++ IteratorUtil.noop {
+      }, {
         for (s <- prev) s.close()
-      }
+      })
     }
   }
 
@@ -211,7 +225,7 @@ object WebArchiveLoader {
           case Right(i) =>
             success = true
             apiFileCount = i
-          case Left(status) => Thread.sleep(RetrySleepMillis)
+          case Left(_) => Thread.sleep(RetrySleepMillis)
         }
       }
       val hdfsFileCount = hdfsHostPort
@@ -312,9 +326,12 @@ object WebArchiveLoader {
         (cdx, path, offset, length)
       }.toOption
     }
+    val sorted = IteratorUtil.groupSortedBy(pointers)(_._2).flatMap { case (_, group) =>
+      group.toSeq.sortBy(_._3)
+    }
     var prevGroup: Option[(String, Long, (String, Long))] = None
     val groups = IteratorUtil
-      .groupSortedBy(pointers) { case (_, path, offset, _) =>
+      .groupSortedBy(sorted) { case (_, path, offset, _) =>
         val group = prevGroup
           .filter { case (p, o, _) =>
             p == path && offset > o && offset <= o + CdxSkipDistance
@@ -423,31 +440,51 @@ object WebArchiveLoader {
       filePath: String,
       offset: Long,
       positions: Iterator[(Long, Long)]): InputStream = {
-    if (context.aitHdfsIOopt.exists(_.exists(filePath))) {
-      val in = context.aitHdfsIOopt.get.open(
-        filePath,
-        offset = offset,
-        decompress = false,
-        strategy = HdfsIO.LoadingStrategy.Remote)
-      IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-    } else {
-      val file = filePath.split('/').last
-      val cachePath = CollectionCache.cachePath(sourceId, file)
-      if (HdfsIO.exists(cachePath)) {
-        val in = HdfsIO.open(
-          cachePath,
+    val positionsSeq = positions.toSeq
+    val (lastOffset, lastLength) = positionsSeq.lastOption.getOrElse((0L, 0L))
+    val minLength = offset + lastOffset + lastLength
+    new MultiSourceSplitInputStream(
+      offset,
+      positionsSeq.toIterator,
+      (offset, positions) => if (context.aitHdfsIOopt.exists(_.exists(filePath)) && {
+        context.aitHdfsIOopt.exists(_.length(filePath) >= minLength)
+      }) Some {
+        Log.info(s"Accessing $sourceId:$filePath ($offset), direct...")
+        val in = context.aitHdfsIOopt.get.open(
+          filePath,
           offset = offset,
           decompress = false,
           strategy = HdfsIO.LoadingStrategy.Remote)
         IOHelper.splitMergeInputStreams(in, positions, buffered = false)
-      } else {
-        HttpClient.rangeRequest(
-          aitWarcUrl(file),
-          headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
-          offset = offset) { in =>
-          IOHelper.splitMergeInputStreams(in, positions)
+      } else None,
+      (offset, positions) => {
+        val cachePath = CollectionCache.cachePath(sourceId, filePath.split('/').last)
+        if (HdfsIO.exists(cachePath) && {
+          HdfsIO.length(cachePath) >= minLength
+        }) Some {
+          Log.info(s"Accessing $sourceId:$filePath ($offset), via cache...")
+          val in = HdfsIO.open(
+            cachePath,
+            offset = offset,
+            decompress = false,
+            strategy = HdfsIO.LoadingStrategy.Remote)
+          IOHelper.splitMergeInputStreams(in, positions, buffered = false)
+        } else None
+      },
+      (offset, positions) => {
+        Log.info(s"Accessing $sourceId:$filePath ($offset), via AIT...")
+        val url = aitWarcUrl(filePath.split('/').last)
+        HttpUtil.syncHost(url) {
+          Log.info(s"Requesting $url...")
+          HttpClient.rangeRequest(
+            url,
+            headers = ArchConf.foreignAitAuthHeader.map("Authorization" -> _).toMap,
+            offset = offset,
+            timeoutMillis = 10000) { in =>
+            Some(IOHelper.splitMergeInputStreams(in, positions))
+          }
         }
       }
-    }
+    )
   }
 }

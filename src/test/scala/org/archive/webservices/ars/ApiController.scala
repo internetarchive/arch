@@ -3,12 +3,11 @@ package test.org.archive.webservices.ars
 import io.circe.parser.parse
 import org.scalatra.test.scalatest._
 
-import org.archive.webservices.ars.{ApiController, DefaultController}
+import org.archive.webservices.ars.{ApiController}
 
 import Fixtures._
 
 class ApiControllerSpec extends UnitSpec {
-  addServlet(classOf[DefaultController], "/*")
   addServlet(classOf[ApiController], "/api/*")
 
   test("/api/collections returns status 403 when not authenticated") {

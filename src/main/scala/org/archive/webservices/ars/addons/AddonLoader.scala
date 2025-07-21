@@ -6,11 +6,11 @@ import scala.collection.JavaConverters._
 object AddonLoader {
   private var init: Map[String, ArchAddon] = Map.empty
 
-  def init(addon: ArchAddon): Unit = {
+  def init(addon: ArchAddon): Unit = synchronized {
     init += addon.getClass.getName -> addon
   }
 
-  def initializePackage(packageName: String): Unit = {
+  def initializePackage(packageName: String): Unit = synchronized {
     val initialized = init.keySet
     val packagePath = packageName.replace('.', '/') + "/"
     val systemClassLoader = ClassLoader.getSystemClassLoader
@@ -39,7 +39,7 @@ object AddonLoader {
     val initializing = (init -- initialized).values
     if (initializing.nonEmpty) {
       println(s"Initializing add-ons of package $packageName...")
-      for (addon <- (init -- initialized).values) {
+      for (addon <- initializing) {
         println(s"Loading add-on ${addon.getClass.getName.stripSuffix("$")}...")
         addon.initAddon()
       }

@@ -64,22 +64,18 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
   def prepareBinaryRow(
       r: WarcRecord,
       row: (String, HttpMessage, InputStream, String, String, String) => Row): Option[Row] = {
-    println("#### URL: " + r.url)
     Common.tryOrElse[Option[Row]](None) {
       r.http.filter(_.status == 200).flatMap { http =>
         val url = AutUtil.url(r)
-        println("#### AUT URL: " + url)
         val body = http.body
         val lastModifiedDate =
           AutUtil.rfc1123toTime14(http.headerMap.getOrElse("last-modified", ""))
         val tikaMime = TikaUtil.mime(body)
         if (checkMime(url, http.mime.getOrElse(""), tikaMime)) {
           val crawlDate = AutUtil.timestamp(r)
-          if (crawlDate.nonEmpty) Some {
-            println("#### PREPARING ROW: " + url)
-            row(url, http, body, tikaMime, crawlDate, lastModifiedDate)
-          }
-          else None
+          if (crawlDate.nonEmpty) {
+            Some(row(url, http, body, tikaMime, crawlDate, lastModifiedDate))
+          } else None
         } else None
       }
     }

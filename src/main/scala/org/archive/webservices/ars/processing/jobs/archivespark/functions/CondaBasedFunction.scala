@@ -5,7 +5,7 @@ import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.sparkling._
 import org.archive.webservices.sparkling.io.{StageSyncManager, SystemProcess}
-import org.archive.webservices.sparkling.logging.LogContext
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File
 
@@ -51,7 +51,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
 
   override def fields: Seq[String] = Seq(label)
 
-  override def init(): SystemProcess = {
+  override def init(restart: Boolean = false): SystemProcess = {
     val arg = {
       (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     }
@@ -69,6 +69,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
         }
 
         shell.exec(s"source $condaActivate")
+        shell.exec("conda-unpack")
 
         for (p <- additionalPackages) {
           val unpackedFlag = p + AdditionalPackagesUnpackedExtension
@@ -96,7 +97,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
           waitForLine = Some(outputEndToken),
           supportsEcho = false,
           pipe = Some(pipe))
-      })
+      }, restart)
   }
 
   override def cmd(file: String): String = file
@@ -107,8 +108,12 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   }
 
   override def process(proc: SystemProcess, pid: Int, derivatives: Derivatives): Unit = {
-    val pipe = StageSyncManager.claimFileIn(pidPipe(pid))
+    val pipeFile = pidPipe(pid)
+    Log.info(s"Claiming pipe $pipeFile...")
+    val pipe = StageSyncManager.claimFileIn(pipeFile)
+    Log.info(s"Consuming to output start token $outputStartToken...")
     proc.consumeToLine(outputStartToken, pipe = Some(pipe))
+    Log.info(s"Reading output to output end token $outputEndToken...")
     val output =
       proc
         .readToLine(
@@ -117,6 +122,7 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
           keepMaxBytes = 1.mb.toInt,
           pipe = Some(pipe))
         .mkString
+    Log.info(s"Writing output from $pipeFile.")
     derivatives <<? processOutput(output)
   }
 

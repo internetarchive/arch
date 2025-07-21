@@ -24,9 +24,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   var user: Option[ArchUser] = None
 
-  lazy val inputSize: Long = job.inputSize(conf)
+  def inputSize: Long = job.inputSize(conf)
 
-  lazy val outputSize: Long = job.outputSize(conf)
+  def outputSize: Long = job.outputSize(conf)
 
   var attempt: Int = 1
   var slots: Int = 1

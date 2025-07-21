@@ -105,6 +105,7 @@ object JobStateManager {
       (id, conf, meta) <- jobs
       job <- JobManager.get(id)
     } {
+      DerivationJob.reset(job, conf)
       job.enqueue(
         conf,
         { instance =>
@@ -163,7 +164,7 @@ object JobStateManager {
           for (uuid <- values.get("uuid").flatMap(_.asString)) {
             Try(Keystone.registerJobEvent(uuid, "CANCELLED"))
           }
-          job.reset(conf)
+          DerivationJob.reset(job, conf)
           job.enqueue(
             conf,
             { instance =>

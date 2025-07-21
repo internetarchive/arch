@@ -80,7 +80,7 @@ object UuidManager {
     }
   }
 
-  private def outFilesCacheFile(path: String): String = IOHelper.concatPaths(path, OutFilesCacheFile)
+  def outFilesCacheFile(path: String): String = IOHelper.concatPaths(path, OutFilesCacheFile)
 
   def outFilesCache(uuid: String): Option[DerivativeOutputCache] = outFilesCache(uuidPath(uuid))
 

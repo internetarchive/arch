@@ -1,4 +1,4 @@
-package org.archive.webservices.ars.processing.jobs.archivespark.functions
+package functions
 
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import org.apache.tika.Tika
@@ -7,20 +7,29 @@ import org.archive.webservices.archivespark.model.pointers.{DataLoadPointer, Fie
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, EnrichRoot, TypedEnrichable}
 import org.archive.webservices.archivespark.specific.warc.functions.WarcPayloadFields
 import org.archive.webservices.archivespark.util.Bytes
+import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.ArchArchiveSparkFunctionAdapter
 import org.archive.webservices.sparkling.html.HtmlProcessor
 import org.archive.webservices.sparkling.http.HttpMessage
-import org.archive.webservices.sparkling.util.RegexUtil
+import org.archive.webservices.sparkling.io.IOUtil
+import org.archive.webservices.sparkling.util.{RegexUtil, StringUtil}
+
+import java.io.ByteArrayInputStream
 
 object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
-  lazy val tika = new Tika()
+  @transient lazy val tika = new Tika()
 
   override def baseFunc: EnrichFunc[ArchEnrichRoot[_], EnrichRoot, Bytes, String] = new ExtractedText
 
+  override def initFunc(params: DerivationJobParameters): EnrichFunc[_, _, Bytes, String] = {
+    val qualityFilter = params.get[Boolean]("quality-filter").getOrElse(false)
+    new ExtractedText(qualityFilter)
+  }
+
   val PageMime: String = "text/html"
   val SupportedMimes: Set[String] = Set(
-    PageMime, 
+    PageMime,
     "application/atom+xml",
     "application/vnd.openxmlformats-officedocument.presentationml.slide",
     "application/x-xliff+xml",
@@ -38,6 +47,7 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
     "text/x-groovy",
     "application/vnd.oasis.opendocument.chart-template",
     "application/rtf",
+    "text/rtf",
     "application/vnd.oasis.opendocument.text",
     "application/vnd.ms-powerpoint.template.macroenabled.12",
     "application/vnd.ms-word.template.macroenabled.12",
@@ -72,7 +82,8 @@ object ExtractedText extends ArchArchiveSparkFunctionAdapter[Bytes, String] {
     "application/vnd.oasis.opendocument.flat.text",
     "text/tsv",
     "application/vnd.ms-visio.drawing.macroenabled.12",
-    "application/vnd.openxmlformats-officedocument.presentationml.slideshow"
+    "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+    "application/vnd.ms-excel"
   )
 
   val MinTextLength = 300

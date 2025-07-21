@@ -5,6 +5,8 @@ import io.circe.parser._
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.app.RequestContext
 import org.archive.webservices.ars.util.HttpUtil
+import org.archive.webservices.sparkling.http.HttpClient
+import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.StringUtil
 import org.scalatra.servlet.ServletApiImplicits._
 import org.scalatra.{Cookie, CookieOptions}
@@ -18,6 +20,8 @@ import scala.io.Source
 import scala.util.Try
 
 object Ait {
+  implicit private val logContext: LogContext = LogContext(this)
+
   val AitSessionRequestAttribute = "AIT-sessionid"
   val AitSessionCookie = "sessionid"
   val UserSessionAttribute = "ait-user"
@@ -170,31 +174,28 @@ object Ait {
     val url =
       if (path.matches("^https?://.+$")) path
       else ArchConf.aitBaseUrl + path
-    val ait = HttpUtil.openConnection(url)
-    ait.setInstanceFollowRedirects(true)
     try {
-      for (sid <- sessionId if basicAuth.isEmpty)
-        ait.setRequestProperty("Cookie", AitSessionCookie + "=" + sid)
-      for (auth <- basicAuth) ait.setRequestProperty("Authorization", auth)
-      ait.setRequestProperty("Accept", contentType)
-      val status = ait.getResponseCode
-      if (status / 100 == 2) {
-        val in = ait.getInputStream
-        try {
-          action(in) match {
+      HttpClient.requestMessage(url, headers = {
+        Map("Accept" -> contentType) ++ {
+          basicAuth.map("Authorization" -> _).orElse {
+            sessionId.map(a => "Cookie" -> (AitSessionCookie + "=" + a))
+          }.toMap
+        }
+      }, close = close) { response =>
+        val status = response.status
+        if (status / 100 == 2) {
+          action(response.payload) match {
             case Some(r) => Right(r)
             case None => Left(-1)
           }
-        } finally {
-          if (close) Try(in.close())
-        }
-      } else Left(status)
+        } else Left(status)
+      }
     } catch {
       case e: Exception =>
+        Log.info(s"Error accessing $url.")
+        Log.error(e)
         e.printStackTrace()
         throw e
-    } finally {
-      if (close) Try(ait.disconnect())
     }
   }
 

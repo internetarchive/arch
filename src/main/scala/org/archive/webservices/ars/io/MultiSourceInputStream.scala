@@ -12,17 +12,16 @@ abstract class MultiSourceInputStream extends InputStream {
 
   private var _in: Option[InputStream] = None
 
-  @tailrec
   private def nextIn(e: Option[Exception] = None): InputStream = {
     try {
       _in = nextSource(pos)
-      _in match {
-        case Some(in) => in
-        case None => throw e.getOrElse(new RuntimeException("No more sources."))
-      }
     } catch {
       case e: Exception =>
-        nextIn(Some(e))
+        return nextIn(Some(e))
+    }
+    _in match {
+      case Some(in) => in
+      case None => throw e.getOrElse(new RuntimeException("No more sources."))
     }
   }
 

@@ -11,6 +11,10 @@ import scala.util.Try
 
 object LocalFileCache {
   val MaxMemoryCacheSize: Long = 1.mb
+
+  val MimeTmpExtensions = Map(
+    "application/pdf" -> "pdf"
+  )
 }
 
 trait LocalFileCache {
@@ -21,13 +25,16 @@ trait LocalFileCache {
 
   @transient var cacheEnabled = false
 
+  def mime: String
+
   def isLocalCached: Boolean = _localCacheFile.isDefined
 
   def localCacheFile: Option[File] = _localCacheFile
 
   private def cacheLocal(in: => Option[InputStream]): File = _localCacheFile.getOrElse {
     synchronized(_localCacheFile.getOrElse {
-      val file = IOUtil.tmpFile
+      val tmpExt = LocalFileCache.MimeTmpExtensions.get(mime).map("." + _).getOrElse(Sparkling.TmpExt)
+      val file = IOUtil.tmpFile(ext = tmpExt)
       Log.info(s"Caching to ${file.getPath}...")
       val out = IOUtil.fileOut(file)
       try {
@@ -52,7 +59,10 @@ trait LocalFileCache {
   def cacheLocal(): File = cacheLocal(if (_memoryCache.isDefined) None else Some(payloadAccess))
 
   def clearCache(): Unit = if (_localCacheFile.isDefined || _memoryCache.isDefined) synchronized {
-    for (file <- _localCacheFile) file.delete()
+    for (file <- _localCacheFile) {
+      Log.info(s"Deleting ${file.getPath}.")
+      file.delete()
+    }
     _localCacheFile = None
     _memoryCache = None
   }

@@ -26,6 +26,10 @@ trait InputSpec {
   }
   def isResumableInput: Boolean = loader.isResumableInput
   def revision: Int = loader.revision
+
+  object jobInfo {
+    var attempt: Int = 1
+  }
 }
 
 class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[String] = None)

@@ -113,7 +113,7 @@ object UserDefinedQuery extends SparkJob {
   def filterQuery(cdx: CdxRecord, query: DerivationJobParameters): Boolean = {
     {
       checkFieldOperators[String](query, Seq("surtPrefix", "surtPrefixes"))(
-        cdx.surtUrl.startsWith)
+        (cdx.surtUrl + " ").startsWith)
     } && {
       query.get[String]("timestampFrom").forall(cdx.timestamp >= _)
     } && {

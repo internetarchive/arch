@@ -20,12 +20,10 @@ object JobManager {
   // to be removed when ARCH becomes pure IO job processor
   private val collectionInstances = mutable.Map.empty[String, mutable.Set[DerivationJobInstance]]
 
-  val userJobs: Set[DerivationJob] = Set(
+  var userJobs: Set[DerivationJob] = Set(
     ArchiveSparkFlexJob,
     ArchiveSparkNoop,
     EntityExtraction,
-    TextExtraction,
-    QualityTextExtraction,
     WhisperTranscription,
     WhisperText,
     WhisperEntityExtraction,
@@ -48,20 +46,32 @@ object JobManager {
     WebPagesExtraction,
     WordProcessorInformationExtraction)
 
-  val systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication, MetadataSummary)
+  var systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication, MetadataSummary)
 
-  val jobs: ListMap[String, DerivationJob] = ListMap(
-    (userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
-      job.id -> job
-    }: _*)
+  private var _jobs: Option[ListMap[String, DerivationJob]] = None
+  def jobs: ListMap[String, DerivationJob] = _jobs.getOrElse {
+    _jobs = Some(ListMap(
+      (userJobs ++ systemJobs).toSeq.sortBy(_.id).map { job =>
+        job.id -> job
+      }: _*))
+    _jobs.get
+  }
 
-  val nameLookup: Map[String, DerivationJob] = jobs.values.map { job =>
-    job.name -> job
-  }.toMap
+  private var _nameLookup: Option[Map[String, DerivationJob]] = None
+  def nameLookup: Map[String, DerivationJob] = _nameLookup.getOrElse {
+    _nameLookup = Some(jobs.values.map { job =>
+      job.name -> job
+    }.toMap)
+    _nameLookup.get
+  }
 
-  val uuidLookup: Map[String, DerivationJob] = jobs.values.map { job =>
-    job.uuid -> job
-  }.toMap
+  private var _uuidLookup: Option[Map[String, DerivationJob]] = None
+  def uuidLookup: Map[String, DerivationJob] = _uuidLookup.getOrElse {
+    _uuidLookup = Some(jobs.values.map { job =>
+      job.uuid -> job
+    }.toMap)
+    _uuidLookup.get
+  }
 
   def get(idOrUuid: String): Option[DerivationJob] =
     jobs.get(uuidLookup.get(idOrUuid).map(_.id).getOrElse(idOrUuid))
@@ -119,7 +129,7 @@ object JobManager {
     instance.unregistered()
     if (instance.job.partialOf.isEmpty) {
       if (instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
-        if (!instance.isResumable) instance.job.reset(instance.conf)
+        if (!instance.isResumable) DerivationJob.reset(instance.job, instance.conf)
         instance.job.enqueue(
           instance.conf,
           { newInstance =>
