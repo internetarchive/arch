@@ -5,6 +5,8 @@ lazy val commonSettings = Seq(name := "arch", organization := "org.archive.webse
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
 val guavaDependent = Seq(
+  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
+  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "org.scalatra" %% "scalatra-cache-guava" % "2.5.4",
   "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
   "com.optimaize.languagedetector" % "language-detector" % "0.6",
@@ -22,8 +24,6 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
-  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
-  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.json4s" %% "json4s-native" % "3.5.0",
   "org.scalatra" %% "scalatra" % "2.5.4",
