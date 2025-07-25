@@ -11,12 +11,12 @@ import java.util.Properties
 class CoreNlpEntities(
     properties: Properties = EntitiesConstants.DefaultProps,
     filterLatin: Boolean = false) extends Entities(properties, cleanLatin = filterLatin) {
-  override def initPartition[R <: EnrichRoot](partition: Iterator[R], init: R => R): Iterator[R] = {
+  override def initPartition[R <: EnrichRoot](partition: Iterator[R], init: Iterator[R] => Iterator[R], map: R => R): Iterator[R] = {
     StageSyncManager.lockMutex()
-    IteratorUtil.preload(partition.map { r =>
+    IteratorUtil.preload(init(partition.map { r =>
       r.asInstanceOf[LocalFileCache].cachePayload()
       r
-    }, numPreload = 50, parallelism = 2)(init)
+    }), numPreload = 50, parallelism = 2)(map)
   }
 
   override def cleanup(): Unit = {
