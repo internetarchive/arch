@@ -1,0 +1,6 @@
+[project]
+name = "whisper-env"
+version = "20240807195100"
+dependencies = [
+  "openai-whisper==20240930"
+]

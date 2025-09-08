@@ -14,6 +14,12 @@ import cv2
 import craft_utils
 import imgproc
 
+
+from skimage import io
+from io import BytesIO
+import numpy as np
+import fitz
+
 from craft import CRAFT
 from refinenet import RefineNet
 
@@ -96,8 +102,20 @@ def ocr(image, bboxes):
         del copped_image, pixel_values, generated_ids
     return text
 
-def process(image_file):
-    image = imgproc.loadImage(image_file)
+def loadImage(img): # see https://github.com/clovaai/CRAFT-pytorch/blob/master/imgproc.py#L11C1-L18C15
+    if img.shape[0] == 2: img = img[0]
+    if len(img.shape) == 2 : img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    if img.shape[2] == 4:   img = img[:,:,:3]
+    img = np.array(img)
+    return img
+
+def loadImageFromFile(img_file):
+    return loadImage(io.imread(img_file))
+
+def loadImageFromBytes(image_bytes):
+    return loadImage(io.imread(BytesIO(image_bytes)))
+
+def processImage(image):
     bboxes = detect(image) #, args.text_threshold, args.link_threshold, args.low_text, args.cuda, args.poly, refine_net)
     texts = ocr(image, bboxes)
     result = '\n'.join(texts) #bboxes
@@ -107,11 +125,48 @@ def process(image_file):
     gc.collect()
     return result
 
+def process(image_file):
+    if image_file.endswith(".pdf"):
+        with fitz.open(image_file) as doc:
+            return '\n'.join(processPdf(doc))
+    else:
+        image = loadImageFromFile(image_file)
+        return processImage(image)
+
+def processPdf(doc, pagesToImg=True):
+    pages = len(doc)
+    if pagesToImg:
+        zoom = 300 / 72
+        mat = fitz.Matrix(zoom, zoom)
+        for page_index in range(pages):
+            print(f"processing page {page_index} of {pages}")
+            page = doc.load_page(page_index)
+            pix = page.get_pixmap(matrix=mat)
+            image_bytes = pix.tobytes("png")
+            image = loadImageFromBytes(image_bytes)
+            text = processImage(image)
+            print(f"detected: {text}")
+            yield text
+    else:
+        for page_index in range(pages):
+            print(f"processing page {page_index} of {pages}")
+            for img_index, img in enumerate(doc.get_page_images(page_index)):
+                print(f"processing image {img_index}")
+                xref = img[0]
+                base_image = doc.extract_image(xref)
+                image_bytes = base_image["image"]
+                image = loadImageFromBytes(image_bytes)
+                text = processImage(image)
+                print(f"detected: {text}")
+                yield text
+
 with open(out_pipe_path, 'w') as pipe:
     while True:
         print("##", file=pipe, flush=True)
         input_file = sys.stdin.readline().strip()
-        try:
-            result = process(input_file)
-            print(result, file=pipe, flush=True) #print(json.dumps(result.tolist()))
-        except: pass
+        if not input_file: continue
+        print(">>", file=pipe, flush=True)
+        # try:
+        result = process(input_file)
+        print(result, file=pipe, flush=True) #print(json.dumps(result.tolist()))
+        # except: pass

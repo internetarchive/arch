@@ -2,15 +2,10 @@ package org.archive.webservices.ars.processing.jobs.archivespark.functions
 
 import org.archive.webservices.archivespark.model.pointers.FieldPointer
 import org.archive.webservices.archivespark.model.{Derivatives, EnrichFunc, EnrichRoot, TypedEnrichable}
-import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.jobs.archivespark.base.LocalFileCache
-import org.archive.webservices.sparkling.Sparkling
-import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil, StageSyncManager, SystemProcess}
+import org.archive.webservices.sparkling.io.{IOUtil, StageSyncManager, SystemProcess}
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.Common
-
-import java.io.{File, InputStream}
-import java.net.URL
 
 abstract class ArchFileProcEnrichFuncBase[A]
     extends EnrichFunc[EnrichRoot with LocalFileCache, EnrichRoot with LocalFileCache, String, A] {
@@ -18,44 +13,12 @@ abstract class ArchFileProcEnrichFuncBase[A]
 
   final val source: FieldPointer[EnrichRoot with LocalFileCache, String] = ArchFileCache
 
-  def workingDir: String = ArchConf.hadoopNodeLocalTempPath
-
-  def pidPipe(pid: Int): String = workingDir + "/" + pid + ".pipe"
+  def workingDir: String
 
   def bash: SystemProcess = {
     val process = SystemProcess.bash
     process.exec(s"cd $workingDir")
     process
-  }
-
-  def make(file: String)(make: File => Unit): File = {
-    val f = new File(workingDir, file)
-    if (f.exists()) return f
-    make(f)
-    f
-  }
-
-  def copyFile(in: InputStream, file: String): String = {
-    try {
-      val localFile = workingDir + "/" + file
-      val tmpFile = localFile + "._downloading"
-      val out = IOUtil.fileOut(tmpFile)
-      try {
-        IOUtil.copy(in, out)
-      } finally out.close()
-      val f = new File(localFile)
-      if (f.exists()) f.delete()
-      new File(tmpFile).renameTo(f)
-      localFile
-    } finally in.close()
-  }
-
-  def copyFromHdfs(hdfsDir: String, file: String): String = {
-    copyFile(HdfsIO.open(s"$hdfsDir/$file", decompress = false), file)
-  }
-
-  def copyFromUrl(url: String, file: String): String = {
-    copyFile(new URL(url).openStream, file)
   }
 
   def cmd(procFile: String): String
@@ -76,6 +39,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
     }
   }
 
+  def cleanup(pid: Int): Unit = {}
+
   def exec(cmd: String, exec: (SystemProcess, Int, String) => Unit, restart: Boolean = false): SystemProcess = {
     StageSyncManager
       .syncProcess(
@@ -83,10 +48,7 @@ abstract class ArchFileProcEnrichFuncBase[A]
         workingDir,
         bash,
         exec,
-        cleanup = { (p, pid) =>
-          val pipe = new File(pidPipe(pid))
-          IOUtil.delete(pipe)
-        },
+        cleanup = { (_, pid) => cleanup(pid) },
         restart)
       ._1
   }

@@ -239,7 +239,7 @@ RUN mkdir $HADOOP_NODE_LOCAL_TEMP_PATH && chown arch:arch $HADOOP_NODE_LOCAL_TEM
 WORKDIR $HDFS_JOB_ARTIFACT_PATH_WHISPER
 COPY --from=build-whisper-artifacts /root/conda-whisper-env.tar.gz .
 COPY --from=build-whisper-artifacts /root/base.en.pt .
-COPY ./job_scripts/whisper-run.py .
+COPY job_artifacts/whisper-run.py .
 RUN chown --recursive arch:arch $HDFS_JOB_ARTIFACT_PATH_WHISPER
 
 # Symlink whisper assets into expected HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER path to prevent
@@ -255,7 +255,7 @@ WORKDIR $HDFS_JOB_ARTIFACT_PATH_TROCR
 COPY --from=build-trocr-artifacts /root/conda-trocr-env.tar.gz .
 COPY --from=build-trocr-artifacts /root/trocr-models.tar.gz .
 COPY --from=build-trocr-artifacts /root/craft-pytorch.tar.gz .
-COPY ./job_scripts/trocr-run.py .
+COPY job_artifacts/trocr-run.py .
 RUN chown --recursive arch:arch .
 
 # Symlink trocr assets into expected HADOOP_NODE_LOCAL_TEMP_PATH_TROCR path to prevent

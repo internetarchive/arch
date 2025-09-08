@@ -9,7 +9,7 @@ object Whisper extends PythonFunctionAdapter[Json] {
   override def func: PythonFunction[Json] = new Whisper
 }
 
-class Whisper extends PythonUvFunction[Json] {
+class Whisper extends PythonFunction[Json] with UVenv with CondaBaseEnv {
   override val label: String = "whisper"
   override val dataDir: String = s"$label/20240807195100"
   override val pythonFile: String = s"$label-run.py"
@@ -29,4 +29,6 @@ class Whisper extends PythonUvFunction[Json] {
         case Right(json) => Some(json)
       }
   }
+
+  override def condaEnv: String = "test"
 }

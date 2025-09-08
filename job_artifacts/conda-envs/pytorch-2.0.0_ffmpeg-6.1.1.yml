@@ -1,0 +1,15 @@
+name: pytorch-2.0.0_ffmpeg-6.1.1
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - pytorch=2.0.0
+  - torchvision=0.15.0
+  - torchaudio=2.0.0
+  - ffmpeg=6.1.1
+  - cudatoolkit=11.3
+  - conda-pack
+  - pip
+  - pip:
+    - uv

@@ -6,7 +6,7 @@ object TrOCR extends PythonFunctionAdapter[String] {
   override def func: PythonFunction[String] = new TrOCR
 }
 
-class TrOCR extends PythonUvFunction[String] {
+class TrOCR extends PythonFunction[String] with UVenv with CondaBaseEnv {
   override val label: String = "trocr"
   override val dataDir: String = s"$label/20240807195100"
   override val pythonFile: String = s"$label-run.py"
@@ -18,4 +18,6 @@ class TrOCR extends PythonUvFunction[String] {
     "weights/craft_refiner_CTW1500.pth")
 
   override def processOutput(output: String): Option[String] = Some(output)
+
+  override def condaEnv: String = "conda-pytorch-ffmpeg"
 }
