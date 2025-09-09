@@ -1,0 +1,4 @@
+[repositories]
+    local
+    maven-central
+    old-sbt-ivy-releases: https://repo.scala-sbt.org/scalasbt/ivy-releases/, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext], bootOnly

@@ -171,6 +171,9 @@ RUN apt update && apt install -y sbt=1.3.8
 RUN useradd --create-home --home-dir=$ARCH_USER_HOME --uid $UID arch
 USER arch
 
+RUN mkdir $ARCH_USER_HOME/.sbt
+COPY sbt-repositories $ARCH_USER_HOME/.sbt/repositories
+
 # Download Spark
 RUN curl -sL --output $SPARK_TGZ_PATH $SPARK_TGZ_URL \
     && echo "$SPARK_TGZ_CHECKSUM  $SPARK_TGZ_PATH" | sha256sum --check \
@@ -267,6 +270,9 @@ RUN cp $HDFS_JOB_ARTIFACT_PATH_TROCR/trocr-run.py $HADOOP_NODE_LOCAL_TEMP_PATH_T
 
 # Copy entrypoint script.
 COPY --chown=arch entrypoint.sh /entrypoint.sh
+
+# Convert Windows to Linux line endings (in case the file was copied from Windows)
+RUN sed -i 's/\r$//' /entrypoint.sh
 
 USER arch
 WORKDIR $ARCH_INSTALL_DIR
