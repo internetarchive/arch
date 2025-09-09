@@ -7,6 +7,8 @@ import org.archive.webservices.sparkling.io.{IOUtil, StageSyncManager, SystemPro
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 import org.archive.webservices.sparkling.util.Common
 
+import java.io.File
+
 abstract class ArchFileProcEnrichFuncBase[A]
     extends EnrichFunc[EnrichRoot with LocalFileCache, EnrichRoot with LocalFileCache, String, A] {
   implicit private val logContext: LogContext = LogContext(this)
@@ -16,6 +18,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
   def workingDir: String
 
   def bash: SystemProcess = {
+    val dir = new File(workingDir)
+    if (!dir.exists()) dir.mkdirs()
     val process = SystemProcess.bash
     process.exec(s"cd $workingDir")
     process

@@ -17,7 +17,7 @@ class TrOCR extends PythonFunction[String] with UVenv with CondaBaseEnv {
     "weights/craft_mlt_25k.pth",
     "weights/craft_refiner_CTW1500.pth")
 
-  override def processOutput(output: String): Option[String] = Some(output)
+  override def condaEnv: String = "pytorch-1.11.0"
 
-  override def condaEnv: String = "conda-pytorch-ffmpeg"
+  override def processOutput(output: String): Option[String] = Some(output)
 }
