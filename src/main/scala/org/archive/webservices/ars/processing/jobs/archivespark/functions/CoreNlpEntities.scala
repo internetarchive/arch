@@ -10,7 +10,7 @@ import java.util.Properties
 
 class CoreNlpEntities(
     properties: Properties = EntitiesConstants.DefaultProps,
-    filterLatin: Boolean = false) extends Entities(properties, cleanLatin = filterLatin) {
+    cleanLatin: Boolean = true) extends Entities(properties, cleanLatin = cleanLatin) {
   override def initPartition[R <: EnrichRoot](partition: Iterator[R], init: Iterator[R] => Iterator[R], map: R => R): Iterator[R] = {
     StageSyncManager.lockMutex()
     IteratorUtil.preload(init(partition.map { r =>

@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters
 
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
-import org.archive.webservices.archivespark.functions.{Entities, EntitiesConstants}
+import org.archive.webservices.archivespark.functions.EntitiesConstants
 import org.archive.webservices.archivespark.model.EnrichFunc
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.processing.DerivationJobParameters
@@ -21,8 +21,9 @@ object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String, Seq[Strin
   override def initFunc(params: DerivationJobParameters): EnrichFunc[_, _, String, Seq[String]] = {
     val langParam = params.get[String]("lang").map(_.toLowerCase)
     langParam match {
-      case Some("chinese") => Entities.apply(properties(langParam))
-      case _ => Entities.onLatin(properties(langParam))
+      case Some("chinese") => new CoreNlpEntities(properties(langParam), cleanLatin = false)
+      case Some(_) => new CoreNlpEntities(properties(langParam))
+      case None => baseFunc
     }
   }
 
@@ -31,8 +32,9 @@ object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String, Seq[Strin
     lang match {
       case Some(l) =>
         val props = new StanfordCoreNLP(l).getProperties
-        for (p <- default.stringPropertyNames.asScala)
+        for (p <- default.stringPropertyNames.asScala) {
           props.setProperty(p, default.getProperty(p))
+        }
         props
       case None => default
     }

@@ -12,7 +12,11 @@ import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
 
 /* Common Base Test Class */
-abstract class UnitSpec extends ScalatraSuite with FunSuiteLike with MockFactory with BeforeAndAfterAll {
+abstract class UnitSpec
+    extends ScalatraSuite
+    with FunSuiteLike
+    with MockFactory
+    with BeforeAndAfterAll {
   private val dataDir = "data"
   private val backupDataDir = ".data-test-bak"
 
@@ -43,12 +47,28 @@ abstract class UnitSpec extends ScalatraSuite with FunSuiteLike with MockFactory
     map.put(key, value)
   }
 
-  def loggedInAs[A](user: ArchUser)(test: => A): A = {
-    session {
-      post("/login", params = Seq(("username", user.fullName), ("password", user.fullName))) {
-        status should equal (302)
-      }
-      test
-    }
+  def getForUser[A](user: ArchUser, apiKey: String)(
+      uri: String,
+      params: Iterable[(String, String)] = Seq.empty,
+      headers: Iterable[(String, String)] = Seq.empty)(f: ⇒ A): A = {
+    val headersKeys = headers.map(_._1.toLowerCase)
+    var extraHeaders: Iterable[(String, String)] = (
+      (if (!headersKeys.exists(_ == "x-api-user")) Seq(("x-api-user", user.id)) else Seq.empty)
+        ++ (if (!headersKeys.exists(_ == "x-api-key")) Seq(("x-api-key", apiKey)) else Seq.empty)
+    )
+    get[A](uri, params, headers ++ extraHeaders)(f)
   }
+
+  def postForUser[A](user: ArchUser, apiKey: String)(
+      uri: String,
+      body: Array[Byte],
+      headers: Iterable[(String, String)] = Seq.empty)(f: => A): A = {
+    val headersKeys = headers.map(_._1.toLowerCase)
+    var extraHeaders: Iterable[(String, String)] = (
+      (if (!headersKeys.exists(_ == "x-api-user")) Seq(("x-api-user", user.id)) else Seq.empty)
+        ++ (if (!headersKeys.exists(_ == "x-api-key")) Seq(("x-api-key", apiKey)) else Seq.empty)
+    )
+    post(uri, body, headers ++ extraHeaders)(f)
+  }
+
 }

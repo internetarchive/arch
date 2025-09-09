@@ -14,6 +14,7 @@ config/config.json:
 
 .PHONY: build-docker-image
 build-docker-image: config/config.json
+	cp .gitignore .dockerignore; \
 	docker build --build-arg UID=$(UID) . -t $(IMAGE)
 
 shared:
