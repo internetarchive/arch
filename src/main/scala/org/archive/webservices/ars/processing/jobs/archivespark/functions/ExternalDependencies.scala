@@ -10,6 +10,8 @@ trait ExternalDependencies {
   def dataDir: String
   def workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
 
+  var pythonLoaded = false
+
   def init(shell: SystemProcess): Unit
 
   def ensureFile(file: String, sourceDir: String = dataDir, target: Option[String] = None): File = {

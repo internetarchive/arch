@@ -10,10 +10,9 @@ trait CondaEnv extends ExternalDependencies {
   abstract override def init(shell: SystemProcess): Unit = {
     val condaActivate = s"$condaEnv/bin/activate"
 
-    var activated = false
-    def activate(): Unit = if (!activated) {
+    def activate(): Unit = if (!pythonLoaded) {
       shell.exec(s"source $condaActivate", blocking = true)
-      activated = true
+      pythonLoaded = true
     }
 
     make(condaActivate) { _ =>

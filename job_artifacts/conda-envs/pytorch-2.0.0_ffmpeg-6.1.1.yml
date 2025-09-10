@@ -4,11 +4,12 @@ channels:
   - nvidia
   - defaults
 dependencies:
+  - python=3.10
   - pytorch=2.0.0
   - torchvision=0.15.0
   - torchaudio=2.0.0
+  - pytorch-cuda=11.8
   - ffmpeg=6.1.1
-  - cudatoolkit=11.3
   - conda-pack
   - pip
   - pip:

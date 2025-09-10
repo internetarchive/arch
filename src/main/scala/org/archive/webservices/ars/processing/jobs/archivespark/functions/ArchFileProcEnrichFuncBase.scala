@@ -18,8 +18,6 @@ abstract class ArchFileProcEnrichFuncBase[A]
   def workingDir: String
 
   def bash: SystemProcess = {
-    val dir = new File(workingDir)
-    if (!dir.exists()) dir.mkdirs()
     val process = SystemProcess.bash
     process.exec(s"cd $workingDir")
     process
@@ -38,6 +36,8 @@ abstract class ArchFileProcEnrichFuncBase[A]
     if (restart) for (p <- _process) p.destroy()
     if (!initialized) synchronized {
       if (!initialized) {
+        val dir = new File(workingDir)
+        if (!dir.exists) dir.mkdirs()
         _process = Some(init(restart))
       }
     }

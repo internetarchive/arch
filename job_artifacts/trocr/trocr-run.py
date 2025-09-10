@@ -14,7 +14,6 @@ import cv2
 import craft_utils
 import imgproc
 
-
 from skimage import io
 from io import BytesIO
 import numpy as np
@@ -97,7 +96,6 @@ def ocr(image, bboxes):
         pixel_values = processor(copped_image, return_tensors="pt").pixel_values
         generated_ids = model.generate(pixel_values)
         generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        #print(f"$ {generated_text}")
         text.append(generated_text)
         del copped_image, pixel_values, generated_ids
     return text
@@ -139,25 +137,20 @@ def processPdf(doc, pagesToImg=True):
         zoom = 300 / 72
         mat = fitz.Matrix(zoom, zoom)
         for page_index in range(pages):
-            print(f"processing page {page_index} of {pages}")
             page = doc.load_page(page_index)
             pix = page.get_pixmap(matrix=mat)
             image_bytes = pix.tobytes("png")
             image = loadImageFromBytes(image_bytes)
             text = processImage(image)
-            print(f"detected: {text}")
             yield text
     else:
         for page_index in range(pages):
-            print(f"processing page {page_index} of {pages}")
             for img_index, img in enumerate(doc.get_page_images(page_index)):
-                print(f"processing image {img_index}")
                 xref = img[0]
                 base_image = doc.extract_image(xref)
                 image_bytes = base_image["image"]
                 image = loadImageFromBytes(image_bytes)
                 text = processImage(image)
-                print(f"detected: {text}")
                 yield text
 
 with open(out_pipe_path, 'w') as pipe:
@@ -166,7 +159,5 @@ with open(out_pipe_path, 'w') as pipe:
         input_file = sys.stdin.readline().strip()
         if not input_file: continue
         print(">>", file=pipe, flush=True)
-        # try:
         result = process(input_file)
-        print(result, file=pipe, flush=True) #print(json.dumps(result.tolist()))
-        # except: pass
+        print(result, file=pipe, flush=True)
