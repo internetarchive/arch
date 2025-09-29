@@ -7,10 +7,18 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 trait ExternalDependencies {
+  val PythonEnv = "python"
+
   def dataDir: String
   def workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
 
-  var pythonLoaded = false
+  private var _envLoaded = Set.empty[String]
+  def resetEnv(): Unit = _envLoaded = Set.empty
+  def envLoaded(env: String, loading: Boolean = false): Boolean = {
+    val loaded = _envLoaded.contains(env)
+    if (loading) _envLoaded += env
+    loaded
+  }
 
   def init(shell: SystemProcess): Unit
 
@@ -24,7 +32,8 @@ trait ExternalDependencies {
   def copyFile(src: String, dst: String): String = {
     val hdfs = ArchConf.hdfsJobArtifactPath.map(IOUtil.concatPaths(_, src)).filter(HdfsIO.exists)
     hdfs match {
-      case Some(src) => copyFromHdfs(src, dst)
+      case Some(src) =>
+        copyFromHdfs(src, dst)
       case None =>
         val url = ArchConf.jobArtifactUrl.stripSuffix("/") + "/" + src
         copyFromUrl(url, dst)

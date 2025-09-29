@@ -39,8 +39,9 @@ abstract class PythonFunction[A] extends ArchFileProcEnrichFuncBase[A] with Exte
   def init(restart: Boolean = false): SystemProcess = {
     val arg = (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
     exec(
-      s"python $pythonFile $arg",
+      s"python3 $pythonFile $arg",
       { (shell, pid, cmd) =>
+        resetEnv()
         init(shell)
 
         for (p <- additionalPackages) {

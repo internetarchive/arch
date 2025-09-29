@@ -115,10 +115,11 @@ object IOHelper {
         Try(outIn.close())
         Try(out.close())
       }
-    HdfsIO.rename(tmpOutFile, dstPath)
 
     if (deleteSrcFiles) for (file <- srcFiles) HdfsIO.delete(file)
     if (deleteSrcPath) HdfsIO.delete(srcPath)
+
+    HdfsIO.rename(tmpOutFile, dstPath)
 
     r.last.asInstanceOf[R]
   }

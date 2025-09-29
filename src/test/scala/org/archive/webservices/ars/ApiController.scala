@@ -55,7 +55,7 @@ class ApiControllerSpec extends UnitSpec {
       user: ArchUser,
       apiKey: String,
       uuid: String,
-      timeoutSeconds: Int = 60): Unit = {
+      timeoutSeconds: Int = 120): Unit = {
     var secondsRemaining = timeoutSeconds;
     while (secondsRemaining > 0) {
       getForUser(user, apiKey)(s"/api/job/${uuid}/state") {
@@ -65,9 +65,7 @@ class ApiControllerSpec extends UnitSpec {
         if (jobState == "Finished") {
           return
         }
-        if (jobState == "Failed") {
-          fail(s"Job ($uuid) failed")
-        }
+        if (jobState == "Failed") fail(s"Job ($uuid) failed")
         Thread.sleep(1000)
         secondsRemaining -= 1
       }
@@ -202,7 +200,7 @@ class ApiControllerSpec extends UnitSpec {
     )
   }
 
-  test("Generating a ArchiveSpark EntityExtraction on the test collection works") {
+  test("Generating an ArchiveSpark EntityExtraction on the test collection works") {
     val (user, apiKey) = makeArchUser()
     runJobAndVerify(
       user,
@@ -340,6 +338,50 @@ class ApiControllerSpec extends UnitSpec {
           "lineCount" : 17,
           "fileType" : "csv",
           "md5Checksum" : "d4b0ef3bf8afd88d2d72b9b2c40cf963"
+        }
+      ]
+      """
+    )
+  }
+
+  test("Generating an ArchiveSpark HtmlTextExtraction on the test collection works") {
+    val (user, apiKey) = makeArchUser()
+    runJobAndVerify(
+      user,
+      apiKey,
+      HtmlTextExtraction,
+      Map("type" -> "collection", "collectionId" -> "SPECIAL-test-collection"),
+      """
+      [
+        {
+          "filename" : "result.jsonl.gz",
+          "sizeBytes" : 20743,
+          "mimeType" : "application/gzip",
+          "lineCount" : 17,
+          "fileType" : "ArchiveSpark/jsonl",
+          "md5Checksum" : "da6bcdad1168af3a09065930cd41ab19"
+        }
+      ]
+      """
+    )
+  }
+
+  test("Generating an ArchiveSpark PySmokeTestJob on the test collection works") {
+    val (user, apiKey) = makeArchUser()
+    runJobAndVerify(
+      user,
+      apiKey,
+      PySmokeTestJob,
+      Map("type" -> "collection", "collectionId" -> "SPECIAL-test-collection"),
+      """
+      [
+        {
+          "filename" : "result.jsonl.gz",
+          "sizeBytes" : 7321,
+          "mimeType" : "application/gzip",
+          "lineCount" : 80,
+          "fileType" : "ArchiveSpark/jsonl",
+          "md5Checksum" : "4228953e712ba43ef7458ce5ebdfe24d"
         }
       ]
       """

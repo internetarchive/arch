@@ -70,7 +70,9 @@ object UuidManager {
             job.revision == revision
           }.flatMap { job =>
             Option(job.history(conf)).filter(instance => HdfsIO.exists(instance.outPath))
-          }.getOrElse(DummyDerivationJob.history(conf))
+          }.getOrElse {
+            DummyDerivationJob.history(conf)
+          }
           instance.predefUuid = Some(uuid)
           instance.inputRevision = inputRevision
           instance.user = cursor.get[String]("user").toOption.flatMap(ArchUser.get)

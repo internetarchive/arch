@@ -23,7 +23,7 @@ trait UVenv extends ExternalDependencies {
     val venvDir = IOUtil.concatPaths(UvDir, VenvDir)
     make(venvDir) { _ =>
       shell.exec(s"cd $UvDir")
-      if (!pythonLoaded) shell.exec("uv venv", blocking = true)
+      if (!envLoaded(PythonEnv)) shell.exec("uv venv", blocking = true)
       else new File(venvDir).mkdir() // flag dir to skip this 'make' next time
       shell.exec(s"uv pip install ." + {
         ArchConf.pypiIndexUrl.map(u => s" --index-url $u").getOrElse("")
@@ -31,7 +31,9 @@ trait UVenv extends ExternalDependencies {
       shell.exec(s"cd ..")
     }
 
-    if (!pythonLoaded) shell.exec(s"source $venvDir/bin/activate")
+    if (!envLoaded(PythonEnv, loading = true)) {
+      shell.exec(s"source $venvDir/bin/activate")
+    }
 
     super.init(shell)
   }
