@@ -8,6 +8,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, FunSuiteLike}
 import org.scalatra.test.scalatest._
 
+import org.archive.webservices.sparkling.logging.LogLevels
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.model.users.ArchUser
 
@@ -30,6 +31,9 @@ abstract class UnitSpec
 
     // Create a backup of the existing data directory.
     FileUtils.copyDirectory(new File(dataDir), new File(backupDataDir))
+
+    // Set Sparkling logging level
+    org.archive.webservices.sparkling.logging.Log.level = LogLevels.Error
   }
 
   override def afterAll {
