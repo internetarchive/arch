@@ -1,9 +1,4 @@
 {
-  "1757361412378" : {
-    "name" : "1757361412378",
-    "password" : "sha1:43ZDMG62HPZN2KZSU4KYDKSME3YYBM7H",
-    "admin" : false
-  },
   "ks:system" : {
     "name" : "Keystone System",
     "admin" : true,
