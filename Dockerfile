@@ -112,11 +112,11 @@ ARG CORENLP_CHINESE_JAR_URL=https://huggingface.co/stanfordnlp/corenlp-chinese/r
 ARG CORENLP_CHINESE_JAR_CHECKSUM=e624af936cda0373e20b6f44a65fdfb1bc196e8b56761dc9659728d98150d5e0
 
 ARG SPARKLING_GIT_REPO=https://github.com/internetarchive/Sparkling
-ARG SPARKLING_SHA1=a5fd21586bef6799630250c7b2625ea36ad5e5ba
+ARG SPARKLING_SHA1=57c70ed8d400775fb180f5415dd64e3516c7290d
 ARG SPARKLING_DIR=$ARCH_USER_HOME/sparkling
 
 ARG ARCHIVESPARK_GIT_REPO=https://github.com/internetarchive/ArchiveSpark
-ARG ARCHIVESPARK_SHA1=853ff1db7b8b57858cbb652ef8788deca5b65d2c
+ARG ARCHIVESPARK_SHA1=c24549b04d5a84aab97d9c76db8c0ed0d9e648b6
 ARG ARCHIVESPARK_DIR=$ARCH_USER_HOME/archivespark
 
 ARG SPARKLING_JAR_PATH=$SPARKLING_DIR/target/scala-2.12/sparkling-assembly-0.3.8-SNAPSHOT.jar
@@ -142,7 +142,7 @@ LABEL description="Docker image for ARCH development"
 LABEL website="https://arch.archive-it.org"
 
 # Install required packages
-RUN apt update && apt install -y \
+RUN apt update && apt upgrade -y && apt install -y \
     curl \
     gnupg \
     openjdk-8-jdk \
@@ -277,7 +277,11 @@ RUN sed -i 's/\r$//' /entrypoint.sh
 USER arch
 WORKDIR $ARCH_INSTALL_DIR
 
-RUN ["sbt", "dev/clean", "dev/update", "dev/compile"]
+# Build ARCH
+RUN sbt dev/clean dev/update dev/compile dev/publishLocal
+
+# Build ARCH job plugins
+RUN find job_plugins/ -mindepth 1 -maxdepth 1 -type d -exec bash -c "cd {}; sbt assembly" \;
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sbt", "dev/run"]
