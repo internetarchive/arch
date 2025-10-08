@@ -211,11 +211,11 @@ class ApiControllerSpec extends UnitSpec {
       [
         {
           "filename": "result.jsonl.gz",
-          "sizeBytes": 5505,
+          "sizeBytes": 5494,
           "mimeType": "application/gzip",
           "lineCount": 41,
           "fileType": "ArchiveSpark/jsonl",
-          "md5Checksum": "c7ceb90be0754ad5bc89a341bbd88aca"
+          "md5Checksum": "fe03006ab3d288804bb393f4efac3c07"
         }
       ]
       """
@@ -238,7 +238,7 @@ class ApiControllerSpec extends UnitSpec {
       """
       [
         {
-          "filename": "IIPC-COVID-Announcement.warc.wat.gz",
+          "filename": "test.warc.wat.gz",
           "mimeType": "application/gzip",
           "lineCount": -1,
           "fileType": "wat"
@@ -355,11 +355,11 @@ class ApiControllerSpec extends UnitSpec {
       [
         {
           "filename" : "result.jsonl.gz",
-          "sizeBytes" : 20743,
+          "sizeBytes" : 20725,
           "mimeType" : "application/gzip",
           "lineCount" : 17,
           "fileType" : "ArchiveSpark/jsonl",
-          "md5Checksum" : "da6bcdad1168af3a09065930cd41ab19"
+          "md5Checksum" : "ec920d2b69f65846d1ff80d02a53990f"
         }
       ]
       """
@@ -377,11 +377,11 @@ class ApiControllerSpec extends UnitSpec {
       [
         {
           "filename" : "result.jsonl.gz",
-          "sizeBytes" : 7321,
+          "sizeBytes" : 7310,
           "mimeType" : "application/gzip",
           "lineCount" : 80,
           "fileType" : "ArchiveSpark/jsonl",
-          "md5Checksum" : "4228953e712ba43ef7458ce5ebdfe24d"
+          "md5Checksum" : "698e2b543c06d871414d94d62d6d050f"
         }
       ]
       """
@@ -404,46 +404,41 @@ class ApiControllerSpec extends UnitSpec {
           "lineCount" : 11,
           "fileType" : "csv",
           "md5Checksum" : "4d34306cdfb43d2ffdbd57dda860758e"
-        },
-        {
+          }, {
           "filename" : "json-file-information.csv.gz",
           "sizeBytes" : 1299,
           "mimeType" : "application/gzip",
           "lineCount" : 1,
           "fileType" : "csv",
           "md5Checksum" : "a5cd0ea93c4642f71ae7688deba7b30c"
-        },
-        {
+          }, {
           "filename" : "xml-file-information.csv.gz",
-          "sizeBytes" : 33761,
+          "sizeBytes" : 33701,
           "mimeType" : "application/gzip",
           "lineCount" : 7,
           "fileType" : "csv",
-          "md5Checksum" : "e307a12aa9cd27b6dfde1589cc67f6ad"
-        },
-        {
+          "md5Checksum" : "fb3d19fb44880c93f6fbed3a4815bbb8"
+          }, {
           "filename" : "plain-text-file-information.csv.gz",
           "sizeBytes" : 1924,
           "mimeType" : "application/gzip",
           "lineCount" : 14,
           "fileType" : "csv",
           "md5Checksum" : "2c31125c17d91e7803fe08fbb5111e75"
-        },
-        {
+          }, {
           "filename" : "js-file-information.csv.gz",
-          "sizeBytes" : 156185,
+          "sizeBytes" : 156098,
           "mimeType" : "application/gzip",
           "lineCount" : 13,
           "fileType" : "csv",
-          "md5Checksum" : "01e7db1236e725ac7f5a3e1ac23f9810"
-        },
-        {
+          "md5Checksum" : "fbea8902bcf7d55fa18dcbe868006702"
+          }, {
           "filename" : "html-file-information.csv.gz",
-          "sizeBytes" : 250494,
+          "sizeBytes" : 250333,
           "mimeType" : "application/gzip",
           "lineCount" : 17,
           "fileType" : "csv",
-          "md5Checksum" : "79619b45d8768905db47b9a19119068d"
+          "md5Checksum" : "1ad61c1190412cdf69931c5cf620e70f"
         }
       ]
       """
