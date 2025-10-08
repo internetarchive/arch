@@ -61,6 +61,7 @@ val buildSettings = commonSettings ++ Seq(
       "scala-2.12" * "*-assembly-*.jar").classpath,
   Test / resourceDirectory := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "resources",
   Test / scalaSource := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "scala",
+  Test / parallelExecution := false,
   assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
   assembly / test  := {},
   resolvers += Resolver.mavenLocal,

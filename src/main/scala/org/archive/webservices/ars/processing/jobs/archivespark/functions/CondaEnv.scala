@@ -16,12 +16,9 @@ trait CondaEnv extends ExternalDependencies {
 
     make(condaActivate) { _ =>
       val f = ensureFile(condaPackage, condaPackageSourceDir)
-      make(condaEnv) { dir =>
-        dir.mkdir()
-      }
+      make(condaEnv)(_.mkdirs())
       shell.exec(s"tar -xzf $condaPackage -C $condaEnv", blocking = true)
       f.delete()
-
       activate()
       shell.exec("conda-unpack", blocking = true)
     }

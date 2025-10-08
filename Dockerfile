@@ -3,7 +3,6 @@ ARG BASE_IMAGE=ubuntu:20.04
 
 # Build using the command: docker build --build-arg UID=$UID . -t ait-arch
 
-
 ###############################################################################
 # Miniconda build stage
 ###############################################################################
@@ -27,15 +26,18 @@ RUN curl --silent --remote-name $CONDA_INSTALL_SCRIPT_URL
 RUN echo "$CONDA_INSTALL_SCRIPT_SHA256 $CONDA_INSTALL_SCRIPT" | sha256sum --check
 RUN bash $CONDA_INSTALL_SCRIPT -b -p $CONDA_DIR
 ENV PATH="/root/miniconda3/bin:$PATH"
+RUN conda install --yes --channel conda-forge conda-pack
 RUN conda init
 
 # Build conda environments
 ## pytorch-1.11.0
 COPY job_artifacts/conda-envs/pytorch-1.11.0.yml .
-RUN conda env create -p pytorch-1.11.0 -f pytorch-1.11.0.yml
+RUN conda env create -p pytorch-1.11.0 -f pytorch-1.11.0.yml \
+    && conda pack -n pytorch-1.11.0
 ## pytorch-2.0.0_ffmpeg-6.1.1
 COPY job_artifacts/conda-envs/pytorch-2.0.0_ffmpeg-6.1.1.yml .
-RUN conda env create -p pytorch-2.0.0_ffmpeg-6.1.1 -f pytorch-2.0.0_ffmpeg-6.1.1.yml
+RUN conda env create -p pytorch-2.0.0_ffmpeg-6.1.1 -f pytorch-2.0.0_ffmpeg-6.1.1.yml \
+    && conda pack -n pytorch-2.0.0_ffmpeg-6.1.1
 
 ###############################################################################
 # Whisper job artifacts build stage
@@ -122,7 +124,8 @@ RUN apt update && apt upgrade -y && apt install -y \
     git \
     unzip \
     jq \
-    tmux
+    tmux \
+    python3
 
 # Install maven after java 8
 RUN apt install -y maven
@@ -204,8 +207,7 @@ RUN mkdir -p /user/helge/arch-test-collection \
     && curl -sL --output /user/helge/arch-test-collection/test.warc.gz $TEST_WARC_URL \
     && chown --recursive arch:arch /user
 
-# Ensure that the default config hadoopNodeLocalTempPath path exists, to which
-# we will symlink the required AI-job-related assets.
+# Ensure that the default config hadoopNodeLocalTempPath path exists
 RUN mkdir $HADOOP_NODE_LOCAL_TEMP_PATH && chown arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH
 
 # Initialize PySmokeTest working dir
@@ -215,7 +217,7 @@ RUN chown -R arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH_SMOKE
 
 # Initialize whipser working dir
 WORKDIR $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER
-COPY --from=build-miniconda /root/pytorch-2.0.0_ffmpeg-6.1.1 ./pytorch-2.0.0_ffmpeg-6.1.1
+COPY --from=build-miniconda /root/pytorch-2.0.0_ffmpeg-6.1.1.tar.gz .
 COPY --from=build-whisper-artifacts /root/base.en.pt .
 COPY job_artifacts/whisper/pyproject.toml .uv/
 COPY job_artifacts/whisper/whisper-run.py .
@@ -223,9 +225,10 @@ RUN chown -R arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH_WHISPER
 
 # Initialize TrOCR working dir
 WORKDIR $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR
-COPY --from=build-miniconda /root/pytorch-1.11.0 ./pytorch-1.11.0
+COPY --from=build-miniconda /root/pytorch-1.11.0.tar.gz .
 COPY --from=build-trocr-artifacts /root/trocr-models/ .
 COPY --from=build-trocr-artifacts /root/CRAFT-pytorch/ .
+RUN touch trocr-models.tar.gz._unpacked craft-pytorch.tar.gz._unpacked
 COPY job_artifacts/trocr/pyproject.toml .uv/
 COPY job_artifacts/trocr/trocr-run.py .
 RUN chown -R arch:arch $HADOOP_NODE_LOCAL_TEMP_PATH_TROCR
