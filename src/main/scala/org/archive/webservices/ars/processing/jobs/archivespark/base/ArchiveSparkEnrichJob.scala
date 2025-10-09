@@ -7,6 +7,7 @@ import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.archivespark.util.Bytes
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.io.StageSyncManager
 import org.archive.webservices.sparkling.util.IteratorUtil
 
@@ -21,6 +22,11 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
     ArchiveSparkEnrichJob.plainTextLoad
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]]
+
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
+    cdx => superFilter(cdx) && cdx.status == 200
+  }
 
   override def enrich(
       rdd: RDD[ArchEnrichRoot[_]],

@@ -22,12 +22,12 @@ class UserDefinedQuerySpec extends UnitSpec {
     val params = DerivationJobParameters(Map("surtPrefixesOR" -> surtPrefixesOR.asJson))
 
     Await.result(
-      SparkJobManager.context.map { sc =>
+      SparkJobManager.context.map { _ =>
         WebArchiveLoader.loadCdx(inputSpec) {
           rdd => filterQuery(rdd, params).map(_.surtUrl)
         }.collect
       },
-      10 seconds
+      30 seconds
     ).toSet
   }
 

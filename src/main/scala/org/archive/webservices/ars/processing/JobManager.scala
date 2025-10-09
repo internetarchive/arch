@@ -44,7 +44,9 @@ object JobManager {
     VideoInformationExtraction,
     WebGraphExtraction,
     WebPagesExtraction,
-    WordProcessorInformationExtraction)
+    WordProcessorInformationExtraction,
+    HtmlTextExtraction,
+    PySmokeTestJob)
 
   var systemJobs: Set[DerivationJob] = Set(UserDefinedQuery, DatasetPublication, MetadataSummary)
 
@@ -88,7 +90,9 @@ object JobManager {
   }
 
   def getInstance(uuid: String): Option[DerivationJobInstance] = {
-    uuidInstances.get(uuid).orElse(UuidManager.getInstance(uuid))
+    uuidInstances.get(uuid).orElse {
+      UuidManager.getInstance(uuid)
+    }
   }
 
   def registered: Set[DerivationJobInstance] = collectionInstances.values.flatten.toSet
@@ -98,14 +102,16 @@ object JobManager {
     val confJobs = confInstances.getOrElseUpdate(conf, mutable.Map.empty)
     if (!confJobs.contains(instance.job.id)) {
       confJobs.update(instance.job.id, instance)
-      registerUuid(instance)
-      if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
-        val collectionJobs =
-          collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
-        collectionJobs.add(instance)
+      if (instance.job.partialOf.isEmpty) {
+        registerUuid(instance)
+        if (InputSpec.isCollectionBased(conf.inputSpec)) {
+          val collectionJobs =
+            collectionInstances.getOrElseUpdate(conf.inputSpec.collectionId, mutable.Set.empty)
+          collectionJobs.add(instance)
+        }
+        JobStateManager.logRegister(instance)
       }
       instance.registered = true
-      JobStateManager.logRegister(instance)
       true
     } else false
   }
@@ -117,17 +123,20 @@ object JobManager {
       jobs.remove(instance.job.id)
       if (jobs.isEmpty) confInstances.remove(conf)
     }
-    uuidInstances.remove(instance.uuid)
-    if (instance.job.partialOf.isEmpty && InputSpec.isCollectionBased(conf.inputSpec)) {
-      for (collectionJobs <- collectionInstances.get(conf.inputSpec.collectionId)) {
-        collectionJobs.remove(instance)
-        if (collectionJobs.isEmpty) collectionInstances.remove(conf.inputSpec.collectionId)
+    val subjob = instance.job.partialOf.isDefined
+    if (!subjob) {
+      uuidInstances.remove(instance.uuid)
+      if (InputSpec.isCollectionBased(conf.inputSpec)) {
+        for (collectionJobs <- collectionInstances.get(conf.inputSpec.collectionId)) {
+          collectionJobs.remove(instance)
+          if (collectionJobs.isEmpty) collectionInstances.remove(conf.inputSpec.collectionId)
+        }
       }
+      JobStateManager.logUnregister(instance)
     }
     instance.registered = false
-    JobStateManager.logUnregister(instance)
     instance.unregistered()
-    if (instance.job.partialOf.isEmpty) {
+    if (!subjob) {
       if (instance.state == ProcessingState.Failed && instance.attempt < MaxAttempts) {
         if (!instance.isResumable) DerivationJob.reset(instance.job, instance.conf)
         instance.job.enqueue(

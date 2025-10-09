@@ -5,8 +5,7 @@ import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
-import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 
 object WhisperText extends AiJob {
   val uuid: String = "0191e26a-056c-77e2-8fe0-dfba9928b3e2"
@@ -23,13 +22,8 @@ object WhisperText extends AiJob {
 
   override val category: ArchJobCategory = ArchJobCategories.Speech
 
-  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
-    val superFilter = super.cdxPrefilter(conf)
-    cdx => superFilter(cdx) && cdx.status == 200
-  }
-
   override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
-    mime => mime.startsWith("audio/") || mime.startsWith("video/")
+    WhisperTranscription.mimePrefilter(conf)
   }
 
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {

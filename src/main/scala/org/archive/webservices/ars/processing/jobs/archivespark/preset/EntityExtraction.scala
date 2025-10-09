@@ -2,10 +2,9 @@ package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
 import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
-import org.archive.webservices.sparkling.cdx.CdxRecord
 
 object EntityExtraction extends ArchiveSparkEnrichJob {
   val name: String = "Named entities"
@@ -18,11 +17,6 @@ object EntityExtraction extends ArchiveSparkEnrichJob {
     "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
   val category: ArchJobCategory = ArchJobCategories.Text
-
-  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
-    val superFilter = super.cdxPrefilter(conf)
-    cdx => superFilter(cdx) && cdx.status == 200
-  }
 
   override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
     mime => mime.startsWith("text/")

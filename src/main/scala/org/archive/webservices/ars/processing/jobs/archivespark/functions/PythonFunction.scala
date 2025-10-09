@@ -4,18 +4,18 @@ import org.archive.webservices.archivespark.model.Derivatives
 import org.archive.webservices.ars.model.ArchConf
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.sparkling._
-import org.archive.webservices.sparkling.io.{StageSyncManager, SystemProcess}
+import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil, StageSyncManager, SystemProcess}
 import org.archive.webservices.sparkling.logging.{Log, LogContext}
 
 import java.io.File
 
-abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
+abstract class PythonFunction[A] extends ArchFileProcEnrichFuncBase[A] with ExternalDependencies {
   implicit private val logContext: LogContext = LogContext(this)
 
   val AdditionalPackagesUnpackedExtension = "._unpacked"
 
+  def label: String
   def dataDir: String
-  def condaEnv: String
   def pythonFile: String
   def additionalPackages: Seq[String] = Seq.empty
   def pythonArgumentFiles: Seq[String]
@@ -27,49 +27,22 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
     _additionalPythonArguments = additionalPythonArguments(params)
   }
 
-  def condaFile: String = condaEnv + ".tar.gz"
   val outputStartToken = ">>"
   val outputEndToken = "##"
 
-  lazy val hdfsDir: Option[String] = ArchConf.hdfsJobArtifactPath.map(_ + "/" + dataDir)
-  lazy val artifactUrl: String = ArchConf.jobArtifactUrl.stripSuffix("/") + "/" + dataDir
-
-  def ensureFile(file: String): File = make(file) { _ =>
-    copyFile(file)
-  }
-
-  def copyFile(file: String): String = {
-    hdfsDir match {
-      case Some(dir) => copyFromHdfs(dir, file)
-      case None => copyFromUrl(s"$artifactUrl/$file", file)
-    }
-  }
-
-  override lazy val workingDir: String = ArchConf.hadoopNodeLocalTempPath + "/" + dataDir
-
-  def label: String
-
   override def fields: Seq[String] = Seq(label)
 
-  override def init(restart: Boolean = false): SystemProcess = {
-    val arg = {
-      (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
-    }
-    exec(
-      s"python $pythonFile $arg",
-      { (shell, pid, cmd) =>
-        val condaActivate = s"$condaEnv/bin/activate"
-        make(condaActivate) { _ =>
-          val f = ensureFile(condaFile)
-          make(condaEnv) { dir =>
-            dir.mkdir()
-          }
-          shell.exec(s"tar -xzf $condaFile -C $condaEnv", blocking = true)
-          f.delete()
-        }
+  def pidPipe(pid: Int): String = workingDir + "/" + pid + ".pipe"
 
-        shell.exec(s"source $condaActivate")
-        shell.exec("conda-unpack")
+  override def init(shell: SystemProcess): Unit = {}
+
+  def init(restart: Boolean = false): SystemProcess = {
+    val arg = (pythonArgumentFiles.mkString(" ") + " " + _additionalPythonArguments.mkString(" ")).trim
+    exec(
+      s"python3 $pythonFile $arg",
+      { (shell, pid, cmd) =>
+        resetEnv()
+        init(shell)
 
         for (p <- additionalPackages) {
           val unpackedFlag = p + AdditionalPackagesUnpackedExtension
@@ -127,4 +100,6 @@ abstract class CondaBasedFunction[A] extends ArchFileProcEnrichFuncBase[A] {
   }
 
   def processOutput(output: String): Option[A]
+
+  override def cleanup(pid: Int): Unit = IOUtil.delete(pidPipe(pid))
 }

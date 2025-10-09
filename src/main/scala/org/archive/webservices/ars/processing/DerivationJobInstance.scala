@@ -4,6 +4,7 @@ import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
+import org.archive.webservices.sparkling.util.Common
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global

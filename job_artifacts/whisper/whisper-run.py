@@ -19,7 +19,10 @@ with open(out_pipe_path, 'w') as pipe:
     while True:
         print("##", file=pipe, flush=True)
         input_file = sys.stdin.readline().strip()
+        if not input_file: continue
+        print(">>", file=pipe, flush=True)
         try:
             result = process(input_file)
             print(json.dumps(result["segments"]), file=pipe, flush=True)
-        except: pass
+        except:
+            pass

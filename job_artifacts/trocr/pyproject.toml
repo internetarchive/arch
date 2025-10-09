@@ -1,0 +1,9 @@
+[project]
+name = "trocr-env"
+version = "20240807195100"
+dependencies = [
+  "opencv-python==4.10.0.84",
+  "scikit-image==0.24.0",
+  "transformers==4.43.4",
+  "PyMuPDF==1.26.1"
+]

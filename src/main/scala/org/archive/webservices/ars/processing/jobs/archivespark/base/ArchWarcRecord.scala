@@ -21,7 +21,7 @@ class ArchWarcRecord(val warc: WarcRecord) extends ArchEnrichRoot[CdxRecord] wit
   override def companion: EnrichRootCompanion[ArchWarcRecord] = ArchWarcRecord
 
   override lazy val get: CdxRecord = {
-    warc.toCdx(0L, handleRevisits = true, handleOthers = true).get
+    warc.toCdx(0L, handleRevisits = true, handleOthers = true, digestStr = warc.payloadDigest.orElse(Some("-"))).get
   }
 
   def mime: String = warc.http.flatMap(_.mime).getOrElse("/")
