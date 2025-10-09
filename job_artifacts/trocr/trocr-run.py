@@ -159,5 +159,8 @@ with open(out_pipe_path, 'w') as pipe:
         input_file = sys.stdin.readline().strip()
         if not input_file: continue
         print(">>", file=pipe, flush=True)
-        result = process(input_file)
-        print(result, file=pipe, flush=True)
+        try:
+            result = process(input_file)
+            print(result, file=pipe, flush=True)
+        except:
+            pass
