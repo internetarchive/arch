@@ -16,6 +16,9 @@ object TextExtractionEntities extends ArchiveSparkEnrichJob {
 
   override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/15810489328276-ARCH-named-entities-datasets"
 
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/job_plugins/text_extraction/jobs/TextExtractionEntities.scala"
+
   val category: ArchJobCategory = ArchJobCategories.Text
 
   override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
