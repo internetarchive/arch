@@ -5,13 +5,15 @@ lazy val commonSettings = Seq(name := "arch", organization := "org.archive.webse
 val guava = "com.google.guava" % "guava" % "29.0-jre"
 
 val guavaDependent = Seq(
+  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
+  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "org.scalatra" %% "scalatra-cache-guava" % "2.5.4",
   "io.archivesunleashed" % "aut" % "0.90.0" intransitive (),
   "com.optimaize.languagedetector" % "language-detector" % "0.6",
-  "org.apache.tika" % "tika-core" % "1.22",
+  "org.apache.tika" % "tika-core" % "2.9.2" % "provided",
   "org.apache.tika" % "tika-langdetect" % "1.22" exclude (org = "com.optimaize.languagedetector",
-  name = "language-detector"),
-  "org.apache.tika" % "tika-parsers" % "1.22" excludeAll ExclusionRule(
+    name = "language-detector"),
+  "org.apache.tika" % "tika-parsers" % "2.9.2" % "provided" excludeAll ExclusionRule(
     organization = "com.fasterxml.jackson.core"))
 
 val prodProvided = Seq(
@@ -21,16 +23,17 @@ val prodProvided = Seq(
   "org.apache.spark" %% "spark-sql" % "2.4.5",
   "org.apache.spark" %% "spark-yarn" % "2.4.5")
 
+val testDependencies = Seq(
+  "org.scalatra" %% "scalatra-scalatest" % "2.5.4",
+  "org.scalamock" %% "scalamock" % "5.2.0"
+)
+
 val dependencies = prodProvided.map(_ % "provided") ++ Seq(
-  "org.archive.webservices" %% "sparkling" % "0.3.8-SNAPSHOT" % "provided",
-  "org.archive.webservices" %% "archivespark" % "3.3.8-SNAPSHOT" % "provided",
   "commons-codec" % "commons-codec" % "1.12",
   "org.json4s" %% "json4s-native" % "3.5.0",
   "org.scalatra" %% "scalatra" % "2.5.4",
   "org.scalatra" %% "scalatra-scalate" % "2.5.4",
-  "org.scalatra" %% "scalatra-scalatest" % "2.5.4" % "test",
   "org.scalatra" %% "scalatra-swagger"  % "2.5.4",
-  "org.scalamock" %% "scalamock" % "5.2.0" % "test",
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.2.19.v20160908" % "compile",
   "com.lihaoyi" %% "requests" % "0.8.0",
@@ -41,27 +44,34 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "com.fasterxml.uuid" % "java-uuid-generator" % "4.1.1",
   "io.sentry" % "sentry" % "6.28.0",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  "edu.stanford.nlp" % "stanford-corenlp" % "4.3.1" % "provided",
+  "edu.stanford.nlp" % "stanford-corenlp" % "4.5.6" % "provided",
   "io.github.nremond" %% "pbkdf2-scala" % "0.7.0") ++ guavaDependent.map(
   _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",
-  "io.circe" %% "circe-parser").map(_ % "0.13.0")
+  "io.circe" %% "circe-parser").map(_ % "0.13.0") ++ testDependencies.map(_ % "test")
 
 val buildSettings = commonSettings ++ Seq(
   mainClass in (Compile, run) := Some("org.archive.webservices.ars.Arch"),
+  Compile / scalaSource := baseDirectory.value.getParentFile.getParentFile / "src" / "main" / "scala",
+  Compile / unmanagedJars ++=
+    (baseDirectory.value.getParentFile.getParentFile / "lib" * "*.jar").classpath,
+  Compile / unmanagedJars ++=
+    (baseDirectory.value.getParentFile.getParentFile / "job_plugins" ** "target" /
+      "scala-2.12" * "*-assembly-*.jar").classpath,
+  Test / resourceDirectory := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "resources",
+  Test / scalaSource := baseDirectory.value.getParentFile.getParentFile / "src" / "test" / "scala",
+  Test / parallelExecution := false,
+  assembly / fullClasspath ++= (Compile / unmanagedClasspath).value,
+  assembly / test  := {},
   resolvers += Resolver.mavenLocal,
   publishMavenStyle := false)
 
-lazy val root = (project in file("."))
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided") ++ dependencies)
+lazy val arch = (project in file("."))
+  .settings(libraryDependencies ++= dependencies)
 
 lazy val dev = (project in file("build/dev"))
-  .dependsOn(root)
-  .settings(libraryDependencies ++= prodProvided)
+  .settings(libraryDependencies ++= dependencies ++ prodProvided)
   .settings(buildSettings: _*)
   .settings(
     fork in run := true,
@@ -69,20 +79,22 @@ lazy val dev = (project in file("build/dev"))
     baseDirectory in run := file("."))
 
 lazy val prod = (project in file("build/prod"))
-  .dependsOn(root)
-  .settings(libraryDependencies += guava)
+  .settings(libraryDependencies ++= dependencies :+ guava)
   .settings(buildSettings: _*)
   .settings(
     assemblyShadeRules in assembly := Seq(
       ShadeRule
         .rename("com.google.common.**" -> (name.value + ".shade.@0"))
-        .inLibrary(guava)
-        .inLibrary(guavaDependent: _*)
+        .inLibrary(Seq(guava) ++ guavaDependent: _*)
         .inProject),
     assemblyOption in assembly := (assemblyOption in assembly).value
       .copy(includeScala = false, includeDependency = false),
     assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case PathList("META-INF", xs@_*) =>
+        xs.map(_.toLowerCase) match {
+          case "services" :: xs => MergeStrategy.filterDistinctLines
+          case _ => MergeStrategy.discard
+        }
       case _ => MergeStrategy.first
     })
 

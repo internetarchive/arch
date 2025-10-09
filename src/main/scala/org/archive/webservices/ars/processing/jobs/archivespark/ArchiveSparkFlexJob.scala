@@ -1,12 +1,13 @@
 package org.archive.webservices.ars.processing.jobs.archivespark
 
 import io.circe.{HCursor, Json}
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.{ArchArchiveSparkFunctionAdapter, EntitiesAdapter}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.{Whisper, WhisperText}
 import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
+import org.archive.webservices.sparkling.cdx.CdxRecord
 import org.archive.webservices.sparkling.util.StringUtil
 
 object ArchiveSparkFlexJob extends AiJob {
@@ -16,7 +17,7 @@ object ArchiveSparkFlexJob extends AiJob {
   val description: String = "ArchiveSpark flex job "
   val category: ArchJobCategory = ArchJobCategories.None
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
     val mime = conf.params.values
       .get("mime")
       .toSeq
@@ -27,14 +28,14 @@ object ArchiveSparkFlexJob extends AiJob {
       }
       .toSet
     if (mime.isEmpty) {
-      super.genericPredicate(conf)
-    } else { record =>
-      mime.contains(record.mime) || mime.contains(StringUtil.prefixToSeparator(record.mime, "/"))
+      super.mimePrefilter(conf)
+    } else { m =>
+      mime.contains(m) || mime.contains(StringUtil.prefixToSeparator(m, "/"))
     }
   }
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
     val status = conf.params.values.get("status").toSeq.flatMap { status =>
       if (status.isNumber) status.asNumber.flatMap(_.toInt).toSeq
       else if (status.isArray)
@@ -43,29 +44,29 @@ object ArchiveSparkFlexJob extends AiJob {
     }
     if (status.isEmpty) {
       superFilter
-    } else { warc =>
-      superFilter(warc) && {
+    } else { cdx =>
+      superFilter(cdx) && {
         status.exists { s =>
-          warc.status == s || (s < 100 && (warc.status / 10 == s || (s < 10 && warc.status / 100 == s)))
+          cdx.status == s || (s < 100 && (cdx.status / 10 == s || (s < 10 && cdx.status / 100 == s)))
         }
       }
     }
   }
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     conf.params.values.get("functions").toSeq.flatMap(_.asArray.toSeq.flatten).map { function =>
       ArchiveSparkFlexJob.initFunction(function)
     }
   }
 
-  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_]] =
+  val adapters: Map[String, ArchArchiveSparkFunctionAdapter[_, _]] =
     Seq(EntitiesAdapter, Whisper, WhisperText).flatMap { adapter =>
       Iterator(adapter.name -> adapter, adapter.name.toLowerCase -> adapter)
     }.toMap
 
   private def initFunction[A](
-      func: ArchArchiveSparkFunctionAdapter[A],
-      cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], A, _] = {
+      func: ArchArchiveSparkFunctionAdapter[A, _],
+      cursor: HCursor): EnrichFunc[ArchEnrichRoot[_], EnrichRoot, A, _] = {
     val dependency =
       cursor.downField("on").focus.map(initFunction).flatMap(func.toDependencyPointer)
     cursor.downField("params").focus.flatMap(DerivationJobParameters.fromJson) match {
@@ -74,7 +75,7 @@ object ArchiveSparkFlexJob extends AiJob {
     }
   }
 
-  def initFunction(definition: Json): EnrichFunc[ArchEnrichRoot[_], _, _] = {
+  def initFunction(definition: Json): EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _] = {
     if (definition.isString) {
       adapters.get(definition.asString.get).map(_.noParams)
     } else if (definition.isObject) {

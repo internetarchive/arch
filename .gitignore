@@ -238,3 +238,5 @@ project/project/
 /shared
 
 !webapp/js/dist
+
+.dockerignore

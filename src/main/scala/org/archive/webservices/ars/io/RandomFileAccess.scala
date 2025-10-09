@@ -7,7 +7,6 @@ import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.io.{CleanupInputStream, IOUtil, S3Client}
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
-import java.net.URL
 import java.util.Base64
 import scala.collection.mutable
 

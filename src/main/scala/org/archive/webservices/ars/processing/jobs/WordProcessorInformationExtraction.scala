@@ -35,7 +35,8 @@ object WordProcessorInformationExtraction extends BinaryInformationAutJob {
     "application/vnd.apple.pages",
     "application/macwriteii",
     "application/vnd.ms-works",
-    "application/rtf")
+    "application/rtf",
+    "text/rtf")
 
   override def checkMime(url: String, server: String, tika: String): Boolean =
     WordProcessorMimeTypes.contains(tika)

@@ -1,10 +1,10 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.TrOCR
 
 object TrOcrProcessing extends AiJob {
@@ -12,22 +12,21 @@ object TrOcrProcessing extends AiJob {
 
   val name: String = "Text recognition"
   val description: String =
-    "Text recognized and transcribed from images in a collection, including handwriting. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Text recognized and transcribed from images in a collection, including handwriting. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and transcription."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#ocr"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/TrOcrProcessing.scala"
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override val category: ArchJobCategory = ArchJobCategories.Images
+
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    mime => mime.startsWith("image/") || mime == "application/pdf"
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("image/")
-  }
-
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     Seq(TrOCR.noParams)
   }
 }

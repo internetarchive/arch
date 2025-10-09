@@ -7,7 +7,7 @@ import org.archive.webservices.ars.processing.{DerivationJobInstance, JobManager
 import org.archive.webservices.ars.util.{HttpUtil, LazyCache}
 
 import java.io.DataOutputStream
-import java.net.{HttpURLConnection, URL}
+import java.net.HttpURLConnection
 import java.time.Instant
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -58,6 +58,7 @@ object Keystone {
     LazyCache.lazyProcess(instance.lazyOutFiles, instance.outFiles) { outFiles =>
       val outputMetadata = Map(
         "job_start_id" -> instance.uuid.asJson,
+        "event_type" -> instance.stateStr.toUpperCase.asJson,
         "output_bytes" -> instance.outputSize.asJson,
         "created_at" -> Instant.now.toString.asJson,
         "files" -> (

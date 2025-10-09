@@ -10,8 +10,4 @@ abstract class PartialDerivationJob(parent: ChainedJob) extends DerivationJob {
   val category: ArchJobCategory = ArchJobCategories.None
   val description: String = id
   override val templateName: Option[String] = None
-  override def enqueue(
-      conf: DerivationJobConf,
-      get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] =
-    super.enqueue(conf, get)
 }

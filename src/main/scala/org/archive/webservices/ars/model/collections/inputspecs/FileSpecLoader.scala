@@ -90,7 +90,7 @@ object FileSpecLoader extends InputSpecLoader {
 
   def loadVault(spec: InputSpec, recordFactory: FileRecordFactory): RDD[(String, String)] = {
     val vault = recordFactory.asInstanceOf[VaultFileRecordFactory]
-    val (resolved, remaining) = vault.iterateGlob(Set(spec.str("fileGlob").getOrElse("**")))
+    val (resolved, remaining) = vault.iterateFiles()
     val partitions =
       (resolved.map { case (p, n) => (p, n.fileType) } ++ remaining.map { p => (p, None) }).toSeq
     val vaultBc = Sparkling.sc.broadcast(vault)

@@ -24,6 +24,12 @@ trait InputSpec {
   lazy val loader: InputSpecLoader = InputSpecLoader.get(this).getOrElse {
     throw new UnsupportedOperationException("no loader found for input spec type " + specType)
   }
+  def isResumableInput: Boolean = loader.isResumableInput
+  def revision: Int = loader.revision
+
+  object jobInfo {
+    var attempt: Int = 1
+  }
 }
 
 class DefaultInputSpec(val specType: String, val cursor: HCursor, idOpt: Option[String] = None)

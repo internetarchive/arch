@@ -5,6 +5,7 @@ import org.apache.commons.io.FilenameUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.BinaryInformationAutJob
 import org.archive.webservices.sparkling.Sparkling.executionContext
 import org.archive.webservices.sparkling.http.HttpMessage
@@ -22,8 +23,13 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
   val name = "Image file information"
   val uuid = "01895067-d598-7db8-88ad-46fed66e27f5"
 
+  override val category: ArchJobCategory = ArchJobCategories.Images
+
   override val infoUrl =
     "https://arch-webservices.zendesk.com/hc/en-us/articles/14410815476500-ARCH-File-format-datasets#image"
+
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/ImageInformationExtraction.scala"
 
   val description =
     "Locations and metadata for JPEG, PNG, GIF, and other image formatted files in the collection. Output: one CSV with columns for crawl date, last modified date, URL, file name, file format extension, MIME type as reported by the web server and as detected by Apache TIKA, and MD5 and SHA1 hash values."

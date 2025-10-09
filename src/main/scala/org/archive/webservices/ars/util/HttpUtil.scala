@@ -9,10 +9,11 @@ import org.archive.webservices.sparkling.io.CatchingInputStream
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, InetSocketAddress, Proxy, URL}
-import javax.net.ssl.HttpsURLConnection
 
 object HttpUtil {
   val MaxContentLength: Long = 1.mb
+
+  private var syncHosts = Map.empty[String, AnyRef]
 
   def bodyString(body: InputStream, http: HttpMessage): String = {
     val boundedBody = new BoundedInputStream(body, MaxContentLength)
@@ -34,4 +35,16 @@ object HttpUtil {
       u.openConnection(proxy)
     } else u.openConnection()
   }.asInstanceOf[HttpURLConnection]
+
+  def syncHost[R](url: String)(action: => R): R = {
+    val sync = synchronized {
+      val host = new URL(url).getHost
+      syncHosts.getOrElse(host, {
+        val obj = new AnyRef
+        syncHosts += host -> obj
+        obj
+      })
+    }
+    sync.synchronized(action)
+  }
 }

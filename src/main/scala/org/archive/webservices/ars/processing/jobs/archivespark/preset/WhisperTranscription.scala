@@ -1,33 +1,32 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.DerivationJobConf
 import org.archive.webservices.ars.processing.jobs.archivespark.AiJob
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord}
+import org.archive.webservices.ars.processing.jobs.archivespark.base.ArchEnrichRoot
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.Whisper
 
 object WhisperTranscription extends AiJob {
   val uuid: String = "018f7b0a-4f3c-7846-862a-ff1ae26ce139"
 
-  val name: String = "Speech recognition (raw)"
+  val name: String = "Speech recognition with technical metadata"
   val description: String =
-    "Raw transcription output and technical metadata from speech recognized in collection audio and video documents. Output: one or more JSONL files comprising a JSON object for each input record."
+    "Raw transcription output from each segment of speech recognized in collection audio and video documents with associated technical metadata. Output: one JSONL file comprising a JSON object for each text segment. Values include filename and path, MIME type, text, segment ID, seek, start and end, tokens, temperature, and confidence scores."
 
-  override def infoUrl: String = "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
+  override def infoUrl: String =
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
 
-  override val category: ArchJobCategory = ArchJobCategories.Text
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperTranscription.scala"
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override val category: ArchJobCategory = ArchJobCategories.Speech
+
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    mime => mime.startsWith("audio/") || mime.startsWith("video/")
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("audio/") || record.mime.startsWith("video/")
-  }
-
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     Seq(Whisper.noParams)
   }
 }

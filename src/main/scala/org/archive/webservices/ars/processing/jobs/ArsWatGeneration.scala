@@ -32,7 +32,7 @@ object ArsWatGeneration extends SparkJob with ArsJob {
   def run(conf: DerivationJobConf): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, ArsWatGeneration, conf)
-      WebArchiveLoader.loadWarc(conf.inputSpec) { rdd =>
+      WebArchiveLoader.loadWarcFileRecords(conf.inputSpec) { rdd =>
         IOHelper.sampleGrouped[String, InputStream, Boolean](
           rdd.map { file =>
             val outFile = StringUtil.stripSuffix(file.filename, Sparkling.GzipExt) + ".wat.gz"
@@ -67,7 +67,6 @@ object ArsWatGeneration extends SparkJob with ArsJob {
           RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
             for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
-          lazyOutFilesCache(conf) // trigger lazy outfile caching
           processed >= 0
         }
       }
@@ -91,8 +90,6 @@ object ArsWatGeneration extends SparkJob with ArsJob {
       val (path, name) = file.splitAt(file.lastIndexOf('/'))
       DerivativeOutput(name.stripPrefix("/"), path, "wat", "application/gzip")
     }
-
-  override val outputScalesWithInput: Boolean = true
 
   override val templateName: Option[String] = Some("jobs/DefaultArsJob")
 

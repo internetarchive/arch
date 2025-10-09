@@ -1,11 +1,15 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.base
 
 import org.apache.spark.rdd.RDD
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.archivespark.model.dataloads.ByteLoad
 import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.archivespark.util.Bytes
 import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.sparkling.Sparkling
+import org.archive.webservices.sparkling.cdx.CdxRecord
+import org.archive.webservices.sparkling.io.StageSyncManager
+import org.archive.webservices.sparkling.util.IteratorUtil
 
 abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
   def byteLoad: DataLoadPointer[ArchEnrichRoot[_], Bytes] =
@@ -17,7 +21,12 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
   def plainTextLoad: DataLoadPointer[ArchEnrichRoot[_], String] =
     ArchiveSparkEnrichJob.plainTextLoad
 
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]]
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]]
+
+  override def cdxPrefilter(conf: DerivationJobConf): CdxRecord => Boolean = {
+    val superFilter = super.cdxPrefilter(conf)
+    cdx => superFilter(cdx) && cdx.status == 200
+  }
 
   override def enrich(
       rdd: RDD[ArchEnrichRoot[_]],
@@ -31,9 +40,14 @@ abstract class ArchiveSparkEnrichJob extends ArchiveSparkBaseJob {
       } else rdd
     }
     for (func <- funcs) enriched = enriched.enrich(func)
-    enriched.map { r =>
-      r.clearCache()
-      r
+    enriched.mapPartitions { partition =>
+      StageSyncManager.lockMutex(blocking = Sparkling.taskContext.exists(_.attemptNumber > 0))
+      IteratorUtil.tryFinally(partition.map { r =>
+        r.clearCache()
+        r
+      }, {
+        StageSyncManager.unlockMutex()
+      })
     }
   }
 }

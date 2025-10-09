@@ -4,6 +4,7 @@ import io.archivesunleashed.matchbox.ExtractImageLinks
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil}
+import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
 import org.archive.webservices.ars.processing.jobs.shared.NetworkAutJob
 import org.archive.webservices.ars.util.{Common, HttpUtil}
 import org.archive.webservices.sparkling.warc.WarcRecord
@@ -14,8 +15,13 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
   val name = "Image graph"
   val uuid = "01895067-92fb-739c-a99d-037fde1798a4"
 
+  override val category: ArchJobCategory = ArchJobCategories.Images
+
   override val infoUrl =
     "https://arch-webservices.zendesk.com/hc/en-us/articles/14410738717588-ARCH-Network-datasets#image-graph"
+
+  override def codeUrl: String =
+    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/ImageGraphExtraction.scala"
 
   val description =
     "Timestamp, location, and any original description for each image file in the collection. Output: one CSV with columns for crawl date, source page, image file url, and alt text."

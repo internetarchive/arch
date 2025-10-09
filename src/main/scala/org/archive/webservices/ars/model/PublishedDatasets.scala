@@ -14,7 +14,6 @@ import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
 
 import java.io.InputStream
-import java.net.{HttpURLConnection, URL}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import scala.annotation.tailrec

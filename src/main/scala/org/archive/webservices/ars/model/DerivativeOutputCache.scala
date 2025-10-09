@@ -4,6 +4,7 @@ import _root_.io.circe.parser
 import _root_.io.circe.syntax._
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.StringUtil
 
 import scala.collection.immutable.ListMap
 
@@ -25,11 +26,11 @@ object DerivativeOutputCache {
       copy(downloadName = IOHelper.escapePath(prefix) + filename)
   }
 
-  def parseLine(line: String): Option[DerivativeOutput] = {
+  def parseLine(line: String, dir: String): Option[DerivativeOutput] = {
     parser.parse(line).toOption.map(_.hcursor).flatMap { cursor =>
       for {
         filename <- cursor.get[String]("filename").toOption
-        dir <- cursor.get[String]("dir").toOption
+        absoluteDir <- cursor.get[String]("dir").toOption.map(IOHelper.concatPaths(dir, _))
         fileType <- cursor.get[String]("fileType").toOption
         mimeType <- cursor.get[String]("mimeType").toOption
         size <- cursor.get[Long]("size").toOption
@@ -43,7 +44,7 @@ object DerivativeOutputCache {
         }
       } yield CachedDerivativeOutput(
         filename,
-        dir,
+        absoluteDir,
         fileType,
         mimeType,
         filename,
@@ -57,6 +58,7 @@ object DerivativeOutputCache {
   def parse(cacheFile: String): Option[DerivativeOutputCache] = {
     val lines = HdfsIO.iterLines(cacheFile)
     if (lines.hasNext) {
+      val dir = StringUtil.splitAtLast(cacheFile, "/")._1
       val metadata = lines.next()
       parser.parse(metadata).toOption.map(_.hcursor).flatMap { cursor =>
         for {
@@ -65,13 +67,14 @@ object DerivativeOutputCache {
         } yield DerivativeOutputCache(
           count,
           size, {
-            lines.flatMap(parseLine)
+            lines.flatMap(parseLine(_, dir))
           })
       }
     } else None
   }
 
   def write(files: Iterator[DerivativeOutput], cacheFile: String): Unit = {
+    val dir = StringUtil.splitAtLast(cacheFile, "/")._1 + "/"
     val tmpFile = cacheFile + ".tmp"
     var count = 0
     var size = 0L
@@ -80,9 +83,11 @@ object DerivativeOutputCache {
         files.map { file =>
           count += 1
           size += file.size
+          val dirIdx = file.dir.indexOf(dir)
+          val relative = if (dirIdx < 0) file.dir else file.dir.drop(dirIdx + dir.length)
           ListMap(
             "filename" -> file.filename.asJson,
-            "dir" -> file.dir.asJson,
+            "dir" -> relative.asJson,
             "fileType" -> file.fileType.asJson,
             "mimeType" -> file.mimeType.asJson,
             "size" -> file.size.asJson,

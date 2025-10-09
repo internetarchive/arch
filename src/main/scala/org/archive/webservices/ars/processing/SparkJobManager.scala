@@ -15,7 +15,6 @@ import scala.concurrent.Future
 object SparkJobManager
     extends JobManagerBase("Spark", 3, timeoutSecondsMinMax = Some((60 * 60, 60 * 60 * 3))) {
   val taskTimeoutSeconds = 60 * 60 * 12 // 12 hours
-  val SharedSparkContext = true
   val SparkAllocationFile = "fairscheduler.xml"
   val MaxPriorityWeight = 128
   val PoolPrefix = "weight-"
@@ -42,6 +41,7 @@ object SparkJobManager
         context.setLogLevel("INFO")
         _context = Some(context)
         Sparkling.resetSparkContext(Some(context))
+        SparkJobListener.reset()
         context.addSparkListener(SparkJobListener)
         println("New Spark context initialized: " + context.applicationId)
         context
@@ -74,11 +74,8 @@ object SparkJobManager
     val threshold = Instant.now.getEpochSecond - taskTimeoutSeconds
     val startTimes = SparkJobListener.taskStartTimes.values
     if (startTimes.forall(_ < threshold)) {
-      SparkJobListener.synchronized {
-        SparkJobListener.reset()
-        stopContext()
-        return
-      }
+      stopContext()
+      return
     }
     if (numQueued > 0 && freeSlots == 0) bypassJobs()
   }
@@ -91,6 +88,6 @@ object SparkJobManager
   }
 
   def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {
-    if (SharedSparkContext) job.run(conf) else SparkRunner.run(job, conf)
+    job.run(conf)
   }
 }

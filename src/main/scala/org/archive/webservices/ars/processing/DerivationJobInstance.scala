@@ -1,35 +1,21 @@
 package org.archive.webservices.ars.processing
 
-import org.apache.hadoop.fs.Path
+import org.archive.webservices.ars.io.UuidManager
 import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.model.users.ArchUser
-import org.archive.webservices.ars.util.UUID
-import org.archive.webservices.sparkling.io.HdfsIO
+import org.archive.webservices.sparkling.util.Common
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object DerivationJobInstance {
-  def uuid: String = uuid(false)
-
-  def uuid(reserve: Boolean): String = {
-    var uuid = UUID.uuid7str
-    for (path <- ArchConf.uuidJobOutPath) {
-      val uuidPath = new Path(path + "/" + uuid)
-      while (HdfsIO.fs.exists(uuidPath)) uuid = UUID.uuid7str
-      if (reserve) HdfsIO.fs.mkdirs(uuidPath)
-    }
-    uuid
-  }
-}
-
 case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var predefUuid: Option[String] = None
+  var inputRevision: Int = conf.inputSpec.revision
 
   lazy val uuid: String = {
-    val uuid = predefUuid.orElse(info.uuid).getOrElse(DerivationJobInstance.uuid)
+    val uuid = predefUuid.orElse(info.uuid).getOrElse(UuidManager.uuid)
     info.uuid = Some(uuid)
     uuid
   }
@@ -39,9 +25,9 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   var user: Option[ArchUser] = None
 
-  lazy val inputSize: Long = job.inputSize(conf)
+  def inputSize: Long = job.inputSize(conf)
 
-  lazy val outputSize: Long = job.outputSize(conf)
+  def outputSize: Long = job.outputSize(conf)
 
   var attempt: Int = 1
   var slots: Int = 1
@@ -137,10 +123,10 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def stateStr: String = ProcessingState.Strings(state)
   def sampleVizData: Option[SampleVizData] = job.sampleVizData(conf)
   def templateVariables: Seq[(String, Any)] = job.templateVariables(conf)
-  def outFiles: Iterator[DerivativeOutput] = job.outFilesCached(conf)
-  def lazyOutFilesCache: Option[Future[DerivativeOutputCache]] = job.lazyOutFilesCache(conf)
+  def outFiles: Iterator[DerivativeOutput] = UuidManager.outFilesCache(uuid).map(_.files).getOrElse(job.outFiles(conf))
+  def lazyOutFilesCache: Option[Future[DerivativeOutputCache]] = UuidManager.lazyOutFilesCache(this)
   def lazyOutFiles: Option[Future[Iterator[DerivativeOutput]]] = lazyOutFilesCache.map { future =>
-    future.map(_.files)
+    future.value.flatMap(_.toOption).map(_.files).map(Future.successful).getOrElse(future.map(_.files))
   }
 
   private var _onStateChanged: Seq[() => Unit] = Seq.empty
@@ -150,4 +136,6 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def onUnregistered(action: => Unit): Unit = _onUnregistered :+= (() => action)
 
   def unregistered(): Unit = for (func <- _onUnregistered) func()
+
+  def isResumable: Boolean = inputRevision == conf.inputSpec.revision && job.isResumable(conf)
 }

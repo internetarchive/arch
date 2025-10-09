@@ -51,7 +51,7 @@ class AitCollectionSpecifics(val id: String) extends CollectionSpecifics {
     val sourceId = this.sourceId
     WebArchiveLoader.loadAitWarcFiles(aitId, inputPath, sourceId) { rdd =>
       action(rdd.map { case (filename, in) =>
-        (CollectionSpecifics.pointer(sourceId, filename), in)
+        (CollectionSpecifics.pointer(sourceId, filename.split('/').last), in)
       })
     }
   }

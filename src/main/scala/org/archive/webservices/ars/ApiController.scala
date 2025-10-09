@@ -3,7 +3,7 @@ package org.archive.webservices.ars
 import _root_.io.circe._
 import _root_.io.circe.parser.parse
 import _root_.io.circe.syntax._
-import org.archive.webservices.ars.io.IOHelper
+import org.archive.webservices.ars.io.{IOHelper, UuidManager}
 import org.archive.webservices.ars.model._
 import org.archive.webservices.ars.model.api.{ApiFieldType, ApiResponseObject, ApiResponseType, AvailableJobsCategory, Collection, Dataset, DatasetFile, InputSpec, JobState}
 import org.archive.webservices.ars.model.app.RequestContext
@@ -134,7 +134,7 @@ class ApiController(implicit val swagger: Swagger)
       conf <- conf(job, collection, sample, params)
     } yield {
       job.validateParams(conf).map(e => BadRequest(e)).getOrElse {
-        if (rerun) job.reset(conf)
+        if (rerun) DerivationJob.reset(job, conf)
         val history = job.history(conf)
         val queued =
           if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
@@ -199,6 +199,7 @@ class ApiController(implicit val swagger: Swagger)
             .get(params("jobid"))
             .flatMap { job =>
               val rerun = params.get("rerun").contains("true")
+              val resume = params.get("resume").contains("true")
               val sample = params.get("sample").contains("true")
               val user =
                 cursor.get[String]("user").toOption.flatMap(ArchUser.get).orElse(context.userOpt)
@@ -207,7 +208,7 @@ class ApiController(implicit val swagger: Swagger)
               var reservedOutPath = false
               lazy val uuid = cursor.get[String]("uuid").toOption.getOrElse {
                 reservedOutPath = !customOutPath && job.generatesOuputput
-                DerivationJobInstance.uuid(reserve = reservedOutPath)
+                UuidManager.uuid(reserve = reservedOutPath)
               }
               for (conf <- DerivationJobConf.fromJson(
                   cursor,
@@ -220,10 +221,10 @@ class ApiController(implicit val swagger: Swagger)
                     BadRequest(e)
                   }
                   .getOrElse {
-                    if (rerun) job.reset(conf)
                     val history = job.history(uuid, conf)
+                    if (rerun && (!resume || !history.isResumable)) DerivationJob.reset(job, conf)
                     val queued =
-                      if (history.state == ProcessingState.NotStarted || (rerun && history.state == ProcessingState.Failed)) {
+                      if (history.state == ProcessingState.NotStarted || (rerun && history.state > ProcessingState.Running)) {
                         job.enqueue(
                           conf,
                           { instance =>

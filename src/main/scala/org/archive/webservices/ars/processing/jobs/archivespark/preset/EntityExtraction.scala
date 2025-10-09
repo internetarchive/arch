@@ -1,10 +1,10 @@
 package org.archive.webservices.ars.processing.jobs.archivespark.preset
 
-import org.archive.webservices.archivespark.model.EnrichFunc
+import org.archive.webservices.archivespark.model.{EnrichFunc, EnrichRoot}
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchWarcRecord, ArchiveSparkEnrichJob}
+import org.archive.webservices.ars.processing.DerivationJobConf
+import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.adapters.EntitiesAdapter
-import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobParameters}
 
 object EntityExtraction extends ArchiveSparkEnrichJob {
   val name: String = "Named entities"
@@ -18,20 +18,11 @@ object EntityExtraction extends ArchiveSparkEnrichJob {
 
   val category: ArchJobCategory = ArchJobCategories.Text
 
-  override def warcPredicate(conf: DerivationJobConf): ArchWarcRecord => Boolean = {
-    val superFilter = super.warcPredicate(conf)
-    warc => superFilter(warc) && warc.status == 200
+  override def mimePrefilter(conf: DerivationJobConf): String => Boolean = {
+    mime => mime.startsWith("text/")
   }
 
-  override def genericPredicate(conf: DerivationJobConf): ArchEnrichRoot[_] => Boolean = {
-    record => record.mime.startsWith("text/")
-  }
-
-  def entitiesFunc(params: DerivationJobParameters): EnrichFunc[ArchEnrichRoot[_], _, _] = {
-    EntitiesAdapter.withParams(params)
-  }
-
-  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], _, _]] = {
-    Seq(entitiesFunc(conf.params))
+  def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
+    Seq(EntitiesAdapter.withParams(conf.params))
   }
 }
