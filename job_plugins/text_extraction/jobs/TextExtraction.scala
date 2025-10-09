@@ -16,7 +16,7 @@ object TextExtraction extends ArchiveSparkEnrichJob {
     "https://arch-webservices.zendesk.com/hc/en-us/sections/14410598107028-ARCH-Datasets"
 
   override def codeUrl: String =
-    "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/arch/addons/jobs/text_extraction/jobs/TextExtraction.scala"
+    "https://github.com/internetarchive/arch/blob/main/job_plugins/text_extraction/jobs/TextExtraction.scala"
 
   val uuid: String = "01961974-d4a5-7c2b-822c-b07b68fd66ed"
 
