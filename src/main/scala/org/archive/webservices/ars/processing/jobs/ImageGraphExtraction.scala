@@ -18,7 +18,7 @@ object ImageGraphExtraction extends NetworkAutJob[Row] {
   override val category: ArchJobCategory = ArchJobCategories.Images
 
   override val infoUrl =
-    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410738717588-ARCH-Network-datasets#image-graph"
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/39991661250580-ARCH-Image-datasets#image-graph"
 
   override def codeUrl: String =
     "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/ImageGraphExtraction.scala"

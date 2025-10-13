@@ -15,7 +15,7 @@ object WhisperText extends AiJob {
     "Text transcribed from speech recognized in collection audio and video documents. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and transcription."
 
   override def infoUrl: String =
-    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#speech"
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/40006542253332-ARCH-Speech-datasets#speech"
 
   override def codeUrl: String =
     "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/archivespark/preset/WhisperText.scala"

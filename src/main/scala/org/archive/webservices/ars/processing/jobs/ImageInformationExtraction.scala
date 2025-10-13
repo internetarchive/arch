@@ -26,7 +26,7 @@ object ImageInformationExtraction extends BinaryInformationAutJob {
   override val category: ArchJobCategory = ArchJobCategories.Images
 
   override val infoUrl =
-    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410815476500-ARCH-File-format-datasets#image"
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/39991661250580-ARCH-Image-datasets#image-files"
 
   override def codeUrl: String =
     "https://github.com/internetarchive/arch/blob/main/src/main/scala/org/archive/webservices/ars/processing/jobs/ImageInformationExtraction.scala"
