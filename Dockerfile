@@ -105,6 +105,7 @@ ARG CORENLP_CHINESE_JAR_PATH=$CORENLP_DIR/stanford-corenlp-4.5.6-models-chinese.
 ARG JOLLYDAY_JAR_PATH=$CORENLP_DIR/jollyday.jar
 
 ARG TEST_WARC_URL=https://archive.org/download/sample-warc-file/IIPC-COVID-Announcement.warc.gz
+ARG TEST_MP3_URL=https://archive.org/download/tvtunes_11560/Spongebob%20Squarepants.mp3
 
 ARG HADOOP_NODE_LOCAL_TEMP_PATH=/arch-tmp
 ARG HADOOP_NODE_LOCAL_TEMP_PATH_SMOKE=$HADOOP_NODE_LOCAL_TEMP_PATH/smoke-test
@@ -115,6 +116,9 @@ ARG HADOOP_NODE_LOCAL_TEMP_PATH_TROCR=$HADOOP_NODE_LOCAL_TEMP_PATH/trocr/2024080
 LABEL maintainer="Derek Enos <derekenos@archive.org>, Helge Holzmann <helge@archive.org>"
 LABEL description="Docker image for ARCH development"
 LABEL website="https://arch.archive-it.org"
+
+# Set default collation / encoding
+ENV LC_ALL=C.UTF-8
 
 # Install required packages
 RUN apt update && apt upgrade -y && apt install -y \
@@ -202,9 +206,11 @@ USER root
 # Create a sendmail symlink to our dummy script
 RUN chmod +x $ARCH_INSTALL_DIR/src/main/bash/sendmail && ln -s $ARCH_INSTALL_DIR/src/main/bash/sendmail /usr/sbin/sendmail
 
-# Download a WARC to serve as data for the built-in ARCH Test Collection
+# Download a WARC (and an MP3 for automated job tests) to serve as data
+# for the built-in ARCH Test Collection
 RUN mkdir -p /user/helge/arch-test-collection \
     && curl -sL --output /user/helge/arch-test-collection/test.warc.gz $TEST_WARC_URL \
+    && curl -sL --output /user/helge/arch-test-collection/test.mp3 $TEST_MP3_URL \
     && chown --recursive arch:arch /user
 
 # Ensure that the default config hadoopNodeLocalTempPath path exists
