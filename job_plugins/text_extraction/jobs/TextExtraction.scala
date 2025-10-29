@@ -13,7 +13,7 @@ object TextExtraction extends ArchiveSparkEnrichJob {
     "Text extracted from collection documents in PDF, DOC, TXT, or other text-bearing file formats. Output: one JSONL file comprising a JSON object for each input record. Values include filename and path, MIME type, and extracted text."
 
   override def infoUrl: String =
-    "https://arch-webservices.zendesk.com/hc/en-us/sections/14410598107028-ARCH-Datasets"
+    "https://arch-webservices.zendesk.com/hc/en-us/articles/14410760790164-ARCH-Text-datasets#extracted"
 
   override def codeUrl: String =
     "https://github.com/internetarchive/arch/blob/main/job_plugins/text_extraction/jobs/TextExtraction.scala"
