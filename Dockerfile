@@ -208,9 +208,9 @@ RUN chmod +x $ARCH_INSTALL_DIR/src/main/bash/sendmail && ln -s $ARCH_INSTALL_DIR
 
 # Download a WARC (and an MP3 for automated job tests) to serve as data
 # for the built-in ARCH Test Collection
-RUN mkdir -p /user/helge/arch-test-collection \
-    && curl -sL --output /user/helge/arch-test-collection/test.warc.gz $TEST_WARC_URL \
-    && curl -sL --output /user/helge/arch-test-collection/test.mp3 $TEST_MP3_URL \
+RUN mkdir -p /user/arch/arch-test-collection \
+    && curl -sL --output /user/arch/arch-test-collection/test.warc.gz $TEST_WARC_URL \
+    && curl -sL --output /user/arch/arch-test-collection/test.mp3 $TEST_MP3_URL \
     && chown --recursive arch:arch /user
 
 # Ensure that the default config hadoopNodeLocalTempPath path exists

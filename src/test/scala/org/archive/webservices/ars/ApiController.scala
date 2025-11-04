@@ -634,7 +634,7 @@ class ApiControllerSpec extends UnitSpec {
         "type" -> "files".asJson,
         "size" -> "1234".asJson,
         "dataSource" -> "hdfs".asJson,
-        "dataLocation" -> "/user/helge/arch-test-collection/*.mp3".asJson,
+        "dataLocation" -> "/user/arch/arch-test-collection/*.mp3".asJson,
         "dataMime" -> Map(
           "mp3" -> "audio/mp3"
         ).asJson
