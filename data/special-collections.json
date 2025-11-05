@@ -2,7 +2,7 @@
     "collections" : {
         "test-collection" : {
             "name" : "ARCH Test Collection",
-            "path" : "/user/helge/arch-test-collection"
+            "path" : "/user/arch/arch-test-collection"
         }
     },
     "users" : {
