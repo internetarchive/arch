@@ -1,0 +1,26 @@
+# see: https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
+
+test:
+  stage: test
+  image:
+    name: webgroup/ait-arch:latest
+    docker:
+      # Attach as root so that we can correct ~/.sbt/repositories ownership / permissions,
+      # which for some reason is owned by root within the image, and not arch as expected.
+      user: root
+  interruptible: true
+  script:
+    # Make arch the owner of ~/.sbt/repositories
+    - chown arch:arch /home/arch/.sbt/repositories
+    # Assert that we're in the mounted project source dir
+    - test `pwd` = $CI_PROJECT_DIR
+    # Since we attached as root, ensure that the project source is owned by arch
+    - chown --recursive arch:arch .
+    # Overwrite ~/.sbt/repositories with the Gitlab CI file-type variable value
+    - su arch -c "cp $SBT_REPOSITORIES ~/.sbt/repositories"
+    # Init config.json as copy of docker.json
+    - su arch -c "cp config/docker.json config/config.json"
+    # Mirror /opt/arch/lib dependency symlinks in the project source dir
+    - su arch -c "cp -r /opt/arch/lib/* lib/"
+    # Use Gitlab CI vars to override publix suffix list and PYPI index URLs and run the tests
+    - su arch -c "ARCH_PUBLIC_SUFFIX_LIST_URL=$PUBLIC_SUFFIX_LIST_URL ARCH_PYPI_INDEX_URL=$PYPI_INDEX_URL sbt test"

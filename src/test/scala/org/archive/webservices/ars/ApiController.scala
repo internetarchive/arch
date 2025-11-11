@@ -79,10 +79,12 @@ class ApiControllerSpec extends UnitSpec {
        job: DerivationJob,
        inputSpec: Map[String, String],
        expectedFilesResponse: String,
-       params: Map[String, String] = Map.empty
+       params: Map[String, String] = Map.empty,
+       timeoutSeconds: Int = 120
      ): String = {
     runJobAndVerify(user, apiKey, job, inputSpec.asJson, expectedFilesResponse,
-      if (params.nonEmpty) Some(params.asJson) else None)
+      if (params.nonEmpty) Some(params.asJson) else None,
+      timeoutSeconds)
   }
 
   def runJobAndVerify(
@@ -91,7 +93,8 @@ class ApiControllerSpec extends UnitSpec {
     job: DerivationJob,
     inputSpec: Json,
     expectedFilesResponse: String,
-    params: Option[Json]
+    params: Option[Json],
+    timeoutSeconds: Int
   ): String = {
     runJob(user, apiKey, job, inputSpec, params) {
       status should equal(200)
@@ -111,7 +114,7 @@ class ApiControllerSpec extends UnitSpec {
       val uuid = respObj("uuid").get.asString.get
 
       // Wait for the job to complete.
-      waitForJobComplete(user, apiKey, uuid)
+      waitForJobComplete(user, apiKey, uuid, timeoutSeconds)
 
       // Check that the reported output files are as expected.
       var waitingForFilesCache = true
@@ -618,7 +621,8 @@ class ApiControllerSpec extends UnitSpec {
           "md5Checksum" : "ac891b69f391f0cebafbc3d69b3e042a"
         }
       ]
-      """
+      """,
+      timeoutSeconds = 600
     )
   }
 
@@ -649,7 +653,8 @@ class ApiControllerSpec extends UnitSpec {
         }
       ]
       """,
-      None
+      params = None,
+      timeoutSeconds = 600
     )
     // Check that the transcription begins as expected.
     getForUser(user, apiKey)(s"/api/job/${uuid}/preview/result.jsonl.gz") {
