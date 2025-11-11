@@ -89,7 +89,7 @@ ARG CORENLP_CHINESE_JAR_URL=https://huggingface.co/stanfordnlp/corenlp-chinese/r
 ARG CORENLP_CHINESE_JAR_CHECKSUM=e624af936cda0373e20b6f44a65fdfb1bc196e8b56761dc9659728d98150d5e0
 
 ARG SPARKLING_GIT_REPO=https://github.com/internetarchive/Sparkling
-ARG SPARKLING_SHA1=57c70ed8d400775fb180f5415dd64e3516c7290d
+ARG SPARKLING_SHA1=73cbcc95d280d3a736f6896580e208a0df186aaa
 ARG SPARKLING_DIR=$ARCH_USER_HOME/sparkling
 
 ARG ARCHIVESPARK_GIT_REPO=https://github.com/internetarchive/ArchiveSpark
