@@ -117,7 +117,7 @@ class JobManagerBase(
           running(instance) = Instant.now.getEpochSecond
           val currentPriorityRunning = priorityRunning
           val priority = _currentPriority
-          Future(instance.job).flatMap(_.run(instance.conf)).onComplete { opt =>
+          Future(instance.job).flatMap(_.run(instance)).onComplete { opt =>
             synchronized {
               val success = opt.toOption.getOrElse(false)
               instance.updateState(

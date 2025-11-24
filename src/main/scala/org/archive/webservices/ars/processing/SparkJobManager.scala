@@ -51,9 +51,16 @@ object SparkJobManager
 
   private def priorityWeight: Int = if (currentPriority == 0) 1 else currentPriority
 
-  def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
-    sc.setJobGroup(job.uuid, job.name + " " + conf.serialize)
+  def initThread(sc: SparkContext, instance: DerivationJobInstance): Unit = {
+    val (job, conf) = (instance.job, instance.conf)
+    sc.setJobGroup(instance.uuid, job.name + " " + conf.serialize)
     sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
+  }
+
+  def stopJob(instance: DerivationJobInstance): Boolean = {
+    for (context <- _context) context.cancelJobGroup(instance.uuid)
+    instance.updateState(ProcessingState.Stopped)
+    true
   }
 
   def stopContext(): Unit = synchronized {
@@ -85,9 +92,5 @@ object SparkJobManager
       newPriority(priorityWeight * 2)
       true
     } else false
-  }
-
-  def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {
-    job.run(conf)
   }
 }

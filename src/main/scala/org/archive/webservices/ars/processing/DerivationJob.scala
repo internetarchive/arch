@@ -44,7 +44,7 @@ trait DerivationJob {
 
   def templateName: Option[String] = Some("jobs/" + id)
 
-  def run(conf: DerivationJobConf): Future[Boolean]
+  def run(instance: DerivationJobInstance): Future[Boolean]
 
   def isResumable(conf: DerivationJobConf): Boolean = conf.inputSpec.isResumableInput
 
@@ -66,6 +66,8 @@ trait DerivationJob {
       DerivationJobInstance(this, conf)
     }
   }
+
+  def stop(instance: DerivationJobInstance): Boolean = false
 
   def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] = None
 

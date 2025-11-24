@@ -7,26 +7,33 @@ import scala.concurrent.Future
 abstract class ChainedJob extends DerivationJob {
   def children: Seq[PartialDerivationJob]
 
-  def run(conf: DerivationJobConf): Future[Boolean] =
+  def run(instance: DerivationJobInstance): Future[Boolean] =
     throw new UnsupportedOperationException("Cannot run a chained job: " + id)
 
-  override def history(conf: DerivationJobConf): DerivationJobInstance = {
-    val instance = super.history(conf)
-    val currentChild = children.zipWithIndex.reverseIterator
+  def currentChild(conf: DerivationJobConf): (DerivationJobInstance, Int) = {
+    children.zipWithIndex.reverseIterator
       .map { case (job, idx) =>
         (job.history(conf), idx)
       }
-      .find { case (child, idx) => child.state > ProcessingState.NotStarted || idx == 0 }
-    for ((child, idx) <- currentChild) {
-      val state = child.state
-      instance.state = state match {
-        case ProcessingState.Failed => state
-        case ProcessingState.Finished =>
-          if (idx == children.size - 1) state else ProcessingState.Failed
-        case _ => if (idx == 0) state else ProcessingState.Failed
-      }
+      .find { case (child, idx) => child.state > ProcessingState.NotStarted || idx == 0 }.get
+  }
+
+  override def history(conf: DerivationJobConf): DerivationJobInstance = {
+    val instance = super.history(conf)
+    val (child, idx) = currentChild(conf)
+    val state = child.state
+    instance.state = state match {
+      case ProcessingState.Failed => state
+      case ProcessingState.Finished =>
+        if (idx == children.size - 1) state else ProcessingState.Failed
+      case _ => if (idx == 0) state else ProcessingState.Failed
     }
     instance
+  }
+
+  override def stop(instance: DerivationJobInstance): Boolean = {
+    val (child, _) = currentChild(instance.conf)
+    child.stopJob()
   }
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =

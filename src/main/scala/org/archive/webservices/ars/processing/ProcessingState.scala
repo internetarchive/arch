@@ -8,4 +8,5 @@ object ProcessingState {
   val Running = 2
   val Finished = 3
   val Failed = 4
+  val Stopped = 5
 }

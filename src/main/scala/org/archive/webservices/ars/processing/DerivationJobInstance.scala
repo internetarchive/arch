@@ -48,14 +48,6 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def queue: Option[JobQueue] = _queue
 
-  def queueIndex: Int = {
-    _queue
-      .map { q =>
-        if (queuePos >= q.pos) queuePos - q.pos else queuePos + (Int.MaxValue - q.pos)
-      }
-      .getOrElse(-1)
-  }
-
   private var activeStage: Option[DerivationJobInstance] = None
 
   def setStage(instance: DerivationJobInstance): Unit = {
@@ -138,4 +130,8 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def unregistered(): Unit = for (func <- _onUnregistered) func()
 
   def isResumable: Boolean = inputRevision == conf.inputSpec.revision && job.isResumable(conf)
+
+  def stopJob(): Boolean = {
+    if (state < ProcessingState.Finished) job.stop(this) else true
+  }
 }

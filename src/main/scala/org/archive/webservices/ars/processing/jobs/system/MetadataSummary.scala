@@ -19,9 +19,9 @@ object MetadataSummary extends SparkJob {
 
   val SummaryFile = "summary.json"
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, MetadataSummary, conf)
+      SparkJobManager.initThread(sc, instance)
       InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
         val summary = rdd
           .mapPartitions { partition =>

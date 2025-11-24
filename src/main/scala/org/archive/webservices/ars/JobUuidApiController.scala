@@ -60,6 +60,13 @@ class JobUuidApiController(implicit val swagger: Swagger)
     }
   }
 
+  get(UuidPattern + "stop") {
+    response { instance =>
+      instance.job.stop()
+      Ok(instance.info.toJson.spaces4, Map("Content-Type" -> "application/json"))
+    }
+  }
+
   def getResult =
     (jobApiOp[WasapiResponse]("getResult")
       summary "Get the job's WASAPI output listing"

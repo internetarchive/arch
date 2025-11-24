@@ -3,7 +3,6 @@ package org.archive.webservices.ars.processing
 import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 
 class JobQueue(val name: String) {
-  private var _pos = 0
   private val queue = collection.mutable.Queue.empty[DerivationJobInstance]
 
   def items: Iterator[DerivationJobInstance] = queue.toIterator
@@ -12,18 +11,16 @@ class JobQueue(val name: String) {
   def nonEmpty: Boolean = queue.nonEmpty
   def size: Int = queue.size
 
-  def enqueue(instance: DerivationJobInstance): Int = synchronized {
-    val remainder = Int.MaxValue - _pos
-    val thisPos = if (remainder < queue.size) queue.size - remainder else _pos + queue.size
+  def enqueue(instance: DerivationJobInstance): Unit = synchronized {
     queue.enqueue(instance)
     instance.updateState(ProcessingState.Queued)
-    thisPos
   }
 
-  def dequeue: DerivationJobInstance = synchronized {
-    if (_pos == Int.MaxValue) _pos = 1 else _pos += 1
-    queue.dequeue
+  def dequeue(instance: DerivationJobInstance): Boolean = synchronized {
+    queue.dequeueFirst(_.uuid == instance.uuid).isDefined
   }
+
+  def dequeue: DerivationJobInstance = synchronized(queue.dequeue)
 
   def dequeue(
       freeSlots: Int,
@@ -49,6 +46,4 @@ class JobQueue(val name: String) {
       }
       .orElse(minUserInstance.flatMap(instance => queue.dequeueFirst(_ == instance)))
   }
-
-  def pos: Int = _pos
 }

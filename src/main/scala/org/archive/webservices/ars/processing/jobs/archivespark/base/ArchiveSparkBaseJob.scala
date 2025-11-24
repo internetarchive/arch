@@ -60,9 +60,9 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   object ArchiveSparkProcessor extends PartialDerivationJob(this) with SparkJob {
     override val stage: String = "ArchiveSpark"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = {
+    def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
-        SparkJobManager.initThread(sc, ArchiveSparkBaseJob.this, conf)
+        SparkJobManager.initThread(sc, instance)
         conf.inputSpec.inputType match {
           case InputSpec.InputType.Files =>
             val prefilter = mimePrefilter(conf)
@@ -118,7 +118,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     override val stage: String = "Post-Processing"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
+    def run(instance: DerivationJobInstance): Future[Boolean] = Future {
       val outDir = conf.outputPath + relativeOutPath + resultDir
       val outFile = conf.outputPath + relativeOutPath + resultFile
 

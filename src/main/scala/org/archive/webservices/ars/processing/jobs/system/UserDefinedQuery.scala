@@ -147,9 +147,9 @@ object UserDefinedQuery extends SparkJob {
       }
   }
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, UserDefinedQuery, conf)
+      SparkJobManager.initThread(sc, instance)
       WebArchiveLoader.loadCdx(conf.inputSpec) { rdd =>
         val filtered = filterQuery(rdd, conf.params)
         val cdxPath = conf.outputPath + "/" + CdxDir

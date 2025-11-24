@@ -38,7 +38,6 @@ object JobState {
       activeStage = active.job.stage,
       activeState = active.stateStr,
       queue = active.queue.map(_.name),
-      queuePos = active.queue.map(q => active.queueIndex),
       startTime = info.started.map(FormatUtil.instantTimeString),
       finishedTime = info.finished.map(FormatUtil.instantTimeString))
   }

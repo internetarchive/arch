@@ -54,9 +54,10 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       })
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
-    def run(conf: DerivationJobConf): Future[Boolean] = {
+    def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
-        SparkJobManager.initThread(sc, ArsLgaGeneration, conf)
+        SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
           IOHelper.sample(
             {
@@ -108,7 +109,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     override val stage: String = "Post-Processing"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
+    def run(instance: DerivationJobInstance): Future[Boolean] = Future {
+      val conf = instance.conf
       IOHelper.concatLocal(
         conf.outputPath + relativeOutPath + "/_" + MapFile,
         _.endsWith(".gz"),

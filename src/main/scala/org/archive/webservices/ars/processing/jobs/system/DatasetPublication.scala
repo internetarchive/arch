@@ -49,7 +49,7 @@ object DatasetPublication extends SparkJob {
       }
   }
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     for {
       dataset <- confDataset(conf).toOption
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
@@ -59,7 +59,7 @@ object DatasetPublication extends SparkJob {
       else {
         val itemName = itemInfo.item
         SparkJobManager.context.map { sc =>
-          SparkJobManager.initThread(sc, DatasetPublication, conf)
+          SparkJobManager.initThread(sc, instance)
           val accessContext = FileAccessContext.fromLocalArchConf
           val fileListBc = sc.broadcast(PublishedDatasets.files(itemName))
           RddUtil

@@ -12,5 +12,5 @@ object DummyDerivationJob extends DerivationJob {
   override def relativeOutPath: String = ""
   override def category: ArchJobCategory = ArchJobCategories.System
   override def description: String = id
-  override def run(conf: DerivationJobConf): Future[Boolean] = Future(true)
+  override def run(instance: DerivationJobInstance): Future[Boolean] = Future(true)
 }
