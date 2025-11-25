@@ -33,16 +33,13 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   var slots: Int = 1
 
   private var _queue: Option[JobQueue] = None
-  private var queuePos: Int = -1
 
   def unsetQueue(): Unit = {
     _queue = None
-    queuePos = -1
   }
 
-  def setQueue(queue: JobQueue, pos: Int): Unit = {
+  def setQueue(queue: JobQueue): Unit = {
     _queue = Some(queue)
-    queuePos = pos
     JobStateManager.updateRunning(this)
   }
 

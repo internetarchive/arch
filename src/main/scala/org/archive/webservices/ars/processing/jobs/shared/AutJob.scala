@@ -78,6 +78,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
         SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
           IOHelper
             .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
@@ -100,7 +101,7 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
     override val stage: String = "Post-Processing"
 
     def run(instance: DerivationJobInstance): Future[Boolean] = Future {
-      Try(postProcess(conf.outputPath + relativeOutPath)).getOrElse(false)
+      Try(postProcess(instance.conf.outputPath + relativeOutPath)).getOrElse(false)
     }
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {

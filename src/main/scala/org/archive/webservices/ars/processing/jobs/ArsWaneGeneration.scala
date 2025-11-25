@@ -33,6 +33,7 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, instance)
+      val conf = instance.conf
       WebArchiveLoader.loadWarcsRecords(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](

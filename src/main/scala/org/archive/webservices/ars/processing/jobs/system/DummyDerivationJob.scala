@@ -1,7 +1,7 @@
 package org.archive.webservices.ars.processing.jobs.system
 
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory}
-import org.archive.webservices.ars.processing.{DerivationJob, DerivationJobConf}
+import org.archive.webservices.ars.processing.{DerivationJob, DerivationJobConf, DerivationJobInstance}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

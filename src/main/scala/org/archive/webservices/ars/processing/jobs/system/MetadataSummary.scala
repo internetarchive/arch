@@ -22,6 +22,7 @@ object MetadataSummary extends SparkJob {
   def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
       SparkJobManager.initThread(sc, instance)
+      val conf = instance.conf
       InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
         val summary = rdd
           .mapPartitions { partition =>

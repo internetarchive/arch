@@ -64,7 +64,8 @@ class JobManagerBase(
   def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] = synchronized {
     val queue = if (instance.conf.sample < 0) mainQueue else sampleQueue
     if (JobManager.register(instance)) {
-      instance.setQueue(queue, queue.enqueue(instance))
+      queue.enqueue(instance)
+      instance.setQueue(queue)
       processQueues()
       Some(instance)
     } else None

@@ -50,6 +50,7 @@ object DatasetPublication extends SparkJob {
   }
 
   def run(instance: DerivationJobInstance): Future[Boolean] = {
+    val conf = instance.conf
     for {
       dataset <- confDataset(conf).toOption
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)

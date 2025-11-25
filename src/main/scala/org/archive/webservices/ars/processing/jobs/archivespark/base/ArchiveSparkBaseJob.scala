@@ -63,6 +63,7 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
     def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
         SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         conf.inputSpec.inputType match {
           case InputSpec.InputType.Files =>
             val prefilter = mimePrefilter(conf)
@@ -119,6 +120,8 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
     override val stage: String = "Post-Processing"
 
     def run(instance: DerivationJobInstance): Future[Boolean] = Future {
+      val conf = instance.conf
+
       val outDir = conf.outputPath + relativeOutPath + resultDir
       val outFile = conf.outputPath + relativeOutPath + resultFile
 

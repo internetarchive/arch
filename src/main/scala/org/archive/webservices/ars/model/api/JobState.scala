@@ -15,9 +15,6 @@ case class JobState(
     activeStage: String,
     activeState: String,
     queue: Option[String],
-    queuePos: Option[
-      Integer
-    ], // Option type lookup fails for Int in package.scala, so use Integer
     startTime: Option[String],
     finishedTime: Option[String])
     extends ApiResponseObject[JobState]
