@@ -63,7 +63,7 @@ class JobUuidApiController(implicit val swagger: Swagger)
   get(UuidPattern + "stop") {
     response { instance =>
       if (instance.job.stop(instance)) {
-        Ok(instance.info.toJson.spaces4, Map("Content-Type" -> "application/json"))
+        Ok("Process stopped.", Map("Content-Type" -> "application/json"))
       } else Conflict("The process can't be stopped.")
     }
   }
