@@ -192,7 +192,7 @@ object PublishedDatasets {
             connection.setDoOutput(true)
             val out = IOUtil.print(connection.getOutputStream, closing = true)
             try {
-              out.println(postBody)
+              out.print(postBody)
             } finally {
               Try(out.close())
             }
