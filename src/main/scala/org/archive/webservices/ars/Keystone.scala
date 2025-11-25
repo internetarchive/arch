@@ -96,11 +96,19 @@ object Keystone {
         || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         val inputStream = connection.getInputStream
         val response = Source.fromInputStream(inputStream).mkString
-
         inputStream.close()
         response
       } else {
-        throw new RuntimeException("HTTP request failed with response code: " + responseCode)
+        throw new RuntimeException(
+          Option(connection.getErrorStream) match {
+            case Some(errorStream) => {
+              val response = Source.fromInputStream(errorStream).mkString
+              errorStream.close()
+              s"HTTP request failed with response code $responseCode: $response"
+            }
+            case _ => s"HTTP request failed with response code $responseCode"
+          }
+        )
       }
     } finally {
       Try(connection.disconnect())
