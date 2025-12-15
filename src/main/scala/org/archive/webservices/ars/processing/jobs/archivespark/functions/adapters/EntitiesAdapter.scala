@@ -7,9 +7,23 @@ import org.archive.webservices.archivespark.model.pointers.DataLoadPointer
 import org.archive.webservices.ars.processing.DerivationJobParameters
 import org.archive.webservices.ars.processing.jobs.archivespark.base.{ArchEnrichRoot, ArchiveSparkEnrichJob}
 import org.archive.webservices.ars.processing.jobs.archivespark.functions.CoreNlpEntities
+import org.archive.webservices.ars.util.JsonSchemaUtil.finalSchemaJson
+
+import io.circe.Encoder
+import json._
+import json.schema._
+import com.github.andyglow.jsonschema.AsCirce._
 
 import java.util.Properties
 import scala.collection.JavaConverters.asScalaSetConverter
+
+object Lang extends Enumeration {
+  type Lang = Value
+  val English, Chinese = Value
+
+  implicit val encodeLang: Encoder[Lang.Lang] = Encoder.encodeEnumeration(Lang)
+}
+import Lang._
 
 object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String, Seq[String]] {
   override lazy val baseFunc: EnrichFunc[_, _, String, Seq[String]] = new CoreNlpEntities()
@@ -39,4 +53,10 @@ object EntitiesAdapter extends ArchArchiveSparkFunctionAdapter[String, Seq[Strin
       case None => default
     }
   }
+
+  case class Params(
+      @title("Language") @description("The native language of the corpus") lang: Lang =
+        Lang.English)
+
+  val paramsSchema = Some(finalSchemaJson[Params](Json.schema[Params]))
 }
