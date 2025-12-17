@@ -9,13 +9,13 @@ import org.archive.webservices.ars.model.collections.inputspecs.InputSpec
 import org.archive.webservices.ars.processing._
 import org.archive.webservices.ars.processing.jobs.WebPagesExtraction
 import org.archive.webservices.ars.processing.jobs.system.{DatasetPublication, UserDefinedQuery}
-import org.archive.webservices.ars.util.{Common, HttpUtil}
+import org.archive.webservices.ars.util.HttpUtil
 import org.archive.webservices.sparkling.io.{HdfsIO, IOUtil}
 import org.archive.webservices.sparkling.util.DigestUtil
 
 import java.io.InputStream
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.{Instant, ZonedDateTime, ZoneOffset}
+import java.time.format.DateTimeFormatter
 import scala.annotation.tailrec
 import scala.collection.immutable.{ListMap, Map}
 import scala.io.Source
@@ -49,9 +49,12 @@ object PublishedDatasets {
     }
   }
 
-  val MaxInputIdLength = 25
+  val MaxInputIdLength = 27
   def itemName(instance: DerivationJobInstance): String = {
-    val jobId = instance.job.id + (if (instance.conf.isSample) "-sample" else "")
+    // Petabox item name must be <= 100 characters.
+    // Max jobId length will be 47.
+    val jobId = instance.job.id.take(40) + (if (instance.conf.isSample) "-sample" else "")
+    // Max inputId length will be 27.
     val inputSpecId = instance.conf.inputSpec.id
     val inputId =
       if (inputSpecId.length <= MaxInputIdLength) inputSpecId
@@ -61,12 +64,17 @@ object PublishedDatasets {
         }
         prefix + DigestUtil.md5Hex(inputSpecId).take(16)
       }
-    val timestamp = instance.info.started
-      .getOrElse(Instant.now)
-      .truncatedTo(ChronoUnit.SECONDS)
-      .toString
-      .replaceAll("[^\\dTZ]", "")
-    Seq("arch", inputId, jobId, timestamp).mkString("_").replaceAll("[^a-zA-Z0-9_.-]", "-")
+    // Timestamp length will be 12.
+    val now = Instant.now
+    val timestamp = DateTimeFormatter.ofPattern("yyyyMMddHHmm").format(
+      ZonedDateTime.ofInstant(instance.info.started.getOrElse(now), ZoneOffset.UTC)
+    )
+    // Accounting for the "arch" prefix and 4x "_" segment delimiters, we're up to 94 chars.
+    // Include 6 least significant seconds since Epoch digits to prevent a name collision in the event
+    // that this is a republication of a previously-unpublished dataset (which would now exist as a darked
+    // item that we do not have permission to undark).
+    val suffix = now.getEpochSecond.toString.takeRight(6)
+    Seq("arch", inputId, jobId, timestamp, suffix).mkString("_").replaceAll("[^a-zA-Z0-9_.-]", "-")
   }
 
   def syncCollectionFile[R](f: String)(action: => R): R = {
@@ -371,58 +379,8 @@ object PublishedDatasets {
     }
   }
 
-  private def isDark(name: String): Option[Boolean] = {
-    request("services/tasks.php?history=1&identifier=" + name).toOption.map { tasks =>
-      parse(tasks).toOption
-        .map(_.hcursor)
-        .flatMap { cursor =>
-          cursor.downField("value").downField("history").downArray.focus.map(_.hcursor)
-        }
-        .exists { lastTask =>
-          lastTask.get[String]("cmd").toOption.contains("make_dark.php") && {
-            lastTask
-              .downField("args")
-              .get[String]("curation")
-              .toOption
-              .exists(_.contains("[comment]" + DeleteCommentPrefix))
-          }
-        }
-    }
-  }
-
-  def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean = {
-    request(name, s3 = true, metadata = metadata).isRight || {
-      isDark(name).contains(true) && {
-        request(
-          "/services/tasks.php",
-          post = Some {
-            ListMap(
-              "cmd" -> "make_undark.php".asJson,
-              "identifier" -> name.asJson,
-              "args" -> Map(
-                "comment" -> s"$DeleteCommentPrefix Re-publish item").asJson).asJson.noSpaces
-          }).isRight && {
-          {
-            Common.retryWhile(
-              isDark(name).getOrElse(true),
-              sleepMs = 500,
-              maxTimes = 12,
-              _ * 2) && {
-              request(name, s3 = true, update = true, metadata = metadata).isRight
-            }
-          } || {
-            if (!Common.retryWhile(!deleteItem(name), sleepMs = 100, maxTimes = 10, _ * 2)) {
-              Arch.reportWarning(
-                "PublishedDatasets Create/Undark Item Error",
-                "An Item is likely to be undarked, but not in use, please double check.",
-                Map("item" -> name))
-            }
-            false
-          }
-        }
-      }
-    }
-  }
+  def createItem(name: String, metadata: Map[String, Seq[String]]): Boolean =
+    request(name, s3 = true, metadata = metadata).isRight
 
   def updateItem(instance: DerivationJobInstance, metadata: Map[String, Seq[String]]): Boolean = {
     val jobFilePath = jobFile(instance)
