@@ -5,6 +5,7 @@ import org.archive.webservices.ars.model.collections.inputspecs.{InputSpec, Inpu
 import org.archive.webservices.ars.model.{ArchJobCategory, DerivativeOutput}
 import org.archive.webservices.sparkling.io.HdfsIO
 
+import io.circe.Json
 import scala.concurrent.Future
 
 object DerivationJob {
@@ -90,6 +91,8 @@ trait DerivationJob {
   def generatesOuputput: Boolean = true
 
   def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOuputput
+
+  val paramsSchema: Option[Json] = None
 
   def validateParams(conf: DerivationJobConf): Option[String] = None
 
