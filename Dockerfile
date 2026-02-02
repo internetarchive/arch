@@ -1,7 +1,7 @@
 # Ubuntu (Focal) based image
 ARG BASE_IMAGE=ubuntu:20.04
 
-# Build using the command: docker build --build-arg UID=$UID . -t ait-arch
+# Build using the command: docker buildx build --build-arg UID=$UID . -t ait-arch --load
 
 ###############################################################################
 # Miniconda build stage
@@ -9,8 +9,13 @@ ARG BASE_IMAGE=ubuntu:20.04
 
 FROM $BASE_IMAGE AS build-miniconda
 
+# Architecture detection. TARGETARCH is automatically set by Docker BuildKit when using --platform
+ARG TARGETARCH
 ARG CONDA_INSTALL_SCRIPT=Miniconda3-py310_25.1.1-2-Linux-x86_64.sh
 ARG CONDA_INSTALL_SCRIPT_SHA256=7f298109ab95b5436632973a04189a125282cc948f1dd1b03fa9cb6c71443915
+# ARM_CONDA_INSTALL_SCRIPT_SHA256=5f61143e93d9d48a82aa99a1d7b1c77561f599b9a67ab954862e6e8d6a25c0cc
+# Override CONDA_INSTALL_SCRIPT and CONDA_INSTALL_SCRIPT_SHA256 via build args for ARM64
+# For ARM64: --build-arg CONDA_INSTALL_SCRIPT=Miniconda3-py310_25.1.1-2-Linux-aarch64.sh --build-arg CONDA_INSTALL_SCRIPT_SHA256=<sha256>
 ARG CONDA_INSTALL_SCRIPT_URL=https://repo.anaconda.com/miniconda/$CONDA_INSTALL_SCRIPT
 ARG CONDA_DIR=/root/miniconda3
 
@@ -31,12 +36,29 @@ RUN conda init
 
 # Build conda environments
 ## pytorch-1.11.0
-COPY job_artifacts/conda-envs/pytorch-1.11.0.yml .
-RUN conda env create -p pytorch-1.11.0 -f pytorch-1.11.0.yml \
+# Copy both amd64 and arm64 versions, then select based on architecture
+COPY job_artifacts/conda-envs/pytorch-1.11.0.yml ./pytorch-1.11.0-amd64.yml
+COPY job_artifacts/conda-envs/pytorch-1.11.0-arm64.yml ./pytorch-1.11.0-arm64.yml
+RUN ARCH=$TARGETARCH && \
+    if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "arm" ]; then \
+        cp pytorch-1.11.0-arm64.yml pytorch-1.11.0.yml; \
+    else \
+        cp pytorch-1.11.0-amd64.yml pytorch-1.11.0.yml; \
+    fi && \
+    conda env create -p pytorch-1.11.0 -f pytorch-1.11.0.yml \
     && conda pack -n pytorch-1.11.0
+
 ## pytorch-2.0.0_ffmpeg-6.1.1
-COPY job_artifacts/conda-envs/pytorch-2.0.0_ffmpeg-6.1.1.yml .
-RUN conda env create -p pytorch-2.0.0_ffmpeg-6.1.1 -f pytorch-2.0.0_ffmpeg-6.1.1.yml \
+# Copy both amd64 and arm64 versions, then select based on architecture
+COPY job_artifacts/conda-envs/pytorch-2.0.0_ffmpeg-6.1.1.yml ./pytorch-2.0.0_ffmpeg-6.1.1-amd64.yml
+COPY job_artifacts/conda-envs/pytorch-2.0.0_ffmpeg-6.1.1-arm64.yml ./pytorch-2.0.0_ffmpeg-6.1.1-arm64.yml
+RUN ARCH=$TARGETARCH && \
+    if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "arm" ]; then \
+        cp pytorch-2.0.0_ffmpeg-6.1.1-arm64.yml pytorch-2.0.0_ffmpeg-6.1.1.yml; \
+    else \
+        cp pytorch-2.0.0_ffmpeg-6.1.1-amd64.yml pytorch-2.0.0_ffmpeg-6.1.1.yml; \
+    fi && \
+    conda env create -p pytorch-2.0.0_ffmpeg-6.1.1 -f pytorch-2.0.0_ffmpeg-6.1.1.yml \
     && conda pack -n pytorch-2.0.0_ffmpeg-6.1.1
 
 ###############################################################################
@@ -56,11 +78,19 @@ RUN ./download_deps.sh
 FROM build-miniconda AS build-trocr-artifacts
 
 # Install git lfs (required for the next step)
-RUN curl -L --silent --remote-name https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/git-lfs-linux-amd64-v3.6.1.tar.gz \
-    && tar xf git-lfs-linux-amd64-v3.6.1.tar.gz \
-    && git-lfs-3.6.1/install.sh \
-    && git lfs install \
-    && rm -rf ./git-lfs-3.6.1 git-lfs-linux-amd64-v3.6.1.tar.gz
+# Use architecture-specific git-lfs binary
+ARG TARGETARCH
+RUN ARCH=$TARGETARCH && \
+    if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "arm" ]; then \
+        GIT_LFS_ARCH=arm64; \
+    else \
+        GIT_LFS_ARCH=amd64; \
+    fi && \
+    curl -L --silent --remote-name https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/git-lfs-linux-${GIT_LFS_ARCH}-v3.6.1.tar.gz && \
+    tar xf git-lfs-linux-${GIT_LFS_ARCH}-v3.6.1.tar.gz && \
+    git-lfs-3.6.1/install.sh && \
+    git lfs install && \
+    rm -rf ./git-lfs-3.6.1 git-lfs-linux-${GIT_LFS_ARCH}-v3.6.1.tar.gz
 
 # Download dependencies / models
 COPY job_artifacts/trocr/download_deps.sh .
@@ -73,6 +103,7 @@ RUN ./download_deps.sh
 FROM $BASE_IMAGE
 
 ARG UID
+ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ARCH_USER_HOME=/home/arch
 ARG ARCH_INSTALL_DIR=/opt/arch
@@ -134,8 +165,14 @@ RUN apt update && apt upgrade -y && apt install -y \
 # Install maven after java 8
 RUN apt install -y maven
 
-# Set JAVA_HOME
-RUN printf "JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64\n" >> /etc/environment
+# Set JAVA_HOME (architecture-aware)
+ARG TARGETARCH
+RUN ARCH=$TARGETARCH && \
+    if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "arm" ]; then \
+        printf "JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64\n" >> /etc/environment; \
+    else \
+        printf "JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64\n" >> /etc/environment; \
+    fi
 
 # Install scala v2.12.8
 WORKDIR /tmp
@@ -185,16 +222,15 @@ RUN git clone $ARCHIVESPARK_GIT_REPO . \
 COPY --chown=arch ./ $ARCH_INSTALL_DIR
 WORKDIR $ARCH_INSTALL_DIR
 
-# If they don't already exist as a result of being copied in from the local arch dir, symlink JARs into
+# If they don't already exist as a result of being copied in from the local arch dir, individually symlink JARs into
 # $ARCH_INSTALL_DIR/lib to make sbt dev/run happy
-RUN test -L $ARCH_INSTALL_DIR/lib/`basename $SPARKLING_JAR_PATH` || ( \
-        ln -s $SPARKLING_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $SPARKLING_JAR_PATH` \
-        && ln -s $ARCHIVESPARK_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $ARCHIVESPARK_JAR_PATH` \
-        && ln -s $CORENLP_CHINESE_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_CHINESE_JAR_PATH` \
-        && ln -s $CORENLP_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_JAR_PATH` \
-        && ln -s $CORENLP_MODELS_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $CORENLP_MODELS_JAR_PATH` \
-        && ln -s $JOLLYDAY_JAR_PATH $ARCH_INSTALL_DIR/lib/`basename $JOLLYDAY_JAR_PATH` \
-    )
+RUN \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $SPARKLING_JAR_PATH) || ln -s $SPARKLING_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $SPARKLING_JAR_PATH) ; \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $ARCHIVESPARK_JAR_PATH) || ln -s $ARCHIVESPARK_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $ARCHIVESPARK_JAR_PATH) ; \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_CHINESE_JAR_PATH) || ln -s $CORENLP_CHINESE_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_CHINESE_JAR_PATH) ; \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_JAR_PATH) || ln -s $CORENLP_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_JAR_PATH) ; \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_MODELS_JAR_PATH) || ln -s $CORENLP_MODELS_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $CORENLP_MODELS_JAR_PATH) ; \
+    test -L $ARCH_INSTALL_DIR/lib/$(basename $JOLLYDAY_JAR_PATH) || ln -s $JOLLYDAY_JAR_PATH $ARCH_INSTALL_DIR/lib/$(basename $JOLLYDAY_JAR_PATH)
 
 # ARCH will happily create the job output directories as needed, but will fail if the log
 # directory does not exist, so let's create it in the event that the image is run without
