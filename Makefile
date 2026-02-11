@@ -48,7 +48,7 @@ endef
 
 .PHONY: run-docker-image
 run-docker-image: shared
-	$(call run_docker_image_fn)
+	$(call run_docker_image_fn,"-v $(PWD)/config/docker.json:/opt/arch/config/config.json:ro")
 
 lib/.symlinks-copied:
 	docker cp $$(docker create --name arch-tmp $(IMAGE)):/opt/arch/lib . \
