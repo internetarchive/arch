@@ -25,8 +25,7 @@ trait UVenv extends ExternalDependencies {
       shell.exec(s"cd $UvDir")
       if (!envLoaded(PythonEnv)) shell.exec("uv venv", blocking = true)
       else new File(venvDir).mkdir() // flag dir to skip this 'make' next time
-      // --no-build-isolation is necessary to avoid build errors for whisper during test
-      shell.exec(s"uv pip install . --no-build-isolation" + {
+      shell.exec(s"uv pip install ." + {
         ArchConf.pypiIndexUrl.map(u => s" --index-url $u").getOrElse("")
       }, blocking = true)
       shell.exec(s"cd ..")
