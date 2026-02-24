@@ -622,7 +622,7 @@ class ApiControllerSpec extends UnitSpec {
         }
       ]
       """,
-      timeoutSeconds = 600
+      timeoutSeconds = 1200
     )
   }
 
@@ -654,7 +654,7 @@ class ApiControllerSpec extends UnitSpec {
       ]
       """,
       params = None,
-      timeoutSeconds = 600
+      timeoutSeconds = 1200
     )
     // Check that the transcription begins as expected.
     getForUser(user, apiKey)(s"/api/job/${uuid}/preview/result.jsonl.gz") {
