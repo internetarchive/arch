@@ -59,7 +59,6 @@ object SparkJobManager
 
   def stopJob(instance: DerivationJobInstance): Boolean = {
     for (context <- _context) context.cancelJobGroup(instance.uuid)
-    instance.updateState(ProcessingState.Cancelled)
     true
   }
 

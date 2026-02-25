@@ -15,6 +15,7 @@ class ArchJobInstanceInfo private () {
   var conf: Option[DerivationJobConf] = None
   var started: Option[Instant] = None
   var finished: Option[Instant] = None
+  var state: Option[Int] = None
 
   def toJson: Json = {
     (ListMap(uuid.map("uuid" -> _.asJson).toSeq: _*) ++ {
@@ -23,6 +24,8 @@ class ArchJobInstanceInfo private () {
       started.map("started" -> _.getEpochSecond.asJson)
     } ++ {
       finished.map("finished" -> _.getEpochSecond.asJson)
+    } ++ {
+      state.map("state" -> _.asJson)
     }).asJson
   }
 
@@ -51,6 +54,7 @@ object ArchJobInstanceInfo {
             info.conf = cursor.downField("conf").focus.flatMap(DerivationJobConf.fromJson)
             info.started = cursor.get[Long]("started").toOption.map(Instant.ofEpochSecond)
             info.finished = cursor.get[Long]("finished").toOption.map(Instant.ofEpochSecond)
+            info.state = cursor.get[Int]("state").toOption
             info
           case None => new ArchJobInstanceInfo()
         }

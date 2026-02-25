@@ -93,14 +93,19 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
-      if (started) {
-        val completed =
-          HdfsIO.exists(
-            conf.outputPath + relativeOutPath + "/_" + MapFile + "/" + Sparkling.CompleteFlagFile) && HdfsIO
-            .exists(
-              conf.outputPath + relativeOutPath + "/_" + GraphFile + "/" + Sparkling.CompleteFlagFile)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
+        if (started) {
+          val completed =
+            HdfsIO.exists(
+              conf.outputPath + relativeOutPath + "/_" + MapFile + "/" + Sparkling.CompleteFlagFile) && HdfsIO
+              .exists(
+                conf.outputPath + relativeOutPath + "/_" + GraphFile + "/" + Sparkling.CompleteFlagFile)
+          instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+        }
       }
       instance
     }
@@ -136,13 +141,18 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
-        instance.state =
-          if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
-              .files(conf.outputPath + relativeOutPath + "/_*")
-              .isEmpty)
-            ProcessingState.Finished
-          else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
+          instance.state =
+            if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
+                .files(conf.outputPath + relativeOutPath + "/_*")
+                .isEmpty)
+              ProcessingState.Finished
+            else ProcessingState.Failed
+        }
       }
       instance
     }

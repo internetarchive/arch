@@ -59,7 +59,7 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def outPath: String = conf.outputPath + job.relativeOutPath
 
   def info: ArchJobInstanceInfo = {
-    if (job.generatesOuputput) {
+    if (job.generatesOutput) {
       val info = ArchJobInstanceInfo(outPath)
       info.conf = Some(conf)
       info
@@ -68,6 +68,12 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
 
   def updateState(value: Int): Unit = {
     val prevState = state
+    // Once a job has been cancelled, do not overwrite its state with anything else.
+    // Callbacks and onComplete handlers may still fire after cancellation is set;
+    // this guard ensures Cancelled is a terminal state.
+    if (prevState == ProcessingState.Cancelled && value != ProcessingState.Cancelled) {
+      return
+    }
     state = value
     if (registered) {
       if (job.partialOf.isEmpty) {
@@ -91,8 +97,12 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
               }
             }
             JobStateManager.logFinished(this)
+          case ProcessingState.Cancelled =>
+            info.finished = Some(now)
+            info.state = Some(ProcessingState.Cancelled)
+            JobStateManager.logCancelled(this)
         }
-        if (job.generatesOuputput) info.save(outPath)
+        if (job.generatesOutput) info.save(outPath)
       } else {
         state match {
           case ProcessingState.Queued =>
@@ -103,6 +113,8 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
             JobStateManager.logFailed(this, subJob = true)
           case ProcessingState.Finished =>
             JobStateManager.logFinished(this, subJob = true)
+          case ProcessingState.Cancelled =>
+            JobStateManager.logCancelled(this, subJob = true)
         }
       }
       for (func <- _onStateChanged) func()
@@ -129,6 +141,36 @@ case class DerivationJobInstance(job: DerivationJob, conf: DerivationJobConf) {
   def isResumable: Boolean = inputRevision == conf.inputSpec.revision && job.isResumable(conf)
 
   def stopJob(): Boolean = {
-    if (state < ProcessingState.Finished) job.stop(this) else true
+    if (state < ProcessingState.Finished) {
+      if (state == ProcessingState.Queued) {
+        val activeChild = active
+        if (activeChild != this) {
+          // ChainedJob parent: the parent is never in a JobQueue itself — only the child is.
+          // Set parent to Cancelled first so the child's onStateChanged/onUnregistered callbacks
+          // don't race and overwrite it back to Failed, then stop the actual queued child.
+          updateState(ProcessingState.Cancelled)
+          activeChild.stopJob()
+          // JobManager.unregister(this) will be called via child.onUnregistered callback
+        } else {
+          // Regular job: directly queued in a JobQueue
+          for (q <- queue) {
+            q.dequeue(this)
+            unsetQueue()
+          }
+          // Update state to cancelled (while still registered so it logs)
+          if (registered) {
+            updateState(ProcessingState.Cancelled)
+            JobManager.unregister(this)
+          }
+        }
+        true
+      } else {
+        // For running jobs, set state to Cancelled FIRST to prevent race condition
+        // with Future completion handler in JobManagerBase
+        updateState(ProcessingState.Cancelled)
+        // Then call job.stop() to cancel the actual execution (e.g., Spark job group)
+        job.stop(this)
+      }
+    } else true
   }
 }

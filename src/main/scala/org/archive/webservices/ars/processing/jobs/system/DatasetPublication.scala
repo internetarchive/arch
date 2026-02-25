@@ -101,5 +101,9 @@ object DatasetPublication extends SparkJob {
 
   override val finishedNotificationTemplate: Option[String] = None
 
-  override def generatesOuputput: Boolean = false
+  override def generatesOutput: Boolean = false
+
+  // DatasetPublication is not a Spark job in the sense of running user-visible Spark tasks;
+  // stopping it mid-way is not supported.
+  override def stop(instance: DerivationJobInstance): Boolean = false
 }

@@ -23,6 +23,7 @@ abstract class ChainedJob extends DerivationJob {
     val (child, idx) = currentChild(conf)
     val state = child.state
     instance.state = state match {
+      case ProcessingState.Cancelled => state
       case ProcessingState.Failed => state
       case ProcessingState.Finished =>
         if (idx == children.size - 1) state else ProcessingState.Failed
@@ -32,8 +33,16 @@ abstract class ChainedJob extends DerivationJob {
   }
 
   override def stop(instance: DerivationJobInstance): Boolean = {
-    val (child, _) = currentChild(instance.conf)
-    child.stopJob()
+    // Use the live active child instance rather than a history instance.
+    // currentChild() creates history instances which read info.state from cache.
+    // Since parent.updateState(Cancelled) has already been called before stop() is invoked,
+    // the cache already has state=Cancelled, so a history instance would see Cancelled and
+    // stopJob() would return early without ever calling cancelJobGroup on the Spark job.
+    val active = instance.active
+    if (active != instance) active.stopJob()
+    // Return true: the parent job's state is already Cancelled at this point, regardless of
+    // whether the child's underlying computation (e.g. a GenericJob) could be interrupted.
+    true
   }
 
   override def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] =

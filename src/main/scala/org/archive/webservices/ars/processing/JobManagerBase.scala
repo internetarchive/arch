@@ -120,15 +120,20 @@ class JobManagerBase(
           val priority = _currentPriority
           Future(instance.job).flatMap(_.run(instance)).onComplete { opt =>
             synchronized {
-              val success = opt.toOption.getOrElse(false)
-              instance.updateState(
-                if (success) ProcessingState.Finished else ProcessingState.Failed)
+              val cancelled = instance.state == ProcessingState.Cancelled ||
+                instance.info.state.contains(ProcessingState.Cancelled)
+              if (cancelled) {
+                instance.updateState(ProcessingState.Cancelled)
+              } else {
+                val success = opt.toOption.getOrElse(false)
+                instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
+                if (!success && opt.isFailure) opt.failed.get.printStackTrace()
+              }
               currentPriorityRunning.dequeueFirst(_ == instance)
               if (currentPriorityRunning.isEmpty) removePriority(priority)
               running.remove(instance)
               JobManager.unregister(instance)
               if (running.isEmpty) onAllJobsFinished()
-              if (!success && opt.isFailure) opt.failed.get.printStackTrace()
             }
             processQueues()
           }

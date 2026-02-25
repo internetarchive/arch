@@ -105,12 +105,17 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
-      if (started) {
-        val completed =
-          HdfsIO.exists(
-            conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
+        if (started) {
+          val completed =
+            HdfsIO.exists(
+              conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
+          instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+        }
       }
       instance
     }

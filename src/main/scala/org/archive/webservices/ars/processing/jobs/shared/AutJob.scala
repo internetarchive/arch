@@ -92,7 +92,12 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      for (s <- checkSparkState(conf.outputPath + relativeOutPath)) instance.state = s
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        for (s <- checkSparkState(conf.outputPath + relativeOutPath)) instance.state = s
+      }
       instance
     }
   }
@@ -106,7 +111,12 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      for (s <- checkFinishedState(conf.outputPath + relativeOutPath)) instance.state = s
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        for (s <- checkFinishedState(conf.outputPath + relativeOutPath)) instance.state = s
+      }
       instance
     }
 

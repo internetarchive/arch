@@ -41,11 +41,16 @@ object MetadataSummary extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started =
-      HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
-    if (started) {
-      val completed = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + SummaryFile)
-      instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+    // Check if job was cancelled (stored in info file)
+    if (instance.info.state.contains(ProcessingState.Cancelled)) {
+      instance.state = ProcessingState.Cancelled
+    } else {
+      val started =
+        HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
+      if (started) {
+        val completed = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + SummaryFile)
+        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      }
     }
     instance
   }

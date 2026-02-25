@@ -260,4 +260,12 @@ object JobStateManager {
       println("Failed: " + str(instance))
     }
   }
+
+  def logCancelled(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
+    if (!subJob) {
+      unregisterRunning(instance)
+      ks(Keystone.registerJobEvent(instance.uuid, "CANCELLED"))
+    }
+    println("Cancelled: " + str(instance))
+  }
 }
