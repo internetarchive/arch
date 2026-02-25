@@ -207,7 +207,7 @@ class ApiController(implicit val swagger: Swagger)
                 cursor.keys.toSet.flatten.contains(DerivationJobConf.OutputPathConfKey)
               var reservedOutPath = false
               lazy val uuid = cursor.get[String]("uuid").toOption.getOrElse {
-                reservedOutPath = !customOutPath && job.generatesOuputput
+                reservedOutPath = !customOutPath && job.generatesOutput
                 UuidManager.uuid(reserve = reservedOutPath)
               }
               for (conf <- DerivationJobConf.fromJson(

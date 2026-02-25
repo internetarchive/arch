@@ -90,9 +90,9 @@ trait DerivationJob {
 
   def finishedNotificationTemplate: Option[String] = Some("finished")
 
-  def generatesOuputput: Boolean = true
+  def generatesOutput: Boolean = true
 
-  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOuputput
+  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOutput
 
   val paramsSchema: Option[Json] = None
 
