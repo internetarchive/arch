@@ -1,0 +1,16 @@
+name: pytorch-1.11.0
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  # PyTorch 1.11.0 doesn't have ARM64 conda packages, so install via pip instead
+  # pip has ARM64 wheels available for older PyTorch versions
+  - numpy<2
+  - conda-pack
+  - pip
+  - pip:
+    - torch==1.11.0
+    - torchvision==0.12.0
+    - torchaudio==0.11.0
+    - uv
+

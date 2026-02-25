@@ -1,0 +1,16 @@
+name: pytorch-2.0.0_ffmpeg-6.1.1
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  # Install PyTorch via pip for ARM64 (better wheel support)
+  # pytorch-cuda removed for ARM64 (not available)
+  - ffmpeg=6.1.1
+  - conda-pack
+  - pip
+  - pip:
+    - torch==2.0.0
+    - torchvision==0.15.0
+    - torchaudio==2.0.0
+    - uv
+
