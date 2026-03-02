@@ -53,7 +53,7 @@ object SparkJobManager
 
   def initThread(sc: SparkContext, instance: DerivationJobInstance): Unit = {
     val (job, conf) = (instance.job, instance.conf)
-    sc.setJobGroup(instance.uuid, job.name + " " + conf.serialize)
+    sc.setJobGroup(instance.uuid, job.name + " " + conf.serialize, interruptOnCancel = true)
     sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
   }
 
