@@ -55,6 +55,12 @@ object SparkJobManager
     val (job, conf) = (instance.job, instance.conf)
     sc.setJobGroup(instance.uuid, job.name + " " + conf.serialize, interruptOnCancel = true)
     sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
+    // If the job was cancelled while the Spark context was still initializing,
+    // cancelJobGroup in stopJob was a no-op (context was None). Throw here so
+    // the run Future fails before any Spark actions are submitted; onComplete
+    // will see state == Cancelled and handle it correctly.
+    if (instance.state == ProcessingState.Cancelled)
+      throw new InterruptedException(s"Job ${instance.uuid} was cancelled before execution started")
   }
 
   def stopJob(instance: DerivationJobInstance): Boolean = {
