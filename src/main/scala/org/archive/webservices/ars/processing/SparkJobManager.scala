@@ -60,7 +60,7 @@ object SparkJobManager
     // the run Future fails before any Spark actions are submitted; onComplete
     // will see state == Cancelled and handle it correctly.
     if (instance.state == ProcessingState.Cancelled)
-      throw new InterruptedException(s"Job ${instance.uuid} was cancelled before execution started")
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled before execution started")
   }
 
   def stopJob(instance: DerivationJobInstance): Boolean = {
@@ -70,10 +70,12 @@ object SparkJobManager
 
   def stopContext(): Unit = synchronized {
     for (context <- _context) {
+      println("Stopping Spark context: " + context.applicationId)
       context.stop()
       while (!context.isStopped) Thread.`yield`()
       _context = None
       Sparkling.resetSparkContext()
+      println("Spark context stopped.")
     }
   }
 
