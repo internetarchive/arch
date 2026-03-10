@@ -73,6 +73,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
               rdd.map { case (k, v) => (k, v) },
               outPath,
               skipIfExists = true)
+            if (instance.state == ProcessingState.Cancelled)
+              throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
             RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
               for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }

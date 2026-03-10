@@ -29,9 +29,10 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def samplingConditions: Seq[R => Boolean] = Seq.empty
 
-  def runSpark(rdd: RDD[R], outPath: String): Unit = {
+  def runSpark(rdd: RDD[R], outPath: String, instance: DerivationJobInstance): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
@@ -83,7 +84,9 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
           IOHelper
             .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
               val outPath = conf.outputPath + relativeOutPath
-              runSpark(rdd, outPath)
+              if (instance.state == ProcessingState.Cancelled)
+                throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
+              runSpark(rdd, outPath, instance)
               checkSparkState(outPath).contains(ProcessingState.Finished)
             }
         }

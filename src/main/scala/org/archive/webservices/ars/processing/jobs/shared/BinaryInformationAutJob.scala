@@ -7,7 +7,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.archive.webservices.ars.aut.{AutLoader, AutUtil, TikaUtil}
 import org.archive.webservices.ars.io.IOHelper
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState, SampleVizData}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, ProcessingState, SampleVizData}
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.Sparkling
 import org.archive.webservices.sparkling.Sparkling.executionContext
@@ -50,14 +50,16 @@ abstract class BinaryInformationAutJob extends AutJob[Row] {
       outPath + "/_" + MimeTypeCountFile)
   }
 
-  override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
+  override def runSpark(rdd: RDD[Row], outPath: String, instance: DerivationJobInstance): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
       overwrite = true)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     computeMimeTypeCounts(data, outPath)
   }
 

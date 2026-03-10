@@ -72,6 +72,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
             val outPath = conf.outputPath + relativeOutPath
             val cachePath = outPath + "/" + ParsedCacheFile
             RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
+            if (instance.state == ProcessingState.Cancelled)
+              throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
             try {
               val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
               LGA.parsedToBigGraph(cached) { mapRdd =>

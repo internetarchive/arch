@@ -65,6 +65,8 @@ object ArsWatGeneration extends SparkJob with ArsJob {
             outPath,
             compress = true,
             skipIfExists = true)
+          if (instance.state == ProcessingState.Cancelled)
+            throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
           RddUtil.loadFilesLocality(outPath + "/*.wat.gz").foreachPartition { files =>
             for (file <- files) DerivativeOutput.hashFileHdfs(file)
           }
