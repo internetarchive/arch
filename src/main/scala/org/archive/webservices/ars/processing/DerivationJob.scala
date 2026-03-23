@@ -44,7 +44,7 @@ trait DerivationJob {
 
   def templateName: Option[String] = Some("jobs/" + id)
 
-  def run(conf: DerivationJobConf): Future[Boolean]
+  def run(instance: DerivationJobInstance): Future[Boolean]
 
   def isResumable(conf: DerivationJobConf): Boolean = conf.inputSpec.isResumableInput
 
@@ -67,6 +67,8 @@ trait DerivationJob {
     }
   }
 
+  def stop(instance: DerivationJobInstance): Boolean = false
+
   def sampleVizData(conf: DerivationJobConf): Option[SampleVizData] = None
 
   def templateVariables(conf: DerivationJobConf): Seq[(String, Any)] = Seq.empty
@@ -88,9 +90,9 @@ trait DerivationJob {
 
   def finishedNotificationTemplate: Option[String] = Some("finished")
 
-  def generatesOuputput: Boolean = true
+  def generatesOutput: Boolean = true
 
-  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOuputput
+  def logCollectionInfo: Boolean = JobManager.userJobs.contains(this) && generatesOutput
 
   val paramsSchema: Option[Json] = None
 

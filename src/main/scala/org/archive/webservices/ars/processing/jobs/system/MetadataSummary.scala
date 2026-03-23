@@ -19,9 +19,10 @@ object MetadataSummary extends SparkJob {
 
   val SummaryFile = "summary.json"
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, MetadataSummary, conf)
+      SparkJobManager.initThread(sc, instance)
+      val conf = instance.conf
       InputSpecLoader.loadSpark(conf.inputSpec) { rdd =>
         val summary = rdd
           .mapPartitions { partition =>
@@ -40,11 +41,16 @@ object MetadataSummary extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started =
-      HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
-    if (started) {
-      val completed = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + SummaryFile)
-      instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+    // Check if job was cancelled (stored in info file)
+    if (instance.info.state.contains(ProcessingState.Cancelled)) {
+      instance.state = ProcessingState.Cancelled
+    } else {
+      val started =
+        HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + ArchJobInstanceInfo.InfoFile)
+      if (started) {
+        val completed = HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + SummaryFile)
+        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      }
     }
     instance
   }

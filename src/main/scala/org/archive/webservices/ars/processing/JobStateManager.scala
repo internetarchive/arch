@@ -162,7 +162,7 @@ object JobStateManager {
       } {
         for (job <- JobManager.get(id)) {
           for (uuid <- values.get("uuid").flatMap(_.asString)) {
-            Try(Keystone.registerJobEvent(uuid, "CANCELLED"))
+            Try(Keystone.registerJobEvent(uuid, ProcessingState.Strings(ProcessingState.Cancelled).toUpperCase))
           }
           DerivationJob.reset(job, conf)
           job.enqueue(
@@ -259,5 +259,13 @@ object JobStateManager {
       }
       println("Failed: " + str(instance))
     }
+  }
+
+  def logCancelled(instance: DerivationJobInstance, subJob: Boolean = false): Unit = {
+    if (!subJob) {
+      unregisterRunning(instance)
+      ks(Keystone.registerJobEvent(instance.uuid, "CANCELLED"))
+    }
+    println("Cancelled: " + str(instance))
   }
 }

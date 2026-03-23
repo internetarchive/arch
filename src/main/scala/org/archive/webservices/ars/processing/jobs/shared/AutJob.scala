@@ -29,9 +29,10 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
   def samplingConditions: Seq[R => Boolean] = Seq.empty
 
-  def runSpark(rdd: RDD[R], outPath: String): Unit = {
+  def runSpark(rdd: RDD[R], outPath: String, instance: DerivationJobInstance): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
@@ -75,14 +76,17 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   }
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
-    def run(conf: DerivationJobConf): Future[Boolean] = {
+    def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
-        SparkJobManager.initThread(sc, AutJob.this, conf)
+        SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
           IOHelper
             .sample(prepareRecords(rdd), conf.sample, samplingConditions) { rdd =>
               val outPath = conf.outputPath + relativeOutPath
-              runSpark(rdd, outPath)
+              if (instance.state == ProcessingState.Cancelled)
+                throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
+              runSpark(rdd, outPath, instance)
               checkSparkState(outPath).contains(ProcessingState.Finished)
             }
         }
@@ -91,7 +95,12 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      for (s <- checkSparkState(conf.outputPath + relativeOutPath)) instance.state = s
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        for (s <- checkSparkState(conf.outputPath + relativeOutPath)) instance.state = s
+      }
       instance
     }
   }
@@ -99,13 +108,18 @@ abstract class AutJob[R: ClassTag] extends ChainedJob {
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     override val stage: String = "Post-Processing"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
-      Try(postProcess(conf.outputPath + relativeOutPath)).getOrElse(false)
+    def run(instance: DerivationJobInstance): Future[Boolean] = Future {
+      Try(postProcess(instance.conf.outputPath + relativeOutPath)).getOrElse(false)
     }
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      for (s <- checkFinishedState(conf.outputPath + relativeOutPath)) instance.state = s
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        for (s <- checkFinishedState(conf.outputPath + relativeOutPath)) instance.state = s
+      }
       instance
     }
 

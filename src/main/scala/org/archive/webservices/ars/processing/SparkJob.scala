@@ -6,4 +6,8 @@ trait SparkJob extends DerivationJob {
       get: DerivationJobInstance => Unit = _ => {}): Option[DerivationJobInstance] = {
     super.enqueue(conf, get).flatMap(SparkJobManager.enqueue)
   }
+
+  override def stop(instance: DerivationJobInstance): Boolean = {
+    SparkJobManager.stopJob(instance: DerivationJobInstance)
+  }
 }

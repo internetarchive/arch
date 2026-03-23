@@ -60,9 +60,10 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   object ArchiveSparkProcessor extends PartialDerivationJob(this) with SparkJob {
     override val stage: String = "ArchiveSpark"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = {
+    def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
-        SparkJobManager.initThread(sc, ArchiveSparkBaseJob.this, conf)
+        SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         conf.inputSpec.inputType match {
           case InputSpec.InputType.Files =>
             val prefilter = mimePrefilter(conf)
@@ -104,12 +105,17 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
-      if (started) {
-        val completed =
-          HdfsIO.exists(
-            conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
+        if (started) {
+          val completed =
+            HdfsIO.exists(
+              conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
+          instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+        }
       }
       instance
     }
@@ -118,7 +124,9 @@ abstract class ArchiveSparkBaseJob extends ChainedJob {
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     override val stage: String = "Post-Processing"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
+    def run(instance: DerivationJobInstance): Future[Boolean] = Future {
+      val conf = instance.conf
+
       val outDir = conf.outputPath + relativeOutPath + resultDir
       val outFile = conf.outputPath + relativeOutPath + resultFile
 

@@ -83,12 +83,14 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
 
   override def df(rdd: RDD[Row]): Dataset[Row] = AutLoader.textFiles(rdd)
 
-  override def runSpark(rdd: RDD[Row], outPath: String): Unit = {
+  override def runSpark(rdd: RDD[Row], outPath: String, instance: DerivationJobInstance): Unit = {
     val dataset = AutLoader.saveAndLoad(
       df(rdd).filter(TextTypes.values.map(col(MimeTypeColumn).contains).reduce(_.or(_))),
       outPath + "/_" + targetFile)
 
     for ((jobPrefix, mimeTypePattern) <- TextTypes) {
+      if (instance.state == ProcessingState.Cancelled)
+        throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
       val data = AutLoader.saveAndLoad(
         dataset.filter(col(MimeTypeColumn).contains(mimeTypePattern)),
         outPath + "/_" + jobPrefix + "-" + targetFile)
@@ -99,6 +101,8 @@ object TextFilesInformationExtraction extends BinaryInformationAutJob {
         overwrite = true)
     }
 
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     computeMimeTypeCounts(dataset, outPath)
 
     HdfsIO.delete(outPath + "/_" + targetFile)

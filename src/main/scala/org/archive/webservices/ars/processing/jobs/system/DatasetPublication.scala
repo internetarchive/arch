@@ -49,7 +49,8 @@ object DatasetPublication extends SparkJob {
       }
   }
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
+    val conf = instance.conf
     for {
       dataset <- confDataset(conf).toOption
       metadata <- conf.params.values.get("metadata").map(PublishedDatasets.parseJsonMetadata)
@@ -59,7 +60,7 @@ object DatasetPublication extends SparkJob {
       else {
         val itemName = itemInfo.item
         SparkJobManager.context.map { sc =>
-          SparkJobManager.initThread(sc, DatasetPublication, conf)
+          SparkJobManager.initThread(sc, instance)
           val accessContext = FileAccessContext.fromLocalArchConf
           val fileListBc = sc.broadcast(PublishedDatasets.files(itemName))
           RddUtil
@@ -100,5 +101,9 @@ object DatasetPublication extends SparkJob {
 
   override val finishedNotificationTemplate: Option[String] = None
 
-  override def generatesOuputput: Boolean = false
+  override def generatesOutput: Boolean = false
+
+  // DatasetPublication is not a Spark job in the sense of running user-visible Spark tasks;
+  // stopping it mid-way is not supported.
+  override def stop(instance: DerivationJobInstance): Boolean = false
 }
