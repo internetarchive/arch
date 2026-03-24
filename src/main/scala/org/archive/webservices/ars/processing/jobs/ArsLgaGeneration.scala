@@ -54,9 +54,10 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
       })
 
   object Spark extends PartialDerivationJob(this) with SparkJob {
-    def run(conf: DerivationJobConf): Future[Boolean] = {
+    def run(instance: DerivationJobInstance): Future[Boolean] = {
       SparkJobManager.context.map { sc =>
-        SparkJobManager.initThread(sc, ArsLgaGeneration, conf)
+        SparkJobManager.initThread(sc, instance)
+        val conf = instance.conf
         WebArchiveLoader.loadWarcs(conf.inputSpec) { rdd =>
           IOHelper.sample(
             {
@@ -71,6 +72,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
             val outPath = conf.outputPath + relativeOutPath
             val cachePath = outPath + "/" + ParsedCacheFile
             RddUtil.saveTyped(parsed.coalesce(MaxPartitions).map(Option(_)), cachePath)
+            if (instance.state == ProcessingState.Cancelled)
+              throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
             try {
               val cached = RddUtil.loadTyped(cachePath + "/*.gz").flatMap(opt => opt)
               LGA.parsedToBigGraph(cached) { mapRdd =>
@@ -92,14 +95,19 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
-      if (started) {
-        val completed =
-          HdfsIO.exists(
-            conf.outputPath + relativeOutPath + "/_" + MapFile + "/" + Sparkling.CompleteFlagFile) && HdfsIO
-            .exists(
-              conf.outputPath + relativeOutPath + "/_" + GraphFile + "/" + Sparkling.CompleteFlagFile)
-        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
+        if (started) {
+          val completed =
+            HdfsIO.exists(
+              conf.outputPath + relativeOutPath + "/_" + MapFile + "/" + Sparkling.CompleteFlagFile) && HdfsIO
+              .exists(
+                conf.outputPath + relativeOutPath + "/_" + GraphFile + "/" + Sparkling.CompleteFlagFile)
+          instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+        }
       }
       instance
     }
@@ -108,7 +116,8 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
   object PostProcessor extends PartialDerivationJob(this) with GenericJob {
     override val stage: String = "Post-Processing"
 
-    def run(conf: DerivationJobConf): Future[Boolean] = Future {
+    def run(instance: DerivationJobInstance): Future[Boolean] = Future {
+      val conf = instance.conf
       IOHelper.concatLocal(
         conf.outputPath + relativeOutPath + "/_" + MapFile,
         _.endsWith(".gz"),
@@ -134,13 +143,18 @@ object ArsLgaGeneration extends ChainedJob with ArsJob {
 
     override def history(conf: DerivationJobConf): DerivationJobInstance = {
       val instance = super.history(conf)
-      if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
-        instance.state =
-          if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
-              .files(conf.outputPath + relativeOutPath + "/_*")
-              .isEmpty)
-            ProcessingState.Finished
-          else ProcessingState.Failed
+      // Check if job was cancelled (stored in info file)
+      if (instance.info.state.contains(ProcessingState.Cancelled)) {
+        instance.state = ProcessingState.Cancelled
+      } else {
+        if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + MapFile)) {
+          instance.state =
+            if (HdfsIO.exists(conf.outputPath + relativeOutPath + "/" + GraphFile) && HdfsIO
+                .files(conf.outputPath + relativeOutPath + "/_*")
+                .isEmpty)
+              ProcessingState.Finished
+            else ProcessingState.Failed
+        }
       }
       instance
     }

@@ -64,7 +64,8 @@ class JobManagerBase(
   def enqueue(instance: DerivationJobInstance): Option[DerivationJobInstance] = synchronized {
     val queue = if (instance.conf.sample < 0) mainQueue else sampleQueue
     if (JobManager.register(instance)) {
-      instance.setQueue(queue, queue.enqueue(instance))
+      queue.enqueue(instance)
+      instance.setQueue(queue)
       processQueues()
       Some(instance)
     } else None
@@ -117,17 +118,22 @@ class JobManagerBase(
           running(instance) = Instant.now.getEpochSecond
           val currentPriorityRunning = priorityRunning
           val priority = _currentPriority
-          Future(instance.job).flatMap(_.run(instance.conf)).onComplete { opt =>
+          Future(instance.job).flatMap(_.run(instance)).onComplete { opt =>
             synchronized {
-              val success = opt.toOption.getOrElse(false)
-              instance.updateState(
-                if (success) ProcessingState.Finished else ProcessingState.Failed)
+              val cancelled = instance.state == ProcessingState.Cancelled ||
+                instance.info.state.contains(ProcessingState.Cancelled)
+              if (cancelled) {
+                instance.updateState(ProcessingState.Cancelled)
+              } else {
+                val success = opt.toOption.getOrElse(false)
+                instance.updateState(if (success) ProcessingState.Finished else ProcessingState.Failed)
+                if (!success && opt.isFailure) opt.failed.get.printStackTrace()
+              }
               currentPriorityRunning.dequeueFirst(_ == instance)
               if (currentPriorityRunning.isEmpty) removePriority(priority)
               running.remove(instance)
               JobManager.unregister(instance)
               if (running.isEmpty) onAllJobsFinished()
-              if (!success && opt.isFailure) opt.failed.get.printStackTrace()
             }
             processQueues()
           }

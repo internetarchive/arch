@@ -51,17 +51,31 @@ object SparkJobManager
 
   private def priorityWeight: Int = if (currentPriority == 0) 1 else currentPriority
 
-  def initThread(sc: SparkContext, job: DerivationJob, conf: DerivationJobConf): Unit = {
-    sc.setJobGroup(job.uuid, job.name + " " + conf.serialize)
+  def initThread(sc: SparkContext, instance: DerivationJobInstance): Unit = {
+    val (job, conf) = (instance.job, instance.conf)
+    sc.setJobGroup(instance.uuid, job.name + " " + conf.serialize, interruptOnCancel = true)
     sc.setLocalProperty("spark.scheduler.pool", PoolPrefix + priorityWeight)
+    // If the job was cancelled while the Spark context was still initializing,
+    // cancelJobGroup in stopJob was a no-op (context was None). Throw here so
+    // the run Future fails before any Spark actions are submitted; onComplete
+    // will see state == Cancelled and handle it correctly.
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled before execution started")
+  }
+
+  def stopJob(instance: DerivationJobInstance): Boolean = {
+    for (context <- _context) context.cancelJobGroup(instance.uuid)
+    true
   }
 
   def stopContext(): Unit = synchronized {
     for (context <- _context) {
+      println("Stopping Spark context: " + context.applicationId)
       context.stop()
       while (!context.isStopped) Thread.`yield`()
       _context = None
       Sparkling.resetSparkContext()
+      println("Spark context stopped.")
     }
   }
 
@@ -85,9 +99,5 @@ object SparkJobManager
       newPriority(priorityWeight * 2)
       true
     } else false
-  }
-
-  def run(job: DerivationJob, conf: DerivationJobConf): Future[Boolean] = {
-    job.run(conf)
   }
 }

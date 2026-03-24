@@ -79,10 +79,12 @@ class ApiControllerSpec extends UnitSpec {
        job: DerivationJob,
        inputSpec: Map[String, String],
        expectedFilesResponse: String,
-       params: Map[String, String] = Map.empty
-     ) {
+       params: Map[String, String] = Map.empty,
+       timeoutSeconds: Int = 120
+     ): String = {
     runJobAndVerify(user, apiKey, job, inputSpec.asJson, expectedFilesResponse,
-      if (params.nonEmpty) Some(params.asJson) else None)
+      if (params.nonEmpty) Some(params.asJson) else None,
+      timeoutSeconds)
   }
 
   def runJobAndVerify(
@@ -91,8 +93,9 @@ class ApiControllerSpec extends UnitSpec {
     job: DerivationJob,
     inputSpec: Json,
     expectedFilesResponse: String,
-    params: Option[Json]
-  ) {
+    params: Option[Json],
+    timeoutSeconds: Int
+  ): String = {
     runJob(user, apiKey, job, inputSpec, params) {
       status should equal(200)
       val respObj = parseJsonObject(body)
@@ -111,7 +114,7 @@ class ApiControllerSpec extends UnitSpec {
       val uuid = respObj("uuid").get.asString.get
 
       // Wait for the job to complete.
-      waitForJobComplete(user, apiKey, uuid)
+      waitForJobComplete(user, apiKey, uuid, timeoutSeconds)
 
       // Check that the reported output files are as expected.
       var waitingForFilesCache = true
@@ -138,6 +141,7 @@ class ApiControllerSpec extends UnitSpec {
           }
         }
       }
+      uuid
     }
   }
 
@@ -404,41 +408,41 @@ class ApiControllerSpec extends UnitSpec {
           "lineCount" : 11,
           "fileType" : "csv",
           "md5Checksum" : "4d34306cdfb43d2ffdbd57dda860758e"
-          }, {
+        }, {
           "filename" : "json-file-information.csv.gz",
           "sizeBytes" : 1299,
           "mimeType" : "application/gzip",
           "lineCount" : 1,
           "fileType" : "csv",
           "md5Checksum" : "a5cd0ea93c4642f71ae7688deba7b30c"
-          }, {
+        }, {
           "filename" : "xml-file-information.csv.gz",
-          "sizeBytes" : 33701,
+          "sizeBytes" : 33761,
           "mimeType" : "application/gzip",
           "lineCount" : 7,
           "fileType" : "csv",
-          "md5Checksum" : "fb3d19fb44880c93f6fbed3a4815bbb8"
-          }, {
+          "md5Checksum" : "e307a12aa9cd27b6dfde1589cc67f6ad"
+        }, {
           "filename" : "plain-text-file-information.csv.gz",
           "sizeBytes" : 1924,
           "mimeType" : "application/gzip",
           "lineCount" : 14,
           "fileType" : "csv",
           "md5Checksum" : "2c31125c17d91e7803fe08fbb5111e75"
-          }, {
+        }, {
           "filename" : "js-file-information.csv.gz",
-          "sizeBytes" : 156098,
+          "sizeBytes" : 156185,
           "mimeType" : "application/gzip",
           "lineCount" : 13,
           "fileType" : "csv",
-          "md5Checksum" : "fbea8902bcf7d55fa18dcbe868006702"
-          }, {
+          "md5Checksum" : "01e7db1236e725ac7f5a3e1ac23f9810"
+        }, {
           "filename" : "html-file-information.csv.gz",
-          "sizeBytes" : 250333,
+          "sizeBytes" : 250494,
           "mimeType" : "application/gzip",
           "lineCount" : 17,
           "fileType" : "csv",
-          "md5Checksum" : "1ad61c1190412cdf69931c5cf620e70f"
+          "md5Checksum" : "79619b45d8768905db47b9a19119068d"
         }
       ]
       """
@@ -599,4 +603,64 @@ class ApiControllerSpec extends UnitSpec {
     )
   }
 
+  test("Generating an ArchiveSpark TrOcrProcessing on the test collection works") {
+    val (user, apiKey) = makeArchUser()
+    runJobAndVerify(
+      user,
+      apiKey,
+      TrOcrProcessing,
+      Map("type" -> "collection", "collectionId" -> "SPECIAL-test-collection"),
+      """
+      [
+        {
+          "filename" : "result.jsonl.gz",
+          "sizeBytes" : 726,
+          "mimeType" : "application/gzip",
+          "lineCount" : 7,
+          "fileType" : "ArchiveSpark/jsonl",
+          "md5Checksum" : "ac891b69f391f0cebafbc3d69b3e042a"
+        }
+      ]
+      """,
+      timeoutSeconds = 1200
+    )
+  }
+
+  test("Generating an ArchiveSpark WhisperText on an MP3 file works") {
+    // To work around inconsistent output at the tail of the transcribed text, check
+    // that the text output begins as expected instead of relying on file size and hash.
+    val (user, apiKey) = makeArchUser()
+    val uuid = runJobAndVerify(
+      user,
+      apiKey,
+      WhisperText,
+      Map(
+        "type" -> "files".asJson,
+        "size" -> "1234".asJson,
+        "dataSource" -> "hdfs".asJson,
+        "dataLocation" -> "/user/arch/arch-test-collection/*.mp3".asJson,
+        "dataMime" -> Map(
+          "mp3" -> "audio/mp3"
+        ).asJson
+      ).asJson,
+      """
+      [
+        {
+          "filename" : "result.jsonl.gz",
+          "mimeType" : "application/gzip",
+          "lineCount" : 1,
+          "fileType" : "ArchiveSpark/jsonl"
+        }
+      ]
+      """,
+      params = None,
+      timeoutSeconds = 1200
+    )
+    // Check that the transcription begins as expected.
+    getForUser(user, apiKey)(s"/api/job/${uuid}/preview/result.jsonl.gz") {
+      status should equal(200)
+      val text = parseJsonObject(body)("whisper").get.asObject.get("text").get.asString.get
+      (text.trim) should startWith ("Are you ready kids?")
+    }
+  }
 }

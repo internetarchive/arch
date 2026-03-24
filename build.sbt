@@ -45,7 +45,9 @@ val dependencies = prodProvided.map(_ % "provided") ++ Seq(
   "io.sentry" % "sentry" % "6.28.0",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "edu.stanford.nlp" % "stanford-corenlp" % "4.5.6" % "provided",
-  "io.github.nremond" %% "pbkdf2-scala" % "0.7.0") ++ guavaDependent.map(
+  "io.github.nremond" %% "pbkdf2-scala" % "0.7.0",
+  "com.github.andyglow" %% "scala-jsonschema" % "0.7.11",
+  "com.github.andyglow" %% "scala-jsonschema-circe-json" % "0.7.11") ++ guavaDependent.map(
   _ exclude (org = "com.google.guava", name = "guava")) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",

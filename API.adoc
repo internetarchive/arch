@@ -379,6 +379,46 @@ __required__|The job run UUID|string
 * `application/json`
 
 
+[[_stopjob]]
+==== Stop an in-progress job
+....
+POST /api/job/{uuid}/stop
+....
+
+
+===== Parameters
+
+[options="header", cols=".^2a,.^3a,.^9a,.^4a"]
+|===
+|Type|Name|Description|Schema
+|**Header**|**X-API-KEY** +
+__required__|An API key that's authorized to act on behalf of X-API-USER|string
+|**Header**|**X-API-USER** +
+__required__|The user for which this request is being made|string
+|**Path**|**uuid** +
+__required__|The job run UUID|string
+|===
+
+
+===== Responses
+
+[options="header", cols=".^2a,.^14a,.^4a"]
+|===
+|HTTP Code|Description|Schema
+|**200**|Request confirmation|string
+|===
+
+
+===== Consumes
+
+* `nothing`
+
+
+===== Produces
+
+* `application/json`
+
+
 
 
 [[_definitions]]
@@ -400,6 +440,8 @@ __required__|A link to information about the job|string
 __required__|Whether the job is internal/non-user-facing use only|boolean
 |**name** +
 __required__||string
+|**paramsSchema** +
+__optional__|Available parmeters schema|<<_json,Json>>
 |**publishable** +
 __required__|Whether the job output is publishable to archive.org|boolean
 |**uuid** +
@@ -488,8 +530,6 @@ __required__|string
 __required__|string
 |**queue** +
 __optional__|string
-|**queuePos** +
-__optional__|integer (int32)
 |**sample** +
 __required__|integer (int32)
 |**startTime** +
@@ -502,6 +542,9 @@ __required__|string
 __required__|string
 |===
 
+
+[[_json]]
+=== Json
 
 [[_object]]
 === Object
@@ -568,3 +611,8 @@ __required__|< string > array
 |**size** +
 __required__|integer (int64)
 |===
+
+
+
+
+

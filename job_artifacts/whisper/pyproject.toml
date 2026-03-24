@@ -5,3 +5,8 @@ dependencies = [
   "openai-whisper==20240930",
   "numpy<2"
 ]
+
+[tool.uv.extra-build-dependencies]
+openai-whisper = [
+  "setuptools==81.0.0"
+]

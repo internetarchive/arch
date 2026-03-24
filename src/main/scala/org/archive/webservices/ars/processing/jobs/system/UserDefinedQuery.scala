@@ -147,9 +147,10 @@ object UserDefinedQuery extends SparkJob {
       }
   }
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, UserDefinedQuery, conf)
+      SparkJobManager.initThread(sc, instance)
+      val conf = instance.conf
       WebArchiveLoader.loadCdx(conf.inputSpec) { rdd =>
         val filtered = filterQuery(rdd, conf.params)
         val cdxPath = conf.outputPath + "/" + CdxDir
@@ -172,10 +173,15 @@ object UserDefinedQuery extends SparkJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
-    if (started) {
-      val completed = HdfsIO.exists(conf.outputPath + "/" + InfoFile)
-      instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+    // Check if job was cancelled (stored in info file)
+    if (instance.info.state.contains(ProcessingState.Cancelled)) {
+      instance.state = ProcessingState.Cancelled
+    } else {
+      val started = HdfsIO.exists(conf.outputPath + relativeOutPath)
+      if (started) {
+        val completed = HdfsIO.exists(conf.outputPath + "/" + InfoFile)
+        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      }
     }
     instance
   }

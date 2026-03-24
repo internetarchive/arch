@@ -5,7 +5,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.storage.StorageLevel
 import org.archive.webservices.ars.aut.AutLoader
 import org.archive.webservices.ars.model.{ArchJobCategories, ArchJobCategory, DerivativeOutput}
-import org.archive.webservices.ars.processing.{DerivationJobConf, ProcessingState, SampleVizData}
+import org.archive.webservices.ars.processing.{DerivationJobConf, DerivationJobInstance, ProcessingState, SampleVizData}
 import org.archive.webservices.ars.util.Common
 import org.archive.webservices.sparkling.io.HdfsIO
 import org.archive.webservices.sparkling.util.{CollectionUtil, SurtUtil}
@@ -84,14 +84,16 @@ abstract class NetworkAutJob[R: ClassTag] extends AutJob[R] {
     }
   }
 
-  override def runSpark(rdd: RDD[R], outPath: String): Unit = {
+  override def runSpark(rdd: RDD[R], outPath: String, instance: DerivationJobInstance): Unit = {
     val data = AutLoader.saveAndLoad(df(rdd), outPath + "/_" + targetFile)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     HdfsIO.writeLines(
       outPath + "/" + targetFile + DerivativeOutput.LineCountFileSuffix,
       Seq(data.count.toString),
       overwrite = true)
-
+    if (instance.state == ProcessingState.Cancelled)
+      throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
     createVizSample(data) { derivative =>
       HdfsIO.writeLines(
         outPath + "/" + sampleGraphFile,

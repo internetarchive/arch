@@ -13,11 +13,12 @@ case class AvailableJob(
     @ApiModelProperty(description = "Whether the job is internal/non-user-facing use only")
     internal: Boolean,
     @ApiModelProperty(description = "A link to the job source code") codeUrl: String,
-    @ApiModelProperty(description = "A link to information about the job") infoUrl: String)
+    @ApiModelProperty(description = "A link to information about the job") infoUrl: String,
+    @ApiModelProperty(description = "Available parmeters schema") paramsSchema: Option[io.circe.Json])
     extends ApiResponseObject[AvailableJob]
 
 object AvailableJob {
-  def apply(job: DerivationJob, isInternal: Boolean): AvailableJob =
+  def apply(job: DerivationJob, isInternal: Boolean): AvailableJob = {
     AvailableJob(
       uuid = job.uuid.toString,
       name = job.name,
@@ -25,5 +26,8 @@ object AvailableJob {
       publishable = (!PublishedDatasets.ProhibitedJobs.contains(job)),
       internal = isInternal,
       codeUrl = job.codeUrl,
-      infoUrl = job.infoUrl)
+      infoUrl = job.infoUrl,
+      paramsSchema = job.paramsSchema
+    )
+  }
 }

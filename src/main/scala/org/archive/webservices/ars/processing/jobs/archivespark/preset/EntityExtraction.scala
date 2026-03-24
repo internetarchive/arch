@@ -25,4 +25,6 @@ object EntityExtraction extends ArchiveSparkEnrichJob {
   def functions(conf: DerivationJobConf): Seq[EnrichFunc[ArchEnrichRoot[_], EnrichRoot, _, _]] = {
     Seq(EntitiesAdapter.withParams(conf.params))
   }
+
+  override val paramsSchema = EntitiesAdapter.paramsSchema
 }

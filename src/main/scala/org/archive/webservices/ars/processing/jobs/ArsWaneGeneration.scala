@@ -30,9 +30,10 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
   val relativeOutPath = s"/$id"
   val resultDir = "/wane.gz"
 
-  def run(conf: DerivationJobConf): Future[Boolean] = {
+  def run(instance: DerivationJobInstance): Future[Boolean] = {
     SparkJobManager.context.map { sc =>
-      SparkJobManager.initThread(sc, ArsWaneGeneration, conf)
+      SparkJobManager.initThread(sc, instance)
+      val conf = instance.conf
       WebArchiveLoader.loadWarcsRecords(conf.inputSpec) { rdd =>
         IOHelper
           .sampleGrouped[String, String, Boolean](
@@ -72,6 +73,8 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
               rdd.map { case (k, v) => (k, v) },
               outPath,
               skipIfExists = true)
+            if (instance.state == ProcessingState.Cancelled)
+              throw new RuntimeException(s"Job ${instance.uuid} was cancelled")
             RddUtil.loadFilesLocality(outPath + "/*.wane.gz").foreachPartition { files =>
               for (file <- files) DerivativeOutput.hashFileHdfs(file)
             }
@@ -83,12 +86,17 @@ object ArsWaneGeneration extends SparkJob with ArsJob {
 
   override def history(conf: DerivationJobConf): DerivationJobInstance = {
     val instance = super.history(conf)
-    val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
-    if (started) {
-      val completed =
-        HdfsIO.exists(
-          conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
-      instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+    // Check if job was cancelled (stored in info file)
+    if (instance.info.state.contains(ProcessingState.Cancelled)) {
+      instance.state = ProcessingState.Cancelled
+    } else {
+      val started = HdfsIO.exists(conf.outputPath + relativeOutPath + resultDir)
+      if (started) {
+        val completed =
+          HdfsIO.exists(
+            conf.outputPath + relativeOutPath + resultDir + "/" + Sparkling.CompleteFlagFile)
+        instance.state = if (completed) ProcessingState.Finished else ProcessingState.Failed
+      }
     }
     instance
   }

@@ -60,6 +60,20 @@ class JobUuidApiController(implicit val swagger: Swagger)
     }
   }
 
+  def stopJob = (jobApiOp[String]("stopJob")
+      summary "Stop an in-progress job"
+      consumes "nothing"
+      produces "application/json"
+      responseMessage ResponseMessage(200, "Request confirmation"))
+
+  post(UuidPattern + "stop", operation(stopJob)) {
+    response { instance =>
+      if (instance.stopJob()) {
+        Ok("Process stopped.", Map("Content-Type" -> "application/json"))
+      } else Conflict("The process can't be stopped.")
+    }
+  }
+
   def getResult =
     (jobApiOp[WasapiResponse]("getResult")
       summary "Get the job's WASAPI output listing"
